@@ -1,0 +1,67 @@
+id: 1
+description: "A board with a single critical card on chop"
+globally_available_info:
+  suites:
+    - "no_var_red"
+    - "no_var_yellow"
+    - "no_var_green"
+    - "no_var_blue"
+    - "no_var_purple"
+  playing_stacks: [[], [], [], [], []]
+  trash_pile: ["p4"]
+  strikes: 0
+  efficiency: 1.00
+  pace: 15
+  score: 0
+  players:
+    - player_id: "Alice"
+    - player_id: "Bob"
+    - player_id: "Cathy"
+    - player_id: "Donald"
+player_pov:
+  player_id: "Alice"
+  hand:
+    - card_abbreviation: "x"
+    - card_abbreviation: "x"
+    - card_abbreviation: "x"
+    - card_abbreviation: "x"
+  teammates:
+    - player_id: "Bob"
+      player_pov:
+        hand:
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+        teammates: []
+      hand:
+        - card_abbreviation: "g5"
+        - card_abbreviation: "r2"
+        - card_abbreviation: "r2"
+        - card_abbreviation: "b2"
+    - player_id: "Cathy"
+      player_pov:
+        hand:
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+        teammates: []
+      hand:
+        - card_abbreviation: "b1"
+        - card_abbreviation: "p3"
+        - card_abbreviation: "g4"
+        - card_abbreviation: "p4"
+    - player_id: "Donald"
+      player_pov:
+        hand:
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+        teammates: []
+      hand:
+        - card_abbreviation: "y3"
+        - card_abbreviation: "p5"
+        - card_abbreviation: "r1"
+        - card_abbreviation: "b4"

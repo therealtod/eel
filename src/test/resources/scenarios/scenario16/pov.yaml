@@ -1,0 +1,54 @@
+id: 16
+description: "A board with an available finesse"
+globally_available_info:
+  suites:
+    - "no_var_red"
+    - "no_var_yellow"
+    - "no_var_green"
+    - "no_var_blue"
+    - "no_var_purple"
+  playing_stacks: [["r1"], [], [], ["b2"], []]
+  trash_pile: []
+  strikes: 0
+  efficiency: 1.00
+  pace: 15
+  score: 0
+player_pov:
+  player_id: "Alice"
+  hand:
+    - card_abbreviation: "x"
+    - card_abbreviation: "x"
+    - card_abbreviation: "x"
+    - card_abbreviation: "x"
+    - card_abbreviation: "x"
+  teammates:
+    - player_id: "Bob"
+      player_pov:
+        hand:
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+        teammates: []
+      hand:
+        - card_abbreviation: "r2"
+        - card_abbreviation: "b3"
+        - card_abbreviation: "y4"
+        - card_abbreviation: "b1"
+        - card_abbreviation: "r3"
+    - player_id: "Cathy"
+      player_pov:
+        hand:
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+        teammates: []
+      hand:
+        - card_abbreviation: "b4"
+        - card_abbreviation: "r3"
+        - card_abbreviation: "p2"
+        - card_abbreviation: "p2"
+        - card_abbreviation: "r1"

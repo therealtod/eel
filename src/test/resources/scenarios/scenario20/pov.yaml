@@ -1,0 +1,78 @@
+id: 20
+description: "A board with multiple players with 5s on their chop"
+globally_available_info:
+  suites:
+    - "no_var_red"
+    - "no_var_yellow"
+    - "no_var_green"
+    - "no_var_blue"
+    - "no_var_purple"
+  playing_stacks: [["r1"], [], [], [], []]
+  trash_pile: []
+  strikes: 0
+  efficiency: 1.00
+  pace: 15
+  score: 0
+  players:
+    - player_id: "Alice"
+    - player_id: "Bob"
+      slots:
+        - positive_clues: []
+        - positive_clues: [2]
+        - positive_clues: [2]
+        - positive_clues: [1]
+    - player_id: "Cathy"
+    - player_id: "Donald"
+      slots:
+        - positive_clues: []
+        - positive_clues: []
+        - positive_clues: ["YELLOW"]
+        - positive_clues: ["YELLOW"]
+player_pov:
+  player_id: "Alice"
+  hand:
+    - card_abbreviation: "x"
+    - card_abbreviation: "x"
+    - card_abbreviation: "x"
+    - card_abbreviation: "x"
+  teammates:
+    - player_id: "Bob"
+      player_pov:
+        hand:
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+        teammates: []
+      hand:
+        - card_abbreviation: "g5"
+        - card_abbreviation: "g2"
+        - card_abbreviation: "b2"
+        - card_abbreviation: "r1"
+    - player_id: "Cathy"
+      player_pov:
+        hand:
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+        teammates: []
+      hand:
+        - card_abbreviation: "p5"
+        - card_abbreviation: "p3"
+        - card_abbreviation: "y4"
+        - card_abbreviation: "b5"
+    - player_id: "Donald"
+      player_pov:
+        hand:
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+          - card_abbreviation: "x"
+        teammates: [ ]
+      hand:
+        - card_abbreviation: "p3"
+        - card_abbreviation: "y5"
+        - card_abbreviation: "y3"
+        - card_abbreviation: "y3"
