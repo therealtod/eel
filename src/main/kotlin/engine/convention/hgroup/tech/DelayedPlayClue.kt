@@ -3,16 +3,16 @@ package eelst.ilike.engine.convention.hgroup.tech
 import eelst.ilike.engine.PlayerPOV
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.game.entity.card.HanabiCard
-import eelst.ilike.game.entity.suite.NoVarBlue
-import eelst.ilike.game.entity.suite.NoVarGreen
-import eelst.ilike.game.entity.suite.NoVarPurple
-import eelst.ilike.game.entity.suite.NoVarRed
-import eelst.ilike.game.entity.suite.NoVarYellow
+import eelst.ilike.game.entity.suite.Blue
+import eelst.ilike.game.entity.suite.Green
+import eelst.ilike.game.entity.suite.Purple
+import eelst.ilike.game.entity.suite.Red
+import eelst.ilike.game.entity.suite.Yellow
 
 object DelayedPlayClue
     : IndirectPlayClue(
     name = "Delayed Play Clue",
-    appliesTo = setOf(NoVarRed, NoVarYellow, NoVarGreen, NoVarBlue, NoVarPurple),
+    appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
     takesPrecedenceOver = emptySet(),
 ) {
     override fun getActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
@@ -22,7 +22,7 @@ object DelayedPlayClue
             teammate
                 .hand
                 .forEach { slot ->
-                    val card = slot.getCard()
+                    val card = teammate.getCardAtSlot(slot.index)
                     if (!teammate.knows(slot.index) &&
                         playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) > 0 &&
                         connectingCardsAreKnown(card, playerPOV)
@@ -47,6 +47,6 @@ object DelayedPlayClue
         } else {
             stack.suite.getCardsBetween(stack.currentCard(), card)
         }
-        return playerPOV.allCardsAreKnown(missingCards)
+        return playerPOV.teamKnowsAllCards(missingCards)
     }
 }

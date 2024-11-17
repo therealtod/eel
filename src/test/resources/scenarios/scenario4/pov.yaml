@@ -2,11 +2,11 @@ id: 4
 description: "A board with multiple critical cards on chop"
 globally_available_info:
   suites:
-    - "no_var_red"
-    - "no_var_yellow"
-    - "no_var_green"
-    - "no_var_blue"
-    - "no_var_purple"
+    - "red"
+    - "yellow"
+    - "green"
+    - "blue"
+    - "purple"
   playing_stacks: [[], [], [], [], []]
   trash_pile: ["p4", "g5", "r2", "b1", "y4"]
   strikes: 0

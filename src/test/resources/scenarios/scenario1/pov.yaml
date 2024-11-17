@@ -2,11 +2,11 @@ id: 1
 description: "A board with a single critical card on chop"
 globally_available_info:
   suites:
-    - "no_var_red"
-    - "no_var_yellow"
-    - "no_var_green"
-    - "no_var_blue"
-    - "no_var_purple"
+    - "red"
+    - "yellow"
+    - "green"
+    - "blue"
+    - "purple"
   playing_stacks: [[], [], [], [], []]
   trash_pile: ["p4"]
   strikes: 0

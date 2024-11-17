@@ -7,13 +7,11 @@ import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 
 abstract class InterpretedSlot(
-    globalInfo: GloballyAvailableSlotInfo,
+    val globalInfo: GloballyAvailableSlotInfo,
 ): Slot {
     override val index = globalInfo.index
     override val positiveClues = globalInfo.positiveClues
     override val negativeClues = globalInfo.negativeClues
-
-    // abstract fun isKnown(playerPOV: PlayerPOV): Boolean
 
     override fun getEmpathy(visibleCards: List<HanabiCard>, suites: Set<Suite>): Set<HanabiCard> {
         return Utils.getCardEmpathy(
@@ -31,6 +29,4 @@ abstract class InterpretedSlot(
     open fun isClued(): Boolean {
         return positiveClues.isNotEmpty()
     }
-
-    // abstract fun getPossibleIdentities(playerPOV: PlayerPOV): Set<HanabiCard>
 }

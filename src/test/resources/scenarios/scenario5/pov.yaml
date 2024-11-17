@@ -2,11 +2,11 @@ id: 5
 description: "A board with a critical 1"
 globally_available_info:
   suites:
-    - "no_var_red"
-    - "no_var_yellow"
-    - "no_var_green"
-    - "no_var_blue"
-    - "no_var_purple"
+    - "red"
+    - "yellow"
+    - "green"
+    - "blue"
+    - "purple"
   playing_stacks: [[], [], [], [], []]
   trash_pile: ["r1", "r1", "g1"]
   strikes: 0

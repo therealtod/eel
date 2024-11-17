@@ -6,16 +6,16 @@ import eelst.ilike.engine.convention.hgroup.HGroupHelper.getChop
 import eelst.ilike.engine.convention.hgroup.HGroupHelper.hasChop
 import eelst.ilike.engine.convention.hgroup.HGroupHelper.isGloballyKnownPlayable
 import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.suite.NoVarBlue
-import eelst.ilike.game.entity.suite.NoVarGreen
-import eelst.ilike.game.entity.suite.NoVarPurple
-import eelst.ilike.game.entity.suite.NoVarRed
-import eelst.ilike.game.entity.suite.NoVarYellow
+import eelst.ilike.game.entity.suite.Blue
+import eelst.ilike.game.entity.suite.Green
+import eelst.ilike.game.entity.suite.Purple
+import eelst.ilike.game.entity.suite.Red
+import eelst.ilike.game.entity.suite.Yellow
 
 object CriticalSave
     : SaveClue(
     name = "Critical Save",
-    appliesTo = setOf(NoVarRed, NoVarYellow, NoVarGreen, NoVarBlue, NoVarPurple),
+    appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
 ) {
     override fun getActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
         val actions = mutableListOf<ConventionalAction>()
@@ -23,7 +23,7 @@ object CriticalSave
         playerPOV.teammates.forEach { teammate ->
             if (hasChop(teammate.hand)) {
                 val chop = getChop(teammate.hand)
-                val card = chop.getCard()
+                val card = teammate.getCardAtSlot(chop.index)
                 if (appliesTo.contains(card.suite) &&
                     card.rank != Rank.FIVE &&
                     playerPOV.globallyAvailableInfo.isCritical(card) &&

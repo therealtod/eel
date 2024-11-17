@@ -11,20 +11,16 @@ import eelst.ilike.game.entity.card.HanabiCard
 class TeammateHand(val slots: Set<VisibleSlot>): InterpretedHand, Set<InterpretedSlot> by slots {
     override val size = slots.size
 
-    override fun copiesOf(card: HanabiCard, playerPOV: PlayerPOV): Int {
-        return slots.count { it.getCard() == card }
+    override fun copiesOf(card: HanabiCard): Int {
+        return slots.count { it.card == card }
     }
 
     override fun getSlotsTouchedBy(clue: Clue): Set<Slot> {
-        return slots.filter { clue.touches(it.getCard()) }.toSet()
-    }
-
-    override fun getKnownSlots(playerPOV: PlayerPOV): Set<InterpretedSlot> {
-        return slots.filter { it.isKnown(playerPOV) }.toSet()
+        return slots.filter { clue.touches(it.card) }.toSet()
     }
 
     fun getCards(): List<HanabiCard> {
-        return slots.map { it.getCard() }
+        return slots.map { it.card}
     }
 
     fun getSlot(slotIndex: Int): VisibleSlot {

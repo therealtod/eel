@@ -11,7 +11,5 @@ abstract class Player(
     val playerIndex: Int,
     val globallyAvailableInfo: GloballyAvailableInfo,
     val hand: InterpretedHand,
-) {
-    val visibleCards: List<HanabiCard> = TODO()
+)
 
-}

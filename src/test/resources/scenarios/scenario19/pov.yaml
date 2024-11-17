@@ -2,11 +2,11 @@ id: 19
 description: "A board where y2 can be saved because the other visible copy is on Bob's chop"
 globally_available_info:
   suites:
-    - "no_var_red"
-    - "no_var_yellow"
-    - "no_var_green"
-    - "no_var_blue"
-    - "no_var_purple"
+    - "red"
+    - "yellow"
+    - "green"
+    - "blue"
+    - "purple"
   playing_stacks: [["r1"], [], [], ["b2"], []]
   trash_pile: []
   strikes: 0

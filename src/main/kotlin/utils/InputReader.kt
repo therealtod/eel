@@ -5,8 +5,8 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import eelst.ilike.engine.*
 import eelst.ilike.engine.factory.PlayerFactory
 import eelst.ilike.engine.impl.PersonalInfoImpl
-import eelst.ilike.engine.impl.PersonalTeammateInfoImpl
 import eelst.ilike.engine.impl.ActivePlayer
+import eelst.ilike.engine.impl.InfoOnTeammateImpl
 import eelst.ilike.game.*
 import eelst.ilike.game.action.Clue
 import eelst.ilike.game.action.ColorClue
@@ -26,19 +26,12 @@ object InputReader {
         val dto: BoardStateResource = mapper.readValue(fileText)
 
         val suites = dto.globallyAvailableInfo.suites.map { Suite.fromId(it) }.toSet()
-        val playingStacks = suites
-            .zip(dto.globallyAvailableInfo.playingStacks)
-            .associate {
-                it.first.id to PlayingStack(
-                    suite = it.first,
-                    cards = it.second.map { cardAbbreviation -> parseCard(cardAbbreviation, suites) }
-                )
-            }
+        val playingStacks = parsePlayingStacks(suites,dto.globallyAvailableInfo.playingStacks)
         val trashPile = TrashPile(dto.globallyAvailableInfo.trashPile.map { parseCard(it, suites) })
         val variant = Variant.getVariantByName(dto.globallyAvailableInfo.variant)
         val handSize = Common.getHandSize(dto.globallyAvailableInfo.players.size)
         val players = dto.globallyAvailableInfo.players.mapIndexed { index, playerDTO->
-            parsePlayer(
+            parseTeammateInfo(
                 dto = playerDTO,
                 playerIndex = index,
                 handSize = handSize,
@@ -47,7 +40,7 @@ object InputReader {
         }
         val globallyAvailableInfo = GloballyAvailableInfo(
             playingStacks = playingStacks,
-            suites = suites.associateBy { it.id },
+            suites = suites,
             trashPile = trashPile,
             strikes = dto.globallyAvailableInfo.strikes,
             efficiency = dto.globallyAvailableInfo.efficiency,
@@ -61,13 +54,13 @@ object InputReader {
             .teammates
             .associateBy { it.playerId }
             .mapValues {
-            parsePlayer(
+            parseTeammateInfo(
                 teammateDTO = it.value,
                 suites = suites,
             )
         }
         val personalInfo = PersonalInfoImpl(
-            ownHandInfo = parseOwnHandPersonalInfo(dto.playerPOV.hand, suites) ,
+            ownHandInfo = parseOwnHandPersonalInfo(dto.playerPOV.hand, handSize, suites),
             teammates = personalTeammatesInfo
         )
         return PlayerFactory.createActivePlayer(
@@ -77,11 +70,12 @@ object InputReader {
         )
     }
 
-    fun parsePlayer(
+    fun parseTeammateInfo(
         teammateDTO: TeammateDTO,
         suites: Set<Suite>,
-    ): TeammatePersonalInfo {
-        val slots = teammateDTO.hand.mapIndexed { index, slotDTO->
+    ): InfoOnTeammate{
+
+        val slotInfo = teammateDTO.hand.mapIndexed { index, slotDTO->
             getParsedVisibleSlot(
                 index = index,
                 slotDTO = slotDTO,
@@ -89,8 +83,10 @@ object InputReader {
                 playerId = teammateDTO.playerId
             )
         }
-        return PersonalTeammateInfoImpl(
-            slots = slots.toSet()
+
+        return InfoOnTeammateImpl(
+            slots = slotInfo.toSet(),
+            teammatePOVInfo = emptySet()
         )
     }
 
@@ -108,7 +104,8 @@ object InputReader {
                     positiveClues = parseSlotClues(slotDTO.positiveClues, playerId),
                     negativeClues = parseSlotClues(slotDTO.negativeClues, playerId),
                 ),
-                impliedIdentities = slotDTO.impliedIdentities.map { parseCard(it, suites) }.toSet()
+                impliedIdentities = slotDTO.impliedIdentities.map { parseCard(it, suites) }.toSet(),
+                suites = suites
             )
 
             else -> getParsedVisibleSlot(index, slotDTO, suites, playerId)
@@ -148,9 +145,6 @@ object InputReader {
                 cardAbbreviation = slotDTO.cardAbbreviation,
                 suites = suites,
             ),
-            impliedIdentities = slotDTO.impliedIdentities
-                .map { parseCard(cardAbbreviation = it, suites = suites) }
-                .toSet()
         )
     }
 
@@ -164,7 +158,7 @@ object InputReader {
         )
     }
 
-    fun parsePlayer(
+    fun parseTeammateInfo(
         dto: PlayerGloballyAvailableInfoDTO,
         playerIndex: Int,
         handSize: Int,
@@ -194,12 +188,25 @@ object InputReader {
         )
     }
 
-    fun parseOwnHandPersonalInfo(slots: List<SlotDTO>, suites: Set<Suite>): Set<PersonalSlotInfo> {
-        return slots.mapIndexed {index, slot->
+    fun parseOwnHandPersonalInfo(slots: List<SlotDTO>, handSize: Int, suites: Set<Suite>): Set<PersonalSlotInfo> {
+        return slots
+            .ifEmpty { List(handSize) { SlotDTO("x") } }
+            .mapIndexed {index, slot->
             PersonalSlotInfo(
                 slotIndex = index + 1,
                 impliedIdentities = slot.impliedIdentities.map { parseCard(it, suites) }.toSet()
             )
         }.toSet()
+    }
+
+    fun parsePlayingStacks(suites: Set<Suite>, playingStacksDto: List<List<String>>): Map<SuiteId,PlayingStack> {
+        return suites
+            .zip(playingStacksDto)
+            .associate {
+                it.first.id to PlayingStack(
+                    suite = it.first,
+                    cards = it.second.map { cardAbbreviation -> parseCard(cardAbbreviation, suites) }
+                )
+            }
     }
 }

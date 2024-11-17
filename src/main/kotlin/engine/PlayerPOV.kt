@@ -16,14 +16,20 @@ abstract class PlayerPOV(
 
     abstract fun getOwnKnownPlayableSlots(): Set<Slot>
 
-    abstract fun allCardsAreKnown(cards: Set<HanabiCard>): Boolean
+    abstract fun teamKnowsAllCards(cards: Set<HanabiCard>): Boolean
 
     abstract fun getOwnKnownSlots(): Set<Slot>
+
+    abstract fun getOwnKnownCards(): List<HanabiCard>
 
     fun getVisibleCards(): List<HanabiCard> {
         return globallyAvailableInfo.cardsOnStacks +
                 globallyAvailableInfo.trashPile.cards +
-                getOwnFullEmpathyCards() +
+                // getOwnFullEmpathyCards() +
                 teammates.flatMap { teammate-> teammate.hand.getCards() }
+    }
+
+    fun getCardsSeenByTeammate(playerId: PlayerId): List<HanabiCard> {
+        TODO()
     }
 }

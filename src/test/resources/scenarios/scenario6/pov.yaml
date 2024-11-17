@@ -2,11 +2,11 @@ id: 5
 description: "A board where Cathy knows r1 and Bob has a cluable r2"
 globally_available_info:
   suites:
-    - "no_var_red"
-    - "no_var_yellow"
-    - "no_var_green"
-    - "no_var_blue"
-    - "no_var_purple"
+    - "red"
+    - "yellow"
+    - "green"
+    - "blue"
+    - "purple"
   playing_stacks: [[], [], [], [], []]
   trash_pile: []
   strikes: 0

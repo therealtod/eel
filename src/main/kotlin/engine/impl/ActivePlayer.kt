@@ -12,7 +12,7 @@ class ActivePlayer(
     playerIndex: Int,
     hand: OwnHand,
     globallyAvailableInfo: GloballyAvailableInfo,
-    private val playerPOV: PlayerPOV,
+    val playerPOV: PlayerPOV,
 ): Player(
     playerId = playerId,
     playerIndex = playerIndex,

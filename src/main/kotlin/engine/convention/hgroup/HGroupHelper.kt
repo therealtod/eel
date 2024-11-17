@@ -27,15 +27,11 @@ object HGroupHelper {
     }
 
     fun isGloballyKnownPlayable(card: HanabiCard, playerPOV: PlayerPOV): Boolean {
-        /*
         val prerequisiteCards = card.getPrerequisiteCards()
         val playedCardsForSuite = playerPOV.globallyAvailableInfo.getStackForCard(card).cards
         val teammatesKnownCards = playerPOV.teammates.flatMap { it.getKnownCards() }
         val ownKnownCards = playerPOV.getOwnKnownCards()
         return (playedCardsForSuite + teammatesKnownCards + ownKnownCards).containsAll(prerequisiteCards)
-
-         */
-        TODO()
     }
 
     fun isLocked(hand: InterpretedHand): Boolean {
@@ -112,8 +108,11 @@ object HGroupHelper {
     ): Boolean {
         val promptedTeammateSlot = promptedSlots.firstOrNull { slot ->
             slot.isClued() &&
-                    slot.fromOwnerPOV(teammate.personalInfo.getSlotInfo(slot.index))
-                        .possibleIdentities.contains(card)
+                    teammate.getSlotFromTeammatePOV(slot.index)
+                        .getPossibleIdentities(
+                            visibleCards = playerPOV.getCardsSeenByTeammate(teammate.playerId)
+                        )
+                        .contains(card)
         } ?: return false
         val slotIdentity = teammate.hand.getSlot(promptedTeammateSlot.index).card
         return (slotIdentity == card) ||
@@ -161,7 +160,7 @@ object HGroupHelper {
         return true
     }
 
-    fun hasCardOnFinessePosition(card: HanabiCard, teammate: Teammate, playerPOV: PlayerPOV): Boolean {
+    fun hasCardOnFinessePosition(card: HanabiCard, teammate: Teammate): Boolean {
         if (hasFinessePosition(teammate.hand)) {
             val finessePosition = getFinessePosition(teammate.hand)
             return finessePosition == card

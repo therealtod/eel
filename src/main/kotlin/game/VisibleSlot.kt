@@ -6,16 +6,9 @@ import eelst.ilike.engine.PersonalSlotInfo
 import eelst.ilike.engine.PlayerPOV
 import eelst.ilike.game.entity.card.HanabiCard
 
-data class VisibleSlot(
-    val globalInfo: GloballyAvailableSlotInfo,
+class VisibleSlot(
+    globalInfo: GloballyAvailableSlotInfo,
     val card: HanabiCard
 ): InterpretedSlot(
     globalInfo = globalInfo,
-) {
-    fun fromOwnerPOV(personalSlotInfo: PersonalSlotInfo): OwnSlot {
-        return OwnSlot(
-            globalInfo = globalInfo,
-            impliedIdentities = personalSlotInfo.impliedIdentities
-        )
-    }
-}
+)

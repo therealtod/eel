@@ -3,8 +3,8 @@ package game
 import eelst.ilike.game.TrashPile
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.card.HanabiCard
-import eelst.ilike.game.entity.suite.NoVarGreen
-import eelst.ilike.game.entity.suite.NoVarRed
+import eelst.ilike.game.entity.suite.Green
+import eelst.ilike.game.entity.suite.Red
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
@@ -14,15 +14,15 @@ internal class TrashPileTest {
         val trashPile = TrashPile()
 
         val card1 = HanabiCard(
-            suite = NoVarRed,
+            suite = Red,
             rank = Rank.ONE
         )
         val card2 = HanabiCard(
-            suite = NoVarGreen,
+            suite = Green,
             rank = Rank.FIVE
         )
         val card3 = HanabiCard(
-            suite = NoVarRed,
+            suite = Red,
             rank = Rank.FOUR
         )
 
@@ -36,19 +36,19 @@ internal class TrashPileTest {
         val trashPile = TrashPile(
             cards = listOf(
                 HanabiCard(
-                    suite = NoVarRed,
+                    suite = Red,
                     rank = Rank.ONE
                 ),
                 HanabiCard(
-                    suite = NoVarRed,
+                    suite = Red,
                     rank = Rank.ONE
                 ),
                 HanabiCard(
-                    suite = NoVarGreen,
+                    suite = Green,
                     rank = Rank.FIVE
                 ),
                 HanabiCard(
-                    suite = NoVarRed,
+                    suite = Red,
                     rank = Rank.FOUR
                 )
             )
@@ -56,19 +56,19 @@ internal class TrashPileTest {
 
 
         val card1 = HanabiCard(
-            suite = NoVarRed,
+            suite = Red,
             rank = Rank.ONE
         )
         val card2 = HanabiCard(
-            suite = NoVarGreen,
+            suite = Green,
             rank = Rank.FIVE
         )
         val card3 = HanabiCard(
-            suite = NoVarRed,
+            suite = Red,
             rank = Rank.FOUR
         )
         val card4 = HanabiCard(
-            suite = NoVarRed,
+            suite = Red,
             rank = Rank.TWO
         )
 

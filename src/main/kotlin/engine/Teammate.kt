@@ -1,9 +1,9 @@
 package eelst.ilike.engine
 
+import eelst.ilike.engine.impl.OwnHand
 import eelst.ilike.engine.impl.TeammateHand
 import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.PlayerId
-import eelst.ilike.game.VisibleSlot
 import eelst.ilike.game.entity.card.HanabiCard
 
 class Teammate(
@@ -11,26 +11,43 @@ class Teammate(
     val seatsGap: Int,
     val globallyAvailableInfo: GloballyAvailableInfo,
     val hand: TeammateHand,
-    val personalInfo: TeammatePersonalInfo,
+    val personalInfo: PersonalInfo,
+    val visibleCards: List<HanabiCard>,
 ) {
-    val visibleCards: List<HanabiCard> = TODO()
+    private val playerHandGlobalInfo = globallyAvailableInfo.getPlayerInfo(playerId).hand
+    private val ownHand: OwnHand
+
+
+    init {
+        val slots = playerHandGlobalInfo.map {
+            OwnSlot(
+                impliedIdentities = personalInfo.getOwnSlotInfo(it.index).impliedIdentities,
+                globalInfo = playerHandGlobalInfo.elementAt(it.index -1 ),
+                suites = globallyAvailableInfo.suites
+            )
+        }
+        ownHand = OwnHand(slots.toSet())
+    }
 
     fun playsBefore(teammate: Teammate): Boolean {
         return seatsGap < teammate.seatsGap
     }
 
     fun getKnownCards(): List<HanabiCard> {
-        TODO()
-        // return playerPOV.hand.filter { it.isKnown(playerPOV) }.map { it.getCardIdentity(playerPOV) }
+        return ownHand.getKnownCards(visibleCards)
     }
 
     fun knows(slotIndex: Int): Boolean {
-        return hand.getSlot(slotIndex)
-            .fromOwnerPOV(personalSlotInfo = personalInfo.getSlotInfo(slotIndex))
-            .isKnown()
+        return ownHand.getSlot(slotIndex).isKnown(
+            visibleCards = visibleCards,
+        )
     }
 
-    fun getSlot(slotIndex: Int): VisibleSlot{
-        return hand.getSlot(slotIndex)
+    fun getSlotFromTeammatePOV(slotIndex: Int): OwnSlot {
+        return ownHand.getSlot(slotIndex)
+    }
+
+    fun getCardAtSlot(slotIndex: Int): HanabiCard {
+        return hand.getSlot(slotIndex).card
     }
 }

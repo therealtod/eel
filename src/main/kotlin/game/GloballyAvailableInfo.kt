@@ -7,7 +7,7 @@ import eelst.ilike.utils.Common
 
 data class GloballyAvailableInfo(
     val playingStacks: Map<SuiteId, PlayingStack>,
-    val suites: Map<SuiteId, Suite>,
+    val suites: Set<Suite>,
     val trashPile: TrashPile,
     val strikes: Int,
     val efficiency: Float,

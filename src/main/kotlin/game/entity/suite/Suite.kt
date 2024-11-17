@@ -77,20 +77,20 @@ abstract class Suite(
 
     companion object {
         private val registeredSuites = mapOf(
-            "no_var_red" to NoVarRed,
-            "no_var_yellow" to NoVarYellow,
-            "no_var_green" to NoVarGreen,
-            "no_var_blue" to NoVarBlue,
-            "no_var_purple" to NoVarPurple
+            "no_var_red" to Red,
+            "no_var_yellow" to Yellow,
+            "no_var_green" to Green,
+            "no_var_blue" to Blue,
+            "no_var_purple" to Purple
         )
 
         fun fromId(suiteId: SuiteId): Suite {
             val registeredSuites = mapOf(
-                "no_var_red" to NoVarRed,
-                "no_var_yellow" to NoVarYellow,
-                "no_var_green" to NoVarGreen,
-                "no_var_blue" to NoVarBlue,
-                "no_var_purple" to NoVarPurple
+                "red" to Red,
+                "yellow" to Yellow,
+                "green" to Green,
+                "blue" to Blue,
+                "purple" to Purple
             )
             return registeredSuites[suiteId]
                 ?: throw IllegalArgumentException("The suite with id $suiteId is unregistered")

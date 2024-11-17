@@ -2,11 +2,11 @@ id: 11
 description: "A board with one player with a 5 on chop"
 globally_available_info:
   suites:
-    - "no_var_red"
-    - "no_var_yellow"
-    - "no_var_green"
-    - "no_var_blue"
-    - "no_var_purple"
+    - "red"
+    - "yellow"
+    - "green"
+    - "blue"
+    - "purple"
   playing_stacks: [["r1"], [], [], [], []]
   trash_pile: []
   strikes: 0

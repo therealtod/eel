@@ -2,11 +2,11 @@ id: 8
 description: "A board where is possible to give a delayed play clue with multiple stacked cards"
 globally_available_info:
   suites:
-    - "no_var_red"
-    - "no_var_yellow"
-    - "no_var_green"
-    - "no_var_blue"
-    - "no_var_purple"
+    - "red"
+    - "yellow"
+    - "green"
+    - "blue"
+    - "purple"
   playing_stacks: [["r1"], [], [], [], []]
   trash_pile: ["p4"]
   strikes: 0
