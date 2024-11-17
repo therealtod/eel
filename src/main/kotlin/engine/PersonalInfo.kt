@@ -7,4 +7,6 @@ interface PersonalInfo {
     fun getOwnSlotInfo(slotIndex: Int): PersonalSlotInfo
 
     fun getTeammateHand(playerId: PlayerId): TeammateHand
+
+    fun getTeammatePersonalInfo(playerId: PlayerId): TeammatePersonalInfo
 }

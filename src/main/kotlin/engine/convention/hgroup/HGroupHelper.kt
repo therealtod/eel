@@ -1,10 +1,10 @@
 package eelst.ilike.engine.convention.hgroup
 
 import eelst.ilike.engine.InterpretedHand
-import eelst.ilike.engine.InterpretedSlot
 import eelst.ilike.engine.PlayerPOV
 import eelst.ilike.engine.Teammate
 import eelst.ilike.game.Slot
+import eelst.ilike.game.VisibleSlot
 import eelst.ilike.game.action.Clue
 import eelst.ilike.game.entity.card.HanabiCard
 
@@ -107,14 +107,15 @@ object HGroupHelper {
     fun isPromptedCorrectly(
         card: HanabiCard,
         teammate: Teammate,
-        promptedSlots: Set<InterpretedSlot> = emptySet(),
+        promptedSlots: Set<VisibleSlot> = emptySet(),
         playerPOV: PlayerPOV,
     ): Boolean {
         val promptedTeammateSlot = promptedSlots.firstOrNull { slot ->
             slot.isClued() &&
-                    teammate.getSlot(slot.index).getPossibleIdentities(teammate.pov).contains(card)
+                    slot.fromOwnerPOV(teammate.personalInfo.getSlotInfo(slot.index))
+                        .possibleIdentities.contains(card)
         } ?: return false
-        val slotIdentity = teammate.hand.getSlot(promptedTeammateSlot.index).getCard()
+        val slotIdentity = teammate.hand.getSlot(promptedTeammateSlot.index).card
         return (slotIdentity == card) ||
                 (playerPOV.globallyAvailableInfo.isImmediatelyPlayable(card)
                         && isPromptedCorrectly(
@@ -163,7 +164,7 @@ object HGroupHelper {
     fun hasCardOnFinessePosition(card: HanabiCard, teammate: Teammate, playerPOV: PlayerPOV): Boolean {
         if (hasFinessePosition(teammate.hand)) {
             val finessePosition = getFinessePosition(teammate.hand)
-            return finessePosition.getCard() == card
+            return finessePosition == card
         } else return false
     }
 }

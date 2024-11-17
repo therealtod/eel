@@ -1,7 +1,6 @@
 package eelst.ilike.engine
 
 import eelst.ilike.engine.impl.TeammateHand
-import eelst.ilike.engine.impl.TeammatePOV
 import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.VisibleSlot
@@ -12,8 +11,10 @@ class Teammate(
     val seatsGap: Int,
     val globallyAvailableInfo: GloballyAvailableInfo,
     val hand: TeammateHand,
-    val playerPOV: PlayerPOV
+    val personalInfo: TeammatePersonalInfo,
 ) {
+    val visibleCards: List<HanabiCard> = TODO()
+
     fun playsBefore(teammate: Teammate): Boolean {
         return seatsGap < teammate.seatsGap
     }
@@ -23,8 +24,10 @@ class Teammate(
         // return playerPOV.hand.filter { it.isKnown(playerPOV) }.map { it.getCardIdentity(playerPOV) }
     }
 
-    fun knows(slotIndex: Int, playerPOV: PlayerPOV): Boolean {
-        return hand.getSlot(slotIndex).isKnown(playerPOV)
+    fun knows(slotIndex: Int): Boolean {
+        return hand.getSlot(slotIndex)
+            .fromOwnerPOV(personalSlotInfo = personalInfo.getSlotInfo(slotIndex))
+            .isKnown()
     }
 
     fun getSlot(slotIndex: Int): VisibleSlot{

@@ -1,23 +1,28 @@
 package eelst.ilike.engine
 
 import eelst.ilike.game.GloballyAvailableSlotInfo
+import eelst.ilike.game.Utils
 import eelst.ilike.game.entity.card.HanabiCard
+import eelst.ilike.game.entity.suite.Suite
 
 class OwnSlot(
-    globalInfo: GloballyAvailableSlotInfo,
     private val impliedIdentities: Set<HanabiCard>,
-) : InterpretedSlot(globalInfo, impliedIdentities) {
+    globalInfo: GloballyAvailableSlotInfo,
+    visibleCards: List<HanabiCard>,
+    suites: Set<Suite>
+) : InterpretedSlot(globalInfo) {
+    val possibleIdentities = impliedIdentities
+        .ifEmpty { Utils.getCardEmpathy(
+            visibleCards = visibleCards,
+            positiveClues = positiveClues,
+            negativeClues = negativeClues,
+            suites = suites,
+        )
+        }
 
-    override fun getCard(): HanabiCard {
-        TODO("Not yet implemented")
-    }
 
-    override fun getPossibleIdentities(playerPOV: PlayerPOV): Set<HanabiCard> {
-        return impliedIdentities.ifEmpty { getEmpathy(playerPOV) }
-    }
-
-    override fun isKnown(playerPOV: PlayerPOV): Boolean {
-        return getPossibleIdentities(playerPOV).size == 1
+    fun isKnown(): Boolean {
+        return possibleIdentities.size == 1
     }
 
     override fun isClued(): Boolean {

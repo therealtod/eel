@@ -4,20 +4,14 @@ import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.PlayerId
+import eelst.ilike.game.entity.card.HanabiCard
 
 abstract class Player(
     val playerId: PlayerId,
     val playerIndex: Int,
     val globallyAvailableInfo: GloballyAvailableInfo,
     val hand: InterpretedHand,
-    val playerPOV: PlayerPOV,
 ) {
-    fun getActions(conventionSet: ConventionSet): Set<ConventionalAction> {
-        val candidateActions = conventionSet.getTechs().flatMap { it.getActions(playerPOV) }
-        return getPrunedAction(candidateActions)
-    }
+    val visibleCards: List<HanabiCard> = TODO()
 
-    private fun getPrunedAction(actions: Collection<ConventionalAction>): Set<ConventionalAction> {
-        return actions.toSet()
-    }
 }

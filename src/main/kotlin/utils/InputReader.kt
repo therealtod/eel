@@ -80,7 +80,7 @@ object InputReader {
     fun parsePlayer(
         teammateDTO: TeammateDTO,
         suites: Set<Suite>,
-    ): PersonalTeammateInfo {
+    ): TeammatePersonalInfo {
         val slots = teammateDTO.hand.mapIndexed { index, slotDTO->
             getParsedVisibleSlot(
                 index = index,
