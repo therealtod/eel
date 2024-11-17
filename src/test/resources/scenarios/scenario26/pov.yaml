@@ -1,0 +1,59 @@
+id: 26
+description: "A board where a teammate can give a simple prompt to Bob"
+globally_available_info:
+  suites:
+    - "red"
+    - "yellow"
+    - "green"
+    - "blue"
+    - "purple"
+  playing_stacks: [ [ "r1" ], [ ], [ ], [ "b2" ], [ ] ]
+  trash_pile: [ ]
+  strikes: 0
+  efficiency: 1.00
+  pace: 15
+  clue_tokens: 5
+  players:
+    - player_id: "Alice"
+    - player_id: "Bob"
+      slot_clues:
+        - positive_clues: [ ]
+          negative_clues: [ ]
+        - positive_clues: [ ]
+          negative_clues: [ ]
+        - positive_clues: [ 2 ]
+          negative_clues: [ ]
+        - positive_clues: [ 2 ]
+          negative_clues: [ ]
+    - player_id: "Cathy"
+      slot_clues:
+        - positive_clues: [ ]
+          negative_clues: [ ]
+        - positive_clues: [ "BLUE" ]
+          negative_clues: [ ]
+        - positive_clues: [ ]
+          negative_clues: [ ]
+        - positive_clues: [ ]
+          negative_clues: [ ]
+    - player_id: "Donald"
+player_pov:
+  player_id: "Alice"
+  teammates:
+    - player_id: "Bob"
+      hand:
+        - card: "b4"
+        - card: "r4"
+        - card: "r2"
+        - card: "p2"
+    - player_id: "Cathy"
+      hand:
+        - card: "p5"
+        - card: "b3"
+        - card: "y4"
+        - card: "b1"
+    - player_id: "Donald"
+      hand:
+        - card: "b5"
+        - card: "y1"
+        - card: "y4"
+        - card: "g4"

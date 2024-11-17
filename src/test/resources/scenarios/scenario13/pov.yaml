@@ -2,56 +2,57 @@ id: 13
 description: "A board with a good prompt and a wrong prompt that cannot be patched"
 globally_available_info:
   suites:
-    - "no_var_red"
-    - "no_var_yellow"
-    - "no_var_green"
-    - "no_var_blue"
-    - "no_var_purple"
-  playing_stacks: [["r1"], [], [], ["b2"], []]
-  trash_pile: []
+    - "red"
+    - "yellow"
+    - "green"
+    - "blue"
+    - "purple"
+  playing_stacks: [ [ "r1" ], [ ], [ ], [ "b2" ], [ ] ]
+  trash_pile: [ ]
   strikes: 0
   efficiency: 1.00
   pace: 15
-  score: 0
+  clue_tokens: 5
+  players:
+    - player_id: "Alice"
+    - player_id: "Bob"
+      slot_clues:
+        - positive_clues: [ ]
+          negative_clues: [ ]
+        - positive_clues: [ ]
+          negative_clues: [ ]
+        - positive_clues: [ 2 ]
+          negative_clues: [ ]
+        - positive_clues: [ 2 ]
+          negative_clues: [ ]
+        - positive_clues: [ ]
+          negative_clues: [ ]
+    - player_id: "Cathy"
+      slot_clues:
+        - positive_clues: [ ]
+          negative_clues: [ ]
+        - positive_clues: [ "BLUE" ]
+          negative_clues: [ ]
+        - positive_clues: [ ]
+          negative_clues: [ ]
+        - positive_clues: [ ]
+          negative_clues: [ ]
+        - positive_clues: [ ]
+          negative_clues: [ ]
 player_pov:
   player_id: "Alice"
-  hand:
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
   teammates:
     - player_id: "Bob"
-      player_pov:
-        hand:
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-            positive_clues: [2]
-          - card_abbreviation: "x"
-            positive_clues: [2]
-          - card_abbreviation: "x"
-        teammates: []
       hand:
-        - card_abbreviation: "b4"
-        - card_abbreviation: "r4"
-        - card_abbreviation: "p2"
-        - card_abbreviation: "r2"
-        - card_abbreviation: "r1"
+        - card: "b4"
+        - card: "r4"
+        - card: "p2"
+        - card: "r2"
+        - card: "r1"
     - player_id: "Cathy"
-      player_pov:
-        hand:
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-            positive_clues: ["BLUE"]
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-        teammates: []
       hand:
-        - card_abbreviation: "p5"
-        - card_abbreviation: "b3"
-        - card_abbreviation: "y4"
-        - card_abbreviation: "b1"
-        - card_abbreviation: "r3"
+        - card: "p5"
+        - card: "b3"
+        - card: "y4"
+        - card: "b1"
+        - card: "r3"

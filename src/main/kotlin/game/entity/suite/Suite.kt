@@ -1,20 +1,20 @@
 package eelst.ilike.game.entity.suite
 
-import eelst.ilike.game.action.Clue
-import eelst.ilike.game.action.ColorClue
-import eelst.ilike.game.action.RankClue
+import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.card.HanabiCard
+import eelst.ilike.utils.Configuration
 
 abstract class Suite(
     val id: SuiteId,
     val name: String,
     val abbreviations: Set<Char>,
-    val ranks: Set<Rank> = setOf(Rank.ONE, Rank.TWO, Rank.THREE, Rank.FOUR, Rank.FIVE),
+    private val ranks: Set<Rank> = setOf(Rank.ONE, Rank.TWO, Rank.THREE, Rank.FOUR, Rank.FIVE),
     val suiteDirection: SuiteDirection = SuiteDirection.UP,
 ) {
     val maxRank = ranks.last()
+
     // For hashing purposes
     private val copiesValuesList = Rank.entries.map { copiesOf(it) }
 
@@ -35,10 +35,11 @@ abstract class Suite(
         }
     }
 
-    open fun clueTouches(card: HanabiCard, clue: Clue): Boolean {
-        return when(clue) {
-            is RankClue -> getRanksTouching(card.rank).contains(clue.rank)
-            is ColorClue -> getColorsTouching(card.rank).contains(clue.color)
+    open fun clueTouches(card: HanabiCard, clueValue: ClueValue): Boolean {
+        return when (clueValue) {
+            is Rank -> getRanksTouching(card.rank).contains(clueValue)
+            is Color -> getColorsTouching(card.rank).contains(clueValue)
+            else -> throw IllegalArgumentException("Unsupported clue value $clueValue")
         }
     }
 
@@ -76,23 +77,8 @@ abstract class Suite(
     }
 
     companion object {
-        private val registeredSuites = mapOf(
-            "no_var_red" to NoVarRed,
-            "no_var_yellow" to NoVarYellow,
-            "no_var_green" to NoVarGreen,
-            "no_var_blue" to NoVarBlue,
-            "no_var_purple" to NoVarPurple
-        )
-
         fun fromId(suiteId: SuiteId): Suite {
-            val registeredSuites = mapOf(
-                "no_var_red" to NoVarRed,
-                "no_var_yellow" to NoVarYellow,
-                "no_var_green" to NoVarGreen,
-                "no_var_blue" to NoVarBlue,
-                "no_var_purple" to NoVarPurple
-            )
-            return registeredSuites[suiteId]
+            return Configuration.registeredSuitesMap[suiteId]
                 ?: throw IllegalArgumentException("The suite with id $suiteId is unregistered")
         }
 
@@ -100,5 +86,9 @@ abstract class Suite(
             return suites.firstOrNull { it.abbreviations.contains(abbreviation) }
                 ?: Unknown
         }
+    }
+
+    override fun toString(): String {
+        return name
     }
 }

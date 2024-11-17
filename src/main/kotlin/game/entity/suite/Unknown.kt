@@ -1,22 +1,14 @@
 package eelst.ilike.game.entity.suite
 
-import eelst.ilike.game.action.Clue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.card.HanabiCard
 
-object Unknown: Suite(
+object Unknown : Suite(
     id = "unknown",
     name = "Unknown",
     abbreviations = setOf('x'),
 ) {
-    override fun clueTouches(
-        card: HanabiCard,
-        clue: Clue
-    ): Boolean {
-        return super.clueTouches(card, clue)
-    }
-
     override fun cardAfter(card: HanabiCard): HanabiCard {
         TODO("Not yet implemented")
     }

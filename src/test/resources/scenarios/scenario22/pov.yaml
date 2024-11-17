@@ -1,0 +1,43 @@
+id: 22
+description: "A board where Alice can receive a delayed play clue"
+globally_available_info:
+  suites:
+    - "red"
+    - "yellow"
+    - "green"
+    - "blue"
+    - "purple"
+  playing_stacks: [ [ "r1" ], [ ], [ ], [ ], [ ] ]
+  trash_pile: [ "p4" ]
+  strikes: 0
+  efficiency: 1.00
+  pace: 15
+  clue_tokens: 5
+  players:
+    - player_id: "Alice"
+    - player_id: "Bob"
+    - player_id: "Cathy"
+    - player_id: "Donald"
+player_pov:
+  player_id: "Alice"
+  hand: [ "x", "x", "r2", "x" ]
+  teammates:
+    - player_id: "Bob"
+      hand:
+        - card: "r1"
+        - card: "y5"
+        - card: "b4"
+        - card: "b2"
+    - player_id: "Cathy"
+      hand:
+        - card: "p3"
+        - card: "g4"
+        - card: "y1"
+        - card: "p4"
+    - player_id: "Donald"
+      hand:
+        - card: "y3"
+        - card: "r1"
+        - card: "b4"
+        - card: "r3"
+          thinks: "r3"

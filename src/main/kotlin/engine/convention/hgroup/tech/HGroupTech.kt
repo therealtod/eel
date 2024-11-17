@@ -1,81 +1,45 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.Teammate
-import eelst.ilike.engine.convention.ConventionTech
-import eelst.ilike.engine.convention.ConventionalAction
-import eelst.ilike.engine.convention.hgroup.HGroupHelper.getClueFocus
-import eelst.ilike.game.Slot
-import eelst.ilike.game.action.Clue
-import eelst.ilike.game.action.ColorClue
-import eelst.ilike.game.action.RankClue
-import eelst.ilike.game.entity.Color
-import eelst.ilike.game.entity.Rank
+import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.game.entity.card.HanabiCard
+import eelst.ilike.game.variant.Variant
 
-abstract class HGroupTech(
-    override val name: String,
-    val takesPrecedenceOver: Set<HGroupTech>,
-): ConventionTech {
-    protected fun getAllFocusingClues(
-        card: HanabiCard,
-        slot: Slot,
-        teammate: Teammate,
-    ): Set<Clue> {
-        val ranks = card.getRanksTouchingCard()
-        val colors = card.getColorsTouchingCard()
-        return getRankCluesFocusing(
-            slot = slot,
-            teammate = teammate,
-            ranks = ranks,
-        ) +
-                getColorCluesFocusing(
-                    slot = slot,
-                    teammate = teammate,
-                    colors = colors,
-                )
-    }
-    protected fun getAllFocusingActions(
-        card: HanabiCard,
-        slot: Slot,
-        teammate: Teammate,
-    ): Set<ConventionalAction> {
-        val clues = getAllFocusingClues(
-            card = card,
-            slot = slot,
-            teammate = teammate
-        )
-        return clues.map {
-            ConventionalAction(
-                action = it,
-                tech = this
-            )
-        }.toSet()
+interface HGroupTech : ConventionTech {
+    fun appliesTo(card: HanabiCard, variant: Variant): Boolean
+
+    /*
+
+    fun getFocusedSlot(
+        hand: InterpretedHand,
+        clueValue: ClueValue,
+    ): Slot {
+        val touchedSlotsIndexes = hand.getSlotsTouchedBy(clueValue)
+        return getFocusedSlot(hand, touchedSlotsIndexes.map { it.index }.toSet())
     }
 
-    protected fun getRankCluesFocusing(
-        slot: Slot,
-        teammate: Teammate,
-        ranks: Set<Rank>,
-    ): Set<Clue> {
-        return ranks.map {
-            RankClue(rank = it, receiver = teammate.playerId)
+    fun getFocusedSlot(
+        hand: InterpretedHand,
+        touchedSlotsIndexes: Set<Int>,
+    ): Slot {
+        require(touchedSlotsIndexes.isNotEmpty()) {
+            "Can't determine the focus of a clue which touches no slots"
         }
-            .filter { getClueFocus(clue = it, hand = teammate.hand) == slot }
-            .toSet()
-    }
-
-    protected fun getColorCluesFocusing(
-        slot: Slot,
-        teammate: Teammate,
-        colors: Set<Color>,
-    ): Set<Clue> {
-        return colors.map {
-            ColorClue(color = it, receiver = teammate.playerId)
+        val touchedSlots = touchedSlotsIndexes.map { hand.getSlot(it) }
+        if (hasChop(hand)) {
+            val chop = getChop(hand)
+            return if (touchedSlotsIndexes.contains(chop.index)) {
+                chop
+            } else {
+                (touchedSlots.firstOrNull { !it.isTouched() } ?: touchedSlots.first())
+            }
+        } else {
+            return touchedSlots.first()
         }
-            .filter { getClueFocus(clue = it, hand = teammate.hand) == slot }
-            .toSet()
     }
 
-    override fun toString() = name
+     */
+
+    override fun overrides(otherTech: ConventionTech): Boolean {
+        return false
+    }
 }
-

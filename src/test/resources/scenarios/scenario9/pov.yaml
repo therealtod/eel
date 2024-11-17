@@ -2,57 +2,35 @@ id: 9
 description: "A board where r1 is played on the stack and the only direct play clue available is on r2"
 globally_available_info:
   suites:
-    - "no_var_red"
-    - "no_var_yellow"
-    - "no_var_green"
-    - "no_var_blue"
-    - "no_var_purple"
-  playing_stacks: [["r1"], [], [], [], []]
-  trash_pile: []
+    - "red"
+    - "yellow"
+    - "green"
+    - "blue"
+    - "purple"
+  playing_stacks: [ [ "r1" ], [ ], [ ], [ ], [ ] ]
+  trash_pile: [ ]
   strikes: 0
   efficiency: 1.00
   pace: 15
-  score: 0
+  clue_tokens: 5
   players:
     - player_id: "Alice"
     - player_id: "Bob"
     - player_id: "Cathy"
 player_pov:
   player_id: "Alice"
-  hand:
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
   teammates:
     - player_id: "Bob"
-      player_pov:
-        hand:
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-        teammates: []
       hand:
-        - card_abbreviation: "g5"
-        - card_abbreviation: "r4"
-        - card_abbreviation: "g2"
-        - card_abbreviation: "b2"
-        - card_abbreviation: "r1"
+        - card: "g5"
+        - card: "r4"
+        - card: "g2"
+        - card: "b2"
+        - card: "r1"
     - player_id: "Cathy"
-      player_pov:
-        hand:
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-        teammates: []
       hand:
-        - card_abbreviation: "p5"
-        - card_abbreviation: "p3"
-        - card_abbreviation: "y4"
-        - card_abbreviation: "r2"
-        - card_abbreviation: "g3"
+        - card: "p5"
+        - card: "p3"
+        - card: "y4"
+        - card: "r2"
+        - card: "g3"

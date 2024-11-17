@@ -1,22 +1,28 @@
 package eelst.ilike.game
 
+import eelst.ilike.game.entity.PlayingStack
+import eelst.ilike.game.entity.TrashPile
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
+import eelst.ilike.game.entity.suite.SuiteId
 import eelst.ilike.game.variant.Variant
+import eelst.ilike.utils.Utils
 
 data class GloballyAvailableInfo(
     val playingStacks: Map<SuiteId, PlayingStack>,
-    val suites: Map<SuiteId, Suite>,
+    val suites: Set<Suite>,
     val trashPile: TrashPile,
     val strikes: Int,
     val efficiency: Float,
     val pace: Int,
-    val score: Int,
     val variant: Variant,
+    val clueTokens: Int,
     val players: Map<PlayerId, GloballyAvailablePlayerInfo>,
 ) {
-    val cardsInTrash = trashPile.cards
     val cardsOnStacks = playingStacks.flatMap { it.value.cards }
+    val handsSize = Utils.getHandSize(players.size)
+    val numberOfPlayers = players.size
+    val score = cardsOnStacks.size
 
     fun getStackForCard(card: HanabiCard): PlayingStack {
         val suiteId = card.suite.id
@@ -24,7 +30,7 @@ data class GloballyAvailableInfo(
             ?: throw IllegalArgumentException("No stack in this game corresponding to the card $card")
     }
 
-    fun isAlreadyPlayed(card: HanabiCard): Boolean {
+    private fun isAlreadyPlayed(card: HanabiCard): Boolean {
         return getStackForCard(card).contains(card)
     }
 
@@ -40,7 +46,7 @@ data class GloballyAvailableInfo(
     fun getGlobalAwayValue(card: HanabiCard): Int {
         val stack = getStackForCard(card)
         val suite = card.suite
-        return if (stack.isEmpty()){
+        return if (stack.isEmpty()) {
             suite.getPlayingOrder(card) - 1
         } else {
             suite.getPlayingOrder(card) - suite.getPlayingOrder(stack.currentCard()) - 1

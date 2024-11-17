@@ -1,0 +1,41 @@
+id: 27
+description: "A board where y2 cannot be saved from Alice's POV because of the visible rule"
+globally_available_info:
+  suites:
+    - "red"
+    - "yellow"
+    - "green"
+    - "blue"
+    - "purple"
+  playing_stacks: [ [ "r1" ], [ ], [ ], [ "b2" ], [ ] ]
+  trash_pile: [ ]
+  strikes: 0
+  efficiency: 1.00
+  pace: 15
+  clue_tokens: 5
+  players:
+    - player_id: "Alice"
+    - player_id: "Bob"
+    - player_id: "Cathy"
+    - player_id: "Donald"
+player_pov:
+  player_id: "Alice"
+  teammates:
+    - player_id: "Bob"
+      hand:
+        - card: "y2"
+        - card: "b3"
+        - card: "y4"
+        - card: "b1"
+    - player_id: "Cathy"
+      hand:
+        - card: "r2"
+        - card: "r3"
+        - card: "p2"
+        - card: "y2"
+    - player_id: "Donald"
+      hand:
+        - card: "g4"
+        - card: "g1"
+        - card: "b4"
+        - card: "r2"

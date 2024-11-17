@@ -1,34 +1,53 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.PlayerPOV
-import eelst.ilike.engine.convention.ConventionalAction
-import eelst.ilike.engine.convention.hgroup.HGroupHelper.getChop
-import eelst.ilike.game.action.RankClue
+import eelst.ilike.engine.action.ObservedClue
+import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
+import eelst.ilike.engine.factory.KnowledgeFactory
+import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.suite.NoVarBlue
-import eelst.ilike.game.entity.suite.NoVarGreen
-import eelst.ilike.game.entity.suite.NoVarPurple
-import eelst.ilike.game.entity.suite.NoVarRed
-import eelst.ilike.game.entity.suite.NoVarYellow
+import eelst.ilike.game.entity.action.ClueAction
+import eelst.ilike.game.entity.action.RankClueAction
+import eelst.ilike.game.entity.card.HanabiCard
+import eelst.ilike.game.variant.Variant
 
-object FiveSave
-    : SaveClue(
-    name = "5-Save",
-    appliesTo = setOf(NoVarRed, NoVarYellow, NoVarGreen, NoVarBlue, NoVarPurple),
-) {
-    override fun getActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
-        val actions = mutableListOf<ConventionalAction>()
-        playerPOV.teammates.forEach { teammate ->
-            val chop = getChop(teammate.hand)
-            if (chop.getCard().rank == Rank.FIVE) {
+object FiveSave : SaveClue("5-Save") {
+    override fun appliesTo(card: HanabiCard, variant: Variant): Boolean {
+        return true
+    }
+
+    override fun teammateSlotMatchesCondition(teammate: Teammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
+        val chop = getChop(teammate.hand)
+        if (chop.index != slotIndex) {
+            return false
+        }
+        val card = teammate.getCardAtSlot(slotIndex)
+        return card.rank == Rank.FIVE
+    }
+
+    override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
+        val actions = mutableListOf<ClueAction>()
+        playerPOV.forEachTeammate { teammate ->
+            val chop = getChop(teammate.ownHand)
+            if (teammateSlotMatchesCondition(teammate, chop.index, playerPOV)) {
                 actions.add(
-                    ConventionalAction(
-                        action = RankClue(rank = Rank.FIVE, receiver = teammate.playerId),
-                        tech = this
-                    )
+                    RankClueAction(
+                        clueGiver = playerPOV.playerId,
+                        clueReceiver = teammate.playerId,
+                        rank = Rank.FIVE,
+                    ),
                 )
             }
         }
         return actions.toSet()
+    }
+
+    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
+        return true
+    }
+
+    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PersonalKnowledge {
+        return KnowledgeFactory.createEmptyPersonalKnowledge()
     }
 }

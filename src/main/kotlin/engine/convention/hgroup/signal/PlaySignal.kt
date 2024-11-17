@@ -1,3 +1,3 @@
 package eelst.ilike.engine.convention.hgroup.signal
 
-sealed class PlaySignal(name: String): Signal(name)
+sealed class PlaySignal(name: String) : Signal(name)

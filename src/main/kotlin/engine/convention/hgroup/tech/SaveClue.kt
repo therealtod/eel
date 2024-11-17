@@ -1,14 +1,17 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.game.entity.suite.Suite
+import eelst.ilike.engine.convention.hgroup.HGroupCommon
+import eelst.ilike.engine.convention.tech.ConventionTech
+import eelst.ilike.engine.hand.InterpretedHand
 
 
-sealed class SaveClue(name: String, val appliesTo: Set<Suite>) : HGroupTech(
-    name = name,
-    takesPrecedenceOver = setOf(
-        DelayedPlayClue,
-        DirectPlayClue,
-        SimpleFinesse,
-        SimplePrompt,
-    )
-)
+sealed class SaveClue(name: String) : HGroupClue(name) {
+    override fun overrides(otherTech: ConventionTech): Boolean {
+        return otherTech !is SaveClue
+    }
+
+    override fun matchesClueBySlot(focusIndex: Int, hand: InterpretedHand): Boolean {
+        val chop = HGroupCommon.getChop(hand)
+        return focusIndex == chop.index
+    }
+}

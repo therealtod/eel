@@ -1,44 +1,75 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.PlayerPOV
-import eelst.ilike.engine.convention.ConventionalAction
-import eelst.ilike.engine.convention.hgroup.HGroupHelper.getChop
-import eelst.ilike.engine.convention.hgroup.HGroupHelper.hasChop
-import eelst.ilike.engine.convention.hgroup.HGroupHelper.isGloballyKnownPlayable
+import eelst.ilike.engine.action.ObservedClue
+import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
+import eelst.ilike.engine.convention.hgroup.HGroupCommon.hasChop
+import eelst.ilike.engine.convention.hgroup.HGroupCommon.isGloballyKnownPlayable
+import eelst.ilike.engine.factory.KnowledgeFactory
+import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.suite.NoVarBlue
-import eelst.ilike.game.entity.suite.NoVarGreen
-import eelst.ilike.game.entity.suite.NoVarPurple
-import eelst.ilike.game.entity.suite.NoVarRed
-import eelst.ilike.game.entity.suite.NoVarYellow
+import eelst.ilike.game.entity.action.ClueAction
+import eelst.ilike.game.entity.card.HanabiCard
+import eelst.ilike.game.variant.Variant
 
-object CriticalSave
-    : SaveClue(
-    name = "Critical Save",
-    appliesTo = setOf(NoVarRed, NoVarYellow, NoVarGreen, NoVarBlue, NoVarPurple),
-) {
-    override fun getActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
-        val actions = mutableListOf<ConventionalAction>()
+object CriticalSave : SaveClue("Critical Save") {
+    override fun appliesTo(card: HanabiCard, variant: Variant): Boolean {
+        return true
+    }
 
-        playerPOV.teammates.forEach { teammate ->
+    override fun teammateSlotMatchesCondition(teammate: Teammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
+        val chop = getChop(teammate.hand)
+        if (chop.index != slotIndex) {
+            return false
+        }
+        val card = teammate.getCardAtSlot(slotIndex)
+        return appliesTo(card, playerPOV.globallyAvailableInfo.variant) &&
+                card.rank != Rank.FIVE &&
+                playerPOV.globallyAvailableInfo.isCritical(card) &&
+                !isGloballyKnownPlayable(card, playerPOV)
+    }
+
+    override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
+        val actions = mutableSetOf<ClueAction>()
+
+        playerPOV.forEachTeammate { teammate ->
             if (hasChop(teammate.hand)) {
                 val chop = getChop(teammate.hand)
-                val card = chop.getCard()
-                if (appliesTo.contains(card.suite) &&
-                    card.rank != Rank.FIVE &&
-                    playerPOV.globallyAvailableInfo.isCritical(card) &&
-                    !isGloballyKnownPlayable(card, playerPOV)
+                val teammateSlot = teammate.hand.getSlot(chop.index)
+                if (
+                    teammateSlotMatchesCondition(teammate, chop.index, playerPOV)
                 ) {
                     actions.addAll(
-                        getAllFocusingActions(
-                            card = card,
-                            slot = chop,
+                        getAllFocusingClues(
+                            playerPOV = playerPOV,
+                            slot = teammateSlot,
                             teammate = teammate,
                         )
                     )
                 }
             }
         }
-        return actions.toSet()
+        return actions
+    }
+
+    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
+        val ownHand = playerPOV.ownHand
+        val focusedSlot = ownHand.getSlot(focusIndex)
+        return focusedSlot.getPossibleIdentities()
+            .any { playerPOV.globallyAvailableInfo.isCritical(it) }
+
+    }
+
+    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PersonalKnowledge {
+        val focusedSlot = playerPOV.ownHand.getSlot(focusIndex)
+        val possibleFocusIdentities = focusedSlot.getPossibleIdentities().filter {
+            playerPOV.globallyAvailableInfo.isCritical(it)
+        }
+        return KnowledgeFactory.createKnowledge(
+            playerId = playerPOV.playerId,
+            slotIndex = focusIndex,
+            possibleIdentities = possibleFocusIdentities.toSet()
+        )
     }
 }
