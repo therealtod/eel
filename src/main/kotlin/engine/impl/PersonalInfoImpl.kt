@@ -14,6 +14,9 @@ data class PersonalInfoImpl(
     }
 
     override fun getTeammateHand(playerId: PlayerId): TeammateHand {
-        TODO("Not yet implemented")
+        val teammate = teammates[playerId]
+            ?: throw IllegalArgumentException("No player with id $playerId that I know of")
+        val slots = teammate.slots
+        return TeammateHand(slots)
     }
 }

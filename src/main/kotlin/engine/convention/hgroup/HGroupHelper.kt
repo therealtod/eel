@@ -1,15 +1,15 @@
 package eelst.ilike.engine.convention.hgroup
 
+import eelst.ilike.engine.InterpretedHand
 import eelst.ilike.engine.InterpretedSlot
 import eelst.ilike.engine.PlayerPOV
 import eelst.ilike.engine.Teammate
-import eelst.ilike.game.Hand
 import eelst.ilike.game.Slot
 import eelst.ilike.game.action.Clue
 import eelst.ilike.game.entity.card.HanabiCard
 
 object HGroupHelper {
-    fun getClueFocus(clue: Clue, hand: Hand): Slot {
+    fun getClueFocus(clue: Clue, hand: InterpretedHand): Slot {
         val slotTouchedByClue = hand.getSlotsTouchedBy(clue)
         require(slotTouchedByClue.isNotEmpty()) {
             "Can't determine the focus of a clue which touches no slots"
@@ -38,23 +38,23 @@ object HGroupHelper {
         TODO()
     }
 
-    fun isLocked(hand: Hand): Boolean {
+    fun isLocked(hand: InterpretedHand): Boolean {
         return hand.all { it.isTouched() }
     }
 
-    fun hasChop(hand: Hand): Boolean {
+    fun hasChop(hand: InterpretedHand): Boolean {
         return !isLocked(hand)
     }
 
-    fun getChop(hand: Hand): Slot {
+    fun getChop(hand: InterpretedHand): Slot {
         return hand.last { !it.isTouched() }
     }
 
-    fun hasFinessePosition(hand: Hand): Boolean {
+    fun hasFinessePosition(hand: InterpretedHand): Boolean {
         return !isLocked(hand)
     }
 
-    fun getFinessePosition(hand: Hand): Slot {
+    fun getFinessePosition(hand: InterpretedHand): Slot {
         return hand.first { !it.isTouched() }
     }
 
@@ -112,7 +112,7 @@ object HGroupHelper {
     ): Boolean {
         val promptedTeammateSlot = promptedSlots.firstOrNull { slot ->
             slot.isClued() &&
-                    teammate.playerPOV.hand.getSlot(slot.index).getPossibleIdentities(teammate.playerPOV).contains(card)
+                    teammate.getSlot(slot.index).getPossibleIdentities(teammate.pov).contains(card)
         } ?: return false
         val slotIdentity = teammate.hand.getSlot(promptedTeammateSlot.index).getCard()
         return (slotIdentity == card) ||

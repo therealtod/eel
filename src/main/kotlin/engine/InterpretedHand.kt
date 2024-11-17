@@ -1,19 +1,19 @@
 package eelst.ilike.engine
 
-import eelst.ilike.game.Hand
 import eelst.ilike.game.Slot
+import eelst.ilike.game.action.Clue
 import eelst.ilike.game.entity.card.HanabiCard
 
-abstract class InterpretedHand(val slots: Set<InterpretedSlot>): Hand, Set<Slot> by slots {
-    override fun holds(card: HanabiCard): Boolean {
-        return copiesOf(card) > 0
+interface InterpretedHand: Set<InterpretedSlot>{
+    fun holds(card: HanabiCard, playerPOV: PlayerPOV): Boolean {
+        return copiesOf(card, playerPOV) > 0
     }
 
-    override fun holdsAll(cards: Collection<HanabiCard>): Boolean {
-        return cards.all { holds(it) }
+    fun holdsAll(cards: Collection<HanabiCard>, playerPOV: PlayerPOV): Boolean {
+        return cards.all { holds(it, playerPOV) }
     }
 
-    override fun getSlot(slotIndex: Int): InterpretedSlot {
-        return slots.elementAt(slotIndex - 1)
-    }
+    fun getKnownSlots(playerPOV: PlayerPOV): Set<InterpretedSlot>
+    fun copiesOf(card: HanabiCard,  playerPOV: PlayerPOV): Int
+    fun getSlotsTouchedBy(clue: Clue): Set<Slot>
 }

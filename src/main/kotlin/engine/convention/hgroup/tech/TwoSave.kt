@@ -47,7 +47,7 @@ object TwoSave : SaveClue(
     ): Boolean {
         return playerPOV.teammates.none { otherTeammate ->
             otherTeammate.playerId != teammate.playerId &&
-                    otherTeammate.hand.copiesOf(card) == 1 &&
+                    otherTeammate.hand.copiesOf(card, playerPOV) == 1 &&
                     getChop(otherTeammate.hand).getCard() != card
 
         }

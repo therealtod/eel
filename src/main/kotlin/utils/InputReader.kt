@@ -3,9 +3,10 @@ package eelst.ilike.utils
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import eelst.ilike.engine.*
+import eelst.ilike.engine.factory.PlayerFactory
 import eelst.ilike.engine.impl.PersonalInfoImpl
 import eelst.ilike.engine.impl.PersonalTeammateInfoImpl
-import eelst.ilike.engine.impl.PlayerPOVImpl
+import eelst.ilike.engine.impl.ActivePlayer
 import eelst.ilike.game.*
 import eelst.ilike.game.action.Clue
 import eelst.ilike.game.action.ColorClue
@@ -20,7 +21,7 @@ import eelst.ilike.utils.model.*
 object InputReader {
     private val mapper = Common.yamlObjectMapper
 
-    fun parseFile(fileName: String): PlayerPOV {
+    fun parseFile(fileName: String): ActivePlayer {
         val fileText = Common.getResourceFileContentAsString(fileName)
         val dto: BoardStateResource = mapper.readValue(fileText)
 
@@ -69,8 +70,8 @@ object InputReader {
             ownHandInfo = parseOwnHandPersonalInfo(dto.playerPOV.hand, suites) ,
             teammates = personalTeammatesInfo
         )
-        return PlayerPOVImpl(
-            playerId = dto.playerPOV.playerId,
+        return PlayerFactory.createActivePlayer(
+            playerId = players.first().playerId,
             globallyAvailableInfo = globallyAvailableInfo,
             personalInfo = personalInfo
         )

@@ -7,15 +7,23 @@ import eelst.ilike.game.PlayerId
 import eelst.ilike.game.Slot
 import eelst.ilike.game.entity.card.HanabiCard
 
-interface PlayerPOV {
-    val playerId: PlayerId
-    val hand: InterpretedHand
-    val globallyAvailableInfo: GloballyAvailableInfo
-    val teammates: Set<Teammate>
-    fun getVisibleCards(): List<HanabiCard>
-    fun getKnownPlayableSlots(): Set<Slot>
-    // fun getOwnKnownCards(): Set<HanabiCard>
-    fun allCardsAreKnown(cards: Set<HanabiCard>): Boolean
-    fun getActions(conventionSet: ConventionSet): Set<ConventionalAction>
-    fun getPrunedAction(actions: Collection<ConventionalAction>): Set<ConventionalAction>
+abstract class PlayerPOV(
+    val globallyAvailableInfo: GloballyAvailableInfo,
+    val teammates: Set<Teammate>,
+    val hand: InterpretedHand,
+) {
+    abstract fun getOwnFullEmpathyCards(): List<HanabiCard>
+
+    abstract fun getOwnKnownPlayableSlots(): Set<Slot>
+
+    abstract fun allCardsAreKnown(cards: Set<HanabiCard>): Boolean
+
+    abstract fun getOwnKnownSlots(): Set<Slot>
+
+    fun getVisibleCards(): List<HanabiCard> {
+        return globallyAvailableInfo.cardsOnStacks +
+                globallyAvailableInfo.trashPile.cards +
+                getOwnFullEmpathyCards() +
+                teammates.flatMap { teammate-> teammate.hand.getCards() }
+    }
 }

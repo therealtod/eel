@@ -2,7 +2,7 @@ package eelst.ilike.game
 
 import eelst.ilike.game.action.Clue
 import eelst.ilike.game.entity.card.HanabiCard
-
+/*
 interface Hand: Set<Slot> {
     fun copiesOf(card: HanabiCard): Int
 
@@ -14,3 +14,5 @@ interface Hand: Set<Slot> {
 
     fun getSlotsTouchedBy(clue: Clue): Set<Slot>
 }
+
+ */

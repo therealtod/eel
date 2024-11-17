@@ -4,5 +4,5 @@ import eelst.ilike.engine.PersonalTeammateInfo
 import eelst.ilike.game.VisibleSlot
 
 data class PersonalTeammateInfoImpl(
-    val slots: Set<VisibleSlot>
+    override val slots: Set<VisibleSlot>
 ): PersonalTeammateInfo

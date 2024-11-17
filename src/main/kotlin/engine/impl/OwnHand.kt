@@ -8,20 +8,20 @@ import eelst.ilike.game.Slot
 import eelst.ilike.game.action.Clue
 import eelst.ilike.game.entity.card.HanabiCard
 
-class OwnHand(slots: Set<OwnSlot>, private val playerPOV: PlayerPOV): InterpretedHand(slots){
-    override fun copiesOf(card: HanabiCard): Int {
-        return getKnownSlots().count { it.getCard() == card }
+class OwnHand(private val slots: Set<OwnSlot>): InterpretedHand, Set<InterpretedSlot> by slots{
+    override fun copiesOf(card: HanabiCard, playerPOV: PlayerPOV): Int {
+        return getKnownSlots(playerPOV).count { it.getCard() == card }
     }
 
     override fun getSlotsTouchedBy(clue: Clue): Set<Slot> {
         TODO("Not yet implemented")
     }
 
-    fun getKnownCards(): List<HanabiCard> {
-        return getKnownSlots().map { it.getCard() }
+    fun getKnownCards(playerPOV: PlayerPOV): List<HanabiCard> {
+        return getKnownSlots(playerPOV).map { it.getCard() }
     }
 
-    fun getKnownSlots(): Set<InterpretedSlot> {
+    override fun getKnownSlots(playerPOV: PlayerPOV): Set<InterpretedSlot> {
         return slots.filter { it.isKnown(playerPOV = playerPOV) }.toSet()
     }
 }

@@ -2,6 +2,7 @@ package eelst.ilike.engine
 
 import eelst.ilike.game.GloballyAvailableSlotInfo
 import eelst.ilike.game.Slot
+import eelst.ilike.game.Utils
 import eelst.ilike.game.entity.card.HanabiCard
 
 abstract class InterpretedSlot(
@@ -15,10 +16,11 @@ abstract class InterpretedSlot(
     abstract fun isKnown(playerPOV: PlayerPOV): Boolean
 
     override fun getEmpathy(playerPOV: PlayerPOV): Set<HanabiCard> {
-        return EngineHelper.getCardEmpathy(
-            playerPOV = playerPOV,
+        return Utils.getCardEmpathy(
+            visibleCards = playerPOV.getVisibleCards(),
             positiveClues = positiveClues,
             negativeClues = negativeClues,
+            stacks = playerPOV.globallyAvailableInfo.playingStacks
         )
     }
 

@@ -11,7 +11,7 @@ object PlayKnownPlayable : HGroupTech(
 ), PlayTech {
     override fun getActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
         return playerPOV
-            .getKnownPlayableSlots()
+            .getOwnKnownPlayableSlots()
             .map {
                 ConventionalAction(
                     action = Play(it),
