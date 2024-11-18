@@ -26,6 +26,8 @@ abstract class InterpretedSlot(
         return positiveClues.isNotEmpty()
     }
 
+    abstract fun getAsKnown(): KnownSlot
+
     open fun isClued(): Boolean {
         return positiveClues.isNotEmpty()
     }

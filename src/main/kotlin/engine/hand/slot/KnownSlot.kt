@@ -8,4 +8,8 @@ data class KnownSlot(
     val card: HanabiCard
 ) : InterpretedSlot(
     globalInfo = globallyAvailableInfo
-)
+) {
+    override fun getAsKnown(): KnownSlot {
+        return this
+    }
+}

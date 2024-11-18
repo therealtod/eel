@@ -24,7 +24,7 @@ class OwnHand(private val slots: Set<OwnSlot>) : InterpretedHand, Set<Interprete
         return slots.elementAt(slotIndex - 1)
     }
 
-    fun getKnownSlots(): Set<KnownSlot> {
+    override fun getKnownSlots(): Set<KnownSlot> {
         return slots.filter { it.isKnown() }
             .map {
                 KnownSlot(

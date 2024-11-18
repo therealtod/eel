@@ -20,6 +20,16 @@ class OwnSlot(
         return getPossibleIdentities().size == 1
     }
 
+    override fun getAsKnown(): KnownSlot {
+        require(isKnown()) {
+            "Cannot get an unknown slot as known"
+        }
+        return KnownSlot(
+            globallyAvailableInfo = globalInfo,
+            card = getPossibleIdentities().first()
+        )
+    }
+
     override fun isClued(): Boolean {
         return slotKnowledge.isClued()
     }

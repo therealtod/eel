@@ -8,4 +8,11 @@ class VisibleSlot(
     val card: HanabiCard
 ) : InterpretedSlot(
     globalInfo = globalInfo,
-)
+) {
+    override fun getAsKnown(): KnownSlot {
+        return KnownSlot(
+            globallyAvailableInfo = globalInfo,
+            card = card,
+        )
+    }
+}

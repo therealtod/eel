@@ -17,12 +17,12 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
 
-class ActivePlayerTest {
+class ActivePlayerPOVTest {
     @Test
     fun `Should find all possible actions in the scenario`() {
-        val player = TestUtils.getActivePlayerFromScenario(1)
+        val playerPOV = TestUtils.getPlayerPOVFromScenario(1)
 
-        val actual = player.getActions(Level1)
+        val actual = playerPOV.getActions(Level1)
 
         val expected = setOf(
             ConventionalAction(

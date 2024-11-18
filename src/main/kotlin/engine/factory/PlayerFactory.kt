@@ -3,7 +3,7 @@ package eelst.ilike.engine.factory
 import eelst.ilike.engine.hand.OwnHand
 import eelst.ilike.engine.hand.TeammateHand
 import eelst.ilike.engine.hand.slot.OwnSlot
-import eelst.ilike.engine.player.ActivePlayer
+import eelst.ilike.engine.player.ActivePlayerPOV
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.GloballyAvailableInfo
@@ -16,7 +16,7 @@ object PlayerFactory {
         personalKnowledge: PersonalKnowledge,
         otherPlayersKnowledge: Map<PlayerId, PersonalKnowledge>,
         teammatesHands: Map<PlayerId, TeammateHand>
-    ): ActivePlayer {
+    ): ActivePlayerPOV {
         val thisPlayerGlobalInfo = globallyAvailableInfo.getPlayerInfo(playerId)
         val numberOfPlayers = globallyAvailableInfo.players.size
         val activePlayerIndex = thisPlayerGlobalInfo.playerIndex
@@ -40,13 +40,12 @@ object PlayerFactory {
         }
         val hand = OwnHand(slots = slots.toSet())
 
-        return ActivePlayer(
+        return ActivePlayerPOV(
             playerId = playerId,
             playerIndex = activePlayerIndex,
             hand = hand,
             globallyAvailableInfo = globallyAvailableInfo,
             teammates = teammates,
-            personalKnowledge = personalKnowledge,
         )
     }
 

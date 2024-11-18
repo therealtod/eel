@@ -1,6 +1,7 @@
 package eelst.ilike.engine.hand
 
 import eelst.ilike.engine.hand.slot.InterpretedSlot
+import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.game.action.Clue
 import eelst.ilike.game.entity.Slot
@@ -17,8 +18,8 @@ class TeammateHand(val slots: Set<VisibleSlot>) : InterpretedHand, Set<Interpret
         return slots.filter { clue.touches(it.card) }.toSet()
     }
 
-    fun getCards(): List<HanabiCard> {
-        return slots.map { it.card }
+    override fun getKnownSlots(): Set<KnownSlot> {
+        return slots.map { it.getAsKnown() }.toSet()
     }
 
     fun getSlot(slotIndex: Int): VisibleSlot {
