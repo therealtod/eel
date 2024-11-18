@@ -2,8 +2,8 @@ package eelst.ilike.engine.player
 
 
 import eelst.ilike.engine.hand.InterpretedHand
-import eelst.ilike.engine.hand.slot.OwnSlot
 import eelst.ilike.engine.hand.OwnHand
+import eelst.ilike.engine.hand.slot.OwnSlot
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.PlayerId
@@ -22,7 +22,7 @@ abstract class Player(
         val playerHandGlobalInfo = globallyAvailableInfo.getPlayerInfo(playerId).hand
         val slots = playerHandGlobalInfo.map {
             OwnSlot(
-                globalInfo = playerHandGlobalInfo.elementAt(it.index -1),
+                globalInfo = playerHandGlobalInfo.elementAt(it.index - 1),
                 slotKnowledge = personalKnowledge.getKnowledgeAboutOwnSlot(it.index)
             )
         }

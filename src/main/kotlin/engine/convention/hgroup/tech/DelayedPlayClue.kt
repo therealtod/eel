@@ -1,13 +1,9 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.convention.ConventionalAction
+import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.game.entity.card.HanabiCard
-import eelst.ilike.game.entity.suite.Blue
-import eelst.ilike.game.entity.suite.Green
-import eelst.ilike.game.entity.suite.Purple
-import eelst.ilike.game.entity.suite.Red
-import eelst.ilike.game.entity.suite.Yellow
+import eelst.ilike.game.entity.suite.*
 
 object DelayedPlayClue
     : IndirectPlayClue(
@@ -42,7 +38,7 @@ object DelayedPlayClue
 
     private fun connectingCardsAreKnown(card: HanabiCard, playerPOV: PlayerPOV): Boolean {
         val stack = playerPOV.globallyAvailableInfo.getStackForCard(card)
-        val missingCards = if(stack.isEmpty()) {
+        val missingCards = if (stack.isEmpty()) {
             card.getPrerequisiteCards().toSet()
         } else {
             stack.suite.getCardsBetween(stack.currentCard(), card)

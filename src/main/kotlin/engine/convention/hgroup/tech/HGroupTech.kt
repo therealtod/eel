@@ -1,21 +1,21 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.convention.ConventionTech
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.getClueFocus
-import eelst.ilike.game.entity.Slot
+import eelst.ilike.engine.player.Teammate
 import eelst.ilike.game.action.Clue
 import eelst.ilike.game.action.ColorClue
 import eelst.ilike.game.action.RankClue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
+import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.card.HanabiCard
 
 abstract class HGroupTech(
     override val name: String,
-    val takesPrecedenceOver: Set<HGroupTech>,
-): ConventionTech {
+    private val takesPrecedenceOver: Set<HGroupTech>,
+) : ConventionTech {
     protected fun getAllFocusingClues(
         card: HanabiCard,
         slot: Slot,
@@ -34,6 +34,7 @@ abstract class HGroupTech(
                     colors = colors,
                 )
     }
+
     protected fun getAllFocusingActions(
         card: HanabiCard,
         slot: Slot,
@@ -74,6 +75,10 @@ abstract class HGroupTech(
         }
             .filter { getClueFocus(clue = it, hand = teammate.hand) == slot }
             .toSet()
+    }
+
+    override fun overrides(otherTech: ConventionTech): Boolean {
+        return takesPrecedenceOver.contains(otherTech)
     }
 
     override fun toString() = name

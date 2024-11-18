@@ -7,26 +7,27 @@ globally_available_info:
     - "green"
     - "blue"
     - "purple"
-  playing_stacks: [["r1"], [], [], [], []]
-  trash_pile: ["p4"]
+  playing_stacks: [ [ "r1" ], [ ], [ ], [ ], [ ] ]
+  trash_pile: [ "p4" ]
   strikes: 0
   efficiency: 1.00
   pace: 15
   score: 0
+  clue_tokens: 5
   players:
     - player_id: "Alice"
     - player_id: "Bob"
     - player_id: "Cathy"
     - player_id: "Donald"
       slot_clues:
-        - positive_clues: []
-          negative_clues: []
-        - positive_clues: []
-          negative_clues: []
-        - positive_clues: []
-          negative_clues: []
-        - positive_clues: ["RED"]
-          negative_clues: []
+        - positive_clues: [ ]
+          negative_clues: [ ]
+        - positive_clues: [ ]
+          negative_clues: [ ]
+        - positive_clues: [ ]
+          negative_clues: [ ]
+        - positive_clues: [ "RED" ]
+          negative_clues: [ ]
 player_pov:
   player_id: "Alice"
   teammates:

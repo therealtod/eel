@@ -1,5 +1,6 @@
-package game.convention.hgroup.tech
+package engine.convention.hgroup.tech
 
+import TestUtils
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.tech.DelayedPlayClue
 import eelst.ilike.game.action.ColorClue

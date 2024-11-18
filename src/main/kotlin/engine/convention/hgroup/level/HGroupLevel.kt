@@ -8,7 +8,7 @@ sealed class HGroupLevel(
     includes: Set<HGroupLevel> = emptySet(),
     techs: Set<HGroupTech>,
     val rank: Int,
-): ConventionSet(
+) : ConventionSet(
     name = name,
     includes = includes,
     techs = techs

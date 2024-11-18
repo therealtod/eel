@@ -6,6 +6,6 @@ import eelst.ilike.game.entity.card.HanabiCard
 data class KnownSlot(
     val globallyAvailableInfo: GloballyAvailableSlotInfo,
     val card: HanabiCard
-): InterpretedSlot(
+) : InterpretedSlot(
     globalInfo = globallyAvailableInfo
 )

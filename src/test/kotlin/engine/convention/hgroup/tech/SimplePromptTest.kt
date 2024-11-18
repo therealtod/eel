@@ -1,4 +1,4 @@
-package game.convention.hgroup.tech
+package engine.convention.hgroup.tech
 
 import TestUtils
 import eelst.ilike.engine.convention.ConventionalAction

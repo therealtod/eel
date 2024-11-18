@@ -1,11 +1,11 @@
 package eelst.ilike.engine.player
 
-import eelst.ilike.engine.hand.slot.InterpretedSlot
 import eelst.ilike.engine.hand.TeammateHand
+import eelst.ilike.engine.hand.slot.InterpretedSlot
+import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.PlayerId
-import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.game.entity.card.HanabiCard
 
 class Teammate(
@@ -15,7 +15,7 @@ class Teammate(
     val seatsGap: Int,
     override val hand: TeammateHand,
     personalKnowledge: PersonalKnowledge,
-): Player(
+) : Player(
     playerId = playerId,
     playerIndex = playerIndex,
     globallyAvailableInfo = globallyAvailableInfo,

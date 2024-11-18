@@ -3,15 +3,17 @@ package eelst.ilike.utils
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import eelst.ilike.engine.factory.PlayerFactory
-import eelst.ilike.engine.player.ActivePlayer
 import eelst.ilike.engine.hand.TeammateHand
 import eelst.ilike.engine.hand.slot.VisibleSlot
-import eelst.ilike.game.*
+import eelst.ilike.engine.player.ActivePlayer
+import eelst.ilike.game.GloballyAvailableInfo
+import eelst.ilike.game.GloballyAvailableSlotInfo
+import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.game.variant.Variant
-import eelst.ilike.utils.model.dto.ScenarioDTO
 import eelst.ilike.utils.model.dto.PlayerPOVDTO
+import eelst.ilike.utils.model.dto.ScenarioDTO
 import eelst.ilike.utils.model.dto.TeammateDTO
 
 object InputReader {
@@ -43,6 +45,7 @@ object InputReader {
             score = dto.globallyAvailableInfo.score,
             variant = variant,
             players = playersGlobalInfo.associateBy { it.playerId },
+            clueTokens = dto.globallyAvailableInfo.clueTokens,
         )
         val activePlayerGloballyAvailableInfo = globallyAvailableInfo.getPlayerInfo(activePlayerId)
         val playersGlobalInfoMap = playersGlobalInfo.associateBy { it.playerId }
@@ -76,8 +79,7 @@ object InputReader {
                                     index = index + 1,
                                     positiveClues = emptyList(),
                                     negativeClues = emptyList(),
-                                )
-                            ,
+                                ),
                             card = InputParser.parseCard(slot.card, suites)
                         )
                     }.toSet()

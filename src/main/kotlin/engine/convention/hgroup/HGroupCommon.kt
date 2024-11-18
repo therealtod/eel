@@ -1,11 +1,11 @@
 package eelst.ilike.engine.convention.hgroup
 
 import eelst.ilike.engine.hand.InterpretedHand
+import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
-import eelst.ilike.game.entity.Slot
-import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.game.action.Clue
+import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.card.HanabiCard
 
 object HGroupCommon {

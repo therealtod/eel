@@ -3,10 +3,9 @@ package eelst.ilike.engine.factory
 import eelst.ilike.engine.hand.OwnHand
 import eelst.ilike.engine.hand.TeammateHand
 import eelst.ilike.engine.hand.slot.OwnSlot
-
-import eelst.ilike.engine.player.knowledge.PersonalKnowledge
-import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.ActivePlayer
+import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.PlayerId
 
@@ -21,7 +20,7 @@ object PlayerFactory {
         val thisPlayerGlobalInfo = globallyAvailableInfo.getPlayerInfo(playerId)
         val numberOfPlayers = globallyAvailableInfo.players.size
         val activePlayerIndex = thisPlayerGlobalInfo.playerIndex
-        val teammates = globallyAvailableInfo.players.filterKeys { it != playerId }.values.map { playerInfo->
+        val teammates = globallyAvailableInfo.players.filterKeys { it != playerId }.values.map { playerInfo ->
             createTeammate(
                 playerId = playerInfo.playerId,
                 playerIndex = playerInfo.playerIndex,
@@ -64,7 +63,7 @@ object PlayerFactory {
         return Teammate(
             playerId = playerInfo.playerId,
             playerIndex = playerIndex,
-            seatsGap = (numberOfPlayers- activePlayerIndex + playerInfo.playerIndex).mod(numberOfPlayers),
+            seatsGap = (numberOfPlayers - activePlayerIndex + playerInfo.playerIndex).mod(numberOfPlayers),
             globallyAvailableInfo = globallyAvailableInfo,
             hand = hand,
             personalKnowledge = personalKnowledge,

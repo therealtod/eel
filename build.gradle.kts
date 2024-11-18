@@ -12,7 +12,7 @@ repositories {
 dependencies {
     implementation("com.fasterxml.jackson.core:jackson-core:${Versions.JACKSON}")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${Versions.JACKSON}")
-    implementation ("com.fasterxml.jackson.module:jackson-module-kotlin:${Versions.JACKSON}")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:${Versions.JACKSON}")
     testImplementation(kotlin("test"))
     testImplementation("io.mockk:mockk:${Versions.MOCKK}")
 }

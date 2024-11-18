@@ -1,15 +1,11 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
+import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.game.action.RankClue
 import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.suite.Blue
-import eelst.ilike.game.entity.suite.Green
-import eelst.ilike.game.entity.suite.Purple
-import eelst.ilike.game.entity.suite.Red
-import eelst.ilike.game.entity.suite.Yellow
+import eelst.ilike.game.entity.suite.*
 
 object FiveSave
     : SaveClue(

@@ -16,6 +16,7 @@ abstract class Suite(
     val suiteDirection: SuiteDirection = SuiteDirection.UP,
 ) {
     val maxRank = ranks.last()
+
     // For hashing purposes
     private val copiesValuesList = Rank.entries.map { copiesOf(it) }
 
@@ -37,7 +38,7 @@ abstract class Suite(
     }
 
     open fun clueTouches(card: HanabiCard, clue: Clue): Boolean {
-        return when(clue) {
+        return when (clue) {
             is RankClue -> getRanksTouching(card.rank).contains(clue.rank)
             is ColorClue -> getColorsTouching(card.rank).contains(clue.color)
         }

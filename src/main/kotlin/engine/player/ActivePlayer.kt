@@ -1,10 +1,11 @@
 package eelst.ilike.engine.player
 
-import eelst.ilike.game.GloballyAvailableInfo
+import eelst.ilike.engine.EngineCommon
 import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.hand.OwnHand
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
+import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.PlayerId
 
 class ActivePlayer(
@@ -14,7 +15,7 @@ class ActivePlayer(
     globallyAvailableInfo: GloballyAvailableInfo,
     personalKnowledge: PersonalKnowledge,
     teammates: Set<Teammate>,
-): Player(
+) : Player(
     playerId = playerId,
     playerIndex = playerIndex,
     hand = hand,
@@ -29,10 +30,6 @@ class ActivePlayer(
 
     fun getActions(conventionSet: ConventionSet): Set<ConventionalAction> {
         val candidateActions = conventionSet.getTechs().flatMap { it.getActions(playerPOV) }
-        return getPrunedAction(candidateActions)
-    }
-
-    private fun getPrunedAction(actions: Collection<ConventionalAction>): Set<ConventionalAction> {
-        return actions.toSet()
+        return EngineCommon.getPrunedAction(candidateActions)
     }
 }

@@ -6,5 +6,4 @@ sealed class IndirectPlayClue(
     name: String,
     appliesTo: Set<Suite>,
     takesPrecedenceOver: Set<HGroupTech>,
-)
-    : PlayClue(name = name, appliesTo = appliesTo, takesPrecedenceOver = takesPrecedenceOver)
+) : PlayClue(name = name, appliesTo = appliesTo, takesPrecedenceOver = takesPrecedenceOver)

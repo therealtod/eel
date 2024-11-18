@@ -7,12 +7,13 @@ globally_available_info:
     - "green"
     - "blue"
     - "purple"
-  playing_stacks: [[], [], [], [], []]
-  trash_pile: ["r1", "r1", "g1"]
+  playing_stacks: [ [ ], [ ], [ ], [ ], [ ] ]
+  trash_pile: [ "r1", "r1", "g1" ]
   strikes: 0
   efficiency: 1.00
   pace: 15
   score: 0
+  clue_tokens: 5
   players:
     - player_id: "Alice"
     - player_id: "Bob"

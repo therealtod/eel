@@ -4,7 +4,7 @@ import eelst.ilike.game.action.Clue
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 
-interface Slot{
+interface Slot {
     val index: Int
     val positiveClues: List<Clue>
     val negativeClues: List<Clue>

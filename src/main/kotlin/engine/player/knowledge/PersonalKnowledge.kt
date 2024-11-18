@@ -1,6 +1,6 @@
 package eelst.ilike.engine.player.knowledge
 
 
-interface PersonalKnowledge{
+interface PersonalKnowledge {
     fun getKnowledgeAboutOwnSlot(slotIndex: Int): PersonalSlotKnowledge
 }

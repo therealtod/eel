@@ -8,7 +8,7 @@ abstract class UpwardsSuite(
     name: String,
     abbreviations: Set<Char>,
 
-): Suite(
+    ) : Suite(
     id = id,
     name = name,
     abbreviations = abbreviations,
@@ -36,7 +36,7 @@ abstract class UpwardsSuite(
         }
         return HanabiCard(
             suite = this,
-            rank = Rank.getByNumericalValue(card.rank.numericalValue -1)
+            rank = Rank.getByNumericalValue(card.rank.numericalValue - 1)
         )
     }
 
@@ -44,7 +44,7 @@ abstract class UpwardsSuite(
         require(card.suite == this) {
             "The given card must belong to this suite"
         }
-        return getAllUniqueCards().filter { it.rank < card.rank}
+        return getAllUniqueCards().filter { it.rank < card.rank }
     }
 
     override fun getCardsBetween(firstCard: HanabiCard, secondCard: HanabiCard): Set<HanabiCard> {

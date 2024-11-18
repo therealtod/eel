@@ -49,12 +49,12 @@ object InputParser {
             GloballyAvailableSlotInfo(
                 index = index + 1,
                 positiveClues = dto.slotClues.getOrNull(index)?.let {
-                    it.positiveClues.map { clue->
+                    it.positiveClues.map { clue ->
                         parseClue(dto.playerId, clue, suites)
                     }
                 } ?: emptyList(),
                 negativeClues = dto.slotClues.getOrNull(index)?.let {
-                    it.negativeClues.map { clue->
+                    it.negativeClues.map { clue ->
                         parseClue(dto.playerId, clue, suites)
                     }
                 } ?: emptyList(),
@@ -99,7 +99,7 @@ object InputParser {
         )
     }
 
-    fun parseClue(playerId: PlayerId, clueAbbreviation: String, suites: Set<Suite>): Clue{
+    fun parseClue(playerId: PlayerId, clueAbbreviation: String, suites: Set<Suite>): Clue {
         return Color.entries.find { it.name == clueAbbreviation }
             ?.let {
                 ColorClue(

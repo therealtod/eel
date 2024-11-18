@@ -6,6 +6,6 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy::class)
 data class SlotCluesDTO(
-    val positiveClues : List<String> = emptyList(),
-    val negativeClues : List<String> = emptyList(),
+    val positiveClues: List<String> = emptyList(),
+    val negativeClues: List<String> = emptyList(),
 )

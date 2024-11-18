@@ -1,13 +1,9 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.validatePrompt
-import eelst.ilike.game.entity.suite.Blue
-import eelst.ilike.game.entity.suite.Green
-import eelst.ilike.game.entity.suite.Purple
-import eelst.ilike.game.entity.suite.Red
-import eelst.ilike.game.entity.suite.Yellow
+import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.game.entity.suite.*
 
 object SimplePrompt
     : Prompt(
@@ -32,15 +28,19 @@ object SimplePrompt
                         slot = slot,
                         teammate = teammate,
                     )
-                    actions.addAll(candidateClues.filter { validatePrompt(
-                        connectingCards = connectingCards.toSet(),
-                        clue = it,
-                        playerPOV,
-                    ) }
-                        .map { ConventionalAction(
-                            action = it,
-                            tech = this,
-                        ) }
+                    actions.addAll(candidateClues.filter {
+                        validatePrompt(
+                            connectingCards = connectingCards.toSet(),
+                            clue = it,
+                            playerPOV,
+                        )
+                    }
+                        .map {
+                            ConventionalAction(
+                                action = it,
+                                tech = this,
+                            )
+                        }
                     )
                 }
             }

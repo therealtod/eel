@@ -15,4 +15,5 @@ data class GloballyAvailableInfoDTO(
     val score: Int,
     val variant: String = "No Variant",
     val players: List<PlayerGloballyAvailableInfoDTO>,
+    val clueTokens: Int,
 )

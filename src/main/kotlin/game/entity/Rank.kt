@@ -1,6 +1,6 @@
 package eelst.ilike.game.entity
 
-enum class Rank(val numericalValue: Int): CardAttribute {
+enum class Rank(val numericalValue: Int) : CardAttribute {
     ONE(1),
     TWO(2),
     THREE(3),

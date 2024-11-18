@@ -17,6 +17,7 @@ data class GloballyAvailableInfo(
     val pace: Int,
     val score: Int,
     val variant: Variant,
+    val clueTokens: Int,
     val players: Map<PlayerId, GloballyAvailablePlayerInfo>,
 ) {
     val cardsOnStacks = playingStacks.flatMap { it.value.cards }
@@ -44,7 +45,7 @@ data class GloballyAvailableInfo(
     fun getGlobalAwayValue(card: HanabiCard): Int {
         val stack = getStackForCard(card)
         val suite = card.suite
-        return if (stack.isEmpty()){
+        return if (stack.isEmpty()) {
             suite.getPlayingOrder(card) - 1
         } else {
             suite.getPlayingOrder(card) - suite.getPlayingOrder(stack.currentCard()) - 1

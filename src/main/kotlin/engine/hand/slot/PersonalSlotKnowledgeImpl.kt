@@ -6,7 +6,7 @@ import eelst.ilike.game.entity.card.HanabiCard
 class PersonalSlotKnowledgeImpl(
     private val impliedIdentities: Set<HanabiCard>,
     private val empathy: Set<HanabiCard>,
-): PersonalSlotKnowledge {
+) : PersonalSlotKnowledge {
     override fun isClued(): Boolean {
         TODO("Not yet implemented")
     }

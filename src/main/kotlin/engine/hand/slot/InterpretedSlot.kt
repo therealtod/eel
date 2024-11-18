@@ -1,14 +1,14 @@
 package eelst.ilike.engine.hand.slot
 
+import eelst.ilike.game.GameUtils
 import eelst.ilike.game.GloballyAvailableSlotInfo
 import eelst.ilike.game.entity.Slot
-import eelst.ilike.game.GameUtils
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 
 abstract class InterpretedSlot(
     val globalInfo: GloballyAvailableSlotInfo,
-): Slot {
+) : Slot {
     override val index = globalInfo.index
     override val positiveClues = globalInfo.positiveClues
     override val negativeClues = globalInfo.negativeClues

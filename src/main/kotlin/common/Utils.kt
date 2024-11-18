@@ -3,7 +3,6 @@ package eelst.ilike.utils
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import java.lang.IllegalArgumentException
 
 object Utils {
     val yamlObjectMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
@@ -14,10 +13,10 @@ object Utils {
     }
 
     fun getHandSize(numberOfPlayers: Int): Int {
-        return when(numberOfPlayers) {
+        return when (numberOfPlayers) {
             6 -> 3
-            4,5 -> 4
-            2,3 -> 5
+            4, 5 -> 4
+            2, 3 -> 5
             else -> throw IllegalStateException("Invalid number of players: ${numberOfPlayers}")
         }
     }

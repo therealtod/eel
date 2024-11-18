@@ -11,6 +11,7 @@ sealed class Variant(
         val registeredVariants = mapOf(
             NoVariant.name to NoVariant,
         )
+
         fun getVariantByName(variantName: String): Variant {
             return registeredVariants[variantName]
                 ?: throw IllegalArgumentException("No registered variant with name $variantName")

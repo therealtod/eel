@@ -1,3 +1,3 @@
 package eelst.ilike.engine.convention.hgroup.signal
 
-object BlindPlaySignal: PlaySignal("Blind Play")
+object BlindPlaySignal : PlaySignal("Blind Play")

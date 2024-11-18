@@ -1,5 +1,5 @@
-import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.ActivePlayer
+import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.utils.InputReader
 
 object TestUtils {

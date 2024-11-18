@@ -1,4 +1,4 @@
-package game.convention
+package engine.convention
 
 internal class TeammateTest {
 }

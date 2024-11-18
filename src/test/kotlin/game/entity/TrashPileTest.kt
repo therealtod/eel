@@ -1,7 +1,7 @@
-package game
+package game.entity
 
-import eelst.ilike.game.entity.TrashPile
 import eelst.ilike.game.entity.Rank
+import eelst.ilike.game.entity.TrashPile
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Green
 import eelst.ilike.game.entity.suite.Red
