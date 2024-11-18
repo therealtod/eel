@@ -1,6 +1,7 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.convention.ConventionalAction
+import eelst.ilike.engine.convention.GeneratedKnowledge
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.hasChop
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.isGloballyKnownPlayable
@@ -37,4 +38,6 @@ object CriticalSave
         }
         return actions.toSet()
     }
+
+
 }
