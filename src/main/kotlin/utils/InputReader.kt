@@ -4,15 +4,8 @@ package eelst.ilike.utils
 import com.fasterxml.jackson.module.kotlin.readValue
 import eelst.ilike.engine.*
 import eelst.ilike.engine.factory.PlayerFactory
-import eelst.ilike.engine.impl.PersonalInfoImpl
-import eelst.ilike.engine.impl.ActivePlayer
-import eelst.ilike.engine.impl.InfoOnTeammateImpl
+import eelst.ilike.engine.impl.*
 import eelst.ilike.game.*
-import eelst.ilike.game.action.Clue
-import eelst.ilike.game.action.ColorClue
-import eelst.ilike.game.action.RankClue
-import eelst.ilike.game.entity.Color
-import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.game.variant.Variant
@@ -27,17 +20,16 @@ object InputReader {
 
         val suites = dto.globallyAvailableInfo.suites.map { Suite.fromId(it) }.toSet()
         val playingStacks = parsePlayingStacks(suites,dto.globallyAvailableInfo.playingStacks)
-        val trashPile = TrashPile(dto.globallyAvailableInfo.trashPile.map { parseCard(it, suites) })
+        val trashPile = TrashPile(dto.globallyAvailableInfo.trashPile.map { CardNoteParser.parseCard(it, suites) })
         val variant = Variant.getVariantByName(dto.globallyAvailableInfo.variant)
-        val handSize = Common.getHandSize(dto.globallyAvailableInfo.players.size)
-        val players = dto.globallyAvailableInfo.players.mapIndexed { index, playerDTO->
-            parseTeammateInfo(
+        val playersGlobalInfo = dto.globallyAvailableInfo.players.mapIndexed { index, playerDTO->
+            parsePlayerGlobalInfo(
                 dto = playerDTO,
                 playerIndex = index,
-                handSize = handSize,
                 suites = suites
             )
         }
+        val activePlayerId = playersGlobalInfo.first().playerId
         val globallyAvailableInfo = GloballyAvailableInfo(
             playingStacks = playingStacks,
             suites = suites,
@@ -47,156 +39,100 @@ object InputReader {
             pace = dto.globallyAvailableInfo.pace,
             score = dto.globallyAvailableInfo.score,
             variant = variant,
-            players = players.associateBy { it.playerId },
+            players = playersGlobalInfo.associateBy { it.playerId },
         )
-        val personalTeammatesInfo = dto
+        val activePlayerGloballyAvailableInfo = globallyAvailableInfo.getPlayerInfo(activePlayerId)
+        val activePlayerGloballyAvailableSlotsInfo = activePlayerGloballyAvailableInfo.hand
+        val playersGlobalInfoMap = playersGlobalInfo.associateBy { it.playerId }
+        val visibleCardsMap: Map<PlayerId, List<HanabiCard>> = computeVisibleCardsMap()
+        val cardsSeenByActivePlayer = visibleCardsMap[activePlayerId]!!
+        val teammatesPersonalKnowledge = dto
             .playerPOV
             .teammates
             .associateBy { it.playerId }
             .mapValues {
-            parseTeammateInfo(
+            parsePlayerKnowledge(
+                globallyAvailablePlayerInfo = playersGlobalInfoMap[it.key]!!,
                 teammateDTO = it.value,
                 suites = suites,
+                visibleCards = visibleCardsMap[it.key]!!,
             )
         }
-        val personalInfo = PersonalInfoImpl(
-            ownHandInfo = parseOwnHandPersonalInfo(dto.playerPOV.hand, handSize, suites),
-            teammates = personalTeammatesInfo
-        )
-        return PlayerFactory.createActivePlayer(
-            playerId = players.first().playerId,
-            globallyAvailableInfo = globallyAvailableInfo,
-            personalInfo = personalInfo
-        )
-    }
-
-    fun parseTeammateInfo(
-        teammateDTO: TeammateDTO,
-        suites: Set<Suite>,
-    ): InfoOnTeammate{
-
-        val slotInfo = teammateDTO.hand.mapIndexed { index, slotDTO->
-            getParsedVisibleSlot(
-                index = index,
-                slotDTO = slotDTO,
-                suites = suites,
-                playerId = teammateDTO.playerId
-            )
-        }
-
-        return InfoOnTeammateImpl(
-            slots = slotInfo.toSet(),
-            teammatePOVInfo = emptySet()
-        )
-    }
-
-    fun parseSlots(slotDTOs: List<SlotDTO>, suites: Set<Suite>, playerId: PlayerId): Set<Slot> {
-        return slotDTOs.mapIndexed { index, dto ->
-            parseSlot(index, dto, suites, playerId)
-        }.toSet()
-    }
-
-    fun parseSlot(index: Int, slotDTO: SlotDTO, suites: Set<Suite>, playerId: PlayerId): Slot {
-        return when (slotDTO.cardAbbreviation) {
-            "x" -> OwnSlot(
-                globalInfo = GloballyAvailableSlotInfo(
-                    index = index + 1,
-                    positiveClues = parseSlotClues(slotDTO.positiveClues, playerId),
-                    negativeClues = parseSlotClues(slotDTO.negativeClues, playerId),
-                ),
-                impliedIdentities = slotDTO.impliedIdentities.map { parseCard(it, suites) }.toSet(),
-                suites = suites
-            )
-
-            else -> getParsedVisibleSlot(index, slotDTO, suites, playerId)
-        }
-    }
-
-    fun parseSlotClues(clues: List<String>, playerId: PlayerId): List<Clue> {
-        return clues.map { clueAbbreviation ->
-            Color.entries
-                .firstOrNull { it.name == clueAbbreviation }
-                ?.let {
-                    ColorClue(
-                        color = it,
-                        receiver = playerId
-                    )
-                }
-                ?: Rank.entries
-                    .firstOrNull { it.numericalValue == clueAbbreviation.toIntOrNull() }
-                    ?.let {
-                        RankClue(
-                            rank = it,
-                            receiver = playerId
+        val teammatesHands = dto.playerPOV.teammates
+            .associateBy { it.playerId }
+            .mapValues {
+                TeammateHand(
+                    it.value.hand.mapIndexed { index, slot->
+                        VisibleSlot(
+                            globalInfo = playersGlobalInfoMap[it.key]!!.hand.elementAt(index),
+                            card = CardNoteParser.parseCard(slot.card, suites)
                         )
-                    }
-                ?: throw kotlin.IllegalArgumentException("Clue $clueAbbreviation cannot be parsed")
-        }
-    }
+                    }.toSet()
+                )
+            }
+        val personalKnowledge = PersonalKnowledgeImpl(
+            slots = dto.playerPOV.hand.mapIndexed { index, slot->
+                PersonalSlotKnowledgeImpl(
+                    impliedIdentities = CardNoteParser.parseCards(slot, suites),
+                    empathy = Utils.getCardEmpathy(
+                        visibleCards = cardsSeenByActivePlayer,
+                        positiveClues = activePlayerGloballyAvailableSlotsInfo.elementAt(index).positiveClues,
+                        negativeClues = activePlayerGloballyAvailableSlotsInfo.elementAt(index).negativeClues,
+                        suites = suites,
+                    ),
+                )
+            }.toSet(),
+        )
 
-    fun getParsedVisibleSlot(index: Int, slotDTO: SlotDTO, suites: Set<Suite>, playerId: PlayerId): VisibleSlot {
-        return VisibleSlot(
-            globalInfo = GloballyAvailableSlotInfo(
-                index = index + 1,
-                positiveClues = parseSlotClues(slotDTO.positiveClues, playerId),
-                negativeClues = parseSlotClues(slotDTO.negativeClues, playerId)
-            ),
-            card = parseCard(
-                cardAbbreviation = slotDTO.cardAbbreviation,
-                suites = suites,
-            ),
+
+        return PlayerFactory.createActivePlayer(
+            playerId = activePlayerId,
+            globallyAvailableInfo = globallyAvailableInfo,
+            personalKnowledge = personalKnowledge,
+            otherPlayersKnowledge = teammatesPersonalKnowledge,
+            teammatesHands = teammatesHands,
         )
     }
 
-    fun parseCard(cardAbbreviation: String, suites: Set<Suite>): HanabiCard {
-        val suiteAbbreviation = cardAbbreviation.first()
-        val rank = Rank.getByNumericalValue(cardAbbreviation.last().toString().toInt())
-        val suite = Suite.fromAbbreviation(suiteAbbreviation, suites)
-        return HanabiCard(
-            suite = suite,
-            rank = rank,
-        )
-    }
-
-    fun parseTeammateInfo(
+    fun parsePlayerGlobalInfo(
         dto: PlayerGloballyAvailableInfoDTO,
         playerIndex: Int,
-        handSize: Int,
         suites: Set<Suite>
     ): GloballyAvailablePlayerInfo {
-        val slots = dto.slots.ifEmpty {
-            List(size = handSize) { SlotDTO(
-                cardAbbreviation = "x"
-            ) }
-        }.map {
-            parseSlot(
-                index = playerIndex,
-                slotDTO = it,
-                suites = suites,
-                playerId = dto.playerId
-            )
-        }
         return GloballyAvailablePlayerInfo(
             playerId = dto.playerId,
             playerIndex = playerIndex,
-            hand = slots.mapIndexed { index, info->
+            hand = dto.slotClues.mapIndexed {index, slotDto->
                 GloballyAvailableSlotInfo(
-                index = index + 1,
-                    positiveClues = info.positiveClues,
-                    negativeClues = info.negativeClues
+                    index = index + 1,
+                    positiveClues = slotDto.positiveClues.map { CardNoteParser.parseClue(it, suites) },
+                    negativeClues = slotDto.negativeClues.map { CardNoteParser.parseClue(it, suites) },
             ) }.toSet()
         )
     }
 
-    fun parseOwnHandPersonalInfo(slots: List<SlotDTO>, handSize: Int, suites: Set<Suite>): Set<PersonalSlotInfo> {
-        return slots
-            .ifEmpty { List(handSize) { SlotDTO("x") } }
-            .mapIndexed {index, slot->
-            PersonalSlotInfo(
-                slotIndex = index + 1,
-                impliedIdentities = slot.impliedIdentities.map { parseCard(it, suites) }.toSet()
+    fun parsePlayerKnowledge(
+        globallyAvailablePlayerInfo: GloballyAvailablePlayerInfo,
+        teammateDTO: TeammateDTO,
+        suites: Set<Suite>,
+        visibleCards: List<HanabiCard>,
+    ): PersonalKnowledge{
+
+        val slots = teammateDTO.hand.mapIndexed { index, dto ->
+            PersonalSlotKnowledgeImpl(
+                impliedIdentities = CardNoteParser.parseCards(dto.card, suites),
+                empathy = Utils.getCardEmpathy(
+                    visibleCards = visibleCards,
+                    positiveClues = globallyAvailablePlayerInfo.hand.elementAt(index).positiveClues,
+                    negativeClues = globallyAvailablePlayerInfo.hand.elementAt(index).negativeClues,
+                    suites = suites,
+                )
             )
-        }.toSet()
+        }
+
+        return PersonalKnowledgeImpl(
+            slots = slots.toSet()
+        )
     }
 
     fun parsePlayingStacks(suites: Set<Suite>, playingStacksDto: List<List<String>>): Map<SuiteId,PlayingStack> {
@@ -205,8 +141,44 @@ object InputReader {
             .associate {
                 it.first.id to PlayingStack(
                     suite = it.first,
-                    cards = it.second.map { cardAbbreviation -> parseCard(cardAbbreviation, suites) }
+                    cards = it.second.map { cardAbbreviation -> CardNoteParser.parseCard(cardAbbreviation, suites) }
                 )
             }
+    }
+
+    fun computeVisibleCardsMap(
+        playerPOV: PlayerPOVDTO,
+        globallyAvailableInfo: GloballyAvailableInfo,
+        teammates: Map<PlayerId, TeammateDTO>,
+    ): Map<PlayerId, List<HanabiCard>> {
+        val cardsInTrash = globallyAvailableInfo.trashPile.cards
+        val cardsInStacks = globallyAvailableInfo.playingStacks.flatMap { it.value.cards }
+        val activePlayerKnownCards = playerPOV.hand.filter {
+            CardNoteParser.
+        }
+        return globallyAvailableInfo.players.mapValues {
+            computeCardsVisibleByPlayer(
+                playerId = it.key,
+                publiclyVisibleCards = cardsInStacks + cardsInTrash,
+                teammates = teammates,
+                suites = globallyAvailableInfo.suites,
+            )
+        }
+    }
+
+    fun computeCardsVisibleByPlayer(
+        playerId: PlayerId,
+        publiclyVisibleCards: List<HanabiCard>,
+        teammates: Map<PlayerId, TeammateDTO>,
+        suites: Set<Suite>,
+    ): List<HanabiCard> {
+        val cardInTeammatesHands = teammates
+            .filterKeys { it != playerId }
+            .flatMap { teammate->
+                teammate.value.hand.map {
+                    CardNoteParser.parseCard(it.card, suites)
+                }
+            }
+
     }
 }

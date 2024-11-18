@@ -1,9 +1,6 @@
 package eelst.ilike.engine.impl
 
-import eelst.ilike.engine.InterpretedHand
-import eelst.ilike.engine.InterpretedSlot
-import eelst.ilike.engine.OwnSlot
-import eelst.ilike.engine.PlayerPOV
+import eelst.ilike.engine.*
 import eelst.ilike.game.Slot
 import eelst.ilike.game.action.Clue
 import eelst.ilike.game.entity.card.HanabiCard
@@ -17,20 +14,20 @@ class OwnHand(private val slots: Set<OwnSlot>): InterpretedHand, Set<Interpreted
         TODO("Not yet implemented")
     }
 
-    fun getKnownCards(visibleCards: List<HanabiCard>): List<HanabiCard> {
-        return getKnownSlots(visibleCards).map { it.card }
+    fun getKnownCards(): List<HanabiCard> {
+        return getKnownSlots().map { it.card }
     }
 
     fun getSlot(slotIndex: Int): OwnSlot {
         return slots.elementAt(slotIndex - 1)
     }
 
-    fun getKnownSlots(visibleCards: List<HanabiCard>): Set<KnownSlot> {
-        return slots.filter { it.isKnown(visibleCards = visibleCards) }
+    fun getKnownSlots(): Set<KnownSlot> {
+        return slots.filter { it.isKnown() }
             .map {
                 KnownSlot(
                     globallyAvailableInfo = it.globalInfo,
-                    card = it.getPossibleIdentities(visibleCards).first()
+                    card = it.getPossibleIdentities().first()
                 )
             }.toSet()
     }

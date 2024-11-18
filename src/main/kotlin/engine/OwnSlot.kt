@@ -6,31 +6,22 @@ import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 
 class OwnSlot(
-    private val impliedIdentities: Set<HanabiCard>,
     globalInfo: GloballyAvailableSlotInfo,
-    private val suites: Set<Suite>
+    private val slotKnowledge: PersonalSlotKnowledge,
 ) : InterpretedSlot(globalInfo) {
-    fun getPossibleIdentities(visibleCards: List<HanabiCard>): Set<HanabiCard> {
-        return impliedIdentities
-            .ifEmpty { Utils.getCardEmpathy(
-                visibleCards = visibleCards,
-                positiveClues = positiveClues,
-                negativeClues = negativeClues,
-                suites = suites,
-            )
-            }
+    fun getPossibleIdentities(): Set<HanabiCard> {
+        return slotKnowledge.getPossibleSlotIdentities()
     }
 
     fun hasKnownIdentity(card: HanabiCard): Boolean {
-        TODO()
+        return isKnown() && getPossibleIdentities().first() == card
     }
 
-
-    fun isKnown(visibleCards: List<HanabiCard>): Boolean {
-        return getPossibleIdentities(visibleCards).size == 1
+    fun isKnown(): Boolean {
+        return getPossibleIdentities().size == 1
     }
 
     override fun isClued(): Boolean {
-        return positiveClues.isNotEmpty() || impliedIdentities.isNotEmpty()
+        return slotKnowledge.isClued()
     }
 }

@@ -7,6 +7,5 @@ import eelst.ilike.game.PlayerId
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy::class)
 data class TeammateDTO(
     val playerId: PlayerId,
-    val playerPOV: PlayerPOVDTO,
-    val hand: List<SlotDTO>,
+    val hand: List<TeammateSlotDTO>,
 )

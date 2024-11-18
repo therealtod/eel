@@ -108,10 +108,8 @@ object HGroupHelper {
     ): Boolean {
         val promptedTeammateSlot = promptedSlots.firstOrNull { slot ->
             slot.isClued() &&
-                    teammate.getSlotFromTeammatePOV(slot.index)
-                        .getPossibleIdentities(
-                            visibleCards = playerPOV.getCardsSeenByTeammate(teammate.playerId)
-                        )
+                    teammate.getSlotFromPlayerPOV(slot.index)
+                        .getPossibleIdentities()
                         .contains(card)
         } ?: return false
         val slotIdentity = teammate.hand.getSlot(promptedTeammateSlot.index).card
@@ -163,7 +161,7 @@ object HGroupHelper {
     fun hasCardOnFinessePosition(card: HanabiCard, teammate: Teammate): Boolean {
         if (hasFinessePosition(teammate.hand)) {
             val finessePosition = getFinessePosition(teammate.hand)
-            return finessePosition == card
+            return teammate.getCardAtSlot(finessePosition.index) == card
         } else return false
     }
 }

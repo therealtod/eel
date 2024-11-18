@@ -1,5 +1,6 @@
 package eelst.ilike.engine.impl
 
+import eelst.ilike.engine.PersonalKnowledge
 import eelst.ilike.engine.PlayerPOV
 import eelst.ilike.engine.Teammate
 import eelst.ilike.game.GloballyAvailableInfo
@@ -23,20 +24,11 @@ class ActivePlayerPOV(
     }
 
     override fun getOwnKnownSlots(): Set<KnownSlot> {
-        return ownHand.getKnownSlots(getVisibleCards())
+        return ownHand.getKnownSlots()
     }
 
     override fun getOwnKnownCards(): List<HanabiCard> {
         return getOwnKnownSlots().map { it.card }
-    }
-
-    override fun getOwnFullEmpathyCards(): List<HanabiCard> {
-        return ownHand
-            .map {
-                it.getEmpathy(getVisibleCards(), globallyAvailableInfo.suites)
-            }.filter {
-                it.size == 1
-            }.flatten()
     }
 
     override fun getOwnKnownPlayableSlots(): Set<Slot> {

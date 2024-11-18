@@ -10,15 +10,25 @@ import eelst.ilike.game.PlayerId
 class ActivePlayer(
     playerId: PlayerId,
     playerIndex: Int,
-    hand: OwnHand,
     globallyAvailableInfo: GloballyAvailableInfo,
-    val playerPOV: PlayerPOV,
+    personalKnowledge: PersonalKnowledge,
+    teammates: Set<Teammate>,
 ): Player(
     playerId = playerId,
     playerIndex = playerIndex,
-    hand = hand,
-    globallyAvailableInfo = globallyAvailableInfo
+    globallyAvailableInfo = globallyAvailableInfo,
+    personalKnowledge = personalKnowledge,
 ) {
+    val playerPOV: PlayerPOV
+
+    init {
+        playerPOV = ActivePlayerPOV(
+            globallyAvailableInfo = globallyAvailableInfo,
+            teammates = teammates,
+            ownHand = ownHand
+        )
+    }
+
     fun getActions(conventionSet: ConventionSet): Set<ConventionalAction> {
         val candidateActions = conventionSet.getTechs().flatMap { it.getActions(playerPOV) }
         return getPrunedAction(candidateActions)

@@ -1,7 +1,8 @@
 package eelst.ilike.engine.factory
 
 import eelst.ilike.engine.OwnSlot
-import eelst.ilike.engine.PersonalInfo
+
+import eelst.ilike.engine.PersonalKnowledge
 import eelst.ilike.engine.Teammate
 import eelst.ilike.engine.impl.*
 import eelst.ilike.game.GloballyAvailableInfo
@@ -12,86 +13,52 @@ object PlayerFactory {
     fun createActivePlayer(
         playerId: PlayerId,
         globallyAvailableInfo: GloballyAvailableInfo,
-        personalInfo: PersonalInfo,
+        personalKnowledge: PersonalKnowledge,
+        otherPlayersKnowledge: Map<PlayerId, PersonalKnowledge>,
+        teammatesHands: Map<PlayerId, TeammateHand>
     ): ActivePlayer {
         val thisPlayerGlobalInfo = globallyAvailableInfo.getPlayerInfo(playerId)
         val numberOfPlayers = globallyAvailableInfo.players.size
         val activePlayerIndex = thisPlayerGlobalInfo.playerIndex
-        val handMap = globallyAvailableInfo.players.filterKeys { it != playerId }.mapValues { entry ->
-            TeammateHand(
-                entry.value.hand.map {
-                    personalInfo.getInfo(entry.key).getSlot(it.index, it)
-                }.toSet()
-            )
-        }
-        val cardsOnTeammatesHandsMap = handMap.mapValues {
-            it.value.getCards()
-        }
-        val cardsOnTeammatesHands = cardsOnTeammatesHandsMap.values.flatten()
-
-        val activePlayerSlots = thisPlayerGlobalInfo.hand.map {
-            OwnSlot(
-                globalInfo = it,
-                impliedIdentities = personalInfo.getOwnSlotInfo(it.index).impliedIdentities,
-                suites = globallyAvailableInfo.suites
-            )
-        }
-        val ownFullEmpathyCards = activePlayerSlots.filter { slot->
-            slot.isKnown(cardsOnTeammatesHands)
-        }.flatMap { it.getPossibleIdentities(cardsOnTeammatesHands) }
-
         val teammates = globallyAvailableInfo.players.filterKeys { it != playerId }.values.map { playerInfo->
             createTeammate(
                 playerId = playerInfo.playerId,
+                playerIndex = playerInfo.playerIndex,
                 globallyAvailableInfo = globallyAvailableInfo,
+                personalKnowledge = otherPlayersKnowledge[playerInfo.playerId]!!,
                 numberOfPlayers = numberOfPlayers,
                 activePlayerIndex = activePlayerIndex,
-                handMap = handMap,
-                teammatePersonalInfo = personalInfo.getInfo(playerInfo.playerId).getOwnInfo(),
-                visibleCards = ownFullEmpathyCards + cardsOnTeammatesHandsMap
-                    .filterKeys { it != playerInfo.playerId }
-                    .values
-                    .flatten()
+                hand = teammatesHands[playerInfo.playerId]!!,
             )
         }.toSet()
 
-
-        val hand = OwnHand(activePlayerSlots.toSet())
-
-        val pov = ActivePlayerPOV(
-            globallyAvailableInfo = globallyAvailableInfo,
-            teammates = teammates,
-            ownHand = hand,
-        )
 
         return ActivePlayer(
             playerId = playerId,
             playerIndex = activePlayerIndex,
             globallyAvailableInfo = globallyAvailableInfo,
-            playerPOV = pov,
-            hand = hand,
+            teammates = teammates,
+            personalKnowledge = personalKnowledge,
         )
     }
 
     fun createTeammate(
         playerId: PlayerId,
+        playerIndex: Int,
         globallyAvailableInfo: GloballyAvailableInfo,
-        teammatePersonalInfo: PersonalInfo,
+        personalKnowledge: PersonalKnowledge,
         numberOfPlayers: Int,
         activePlayerIndex: Int,
-        handMap: Map<PlayerId, TeammateHand>,
-        visibleCards: List<HanabiCard>,
+        hand: TeammateHand,
     ): Teammate {
         val playerInfo = globallyAvailableInfo.getPlayerInfo(playerId)
-        val teammateVisibleHand = handMap[playerInfo.playerId]
-            ?: throw IllegalArgumentException("No hand data on a player with id ${playerInfo.playerId}")
         return Teammate(
             playerId = playerInfo.playerId,
+            playerIndex = playerIndex,
             seatsGap = (numberOfPlayers- activePlayerIndex + playerInfo.playerIndex).mod(numberOfPlayers),
             globallyAvailableInfo = globallyAvailableInfo,
-            hand = teammateVisibleHand,
-            personalInfo = teammatePersonalInfo,
-            visibleCards = visibleCards,
+            hand = hand,
+            personalKnowledge = personalKnowledge,
         )
     }
 }
