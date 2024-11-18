@@ -5,6 +5,7 @@ import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.hand.OwnHand
 import eelst.ilike.engine.hand.slot.KnownSlot
+import eelst.ilike.engine.hand.slot.OwnSlot
 import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Slot
@@ -46,5 +47,13 @@ class ActivePlayerPOV(
     override fun getOwnKnownPlayableSlots(): Set<Slot> {
         val knownSlots = getOwnKnownSlots()
         return knownSlots.filter { globallyAvailableInfo.isImmediatelyPlayable(it.card) }.toSet()
+    }
+
+    override fun getSlotFromPlayerPOV(slotIndex: Int): OwnSlot {
+        return hand.getSlot(slotIndex)
+    }
+
+    override fun knows(slotIndex: Int): Boolean {
+        return hand.getSlot(slotIndex).isKnown()
     }
 }

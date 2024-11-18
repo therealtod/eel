@@ -2,7 +2,8 @@ package eelst.ilike.engine.player
 
 import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
-import eelst.ilike.engine.hand.InterpretedHand
+import eelst.ilike.engine.hand.OwnHand
+import eelst.ilike.engine.hand.slot.OwnSlot
 import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Slot
@@ -13,7 +14,7 @@ abstract class PlayerPOV(
     val playerIndex: Int,
     val globallyAvailableInfo: GloballyAvailableInfo,
     val teammates: Set<Teammate>,
-    val hand: InterpretedHand,
+    val hand: OwnHand,
 ) {
     abstract fun getOwnKnownPlayableSlots(): Set<Slot>
 
@@ -25,5 +26,7 @@ abstract class PlayerPOV(
 
     abstract fun getActions(conventionSet: ConventionSet): Set<ConventionalAction>
 
+    abstract fun knows(slotIndex: Int): Boolean
 
+    abstract fun getSlotFromPlayerPOV(slotIndex: Int): OwnSlot
 }
