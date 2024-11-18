@@ -1,3 +1,3 @@
 package eelst.ilike.engine.convention.hgroup.signal
 
-object CluedCardPlaySignal : PlaySignal("Clued Card Play")
+data object CluedCardPlaySignal : PlaySignal("Clued Card Play")

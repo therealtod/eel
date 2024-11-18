@@ -17,7 +17,7 @@ object Utils {
             6 -> 3
             4, 5 -> 4
             2, 3 -> 5
-            else -> throw IllegalStateException("Invalid number of players: ${numberOfPlayers}")
+            else -> throw IllegalStateException("Invalid number of players: $numberOfPlayers")
         }
     }
 }

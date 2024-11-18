@@ -12,7 +12,7 @@ sealed class ClassicSuite(
     name = name,
     abbreviations = abbreviations,
 ) {
-    val rankTouchMap = mapOf(
+    private val rankTouchMap = mapOf(
         Rank.ONE to setOf(Rank.ONE),
         Rank.TWO to setOf(Rank.TWO),
         Rank.THREE to setOf(Rank.THREE),

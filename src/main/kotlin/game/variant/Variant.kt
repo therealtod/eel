@@ -8,7 +8,7 @@ sealed class Variant(
     val suites: Set<Suite>,
 ) {
     companion object {
-        val registeredVariants = mapOf(
+        private val registeredVariants = mapOf(
             NoVariant.name to NoVariant,
         )
 

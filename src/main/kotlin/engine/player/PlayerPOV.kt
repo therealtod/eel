@@ -18,7 +18,7 @@ abstract class PlayerPOV(
         return ownHand.getKnownCards()
     }
 
-    fun getOwnKnownSlots(): Set<KnownSlot> {
+    private fun getOwnKnownSlots(): Set<KnownSlot> {
         return ownHand.getKnownSlots()
     }
 

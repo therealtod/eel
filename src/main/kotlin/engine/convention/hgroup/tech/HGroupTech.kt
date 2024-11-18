@@ -53,7 +53,7 @@ abstract class HGroupTech(
         }.toSet()
     }
 
-    protected fun getRankCluesFocusing(
+    private fun getRankCluesFocusing(
         slot: Slot,
         teammate: Teammate,
         ranks: Set<Rank>,
@@ -65,7 +65,7 @@ abstract class HGroupTech(
             .toSet()
     }
 
-    protected fun getColorCluesFocusing(
+    private fun getColorCluesFocusing(
         slot: Slot,
         teammate: Teammate,
         colors: Set<Color>,

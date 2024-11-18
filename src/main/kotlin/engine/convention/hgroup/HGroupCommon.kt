@@ -34,7 +34,7 @@ object HGroupCommon {
         return (playedCardsForSuite + teammatesKnownCards + ownKnownCards).containsAll(prerequisiteCards)
     }
 
-    fun isLocked(hand: InterpretedHand): Boolean {
+    private fun isLocked(hand: InterpretedHand): Boolean {
         return hand.all { it.isTouched() }
     }
 
@@ -46,11 +46,11 @@ object HGroupCommon {
         return hand.last { !it.isTouched() }
     }
 
-    fun hasFinessePosition(hand: InterpretedHand): Boolean {
+    private fun hasFinessePosition(hand: InterpretedHand): Boolean {
         return !isLocked(hand)
     }
 
-    fun getFinessePosition(hand: InterpretedHand): Slot {
+    private fun getFinessePosition(hand: InterpretedHand): Slot {
         return hand.first { !it.isTouched() }
     }
 
@@ -64,7 +64,7 @@ object HGroupCommon {
         )
     }
 
-    fun isSequencePromptable(sequence: Set<HanabiCard>, playerPOV: ActivePlayerPOV): Boolean {
+    private fun isSequencePromptable(sequence: Set<HanabiCard>, playerPOV: ActivePlayerPOV): Boolean {
         return isSequencePromptableGivenAlreadyPromptedCards(
             sequence = sequence,
             promptedCards = emptySet(),
@@ -72,7 +72,7 @@ object HGroupCommon {
         )
     }
 
-    fun isSequencePromptableGivenAlreadyPromptedCards(
+    private fun isSequencePromptableGivenAlreadyPromptedCards(
         sequence: Set<HanabiCard>,
         promptedCards: Set<HanabiCard>,
         playerPOV: ActivePlayerPOV,
@@ -99,7 +99,7 @@ object HGroupCommon {
         }
     }
 
-    fun isPromptedCorrectly(
+    private fun isPromptedCorrectly(
         card: HanabiCard,
         teammate: Teammate,
         promptedSlots: Set<VisibleSlot> = emptySet(),
@@ -127,7 +127,7 @@ object HGroupCommon {
         )
     }
 
-    fun wrongPromptCanBePatched(
+    private fun wrongPromptCanBePatched(
         wrongPromptedCard: HanabiCard,
         wrongPromptedTeammate: Teammate,
         playerPOV: ActivePlayerPOV,

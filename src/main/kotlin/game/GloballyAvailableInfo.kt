@@ -29,7 +29,7 @@ data class GloballyAvailableInfo(
             ?: throw IllegalArgumentException("No stack in this game corresponding to the card $card")
     }
 
-    fun isAlreadyPlayed(card: HanabiCard): Boolean {
+    private fun isAlreadyPlayed(card: HanabiCard): Boolean {
         return getStackForCard(card).contains(card)
     }
 

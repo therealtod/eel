@@ -47,7 +47,7 @@ object PlayerFactory {
         )
     }
 
-    fun createTeammate(
+    private fun createTeammate(
         playerId: PlayerId,
         playerIndex: Int,
         globallyAvailableInfo: GloballyAvailableInfo,
@@ -72,7 +72,7 @@ object PlayerFactory {
         )
     }
 
-    fun createOwnSlots(
+    private fun createOwnSlots(
         playerId: PlayerId,
         globallyAvailableInfo: GloballyAvailableInfo,
         personalKnowledge: PersonalKnowledge,

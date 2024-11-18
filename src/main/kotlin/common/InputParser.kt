@@ -99,7 +99,7 @@ object InputParser {
         )
     }
 
-    fun parseClue(playerId: PlayerId, clueAbbreviation: String, suites: Set<Suite>): Clue {
+    private fun parseClue(playerId: PlayerId, clueAbbreviation: String, suites: Set<Suite>): Clue {
         return Color.entries.find { it.name == clueAbbreviation }
             ?.let {
                 ColorClue(

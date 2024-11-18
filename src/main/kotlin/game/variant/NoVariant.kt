@@ -3,7 +3,7 @@ package eelst.ilike.game.variant
 import eelst.ilike.game.entity.suite.*
 
 
-object NoVariant
+data object NoVariant
     : Variant(
     name = "No Variant",
     suites = setOf(

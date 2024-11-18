@@ -9,7 +9,7 @@ enum class Rank(val numericalValue: Int) : CardAttribute {
 
     companion object {
         fun getByNumericalValue(numericalValue: Int): Rank {
-            require(numericalValue > 0 && numericalValue <= 5) {
+            require(numericalValue in 1..5) {
                 "No Rank with numerical value equal to $numericalValue"
             }
             return entries.first { it.numericalValue == numericalValue }

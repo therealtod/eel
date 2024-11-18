@@ -12,7 +12,7 @@ abstract class Suite(
     val id: SuiteId,
     val name: String,
     val abbreviations: Set<Char>,
-    val ranks: Set<Rank> = setOf(Rank.ONE, Rank.TWO, Rank.THREE, Rank.FOUR, Rank.FIVE),
+    private val ranks: Set<Rank> = setOf(Rank.ONE, Rank.TWO, Rank.THREE, Rank.FOUR, Rank.FIVE),
     val suiteDirection: SuiteDirection = SuiteDirection.UP,
 ) {
     val maxRank = ranks.last()
