@@ -2,14 +2,14 @@ package eelst.ilike.engine.convention.hgroup
 
 import eelst.ilike.engine.hand.InterpretedHand
 import eelst.ilike.engine.hand.slot.VisibleSlot
-import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.ActivePlayerPOV
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.game.action.Clue
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.card.HanabiCard
 
 object HGroupCommon {
-    fun getClueFocus(clue: Clue, hand: InterpretedHand): Slot {
+    fun getClueFocusSlotIndex(clue: Clue, hand: InterpretedHand): Int {
         val slotTouchedByClue = hand.getSlotsTouchedBy(clue)
         require(slotTouchedByClue.isNotEmpty()) {
             "Can't determine the focus of a clue which touches no slots"
@@ -17,19 +17,19 @@ object HGroupCommon {
         if (hasChop(hand)) {
             val chop = getChop(hand)
             return if (slotTouchedByClue.contains(chop)) {
-                chop
+                chop.index
             } else {
-                slotTouchedByClue.firstOrNull { !it.isTouched() } ?: slotTouchedByClue.first()
+                (slotTouchedByClue.firstOrNull { !it.isTouched() } ?: slotTouchedByClue.first()).index
             }
         } else {
-            return slotTouchedByClue.first()
+            return slotTouchedByClue.first().index
         }
     }
 
-    fun isGloballyKnownPlayable(card: HanabiCard, playerPOV: PlayerPOV): Boolean {
+    fun isGloballyKnownPlayable(card: HanabiCard, playerPOV: ActivePlayerPOV): Boolean {
         val prerequisiteCards = card.getPrerequisiteCards()
         val playedCardsForSuite = playerPOV.globallyAvailableInfo.getStackForCard(card).cards
-        val teammatesKnownCards = playerPOV.teammates.flatMap { it.getKnownCards() }
+        val teammatesKnownCards = playerPOV.teammates.flatMap { it.getOwnKnownCards() }
         val ownKnownCards = playerPOV.getOwnKnownCards()
         return (playedCardsForSuite + teammatesKnownCards + ownKnownCards).containsAll(prerequisiteCards)
     }
@@ -56,8 +56,7 @@ object HGroupCommon {
 
     fun validatePrompt(
         connectingCards: Set<HanabiCard>,
-        clue: Clue,
-        playerPOV: PlayerPOV
+        playerPOV: ActivePlayerPOV
     ): Boolean {
         return isSequencePromptable(
             sequence = connectingCards,
@@ -65,7 +64,7 @@ object HGroupCommon {
         )
     }
 
-    fun isSequencePromptable(sequence: Set<HanabiCard>, playerPOV: PlayerPOV): Boolean {
+    fun isSequencePromptable(sequence: Set<HanabiCard>, playerPOV: ActivePlayerPOV): Boolean {
         return isSequencePromptableGivenAlreadyPromptedCards(
             sequence = sequence,
             promptedCards = emptySet(),
@@ -76,7 +75,7 @@ object HGroupCommon {
     fun isSequencePromptableGivenAlreadyPromptedCards(
         sequence: Set<HanabiCard>,
         promptedCards: Set<HanabiCard>,
-        playerPOV: PlayerPOV,
+        playerPOV: ActivePlayerPOV,
     ): Boolean {
         if (sequence.isEmpty()) return true
         val nextInSequence = sequence.first()
@@ -104,7 +103,7 @@ object HGroupCommon {
         card: HanabiCard,
         teammate: Teammate,
         promptedSlots: Set<VisibleSlot> = emptySet(),
-        playerPOV: PlayerPOV,
+        playerPOV: ActivePlayerPOV,
     ): Boolean {
         val promptedTeammateSlot = promptedSlots.firstOrNull { slot ->
             slot.isClued() &&
@@ -112,7 +111,7 @@ object HGroupCommon {
                         .getPossibleIdentities()
                         .contains(card)
         } ?: return false
-        val slotIdentity = teammate.hand.getSlot(promptedTeammateSlot.index).card
+        val slotIdentity = teammate.getSlot(promptedTeammateSlot.index).card
         return (slotIdentity == card) ||
                 (playerPOV.globallyAvailableInfo.isImmediatelyPlayable(card)
                         && isPromptedCorrectly(
@@ -131,13 +130,13 @@ object HGroupCommon {
     fun wrongPromptCanBePatched(
         wrongPromptedCard: HanabiCard,
         wrongPromptedTeammate: Teammate,
-        playerPOV: PlayerPOV,
+        playerPOV: ActivePlayerPOV,
     ): Boolean {
         if (playerPOV.globallyAvailableInfo.getGlobalAwayValue(wrongPromptedCard) < 0) return false
         val preRequisites = wrongPromptedCard.getPrerequisiteCards()
         val cardTeammateMap = preRequisites.associateWith {
             playerPOV.teammates.find { teammate ->
-                teammate.getKnownCards().contains(it)
+                teammate.getOwnKnownCards().contains(it)
             }
         }
         if (cardTeammateMap.entries.any { it.value == null }) {

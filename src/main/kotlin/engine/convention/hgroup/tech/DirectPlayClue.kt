@@ -1,7 +1,7 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.convention.ConventionalAction
-import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.ActivePlayerPOV
 import eelst.ilike.game.entity.suite.*
 
 object DirectPlayClue : PlayClue(
@@ -9,7 +9,7 @@ object DirectPlayClue : PlayClue(
     appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
     takesPrecedenceOver = emptySet(),
 ) {
-    override fun getActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
+    override fun getActions(playerPOV: ActivePlayerPOV): Set<ConventionalAction> {
         val actions = mutableListOf<ConventionalAction>()
         playerPOV.teammates.forEach { teammate ->
             teammate.hand.forEach { slot ->

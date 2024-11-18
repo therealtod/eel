@@ -2,7 +2,7 @@ package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.convention.ConventionTech
 import eelst.ilike.engine.convention.ConventionalAction
-import eelst.ilike.engine.convention.hgroup.HGroupCommon.getClueFocus
+import eelst.ilike.engine.convention.hgroup.HGroupCommon
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.game.action.Clue
 import eelst.ilike.game.action.ColorClue
@@ -61,7 +61,7 @@ abstract class HGroupTech(
         return ranks.map {
             RankClue(rank = it, receiver = teammate.playerId)
         }
-            .filter { getClueFocus(clue = it, hand = teammate.hand) == slot }
+            .filter { HGroupCommon.getClueFocusSlotIndex(clue = it, hand = teammate.hand) == slot.index }
             .toSet()
     }
 
@@ -73,7 +73,7 @@ abstract class HGroupTech(
         return colors.map {
             ColorClue(color = it, receiver = teammate.playerId)
         }
-            .filter { getClueFocus(clue = it, hand = teammate.hand) == slot }
+            .filter { HGroupCommon.getClueFocusSlotIndex(clue = it, hand = teammate.hand) == slot.index }
             .toSet()
     }
 

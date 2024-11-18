@@ -2,7 +2,7 @@ package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
-import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.ActivePlayerPOV
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.game.action.RankClue
 import eelst.ilike.game.entity.Rank
@@ -13,11 +13,11 @@ object TwoSave : SaveClue(
     name = "2-Save",
     appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
 ) {
-    override fun getActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
+    override fun getActions(playerPOV: ActivePlayerPOV): Set<ConventionalAction> {
         val actions = mutableListOf<ConventionalAction>()
         playerPOV.teammates.forEach { teammate ->
             val chop = getChop(teammate.hand)
-            val card = teammate.hand.getSlot(chop.index).card
+            val card = teammate.getSlot(chop.index).card
             if (card.rank == Rank.TWO
                 && canBeTwoSaved(
                     card = card,
@@ -39,7 +39,7 @@ object TwoSave : SaveClue(
     private fun canBeTwoSaved(
         card: HanabiCard,
         teammate: Teammate,
-        playerPOV: PlayerPOV,
+        playerPOV: ActivePlayerPOV,
     ): Boolean {
         return playerPOV.teammates.none { otherTeammate ->
             otherTeammate.playerId != teammate.playerId &&

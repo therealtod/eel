@@ -31,13 +31,11 @@ object PlayerFactory {
                 hand = teammatesHands[playerInfo.playerId]!!,
             )
         }.toSet()
-
-        val slots = (1..globallyAvailableInfo.handsSize).map {
-            OwnSlot(
-                globalInfo = globallyAvailableInfo.getPlayerInfo(playerId).hand.elementAt(it - 1),
-                slotKnowledge = personalKnowledge.getKnowledgeAboutOwnSlot(it)
-            )
-        }
+        val slots = createOwnSlots(
+            playerId = playerId,
+            globallyAvailableInfo = globallyAvailableInfo,
+            personalKnowledge = personalKnowledge,
+        )
         val hand = OwnHand(slots = slots.toSet())
 
         return ActivePlayerPOV(
@@ -59,13 +57,31 @@ object PlayerFactory {
         hand: TeammateHand,
     ): Teammate {
         val playerInfo = globallyAvailableInfo.getPlayerInfo(playerId)
+        val ownSlots = createOwnSlots(
+            playerId = playerId,
+            globallyAvailableInfo = globallyAvailableInfo,
+            personalKnowledge = personalKnowledge,
+        )
         return Teammate(
             playerId = playerInfo.playerId,
             playerIndex = playerIndex,
             seatsGap = (numberOfPlayers - activePlayerIndex + playerInfo.playerIndex).mod(numberOfPlayers),
             globallyAvailableInfo = globallyAvailableInfo,
             hand = hand,
-            personalKnowledge = personalKnowledge,
+            ownHand = OwnHand(ownSlots)
         )
+    }
+
+    fun createOwnSlots(
+        playerId: PlayerId,
+        globallyAvailableInfo: GloballyAvailableInfo,
+        personalKnowledge: PersonalKnowledge,
+    ): Set<OwnSlot> {
+        return (1..globallyAvailableInfo.handsSize).map {
+            OwnSlot(
+                globalInfo = globallyAvailableInfo.getPlayerInfo(playerId).hand.elementAt(it - 1),
+                slotKnowledge = personalKnowledge.getKnowledgeAboutOwnSlot(it)
+            )
+        }.toSet()
     }
 }

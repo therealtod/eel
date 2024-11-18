@@ -1,8 +1,7 @@
 package eelst.ilike.engine.player
 
-import eelst.ilike.engine.convention.ConventionSet
-import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.hand.OwnHand
+import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.hand.slot.OwnSlot
 import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.PlayerId
@@ -13,20 +12,26 @@ abstract class PlayerPOV(
     val playerId: PlayerId,
     val playerIndex: Int,
     val globallyAvailableInfo: GloballyAvailableInfo,
-    val teammates: Set<Teammate>,
-    val hand: OwnHand,
+    val ownHand: OwnHand,
 ) {
-    abstract fun getOwnKnownPlayableSlots(): Set<Slot>
+    fun getOwnKnownCards(): List<HanabiCard> {
+        return ownHand.getKnownCards()
+    }
 
-    abstract fun teamKnowsAllCards(cards: Set<HanabiCard>): Boolean
+    fun getOwnKnownSlots(): Set<KnownSlot> {
+        return ownHand.getKnownSlots()
+    }
 
-    abstract fun getOwnKnownSlots(): Set<Slot>
+    fun getOwnKnownPlayableSlots(): Set<Slot> {
+        val knownSlots = getOwnKnownSlots()
+        return knownSlots.filter { globallyAvailableInfo.isImmediatelyPlayable(it.card) }.toSet()
+    }
 
-    abstract fun getOwnKnownCards(): List<HanabiCard>
+    fun knows(slotIndex: Int): Boolean {
+        return ownHand.getSlot(slotIndex).isKnown()
+    }
 
-    abstract fun getActions(conventionSet: ConventionSet): Set<ConventionalAction>
-
-    abstract fun knows(slotIndex: Int): Boolean
-
-    abstract fun getSlotFromPlayerPOV(slotIndex: Int): OwnSlot
+    fun getSlotFromPlayerPOV(slotIndex: Int): OwnSlot {
+        return ownHand.getSlot(slotIndex)
+    }
 }
