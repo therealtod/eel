@@ -1,10 +1,10 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.Teammate
+import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.convention.ConventionTech
 import eelst.ilike.engine.convention.ConventionalAction
-import eelst.ilike.engine.convention.hgroup.HGroupHelper.getClueFocus
-import eelst.ilike.game.Slot
+import eelst.ilike.engine.convention.hgroup.HGroupCommon.getClueFocus
+import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.action.Clue
 import eelst.ilike.game.action.ColorClue
 import eelst.ilike.game.action.RankClue

@@ -6,6 +6,7 @@ import eelst.ilike.game.action.RankClue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.card.HanabiCard
+import eelst.ilike.utils.Configuration
 
 abstract class Suite(
     val id: SuiteId,
@@ -76,23 +77,8 @@ abstract class Suite(
     }
 
     companion object {
-        private val registeredSuites = mapOf(
-            "no_var_red" to Red,
-            "no_var_yellow" to Yellow,
-            "no_var_green" to Green,
-            "no_var_blue" to Blue,
-            "no_var_purple" to Purple
-        )
-
         fun fromId(suiteId: SuiteId): Suite {
-            val registeredSuites = mapOf(
-                "red" to Red,
-                "yellow" to Yellow,
-                "green" to Green,
-                "blue" to Blue,
-                "purple" to Purple
-            )
-            return registeredSuites[suiteId]
+            return Configuration.registeredSuitesMap[suiteId]
                 ?: throw IllegalArgumentException("The suite with id $suiteId is unregistered")
         }
 
@@ -100,5 +86,9 @@ abstract class Suite(
             return suites.firstOrNull { it.abbreviations.contains(abbreviation) }
                 ?: Unknown
         }
+    }
+
+    override fun toString(): String {
+        return name
     }
 }

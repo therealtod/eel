@@ -1,6 +1,6 @@
 package eelst.ilike.engine.convention
 
-import eelst.ilike.engine.PlayerPOV
+import eelst.ilike.engine.player.PlayerPOV
 
 
 interface ConventionTech {

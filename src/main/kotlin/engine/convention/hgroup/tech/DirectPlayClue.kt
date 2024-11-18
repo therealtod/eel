@@ -1,6 +1,6 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.PlayerPOV
+import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.game.entity.suite.Blue
 import eelst.ilike.game.entity.suite.Green

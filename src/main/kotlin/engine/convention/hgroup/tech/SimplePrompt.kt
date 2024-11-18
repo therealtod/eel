@@ -1,8 +1,8 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.PlayerPOV
+import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.convention.ConventionalAction
-import eelst.ilike.engine.convention.hgroup.HGroupHelper.validatePrompt
+import eelst.ilike.engine.convention.hgroup.HGroupCommon.validatePrompt
 import eelst.ilike.game.entity.suite.Blue
 import eelst.ilike.game.entity.suite.Green
 import eelst.ilike.game.entity.suite.Purple

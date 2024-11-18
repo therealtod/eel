@@ -1,6 +1,6 @@
 package game
 
-import eelst.ilike.game.TrashPile
+import eelst.ilike.game.entity.TrashPile
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Green

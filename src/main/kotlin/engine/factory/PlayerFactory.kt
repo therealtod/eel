@@ -1,13 +1,14 @@
 package eelst.ilike.engine.factory
 
-import eelst.ilike.engine.OwnSlot
+import eelst.ilike.engine.hand.OwnHand
+import eelst.ilike.engine.hand.TeammateHand
+import eelst.ilike.engine.hand.slot.OwnSlot
 
-import eelst.ilike.engine.PersonalKnowledge
-import eelst.ilike.engine.Teammate
-import eelst.ilike.engine.impl.*
+import eelst.ilike.engine.player.knowledge.PersonalKnowledge
+import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.ActivePlayer
 import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.PlayerId
-import eelst.ilike.game.entity.card.HanabiCard
 
 object PlayerFactory {
     fun createActivePlayer(
@@ -32,10 +33,18 @@ object PlayerFactory {
             )
         }.toSet()
 
+        val slots = (1..globallyAvailableInfo.handsSize).map {
+            OwnSlot(
+                globalInfo = globallyAvailableInfo.getPlayerInfo(playerId).hand.elementAt(it - 1),
+                slotKnowledge = personalKnowledge.getKnowledgeAboutOwnSlot(it)
+            )
+        }
+        val hand = OwnHand(slots = slots.toSet())
 
         return ActivePlayer(
             playerId = playerId,
             playerIndex = activePlayerIndex,
+            hand = hand,
             globallyAvailableInfo = globallyAvailableInfo,
             teammates = teammates,
             personalKnowledge = personalKnowledge,

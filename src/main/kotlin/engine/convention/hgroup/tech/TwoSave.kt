@@ -1,9 +1,9 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.PlayerPOV
-import eelst.ilike.engine.Teammate
+import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.convention.ConventionalAction
-import eelst.ilike.engine.convention.hgroup.HGroupHelper.getChop
+import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
 import eelst.ilike.game.action.RankClue
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.card.HanabiCard

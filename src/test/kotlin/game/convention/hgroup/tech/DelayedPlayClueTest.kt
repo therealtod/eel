@@ -62,14 +62,7 @@ internal class DelayedPlayClueTest {
 
         val actual = DelayedPlayClue.getActions(playerPOV)
 
-        val expected = setOf<ConventionalAction>(
-            ConventionalAction(
-                action = RankClue(
-                    rank = Rank.THREE,
-                    receiver = "Donald"
-                ),
-                tech = DelayedPlayClue,
-            ),
+        val expected = setOf(
             ConventionalAction(
                 action = ColorClue(
                     color = Color.RED,

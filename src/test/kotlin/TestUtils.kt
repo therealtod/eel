@@ -1,10 +1,10 @@
-import eelst.ilike.engine.PlayerPOV
-import eelst.ilike.engine.impl.ActivePlayer
+import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.ActivePlayer
 import eelst.ilike.utils.InputReader
 
 object TestUtils {
-    fun getActivePlayerFromScenario(scenarioId: Int): ActivePlayer{
-        return InputReader.parseFile("scenarios/scenario$scenarioId/pov.yaml")
+    fun getActivePlayerFromScenario(scenarioId: Int): ActivePlayer {
+        return InputReader.getPlayerFromResourceFile("scenarios/scenario$scenarioId/pov.yaml")
     }
 
     fun getPlayerPOVFromScenario(scenarioId: Int): PlayerPOV {

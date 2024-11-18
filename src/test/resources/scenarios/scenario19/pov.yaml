@@ -13,44 +13,35 @@ globally_available_info:
   efficiency: 1.00
   pace: 15
   score: 0
+  players:
+    - player_id: "Alice"
+    - player_id: "Bob"
+      slot_clues:
+        - positive_clues: []
+          negative_clues: []
+        - positive_clues: [ ]
+          negative_clues: [ ]
+        - positive_clues: [ ]
+          negative_clues: [ ]
+        - positive_clues: [ ]
+          negative_clues: [ ]
+        - positive_clues: [4]
+          negative_clues: [ ]
+    - player_id: "Cathy"
 player_pov:
   player_id: "Alice"
-  hand:
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
   teammates:
     - player_id: "Bob"
-      player_pov:
-        hand:
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-            positive_clues: [4]
-        teammates: []
       hand:
-        - card_abbreviation: "g5"
-        - card_abbreviation: "b3"
-        - card_abbreviation: "y4"
-        - card_abbreviation: "y2"
-        - card_abbreviation: "p4"
-          positive_clues: [4]
+        - card: "g5"
+        - card: "b3"
+        - card: "y4"
+        - card: "y2"
+        - card: "p4"
     - player_id: "Cathy"
-      player_pov:
-        hand:
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-        teammates: []
       hand:
-        - card_abbreviation: "r2"
-        - card_abbreviation: "r3"
-        - card_abbreviation: "p2"
-        - card_abbreviation: "p2"
-        - card_abbreviation: "y2"
+        - card: "r2"
+        - card: "r3"
+        - card: "p2"
+        - card: "p2"
+        - card: "y2"

@@ -19,40 +19,18 @@ globally_available_info:
     - player_id: "Cathy"
 player_pov:
   player_id: "Alice"
-  hand:
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
   teammates:
     - player_id: "Bob"
-      player_pov:
-        hand:
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-        teammates: []
       hand:
-        - card_abbreviation: "r5"
-        - card_abbreviation: "r4"
-        - card_abbreviation: "p1"
-        - card_abbreviation: "g3"
-        - card_abbreviation: "g1"
+        - card: "r5"
+        - card: "r4"
+        - card: "p1"
+        - card: "g3"
+        - card: "g1"
     - player_id: "Cathy"
-      player_pov:
-        hand:
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-        teammates: []
       hand:
-        - card_abbreviation: "p5"
-        - card_abbreviation: "p3"
-        - card_abbreviation: "y4"
-        - card_abbreviation: "r2"
-        - card_abbreviation: "p1"
+        - card: "p5"
+        - card: "p3"
+        - card: "y4"
+        - card: "r2"
+        - card: "p1"

@@ -13,42 +13,24 @@ globally_available_info:
   efficiency: 1.00
   pace: 15
   score: 0
+  players:
+    - player_id: "Alice"
+    - player_id: "Bob"
+    - player_id: "Cathy"
 player_pov:
   player_id: "Alice"
-  hand:
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
-    - card_abbreviation: "x"
   teammates:
     - player_id: "Bob"
-      player_pov:
-        hand:
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-        teammates: []
       hand:
-        - card_abbreviation: "r3"
-        - card_abbreviation: "b3"
-        - card_abbreviation: "y4"
-        - card_abbreviation: "b1"
-        - card_abbreviation: "g5"
+        - card: "r3"
+        - card: "b3"
+        - card: "y4"
+        - card: "b1"
+        - card: "g5"
     - player_id: "Cathy"
-      player_pov:
-        hand:
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-          - card_abbreviation: "x"
-        teammates: []
       hand:
-        - card_abbreviation: "r2"
-        - card_abbreviation: "r3"
-        - card_abbreviation: "p2"
-        - card_abbreviation: "p2"
-        - card_abbreviation: "y2"
+        - card: "r2"
+        - card: "r3"
+        - card: "p2"
+        - card: "p2"
+        - card: "y2"

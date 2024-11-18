@@ -1,9 +1,12 @@
 package eelst.ilike.game
 
+import eelst.ilike.game.entity.PlayingStack
+import eelst.ilike.game.entity.TrashPile
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
+import eelst.ilike.game.entity.suite.SuiteId
 import eelst.ilike.game.variant.Variant
-import eelst.ilike.utils.Common
+import eelst.ilike.utils.Utils
 
 data class GloballyAvailableInfo(
     val playingStacks: Map<SuiteId, PlayingStack>,
@@ -17,7 +20,7 @@ data class GloballyAvailableInfo(
     val players: Map<PlayerId, GloballyAvailablePlayerInfo>,
 ) {
     val cardsOnStacks = playingStacks.flatMap { it.value.cards }
-    val handsSize = Common.getHandSize(players.size)
+    val handsSize = Utils.getHandSize(players.size)
 
     fun getStackForCard(card: HanabiCard): PlayingStack {
         val suiteId = card.suite.id
