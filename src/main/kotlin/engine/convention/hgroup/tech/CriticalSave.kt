@@ -1,11 +1,15 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.convention.ConventionalAction
+import eelst.ilike.engine.convention.GenerateKnowledgeImpl
 import eelst.ilike.engine.convention.GeneratedKnowledge
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.hasChop
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.isGloballyKnownPlayable
 import eelst.ilike.engine.player.ActivePlayerPOV
+import eelst.ilike.engine.player.knowledge.PersonalKnowledge
+import eelst.ilike.game.action.Clue
+import eelst.ilike.game.action.GameAction
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.suite.*
 
@@ -39,5 +43,17 @@ object CriticalSave
         return actions.toSet()
     }
 
+    override fun getGeneratedKnowledge(action: GameAction): GeneratedKnowledge {
+        return when(action) {
+            is Clue -> {
+                GenerateKnowledgeImpl(
+                    knowledge = mapOf(
+                        action.receiver to PersonalKnowledge(
 
+                        )
+                    )
+                )
+            }
+        }
+    }
 }

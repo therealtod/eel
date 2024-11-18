@@ -11,7 +11,7 @@ class GenerateKnowledgeImpl(
         return knowledge.getOrDefault(
             playerId,
             PersonalKnowledgeImpl(
-                slots = emptySet()
+                slotKnowledge = emptySet()
             )
         )
     }

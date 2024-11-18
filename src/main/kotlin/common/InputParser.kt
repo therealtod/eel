@@ -95,7 +95,7 @@ object InputParser {
         }
 
         return PersonalKnowledgeImpl(
-            slots = slots.toSet()
+            slotKnowledge = slots.toSet()
         )
     }
 
