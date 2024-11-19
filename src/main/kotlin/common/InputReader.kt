@@ -5,7 +5,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import eelst.ilike.engine.factory.PlayerFactory
 import eelst.ilike.engine.hand.TeammateHand
 import eelst.ilike.engine.hand.slot.VisibleSlot
-import eelst.ilike.engine.player.ActivePlayerPOV
+import eelst.ilike.engine.player.ActivePlayer
 import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.GloballyAvailableSlotInfo
 import eelst.ilike.game.PlayerId
@@ -19,7 +19,7 @@ import eelst.ilike.utils.model.dto.TeammateDTO
 object InputReader {
     private val mapper = Utils.yamlObjectMapper
 
-    fun getPlayerFromResourceFile(fileName: String): ActivePlayerPOV {
+    fun getPlayerFromResourceFile(fileName: String): ActivePlayer {
         val fileText = Utils.getResourceFileContentAsString(fileName)
         val dto: ScenarioDTO = mapper.readValue(fileText)
         val suites = dto.globallyAvailableInfo.suites.map { Suite.fromId(it) }.toSet()
@@ -54,14 +54,14 @@ object InputReader {
             globallyAvailableInfo = globallyAvailableInfo,
             suites = suites,
         )
-        val teammatesPersonalKnowledge = dto
+        val teammatesPersonalSlotKnowledge = dto
             .playerPOV
             .teammates
             .associateBy { it.playerId }
             .mapValues {
-                InputParser.parseTeammateKnownledge(
+                InputParser.parseTeammateSlotKnownledge(
                     globallyAvailablePlayerInfo = playersGlobalInfoMap[it.key]
-                        ?: throw IllegalStateException("Player ${it.key} not regitered int he game"),
+                        ?: throw IllegalStateException("Player ${it.key} not registered in the game"),
                     teammateDTO = it.value,
                     suites = suites,
                     visibleCards = visibleCardsMap[it.key]!!,
@@ -88,7 +88,7 @@ object InputReader {
         val activePlayerSlotsKnowledge = (0..<globallyAvailableInfo.handsSize).map {
             dto.playerPOV.hand.getOrNull(it) ?: "x"
         }
-        val activePlayersPersonalKnowledge = InputParser.parsePlayerKnowledge(
+        val activePlayerPersonalSlotKnowledge = InputParser.parsePlayerSlotKnowledge(
             globallyAvailablePlayerInfo = activePlayerGloballyAvailableInfo,
             knowledge = activePlayerSlotsKnowledge,
             suites = suites,
@@ -98,8 +98,7 @@ object InputReader {
         return PlayerFactory.createActivePlayer(
             playerId = activePlayerId,
             globallyAvailableInfo = globallyAvailableInfo,
-            personalKnowledge = activePlayersPersonalKnowledge,
-            otherPlayersKnowledge = teammatesPersonalKnowledge,
+            playersSlotKnowledge = teammatesPersonalSlotKnowledge + Pair(activePlayerId, activePlayerPersonalSlotKnowledge),
             teammatesHands = teammatesHands,
         )
     }

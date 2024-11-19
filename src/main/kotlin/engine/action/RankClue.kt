@@ -1,4 +1,4 @@
-package eelst.ilike.game.action
+package eelst.ilike.engine.action
 
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Rank
@@ -10,8 +10,4 @@ data class RankClue(
 ) : Clue(
     value = rank,
     receiver = receiver,
-) {
-    override fun touches(card: HanabiCard): Boolean {
-        return card.suite.getRanksTouching(card.rank).contains(rank)
-    }
-}
+)

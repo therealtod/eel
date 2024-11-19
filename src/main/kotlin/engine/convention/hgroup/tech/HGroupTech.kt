@@ -3,13 +3,15 @@ package eelst.ilike.engine.convention.hgroup.tech
 import eelst.ilike.engine.convention.ConventionTech
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.HGroupCommon
+import eelst.ilike.engine.hand.InterpretedHand
 import eelst.ilike.engine.player.Teammate
-import eelst.ilike.game.action.Clue
-import eelst.ilike.game.action.ColorClue
-import eelst.ilike.game.action.RankClue
 import eelst.ilike.game.entity.Color
+import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.Slot
+import eelst.ilike.game.entity.action.Clue
+import eelst.ilike.game.entity.action.ColorClue
+import eelst.ilike.game.entity.action.RankClue
 import eelst.ilike.game.entity.card.HanabiCard
 
 abstract class HGroupTech(
@@ -19,18 +21,18 @@ abstract class HGroupTech(
     protected fun getAllFocusingClues(
         card: HanabiCard,
         slot: Slot,
-        teammate: Teammate,
+        hand: InterpretedHand,
     ): Set<Clue> {
         val ranks = card.getRanksTouchingCard()
         val colors = card.getColorsTouchingCard()
         return getRankCluesFocusing(
             slot = slot,
-            teammate = teammate,
+            hand = hand,
             ranks = ranks,
         ) +
                 getColorCluesFocusing(
                     slot = slot,
-                    teammate = teammate,
+                    hand = hand,
                     colors = colors,
                 )
     }
@@ -38,16 +40,16 @@ abstract class HGroupTech(
     protected fun getAllFocusingActions(
         card: HanabiCard,
         slot: Slot,
-        teammate: Teammate,
+        hand: InterpretedHand,
     ): Set<ConventionalAction> {
         val clues = getAllFocusingClues(
             card = card,
             slot = slot,
-            teammate = teammate
+            hand = hand,
         )
         return clues.map {
             ConventionalAction(
-                action = it,
+                action = TODO(),
                 tech = this
             )
         }.toSet()
@@ -55,25 +57,25 @@ abstract class HGroupTech(
 
     private fun getRankCluesFocusing(
         slot: Slot,
-        teammate: Teammate,
+        hand: InterpretedHand,
         ranks: Set<Rank>,
-    ): Set<Clue> {
+    ): Set<RankClue> {
         return ranks.map {
-            RankClue(rank = it, receiver = teammate.playerId)
+            RankClue(rank = it)
         }
-            .filter { HGroupCommon.getClueFocusSlotIndex(clue = it, hand = teammate.hand) == slot.index }
+            .filter { HGroupCommon.getClueFocusSlotIndex(clue = it, hand = hand) == slot.index }
             .toSet()
     }
 
     private fun getColorCluesFocusing(
         slot: Slot,
-        teammate: Teammate,
+        hand: InterpretedHand,
         colors: Set<Color>,
-    ): Set<Clue> {
+    ): Set<ColorClue> {
         return colors.map {
-            ColorClue(color = it, receiver = teammate.playerId)
+            ColorClue(color = it)
         }
-            .filter { HGroupCommon.getClueFocusSlotIndex(clue = it, hand = teammate.hand) == slot.index }
+            .filter { HGroupCommon.getClueFocusSlotIndex(clue = it, hand) == slot.index }
             .toSet()
     }
 

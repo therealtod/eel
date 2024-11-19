@@ -3,11 +3,11 @@ package eelst.ilike.engine.hand
 import eelst.ilike.engine.hand.slot.InterpretedSlot
 import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.hand.slot.OwnSlot
-import eelst.ilike.game.action.Clue
 import eelst.ilike.game.entity.Slot
+import eelst.ilike.game.entity.action.Clue
 import eelst.ilike.game.entity.card.HanabiCard
 
-class OwnHand(private val slots: Set<OwnSlot>) : InterpretedHand, Set<InterpretedSlot> by slots {
+class OwnHand(private val slots: Set<OwnSlot>) : InterpretedHand, Set<Slot> by slots {
     override fun copiesOf(card: HanabiCard): Int {
         return slots.count { it.hasKnownIdentity(card) }
     }
@@ -20,7 +20,7 @@ class OwnHand(private val slots: Set<OwnSlot>) : InterpretedHand, Set<Interprete
         return getKnownSlots().map { it.card }
     }
 
-    fun getSlot(slotIndex: Int): OwnSlot {
+    override fun getSlot(slotIndex: Int): OwnSlot {
         return slots.elementAt(slotIndex - 1)
     }
 

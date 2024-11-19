@@ -7,9 +7,10 @@ import eelst.ilike.game.GameUtils
 import eelst.ilike.game.GloballyAvailablePlayerInfo
 import eelst.ilike.game.GloballyAvailableSlotInfo
 import eelst.ilike.game.PlayerId
-import eelst.ilike.game.action.Clue
-import eelst.ilike.game.action.ColorClue
-import eelst.ilike.game.action.RankClue
+import eelst.ilike.engine.action.Clue
+import eelst.ilike.engine.action.ColorClue
+import eelst.ilike.engine.action.RankClue
+import eelst.ilike.engine.player.knowledge.PersonalSlotKnowledge
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.PlayingStack
 import eelst.ilike.game.entity.Rank
@@ -67,13 +68,12 @@ object InputParser {
         )
     }
 
-    fun parsePlayerKnowledge(
+    fun parsePlayerSlotKnowledge(
         globallyAvailablePlayerInfo: GloballyAvailablePlayerInfo,
         knowledge: List<String>,
         suites: Set<Suite>,
         visibleCards: List<HanabiCard>,
-    ): PersonalKnowledge {
-
+    ): Set<PersonalSlotKnowledge> {
         val slots = knowledge.mapIndexed { index, dto ->
             PersonalSlotKnowledgeImpl(
                 impliedIdentities = parseCards(dto, suites),
@@ -93,10 +93,7 @@ object InputParser {
                 )
             )
         }
-
-        return PersonalKnowledgeImpl(
-            slotKnowledge = slots.toSet()
-        )
+        return slots.toSet()
     }
 
     private fun parseClue(playerId: PlayerId, clueAbbreviation: String, suites: Set<Suite>): Clue {
@@ -128,14 +125,13 @@ object InputParser {
             }
     }
 
-    fun parseTeammateKnownledge(
+    fun parseTeammateSlotKnownledge(
         globallyAvailablePlayerInfo: GloballyAvailablePlayerInfo,
         teammateDTO: TeammateDTO,
         suites: Set<Suite>,
         visibleCards: List<HanabiCard>,
-    ): PersonalKnowledge {
-
-        return parsePlayerKnowledge(
+    ): Set<PersonalSlotKnowledge> {
+        return parsePlayerSlotKnowledge(
             globallyAvailablePlayerInfo = globallyAvailablePlayerInfo,
             knowledge = teammateDTO.hand.map { it.thinks },
             suites = suites,

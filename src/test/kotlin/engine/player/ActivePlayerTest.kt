@@ -7,22 +7,22 @@ import eelst.ilike.engine.convention.hgroup.tech.CriticalSave
 import eelst.ilike.engine.convention.hgroup.tech.DirectPlayClue
 import eelst.ilike.engine.convention.hgroup.tech.DiscardChop
 import eelst.ilike.engine.convention.hgroup.tech.PlayKnownPlayable
-import eelst.ilike.game.action.ColorClue
-import eelst.ilike.game.action.Discard
-import eelst.ilike.game.action.Play
-import eelst.ilike.game.action.RankClue
+import eelst.ilike.engine.action.ColorClue
+import eelst.ilike.engine.action.Discard
+import eelst.ilike.engine.action.Play
+import eelst.ilike.engine.action.RankClue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
 
-class ActivePlayerPOVTest {
+class ActivePlayerTest {
     @Test
     fun `Should find all possible actions in the scenario`() {
-        val playerPOV = TestUtils.getPlayerPOVFromScenario(1)
+        val activePlayer = TestUtils.getActivePlayerFromScenario(1)
 
-        val actual = playerPOV.getActions(Level1)
+        val actual = activePlayer.getLegalActions(Level1)
 
         val expected = setOf(
             ConventionalAction(

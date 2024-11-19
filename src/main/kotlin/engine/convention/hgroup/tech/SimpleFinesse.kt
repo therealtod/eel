@@ -2,7 +2,7 @@ package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.hasCardOnFinessePosition
-import eelst.ilike.engine.player.ActivePlayerPOV
+import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.game.entity.suite.*
 
 object SimpleFinesse
@@ -11,13 +11,13 @@ object SimpleFinesse
     appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
     takesPrecedenceOver = emptySet(),
 ) {
-    override fun getActions(playerPOV: ActivePlayerPOV): Set<ConventionalAction> {
+    override fun getActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
         val actions = mutableListOf<ConventionalAction>()
-        playerPOV.teammates.forEach { teammate ->
-            teammate.hand.forEach { slot ->
+        playerPOV.forEachTeammate { teammate ->
+            teammate.ownHand.forEach { slot ->
                 val card = teammate.getCardAtSlot(slot.index)
                 if (playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) == 1) {
-                    if (playerPOV.teammates.any { otherTeammate ->
+                    if (playerPOV.getTeammates().any { otherTeammate ->
                             otherTeammate.playsBefore(teammate) &&
                                     hasCardOnFinessePosition(
                                         card = card.suite.cardBefore(card),
@@ -28,7 +28,7 @@ object SimpleFinesse
                             getAllFocusingActions(
                                 card = card,
                                 slot = slot,
-                                teammate = teammate,
+                                hand = teammate.hand,
                             )
                         )
                     }

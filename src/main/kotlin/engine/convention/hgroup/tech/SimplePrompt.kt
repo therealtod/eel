@@ -2,7 +2,7 @@ package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.validatePrompt
-import eelst.ilike.engine.player.ActivePlayerPOV
+import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.game.entity.suite.*
 
 object SimplePrompt
@@ -10,10 +10,10 @@ object SimplePrompt
     name = "Prompt",
     appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
 ) {
-    override fun getActions(playerPOV: ActivePlayerPOV): Set<ConventionalAction> {
+    override fun getActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
         val actions = mutableListOf<ConventionalAction>()
-        playerPOV.teammates.forEach { teammate ->
-            teammate.hand.forEach { slot ->
+        playerPOV.forEachTeammate { teammate ->
+            teammate.ownHand.forEach { slot ->
                 val card = teammate.getCardAtSlot(slot.index)
                 if (playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) == 1) {
                     val stack = playerPOV.globallyAvailableInfo.getStackForCard(card)
@@ -26,7 +26,7 @@ object SimplePrompt
                     val candidateClues = getAllFocusingClues(
                         card = card,
                         slot = slot,
-                        teammate = teammate,
+                        hand = teammate.hand,
                     )
                     actions.addAll(candidateClues.filter {
                         validatePrompt(
@@ -35,10 +35,7 @@ object SimplePrompt
                         )
                     }
                         .map {
-                            ConventionalAction(
-                                action = it,
-                                tech = this,
-                            )
+                            TODO()
                         }
                     )
                 }

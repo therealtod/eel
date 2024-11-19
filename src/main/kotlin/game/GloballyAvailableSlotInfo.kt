@@ -1,6 +1,6 @@
 package eelst.ilike.game
 
-import eelst.ilike.game.action.Clue
+import eelst.ilike.engine.action.Clue
 
 data class GloballyAvailableSlotInfo(
     val index: Int,

@@ -1,4 +1,4 @@
-package eelst.ilike.game.action
+package eelst.ilike.engine.action
 
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Color
@@ -10,8 +10,4 @@ data class ColorClue(
 ) : Clue(
     value = color,
     receiver = receiver,
-) {
-    override fun touches(card: HanabiCard): Boolean {
-        return card.suite.getColorsTouching(card.rank).contains(color)
-    }
-}
+)

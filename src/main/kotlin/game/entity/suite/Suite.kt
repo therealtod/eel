@@ -1,8 +1,8 @@
 package eelst.ilike.game.entity.suite
 
-import eelst.ilike.game.action.Clue
-import eelst.ilike.game.action.ColorClue
-import eelst.ilike.game.action.RankClue
+import eelst.ilike.engine.action.Clue
+import eelst.ilike.engine.action.ColorClue
+import eelst.ilike.engine.action.RankClue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.card.HanabiCard

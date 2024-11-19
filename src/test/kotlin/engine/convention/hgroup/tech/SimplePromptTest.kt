@@ -3,8 +3,8 @@ package engine.convention.hgroup.tech
 import TestUtils
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.tech.SimplePrompt
-import eelst.ilike.game.action.ColorClue
-import eelst.ilike.game.action.RankClue
+import eelst.ilike.engine.action.ColorClue
+import eelst.ilike.engine.action.RankClue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import org.junit.jupiter.api.Assertions
