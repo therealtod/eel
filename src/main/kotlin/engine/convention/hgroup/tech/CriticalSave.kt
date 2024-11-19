@@ -5,6 +5,7 @@ import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.hasChop
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.isGloballyKnownPlayable
 import eelst.ilike.engine.player.ActivePlayerPOV
+import eelst.ilike.game.action.GameAction
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.suite.*
 
@@ -14,7 +15,17 @@ object CriticalSave
     appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
 ) {
     override fun getActions(playerPOV: ActivePlayerPOV): Set<ConventionalAction> {
-        val actions = mutableListOf<ConventionalAction>()
+        return recognize(playerPOV)
+            .map {
+                ConventionalAction(
+                    action = it,
+                    tech = this,
+                )
+            }.toSet()
+    }
+
+    override fun recognize(playerPOV: ActivePlayerPOV): Set<GameAction> {
+        val actions = mutableSetOf<GameAction>()
 
         playerPOV.teammates.forEach { teammate ->
             if (hasChop(teammate.hand)) {
@@ -26,7 +37,7 @@ object CriticalSave
                     !isGloballyKnownPlayable(card, playerPOV)
                 ) {
                     actions.addAll(
-                        getAllFocusingActions(
+                        getAllFocusingClues(
                             card = card,
                             slot = chop,
                             teammate = teammate,
@@ -35,6 +46,6 @@ object CriticalSave
                 }
             }
         }
-        return actions.toSet()
+        return actions
     }
 }
