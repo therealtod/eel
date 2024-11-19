@@ -9,10 +9,18 @@ class VisibleSlot(
 ) : InterpretedSlot(
     globalInfo = globalInfo,
 ) {
-    override fun getAsKnown(): KnownSlot {
+    override fun asKnown(): KnownSlot {
         return KnownSlot(
             globallyAvailableInfo = globalInfo,
             card = card,
         )
+    }
+
+    override fun contains(card: HanabiCard): Boolean {
+        return this.card == card
+    }
+
+    override fun isKnown(): Boolean {
+        return true
     }
 }

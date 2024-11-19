@@ -1,9 +1,10 @@
 package eelst.ilike.engine.convention.hgroup
 
+import eelst.ilike.engine.BasePlayer
 import eelst.ilike.engine.hand.InterpretedHand
+import eelst.ilike.engine.hand.slot.InterpretedSlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.PlayerPOV
-import eelst.ilike.engine.player.PlayerPOVImpl
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.Clue
@@ -30,7 +31,7 @@ object HGroupCommon {
     fun isGloballyKnownPlayable(card: HanabiCard, playerPOV: PlayerPOV): Boolean {
         val prerequisiteCards = card.getPrerequisiteCards()
         val playedCardsForSuite = playerPOV.globallyAvailableInfo.getStackForCard(card).cards
-        val teammatesKnownCards = playerPOV.getTeammates().flatMap { it.getOwnKnownCards() }
+        val teammatesKnownCards = playerPOV.teammates.flatMap { it.getOwnKnownCards() }
         val ownKnownCards = playerPOV.getOwnKnownCards()
         return (playedCardsForSuite + teammatesKnownCards + ownKnownCards).containsAll(prerequisiteCards)
     }
@@ -81,11 +82,11 @@ object HGroupCommon {
         if (sequence.isEmpty()) return true
         val nextInSequence = sequence.first()
         return if (
-            playerPOV.getTeammates().any { teammate ->
+            playerPOV.teammates.any { teammate ->
                 isPromptedCorrectly(
                     card = nextInSequence,
                     teammate = teammate,
-                    promptedSlots = teammate.hand.slots,
+                    promptedSlots = teammate.getSlots(),
                     playerPOV = playerPOV,
                 )
             }
@@ -102,8 +103,8 @@ object HGroupCommon {
 
     private fun isPromptedCorrectly(
         card: HanabiCard,
-        teammate: Teammate,
-        promptedSlots: Set<VisibleSlot> = emptySet(),
+        teammate: BasePlayer,
+        promptedSlots: Set<InterpretedSlot> = emptySet(),
         playerPOV: PlayerPOV,
     ): Boolean {
         val promptedTeammateSlot = promptedSlots.firstOrNull { slot ->
@@ -111,9 +112,11 @@ object HGroupCommon {
                     teammate.getSlotFromPlayerPOV(slot.index)
                         .getPossibleIdentities()
                         .contains(card)
-        } ?: return false
-        val slotIdentity = teammate.getSlot(promptedTeammateSlot.index).card
-        return (slotIdentity == card) ||
+                    &&
+                    slot.isKnown()
+        }?.asKnown()
+            ?: return false
+        return (promptedTeammateSlot.contains(card)) ||
                 (playerPOV.globallyAvailableInfo.isImmediatelyPlayable(card)
                         && isPromptedCorrectly(
                     card = card,
@@ -122,7 +125,7 @@ object HGroupCommon {
                     playerPOV = playerPOV
                 )
                         ) || wrongPromptCanBePatched(
-            wrongPromptedCard = slotIdentity,
+            wrongPromptedCard = promptedTeammateSlot.card,
             wrongPromptedTeammate = teammate,
             playerPOV = playerPOV
         )
@@ -130,13 +133,13 @@ object HGroupCommon {
 
     private fun wrongPromptCanBePatched(
         wrongPromptedCard: HanabiCard,
-        wrongPromptedTeammate: Teammate,
+        wrongPromptedTeammate: BasePlayer,
         playerPOV: PlayerPOV,
     ): Boolean {
         if (playerPOV.globallyAvailableInfo.getGlobalAwayValue(wrongPromptedCard) < 0) return false
         val preRequisites = wrongPromptedCard.getPrerequisiteCards()
         val cardTeammateMap = preRequisites.associateWith {
-            playerPOV.getTeammates().find { teammate ->
+            playerPOV.teammates.find { teammate ->
                 teammate.getOwnKnownCards().contains(it)
             }
         }
@@ -147,11 +150,13 @@ object HGroupCommon {
         val sortedKeys = cardTeammateMap.keys.sortedBy { suite.getPlayingOrder(it) }
         sortedKeys.forEachIndexed { index, card ->
             if (index > 0) {
-                if (cardTeammateMap[card]!!.playsBefore(cardTeammateMap[sortedKeys.elementAt(index - 1)]!!)) {
+                val playerHoldingNextPrerequisite = cardTeammateMap[card]!!
+                val playerHoldingPrerequisite = cardTeammateMap[sortedKeys.elementAt(index - 1)]!!
+                if (playerHoldingNextPrerequisite.playsBefore(playerHoldingPrerequisite, TODO())) {
                     return false
                 }
             }
-            if (cardTeammateMap[card]!!.playsBefore(wrongPromptedTeammate) ) {
+            if (cardTeammateMap[card]!!.playsBefore(wrongPromptedTeammate, TODO()) ) {
                 return false
             }
         }

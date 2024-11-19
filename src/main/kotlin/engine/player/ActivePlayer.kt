@@ -6,6 +6,7 @@ import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.factory.PlayerFactory
 import eelst.ilike.engine.hand.OwnHand
+import eelst.ilike.engine.hand.slot.InterpretedSlot
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.card.HanabiCard
 
@@ -13,10 +14,11 @@ class ActivePlayer(
     playerId: PlayerId,
     playerIndex: Int,
     globallyAvailableInfo: GloballyAvailableInfo,
-    override val playerPOV: PlayerPOV,
+    playerPOV: PlayerPOV,
 ): BasePlayer(
     playerId = playerId,
     playerIndex = playerIndex,
+    playerPOV = playerPOV,
 ) {
 
     fun getLegalActions(conventionSet: ConventionSet): Set<ConventionalAction> {
@@ -32,15 +34,12 @@ class ActivePlayer(
         return actions.toSet()
     }
 
-    override fun buildPlayerPOV(
-        globallyAvailableInfo: GloballyAvailableInfo,
-        ownHand: OwnHand,
-        players: Set<BasePlayer>
-    ): PlayerPOV {
-        return PlayerFactory.createPlayerPOV(
-            globallyAvailableInfo = globallyAvailableInfo,
-            ownHand = ownHand,
-            personalKnowledge = TODO()
-        )
+    override fun getSlots(): Set<InterpretedSlot> {
+        TODO("Not yet implemented")
+    }
+
+    override fun hasCardInSlot(card: HanabiCard, slotIndex: Int): Boolean {
+        val slot = ownHand.getSlot(slotIndex)
+        return slot.hasKnownIdentity(card)
     }
 }

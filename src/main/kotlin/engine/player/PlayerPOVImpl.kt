@@ -11,16 +11,8 @@ import eelst.ilike.game.entity.card.HanabiCard
 class PlayerPOVImpl(
     override val globallyAvailableInfo: GloballyAvailableInfo,
     override val ownHand: OwnHand,
-    personalKnowledge: PersonalKnowledge,
+    override val teammates: Set<Teammate>,
 ) : PlayerPOV {
-    private val teammateSet = globallyAvailableInfo.players.map {
-        PlayerFactory.createTeammate(
-            teammateId = it.key,
-            globallyAvailableInfo = globallyAvailableInfo,
-            personalKnowledge = personalKnowledge
-        )
-    }.toSet()
-
     override fun getOwnKnownCards(): List<HanabiCard> {
         return ownHand.getKnownCards()
     }
@@ -34,15 +26,11 @@ class PlayerPOVImpl(
         return knownSlots.filter { globallyAvailableInfo.isImmediatelyPlayable(it.card) }.toSet()
     }
 
-    override fun getTeammates(): Set<Teammate> {
-        return teammateSet
-    }
-
     override fun teamKnowsAllCards(cards: Set<HanabiCard>): Boolean{
         TODO()
     }
 
-    override fun forEachTeammate(action: (player: Teammate) -> Unit) {
-        return teammateSet.forEach(action)
+    override fun forEachTeammate(action: (teammate: Teammate) -> Unit) {
+        return teammates.forEach(action)
     }
 }

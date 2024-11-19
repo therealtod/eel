@@ -1,5 +1,6 @@
 package eelst.ilike.engine.factory
 
+import eelst.ilike.engine.hand.InterpretedHand
 import eelst.ilike.engine.hand.OwnHand
 import eelst.ilike.engine.hand.TeammateHand
 import eelst.ilike.engine.hand.slot.OwnSlot
@@ -10,6 +11,7 @@ import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.engine.player.knowledge.PersonalKnowledgeImpl
 import eelst.ilike.engine.player.knowledge.PersonalSlotKnowledge
+import eelst.ilike.game.GameUtils
 import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.GloballyAvailablePlayerInfo
 import eelst.ilike.game.PlayerId
@@ -30,6 +32,8 @@ object PlayerFactory {
             activePlayerId = playerId,
             globallyAvailableInfo = globallyAvailableInfo,
             personalKnowledge = personalKnowledge,
+            teammatesHands = teammatesHands,
+            playersSlotKnowledge = playersSlotKnowledge,
         )
     }
 
@@ -51,6 +55,7 @@ object PlayerFactory {
         globallyAvailableInfo: GloballyAvailableInfo,
         personalKnowledge: PersonalKnowledge,
         hand: TeammateHand,
+        seatsGap: Int,
     ): Teammate {
         val globallyAvailablePlayerInfo = globallyAvailableInfo.getPlayerInfo(teammateId)
         val slots = createOwnSlots(
@@ -61,11 +66,15 @@ object PlayerFactory {
         return Teammate(
             playerId = teammateId,
             playerIndex = globallyAvailablePlayerInfo.playerIndex,
+            playerPOV = createPlayerPOV(
+                playerId = teammateId,
+                playerIndex = globallyAvailablePlayerInfo.playerIndex,
+                globallyAvailableInfo = globallyAvailableInfo,
+                ownHand = OwnHand(slots),
+                teammatesHands = ,
+            ),
             hand = hand,
-            ownHand = OwnHand(slots),
-            personalKnowledge = personalKnowledge,
-            globallyAvailableInfo = globallyAvailableInfo,
-            seatsGap = TODO()
+            seatsGap = seatsGap
         )
     }
 
@@ -73,6 +82,8 @@ object PlayerFactory {
         activePlayerId: PlayerId,
         globallyAvailableInfo: GloballyAvailableInfo,
         personalKnowledge: PersonalKnowledge,
+        teammatesHands: Map<PlayerId, TeammateHand>,
+        playersSlotKnowledge: Map<PlayerId, Set<PersonalSlotKnowledge>>,
     ): ActivePlayer{
         val activePlayerGloballyAvailableInfo = globallyAvailableInfo.getPlayerInfo(activePlayerId)
         val slots = createOwnSlots(
@@ -80,28 +91,53 @@ object PlayerFactory {
             playerGlobalInfo = activePlayerGloballyAvailableInfo,
             personalKnowledge = personalKnowledge,
         )
+        val ownHand = OwnHand(slots)
 
         return ActivePlayer(
             playerId = activePlayerGloballyAvailableInfo.playerId,
             playerIndex = activePlayerGloballyAvailableInfo.playerIndex,
             globallyAvailableInfo = globallyAvailableInfo,
             playerPOV = createPlayerPOV(
+                playerId = activePlayerGloballyAvailableInfo.playerId,
+                playerIndex = activePlayerGloballyAvailableInfo.playerIndex,
                 globallyAvailableInfo = globallyAvailableInfo,
-                ownHand = OwnHand(slots),
-                personalKnowledge = personalKnowledge,
+                ownHand = ownHand,
+                teammatesHands = teammatesHands + Pair(activePlayerId, ownHand),
+                playersSlotKnowledge = playersSlotKnowledge,
             ),
         )
     }
 
     fun createPlayerPOV(
+        playerId: PlayerId,
+        playerIndex: Int,
         globallyAvailableInfo: GloballyAvailableInfo,
         ownHand: OwnHand,
-        personalKnowledge: PersonalKnowledge,
+        teammatesHands: Map<PlayerId, InterpretedHand>,
+        playersSlotKnowledge: Map<PlayerId, Set<PersonalSlotKnowledge>>,
     ): PlayerPOV {
+        val teammates = globallyAvailableInfo.players.filterKeys { it != playerId }
+            .map {
+                createTeammate(
+                    teammateId = it.key,
+                    globallyAvailableInfo = globallyAvailableInfo,
+                    personalKnowledge = PersonalKnowledgeImpl(
+                        slotKnowledge = playersSlotKnowledge[it.key]!!,
+                        teammatesHands = teammatesHands.minus(playerId) //TODO
+                    ),
+                    hand = teammatesHands[it.key]!!,
+                    seatsGap = GameUtils.getSeatsGap(
+                        playerIndex1 = playerIndex,
+                        playerIndex2 = it.value.playerIndex,
+                        numberOfPlayers = globallyAvailableInfo.numberOfPlayers),
+                )
+            }
+
+
         return PlayerPOVImpl(
             globallyAvailableInfo = globallyAvailableInfo,
             ownHand = ownHand,
-            personalKnowledge = personalKnowledge
+            teammates = teammates.toSet()
         )
     }
 }

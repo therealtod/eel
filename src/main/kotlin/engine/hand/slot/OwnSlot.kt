@@ -16,11 +16,11 @@ class OwnSlot(
         return isKnown() && getPossibleIdentities().first() == card
     }
 
-    fun isKnown(): Boolean {
+    override fun isKnown(): Boolean {
         return getPossibleIdentities().size == 1
     }
 
-    override fun getAsKnown(): KnownSlot {
+    override fun asKnown(): KnownSlot {
         require(isKnown()) {
             "Cannot get an unknown slot as known"
         }
@@ -32,5 +32,9 @@ class OwnSlot(
 
     override fun isClued(): Boolean {
         return slotKnowledge.isClued()
+    }
+
+    override fun contains(card: HanabiCard): Boolean {
+        return hasKnownIdentity(card)
     }
 }

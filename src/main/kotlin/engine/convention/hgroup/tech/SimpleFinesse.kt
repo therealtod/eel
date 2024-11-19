@@ -17,7 +17,7 @@ object SimpleFinesse
             teammate.ownHand.forEach { slot ->
                 val card = teammate.getCardAtSlot(slot.index)
                 if (playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) == 1) {
-                    if (playerPOV.getTeammates().any { otherTeammate ->
+                    if (playerPOV.teammates.any { otherTeammate ->
                             otherTeammate.playsBefore(teammate) &&
                                     hasCardOnFinessePosition(
                                         card = card.suite.cardBefore(card),

@@ -10,11 +10,11 @@ import eelst.ilike.game.entity.card.HanabiCard
 interface PlayerPOV {
     val globallyAvailableInfo: GloballyAvailableInfo
     val ownHand: OwnHand
+    val teammates: Set<Teammate>
 
-    fun getTeammates(): Set<Teammate>
     fun getOwnKnownCards(): List<HanabiCard>
     fun getOwnKnownSlots(): Set<KnownSlot>
     fun getOwnKnownPlayableSlots(): Set<Slot>
     fun teamKnowsAllCards(cards: Set<HanabiCard>): Boolean
-    fun forEachTeammate(action: (player: Teammate) -> Unit)
+    fun forEachTeammate(action: (teammate: Teammate) -> Unit)
 }

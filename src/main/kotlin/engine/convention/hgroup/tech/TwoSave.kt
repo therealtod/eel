@@ -42,7 +42,7 @@ object TwoSave : SaveClue(
         teammate: Teammate,
         playerPOV: PlayerPOV,
     ): Boolean {
-        return playerPOV.getTeammates().none { otherTeammate ->
+        return playerPOV.teammates.none { otherTeammate ->
             otherTeammate.playerId != teammate.playerId &&
                     otherTeammate.ownHand.copiesOf(card) == 1 &&
                     otherTeammate.getCardAtSlot(getChop(otherTeammate.ownHand).index) != card

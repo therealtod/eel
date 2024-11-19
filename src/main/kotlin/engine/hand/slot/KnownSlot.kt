@@ -9,7 +9,15 @@ data class KnownSlot(
 ) : InterpretedSlot(
     globalInfo = globallyAvailableInfo
 ) {
-    override fun getAsKnown(): KnownSlot {
+    override fun asKnown(): KnownSlot {
         return this
+    }
+
+    override fun contains(card: HanabiCard): Boolean {
+        return this.card == card
+    }
+
+    override fun isKnown(): Boolean {
+        return true
     }
 }
