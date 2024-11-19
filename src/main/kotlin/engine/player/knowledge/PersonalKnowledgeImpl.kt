@@ -1,7 +1,7 @@
 package eelst.ilike.engine.player.knowledge
 
-class PersonalKnowledgeImpl(private val slots: Set<PersonalSlotKnowledge>) : PersonalKnowledge {
+class PersonalKnowledgeImpl(private val slotKnowledge: Set<PersonalSlotKnowledge>) : PersonalKnowledge {
     override fun getKnowledgeAboutOwnSlot(slotIndex: Int): PersonalSlotKnowledge {
-        return slots.elementAt(slotIndex - 1)
+        return slotKnowledge.elementAt(slotIndex - 1)
     }
 }
