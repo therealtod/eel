@@ -27,7 +27,12 @@ class PlayerPOVImpl(
     }
 
     override fun teamKnowsAllCards(cards: Set<HanabiCard>): Boolean{
-        TODO()
+        return cards
+            .all { card->
+                teammates.any { teammate ->
+                    teammate.getOwnKnownCards().contains(card)
+                }
+            }
     }
 
     override fun forEachTeammate(action: (teammate: Teammate) -> Unit) {

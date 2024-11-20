@@ -2,20 +2,19 @@ package eelst.ilike.engine.factory
 
 import eelst.ilike.engine.hand.OwnHand
 import eelst.ilike.engine.hand.slot.OwnSlot
-import eelst.ilike.engine.player.knowledge.PersonalKnowledge
-import eelst.ilike.engine.player.knowledge.PersonalSlotKnowledge
+import eelst.ilike.engine.player.knowledge.PersonalHandKnowledge
 import eelst.ilike.game.GloballyAvailablePlayerInfo
 
 object HandFactory {
     fun createOwnSlots(
         handSize: Int,
         playerGlobalInfo: GloballyAvailablePlayerInfo,
-        personalSlotKnowledge: Set<PersonalSlotKnowledge>,
+        personalHandKnowledge: PersonalHandKnowledge,
     ): Set<OwnSlot> {
         return (1..handSize).map {
             OwnSlot(
                 globalInfo = playerGlobalInfo.hand.elementAt(it - 1),
-                slotKnowledge = personalSlotKnowledge.elementAt(it - 1)
+                slotKnowledge = personalHandKnowledge.getKnowledge(it)
             )
         }.toSet()
     }
@@ -23,12 +22,12 @@ object HandFactory {
     fun createOwnHand(
         handSize: Int,
         playerGlobalInfo: GloballyAvailablePlayerInfo,
-        personalSlotKnowledge: Set<PersonalSlotKnowledge>,
+        personalHandKnowledge: PersonalHandKnowledge,
     ): OwnHand {
         val slots = createOwnSlots(
             handSize = handSize,
             playerGlobalInfo = playerGlobalInfo,
-            personalSlotKnowledge = personalSlotKnowledge
+            personalHandKnowledge = personalHandKnowledge
         )
         return OwnHand(slots)
     }

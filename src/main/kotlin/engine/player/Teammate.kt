@@ -1,12 +1,8 @@
 package eelst.ilike.engine.player
 
-import eelst.ilike.engine.BasePlayer
-import eelst.ilike.engine.factory.PlayerFactory
-import eelst.ilike.engine.hand.InterpretedHand
-import eelst.ilike.engine.hand.OwnHand
-import eelst.ilike.engine.hand.TeammateHand
-import eelst.ilike.engine.hand.slot.InterpretedSlot
-import eelst.ilike.engine.hand.slot.VisibleSlot
+import eelst.ilike.engine.ConventionsUsingPlayer
+import eelst.ilike.engine.hand.VisibleHand
+import eelst.ilike.engine.hand.slot.OwnSlot
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.PlayerId
@@ -15,22 +11,26 @@ import eelst.ilike.game.entity.card.HanabiCard
 class Teammate(
     playerId: PlayerId,
     playerIndex: Int,
-    val hand: TeammateHand,
+    globallyAvailableInfo: GloballyAvailableInfo,
+    personalKnowledge: PersonalKnowledge,
+    val hand: VisibleHand,
     val seatsGap: Int,
-) : BasePlayer(
+) : ConventionsUsingPlayer(
     playerId = playerId,
     playerIndex = playerIndex,
+    globallyAvailableInfo = globallyAvailableInfo,
+    personalKnowledge = personalKnowledge,
 ) {
-    override val ownHand = playerPOV.ownHand
-    override val playerPOV: PlayerPOV
-        get() = TODO("Not yet implemented")
-
     fun playsBefore(otherTeammate: Teammate): Boolean {
         return seatsGap < otherTeammate.seatsGap
     }
 
-    override fun getSlots(): Set<InterpretedSlot> {
-        return hand.getSlots()
+    fun getSlotFromTeammatePOV(slotIndex: Int): OwnSlot {
+        return ownHand.getSlot(slotIndex)
+    }
+
+    fun getCardAtSlot(slotIndex: Int): HanabiCard{
+        return hand.getSlot(slotIndex).card
     }
 
     override fun hasCardInSlot(card: HanabiCard, slotIndex: Int): Boolean {

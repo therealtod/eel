@@ -1,5 +1,6 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
+import eelst.ilike.engine.action.GameAction
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.hasCardOnFinessePosition
 import eelst.ilike.engine.player.PlayerPOV
@@ -11,10 +12,10 @@ object SimpleFinesse
     appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
     takesPrecedenceOver = emptySet(),
 ) {
-    override fun getActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
-        val actions = mutableListOf<ConventionalAction>()
+    override fun getGameActions(playerPOV: PlayerPOV): Set<GameAction> {
+        val actions = mutableListOf<GameAction>()
         playerPOV.forEachTeammate { teammate ->
-            teammate.ownHand.forEach { slot ->
+            teammate.hand.forEach { slot ->
                 val card = teammate.getCardAtSlot(slot.index)
                 if (playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) == 1) {
                     if (playerPOV.teammates.any { otherTeammate ->
@@ -25,10 +26,10 @@ object SimpleFinesse
                                     )
                         }) {
                         actions.addAll(
-                            getAllFocusingActions(
+                            getAllFocusingClues(
                                 card = card,
                                 slot = slot,
-                                hand = teammate.hand,
+                                teammate = teammate,
                             )
                         )
                     }
@@ -36,5 +37,8 @@ object SimpleFinesse
             }
         }
         return actions.toSet()
+    }
+    override fun getConventionalActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
+        TODO()
     }
 }

@@ -1,3 +1,3 @@
 package eelst.ilike.game.entity
 
-interface CardAttribute
+interface ClueValue

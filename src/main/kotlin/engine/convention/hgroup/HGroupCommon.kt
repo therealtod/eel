@@ -1,6 +1,5 @@
 package eelst.ilike.engine.convention.hgroup
 
-import eelst.ilike.engine.BasePlayer
 import eelst.ilike.engine.hand.InterpretedHand
 import eelst.ilike.engine.hand.slot.InterpretedSlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
@@ -86,7 +85,7 @@ object HGroupCommon {
                 isPromptedCorrectly(
                     card = nextInSequence,
                     teammate = teammate,
-                    promptedSlots = teammate.getSlots(),
+                    promptedSlots = teammate.hand.getSlots(),
                     playerPOV = playerPOV,
                 )
             }
@@ -103,19 +102,16 @@ object HGroupCommon {
 
     private fun isPromptedCorrectly(
         card: HanabiCard,
-        teammate: BasePlayer,
-        promptedSlots: Set<InterpretedSlot> = emptySet(),
+        teammate: Teammate,
+        promptedSlots: Set<VisibleSlot> = emptySet(),
         playerPOV: PlayerPOV,
     ): Boolean {
         val promptedTeammateSlot = promptedSlots.firstOrNull { slot ->
             slot.isClued() &&
-                    teammate.getSlotFromPlayerPOV(slot.index)
+                    teammate.getSlotFromTeammatePOV(slot.index)
                         .getPossibleIdentities()
                         .contains(card)
-                    &&
-                    slot.isKnown()
-        }?.asKnown()
-            ?: return false
+        } ?: return false
         return (promptedTeammateSlot.contains(card)) ||
                 (playerPOV.globallyAvailableInfo.isImmediatelyPlayable(card)
                         && isPromptedCorrectly(
@@ -133,7 +129,7 @@ object HGroupCommon {
 
     private fun wrongPromptCanBePatched(
         wrongPromptedCard: HanabiCard,
-        wrongPromptedTeammate: BasePlayer,
+        wrongPromptedTeammate: Teammate,
         playerPOV: PlayerPOV,
     ): Boolean {
         if (playerPOV.globallyAvailableInfo.getGlobalAwayValue(wrongPromptedCard) < 0) return false
@@ -152,11 +148,11 @@ object HGroupCommon {
             if (index > 0) {
                 val playerHoldingNextPrerequisite = cardTeammateMap[card]!!
                 val playerHoldingPrerequisite = cardTeammateMap[sortedKeys.elementAt(index - 1)]!!
-                if (playerHoldingNextPrerequisite.playsBefore(playerHoldingPrerequisite, TODO())) {
+                if (playerHoldingNextPrerequisite.playsBefore(playerHoldingPrerequisite)) {
                     return false
                 }
             }
-            if (cardTeammateMap[card]!!.playsBefore(wrongPromptedTeammate, TODO()) ) {
+            if (cardTeammateMap[card]!!.playsBefore(wrongPromptedTeammate) ) {
                 return false
             }
         }
@@ -164,18 +160,9 @@ object HGroupCommon {
     }
 
     fun hasCardOnFinessePosition(card: HanabiCard, teammate: Teammate): Boolean {
-        if (hasFinessePosition(teammate.ownHand)) {
-            val finessePosition = getFinessePosition(teammate.ownHand)
-            return teammate.getSlot(finessePosition.index).card == card
+        if (hasFinessePosition(teammate.hand)) {
+            val finessePosition = getFinessePosition(teammate.hand)
+            return teammate.hasCardInSlot(card, finessePosition.index)
         } else return false
-    }
-
-
-    fun getChop(teammate: Teammate): VisibleSlot {
-        require(hasChop(teammate.ownHand)) {
-            "Cannot find a chop in ${teammate.playerId}'s hand"
-        }
-        val slot = getChop(teammate.ownHand)
-        return teammate.getSlot(slot.index)
     }
 }

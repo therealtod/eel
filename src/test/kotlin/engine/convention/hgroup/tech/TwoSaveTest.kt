@@ -1,10 +1,12 @@
 package engine.convention.hgroup.tech
 
 import TestUtils
+import eelst.ilike.engine.action.GameAction
+import eelst.ilike.engine.action.GiveClue
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.tech.TwoSave
-import eelst.ilike.engine.action.RankClue
 import eelst.ilike.game.entity.Rank
+import eelst.ilike.game.entity.action.RankClue
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
@@ -13,13 +15,13 @@ internal class TwoSaveTest {
     fun `Should save the only visible copy of y2`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(17)
 
-        val actual = TwoSave.getActions(playerPOV)
+        val actual = TwoSave.getGameActions(playerPOV)
 
         val expected = setOf(
-            ConventionalAction(
-                RankClue(rank = Rank.TWO, receiver = "Cathy"),
-                tech = TwoSave
-            )
+            GiveClue(
+                clue = RankClue(Rank.TWO),
+                to = "Cathy",
+            ),
         )
 
         Assertions.assertEquals(expected, actual)
@@ -29,9 +31,9 @@ internal class TwoSaveTest {
     fun `Should not save Cathy's y2 When the other copy is visible in Bob's hand`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(18)
 
-        val actual = TwoSave.getActions(playerPOV)
+        val actual = TwoSave.getGameActions(playerPOV)
 
-        val expected = emptySet<ConventionalAction>()
+        val expected = emptySet<GameAction>()
 
         Assertions.assertEquals(expected, actual)
     }
@@ -40,18 +42,17 @@ internal class TwoSaveTest {
     fun `Should save either Bob's or Cathy's y2 when both copies are on chop`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(19)
 
-        val actual = TwoSave.getActions(playerPOV)
+        val actual = TwoSave.getGameActions(playerPOV)
 
         val expected = setOf(
-            ConventionalAction(
-                RankClue(rank = Rank.TWO, receiver = "Bob"),
-                tech = TwoSave
+            GiveClue(
+                clue = RankClue(Rank.TWO),
+                to = "Bob",
             ),
-            ConventionalAction(
-                RankClue(rank = Rank.TWO, receiver = "Cathy"),
-                tech = TwoSave
-            )
-
+            GiveClue(
+                clue = RankClue(Rank.TWO),
+                to = "Cathy",
+            ),
         )
 
         Assertions.assertEquals(expected, actual)

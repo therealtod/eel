@@ -7,10 +7,6 @@ class PersonalSlotKnowledgeImpl(
     private val impliedIdentities: Set<HanabiCard>,
     private val empathy: Set<HanabiCard>,
 ) : PersonalSlotKnowledge {
-    override fun isClued(): Boolean {
-        TODO("Not yet implemented")
-    }
-
     override fun getPossibleSlotIdentities(): Set<HanabiCard> {
         return impliedIdentities.ifEmpty { empathy }
     }

@@ -1,12 +1,14 @@
 package engine.convention.hgroup.tech
 
 import TestUtils
+import eelst.ilike.engine.action.GameAction
+import eelst.ilike.engine.action.GiveClue
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.tech.CriticalSave
-import eelst.ilike.engine.action.ColorClue
-import eelst.ilike.engine.action.RankClue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
+import eelst.ilike.game.entity.action.ColorClue
+import eelst.ilike.game.entity.action.RankClue
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
@@ -15,23 +17,17 @@ internal class CriticalSaveTest {
     fun `Should return 2 actions which save the only critical card on chop visible on the board`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(1)
 
-        val actual = CriticalSave.getActions(playerPOV)
+        val actual = CriticalSave.getGameActions(playerPOV)
 
         val expected = setOf(
-            ConventionalAction(
-                action = RankClue(
-                    rank = Rank.FOUR,
-                    receiver = "Cathy"
-                ),
-                tech = CriticalSave
+            GiveClue(
+                clue = RankClue(Rank.FOUR),
+                to = "Cathy"
             ),
-            ConventionalAction(
-                action = ColorClue(
-                    color = Color.PURPLE,
-                    receiver = "Cathy"
-                ),
-                tech = CriticalSave
-            )
+            GiveClue(
+                clue = ColorClue(Color.PURPLE),
+                to = "Cathy"
+            ),
         )
         Assertions.assertEquals(actual, expected)
     }
@@ -40,9 +36,9 @@ internal class CriticalSaveTest {
     fun `Should return no actions Given there is nothing in the trash`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(2)
 
-        val actual = CriticalSave.getActions(playerPOV)
+        val actual = CriticalSave.getGameActions(playerPOV)
 
-        val expected = emptySet<ConventionalAction>()
+        val expected = emptySet<GameAction>()
         Assertions.assertEquals(expected, actual)
     }
 
@@ -50,9 +46,9 @@ internal class CriticalSaveTest {
     fun `Should not save 5s on chop`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(3)
 
-        val actual = CriticalSave.getActions(playerPOV)
+        val actual = CriticalSave.getGameActions(playerPOV)
 
-        val expected = emptySet<ConventionalAction>()
+        val expected = emptySet<GameAction>()
         Assertions.assertEquals(expected, actual)
     }
 
@@ -60,51 +56,33 @@ internal class CriticalSaveTest {
     fun `Should find all critical saves Given a state with multiple critical cards on chop`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(4)
 
-        val actual = CriticalSave.getActions(playerPOV)
+        val actual = CriticalSave.getGameActions(playerPOV)
 
         val expected = setOf(
-            ConventionalAction(
-                action = RankClue(
-                    rank = Rank.FOUR,
-                    receiver = "Cathy"
-                ),
-                tech = CriticalSave
+            GiveClue(
+                clue = RankClue(Rank.FOUR),
+                to = "Cathy"
             ),
-            ConventionalAction(
-                action = ColorClue(
-                    color = Color.PURPLE,
-                    receiver = "Cathy"
-                ),
-                tech = CriticalSave
+            GiveClue(
+                clue = ColorClue(Color.PURPLE),
+                to = "Cathy"
             ),
-            ConventionalAction(
-                action = RankClue(
-                    rank = Rank.FOUR,
-                    receiver = "Donald"
-                ),
-                tech = CriticalSave
+            GiveClue(
+                clue = RankClue(Rank.FOUR),
+                to = "Donald"
             ),
-            ConventionalAction(
-                action = ColorClue(
-                    color = Color.YELLOW,
-                    receiver = "Donald"
-                ),
-                tech = CriticalSave
+            GiveClue(
+                clue = ColorClue(Color.YELLOW),
+                to = "Donald"
             ),
-            ConventionalAction(
-                action = RankClue(
-                    rank = Rank.TWO,
-                    receiver = "Emily"
-                ),
-                tech = CriticalSave
+            GiveClue(
+                clue = RankClue(Rank.TWO),
+                to = "Emily"
             ),
-            ConventionalAction(
-                action = ColorClue(
-                    color = Color.RED,
-                    receiver = "Emily"
-                ),
-                tech = CriticalSave
-            )
+            GiveClue(
+                clue = ColorClue(Color.RED),
+                to = "Emily"
+            ),
         )
 
         Assertions.assertEquals(expected, actual)
@@ -114,9 +92,9 @@ internal class CriticalSaveTest {
     fun `Should not save critical playables`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(5)
 
-        val actual = CriticalSave.getActions(playerPOV)
+        val actual = CriticalSave.getGameActions(playerPOV)
 
-        val expected = emptySet<ConventionalAction>()
+        val expected = emptySet<GameAction>()
 
         Assertions.assertEquals(expected, actual)
     }

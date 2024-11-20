@@ -3,9 +3,12 @@ package eelst.ilike.utils
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import eelst.ilike.engine.factory.PlayerFactory
-import eelst.ilike.engine.hand.TeammateHand
+import eelst.ilike.engine.hand.VisibleHand
 import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.OldActivePlayer
+import eelst.ilike.engine.player.knowledge.PersonalHandKnowledge
+import eelst.ilike.engine.player.knowledge.PersonalHandKnowledgeImpl
+import eelst.ilike.engine.player.knowledge.PersonalKnowledgeImpl
 import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.GloballyAvailableSlotInfo
 import eelst.ilike.game.PlayerId
@@ -31,7 +34,6 @@ object InputReader {
                 dto = playerDTO,
                 playerIndex = index,
                 handSize = Utils.getHandSize(dto.globallyAvailableInfo.players.size),
-                suites = suites
             )
         }
         val activePlayerId = playersGlobalInfo.first().playerId
@@ -67,10 +69,10 @@ object InputReader {
                     visibleCards = visibleCardsMap[it.key]!!,
                 )
             }
-        val teammatesHands = dto.playerPOV.teammates
+        val visibleHands = dto.playerPOV.teammates
             .associateBy { it.playerId }
             .mapValues {
-                TeammateHand(
+                VisibleHand(
                     it.value.hand.mapIndexed { index, slot ->
                         VisibleSlot(
                             globalInfo = playersGlobalInfoMap[it.key]!!.hand
@@ -95,11 +97,20 @@ object InputReader {
             visibleCards = visibleCardsMap[activePlayerId]!!
         )
 
+        val activePlayerPersonalHandKnowledge = PersonalHandKnowledgeImpl(activePlayerPersonalSlotKnowledge)
+        val personalHandKnowledge = teammatesPersonalSlotKnowledge.mapValues {
+            PersonalHandKnowledgeImpl(slotKnowledge = it.value)
+        } + Pair(activePlayerId, activePlayerPersonalHandKnowledge)
+
+        val personalKnowledge = PersonalKnowledgeImpl(
+            personalHandKnowledge = personalHandKnowledge,
+            visibleHands = visibleHands,
+        )
+
         return PlayerFactory.createActivePlayer(
-            playerId = activePlayerId,
+            activePlayerId = activePlayerId,
             globallyAvailableInfo = globallyAvailableInfo,
-            playersSlotKnowledge = teammatesPersonalSlotKnowledge + Pair(activePlayerId, activePlayerPersonalSlotKnowledge),
-            teammatesHands = teammatesHands,
+            personalKnowledge = personalKnowledge,
         )
     }
 

@@ -7,7 +7,7 @@ import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.Clue
 import eelst.ilike.game.entity.card.HanabiCard
 
-interface InterpretedHand : Hand {
+interface InterpretedHand : Hand<InterpretedSlot> {
     fun holds(card: HanabiCard): Boolean {
         return copiesOf(card) > 0
     }

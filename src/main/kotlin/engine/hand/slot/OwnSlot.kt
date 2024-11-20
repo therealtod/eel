@@ -31,7 +31,7 @@ class OwnSlot(
     }
 
     override fun isClued(): Boolean {
-        return slotKnowledge.isClued()
+        return globalInfo.positiveClues.isNotEmpty()
     }
 
     override fun contains(card: HanabiCard): Boolean {

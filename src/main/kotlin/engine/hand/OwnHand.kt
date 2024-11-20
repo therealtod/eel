@@ -7,7 +7,7 @@ import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.Clue
 import eelst.ilike.game.entity.card.HanabiCard
 
-class OwnHand(private val slots: Set<OwnSlot>) : InterpretedHand, Set<Slot> by slots {
+class OwnHand(private val slots: Set<OwnSlot>) : InterpretedHand, Set<InterpretedSlot> by slots {
     override fun copiesOf(card: HanabiCard): Int {
         return slots.count { it.hasKnownIdentity(card) }
     }
@@ -22,6 +22,10 @@ class OwnHand(private val slots: Set<OwnSlot>) : InterpretedHand, Set<Slot> by s
 
     override fun getSlot(slotIndex: Int): OwnSlot {
         return slots.elementAt(slotIndex - 1)
+    }
+
+    override fun getSlots(): Set<InterpretedSlot> {
+        return slots
     }
 
     override fun getKnownSlots(): Set<KnownSlot> {

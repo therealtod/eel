@@ -1,15 +1,14 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
+import eelst.ilike.engine.action.GiveClue
 import eelst.ilike.engine.convention.ConventionTech
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.HGroupCommon
 import eelst.ilike.engine.hand.InterpretedHand
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.game.entity.Color
-import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.Slot
-import eelst.ilike.game.entity.action.Clue
 import eelst.ilike.game.entity.action.ColorClue
 import eelst.ilike.game.entity.action.RankClue
 import eelst.ilike.game.entity.card.HanabiCard
@@ -21,36 +20,24 @@ abstract class HGroupTech(
     protected fun getAllFocusingClues(
         card: HanabiCard,
         slot: Slot,
-        hand: InterpretedHand,
-    ): Set<Clue> {
+        teammate: Teammate,
+    ): Set<GiveClue> {
+        val hand = teammate.hand
         val ranks = card.getRanksTouchingCard()
         val colors = card.getColorsTouchingCard()
-        return getRankCluesFocusing(
-            slot = slot,
-            hand = hand,
-            ranks = ranks,
-        ) +
-                getColorCluesFocusing(
-                    slot = slot,
-                    hand = hand,
-                    colors = colors,
-                )
-    }
+        val clues = (ranks.map {
+            RankClue(rank = it)
+        } + colors.map {
+            ColorClue(color = it)
+        }).filter {
+            val focusSlotIndex = HGroupCommon.getClueFocusSlotIndex(clue = it, hand = hand)
+            teammate.getCardAtSlot(focusSlotIndex) == card
+        }
 
-    protected fun getAllFocusingActions(
-        card: HanabiCard,
-        slot: Slot,
-        hand: InterpretedHand,
-    ): Set<ConventionalAction> {
-        val clues = getAllFocusingClues(
-            card = card,
-            slot = slot,
-            hand = hand,
-        )
         return clues.map {
-            ConventionalAction(
-                action = TODO(),
-                tech = this
+            GiveClue(
+                clue = it,
+                to = teammate.playerId,
             )
         }.toSet()
     }
@@ -59,7 +46,7 @@ abstract class HGroupTech(
         slot: Slot,
         hand: InterpretedHand,
         ranks: Set<Rank>,
-    ): Set<RankClue> {
+    ): Set<RankClue>{
         return ranks.map {
             RankClue(rank = it)
         }

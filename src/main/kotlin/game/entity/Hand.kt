@@ -1,5 +1,5 @@
 package eelst.ilike.game.entity
 
-interface Hand: Set<Slot> {
-    fun getSlot(slotIndex: Int): Slot
+interface Hand<T: Slot>: Set<T> {
+    fun getSlot(slotIndex: Int): T
 }

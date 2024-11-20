@@ -1,10 +1,11 @@
 package engine.convention.hgroup.tech
 
 import TestUtils
+import eelst.ilike.engine.action.GiveClue
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.tech.FiveSave
-import eelst.ilike.engine.action.RankClue
 import eelst.ilike.game.entity.Rank
+import eelst.ilike.game.entity.action.RankClue
 import org.junit.jupiter.api.Assertions
 import kotlin.test.Test
 
@@ -13,16 +14,13 @@ internal class FiveSaveTest {
     fun `Should find the only 5 save on the board`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(11)
 
-        val actual = FiveSave.getActions(playerPOV)
+        val actual = FiveSave.getGameActions(playerPOV)
 
         val expected = setOf(
-            ConventionalAction(
-                action = RankClue(
-                    rank = Rank.FIVE,
-                    receiver = "Cathy"
-                ),
-                tech = FiveSave
-            )
+            GiveClue(
+                clue = RankClue(Rank.FIVE),
+                to = "Cathy",
+            ),
         )
 
         Assertions.assertEquals(expected, actual)
@@ -32,30 +30,21 @@ internal class FiveSaveTest {
     fun `Should find all the 5 saves available on the board`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(20)
 
-        val actual = FiveSave.getActions(playerPOV)
+        val actual = FiveSave.getGameActions(playerPOV)
 
         val expected = setOf(
-            ConventionalAction(
-                action = RankClue(
-                    rank = Rank.FIVE,
-                    receiver = "Bob"
-                ),
-                tech = FiveSave
+            GiveClue(
+                clue = RankClue(Rank.FIVE),
+                to = "Bob",
             ),
-            ConventionalAction(
-                action = RankClue(
-                    rank = Rank.FIVE,
-                    receiver = "Cathy"
-                ),
-                tech = FiveSave
+            GiveClue(
+                clue = RankClue(Rank.FIVE),
+                to = "Cathy",
             ),
-            ConventionalAction(
-                action = RankClue(
-                    rank = Rank.FIVE,
-                    receiver = "Donald"
-                ),
-                tech = FiveSave
-            )
+            GiveClue(
+                clue = RankClue(Rank.FIVE),
+                to = "Donald",
+            ),
         )
 
         Assertions.assertEquals(expected, actual)

@@ -1,20 +1,18 @@
 package eelst.ilike.utils
 
 import eelst.ilike.engine.hand.slot.PersonalSlotKnowledgeImpl
-import eelst.ilike.engine.player.knowledge.PersonalKnowledge
-import eelst.ilike.engine.player.knowledge.PersonalKnowledgeImpl
 import eelst.ilike.game.GameUtils
 import eelst.ilike.game.GloballyAvailablePlayerInfo
 import eelst.ilike.game.GloballyAvailableSlotInfo
 import eelst.ilike.game.PlayerId
-import eelst.ilike.engine.action.Clue
-import eelst.ilike.engine.action.ColorClue
-import eelst.ilike.engine.action.RankClue
 import eelst.ilike.engine.player.knowledge.PersonalSlotKnowledge
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.PlayingStack
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.TrashPile
+import eelst.ilike.game.entity.action.Clue
+import eelst.ilike.game.entity.action.ColorClue
+import eelst.ilike.game.entity.action.RankClue
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.game.entity.suite.SuiteId
@@ -44,19 +42,18 @@ object InputParser {
         dto: PlayerGloballyAvailableInfoDTO,
         handSize: Int,
         playerIndex: Int,
-        suites: Set<Suite>
     ): GloballyAvailablePlayerInfo {
-        val slotInfo = (1..handSize).mapIndexed { index, i ->
+        val slotInfo = (1..handSize).map{ index->
             GloballyAvailableSlotInfo(
-                index = index + 1,
-                positiveClues = dto.slotClues.getOrNull(index)?.let {
+                index = index,
+                positiveClues = dto.slotClues.getOrNull(index - 1)?.let {
                     it.positiveClues.map { clue ->
-                        parseClue(dto.playerId, clue, suites)
+                        parseClue(clue)
                     }
                 } ?: emptyList(),
-                negativeClues = dto.slotClues.getOrNull(index)?.let {
+                negativeClues = dto.slotClues.getOrNull(index - 1)?.let {
                     it.negativeClues.map { clue ->
-                        parseClue(dto.playerId, clue, suites)
+                        parseClue(clue)
                     }
                 } ?: emptyList(),
             )
@@ -96,19 +93,17 @@ object InputParser {
         return slots.toSet()
     }
 
-    private fun parseClue(playerId: PlayerId, clueAbbreviation: String, suites: Set<Suite>): Clue {
+    private fun parseClue(clueAbbreviation: String): Clue {
         return Color.entries.find { it.name == clueAbbreviation }
             ?.let {
                 ColorClue(
                     color = it,
-                    receiver = playerId
                 )
             } ?: Rank.entries
             .find { it.numericalValue == clueAbbreviation.toInt() }
             ?.let {
                 RankClue(
                     rank = it,
-                    receiver = playerId,
                 )
             } ?: throw IllegalArgumentException("Could not parse clue: $clueAbbreviation")
 

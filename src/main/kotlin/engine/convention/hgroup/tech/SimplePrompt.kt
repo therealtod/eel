@@ -1,19 +1,19 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
+import eelst.ilike.engine.action.GameAction
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.validatePrompt
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.game.entity.suite.*
 
-object SimplePrompt
-    : Prompt(
+object SimplePrompt : Prompt(
     name = "Prompt",
     appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
 ) {
-    override fun getActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
-        val actions = mutableListOf<ConventionalAction>()
+    override fun getGameActions(playerPOV: PlayerPOV): Set<GameAction> {
+        val actions = mutableListOf<GameAction>()
         playerPOV.forEachTeammate { teammate ->
-            teammate.ownHand.forEach { slot ->
+            teammate.hand.forEach { slot ->
                 val card = teammate.getCardAtSlot(slot.index)
                 if (playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) == 1) {
                     val stack = playerPOV.globallyAvailableInfo.getStackForCard(card)
@@ -24,23 +24,21 @@ object SimplePrompt
                     }
 
                     val candidateClues = getAllFocusingClues(
-                        card = card,
-                        slot = slot,
-                        hand = teammate.hand,
+                        card = card, slot = slot, teammate = teammate
                     )
                     actions.addAll(candidateClues.filter {
                         validatePrompt(
                             connectingCards = connectingCards.toSet(),
                             playerPOV,
                         )
-                    }
-                        .map {
-                            TODO()
-                        }
-                    )
+                    })
                 }
             }
         }
         return actions.toSet()
+    }
+
+    override fun getConventionalActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
+        TODO()
     }
 }

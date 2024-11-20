@@ -1,19 +1,28 @@
 package eelst.ilike.engine.player.knowledge
 
-import eelst.ilike.engine.hand.InterpretedHand
-import eelst.ilike.engine.hand.TeammateHand
+import eelst.ilike.engine.hand.VisibleHand
 import eelst.ilike.game.PlayerId
 
 class PersonalKnowledgeImpl(
-    private val slotKnowledge: Set<PersonalSlotKnowledge>,
-    private val teammatesHands: Map<PlayerId, InterpretedHand>
+    private val personalHandKnowledge: Map<PlayerId, PersonalHandKnowledge>,
+    private val visibleHands: Map<PlayerId, VisibleHand>
 ) : PersonalKnowledge {
-    override fun getKnowledgeAboutOwnSlot(slotIndex: Int): PersonalSlotKnowledge {
-        return slotKnowledge.elementAt(slotIndex - 1)
+    override fun getOwnHandKnowledge(playerId: PlayerId): PersonalHandKnowledge {
+        return personalHandKnowledge[playerId]!!
     }
 
-    override fun getTeammateHand(teammatePlayerId: PlayerId): InterpretedHand {
-        return teammatesHands[teammatePlayerId]
-            ?: throw IllegalArgumentException("The hand of the player with ID $teammatePlayerId is unknown")
+    override fun getVisibleHand(playerId: PlayerId): VisibleHand {
+        return visibleHands[playerId]!!
+    }
+
+    override fun getVisibleHands(): Map<PlayerId, VisibleHand> {
+        return visibleHands
+    }
+
+    override fun accessibleTo(playerId: PlayerId): PersonalKnowledge {
+        return PersonalKnowledgeImpl(
+            personalHandKnowledge = personalHandKnowledge,
+            visibleHands = visibleHands.minus(playerId)
+        )
     }
 }

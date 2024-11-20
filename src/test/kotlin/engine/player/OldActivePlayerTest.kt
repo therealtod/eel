@@ -7,12 +7,13 @@ import eelst.ilike.engine.convention.hgroup.tech.CriticalSave
 import eelst.ilike.engine.convention.hgroup.tech.DirectPlayClue
 import eelst.ilike.engine.convention.hgroup.tech.DiscardChop
 import eelst.ilike.engine.convention.hgroup.tech.PlayKnownPlayable
-import eelst.ilike.engine.action.ColorClue
 import eelst.ilike.engine.action.Discard
+import eelst.ilike.engine.action.GiveClue
 import eelst.ilike.engine.action.Play
-import eelst.ilike.engine.action.RankClue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
+import eelst.ilike.game.entity.action.ColorClue
+import eelst.ilike.game.entity.action.RankClue
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
@@ -26,44 +27,44 @@ class OldActivePlayerTest {
 
         val expected = setOf(
             ConventionalAction(
-                action = RankClue(
-                    rank = Rank.FOUR,
-                    receiver = "Cathy"
+                GiveClue(
+                    clue = RankClue(Rank.FOUR),
+                    to = "Cathy",
                 ),
                 tech = CriticalSave,
             ),
             ConventionalAction(
-                action = ColorClue(
-                    color = Color.PURPLE,
-                    receiver = "Cathy",
+                GiveClue(
+                    clue = ColorClue(Color.PURPLE),
+                    to = "Cathy",
                 ),
                 tech = CriticalSave,
             ),
             ConventionalAction(
-                action = RankClue(
-                    rank = Rank.ONE,
-                    receiver = "Cathy"
+                GiveClue(
+                    clue = RankClue(Rank.ONE),
+                    to = "Cathy",
                 ),
                 tech = DirectPlayClue,
             ),
             ConventionalAction(
-                action = ColorClue(
-                    color = Color.BLUE,
-                    receiver = "Cathy",
+                GiveClue(
+                    clue = ColorClue(Color.BLUE),
+                    to = "Cathy",
                 ),
                 tech = DirectPlayClue,
             ),
             ConventionalAction(
-                action = RankClue(
-                    rank = Rank.ONE,
-                    receiver = "Donald"
+                GiveClue(
+                    clue = RankClue(Rank.ONE),
+                    to = "Donald",
                 ),
                 tech = DirectPlayClue,
             ),
             ConventionalAction(
-                action = ColorClue(
-                    color = Color.RED,
-                    receiver = "Donald",
+                GiveClue(
+                    clue = ColorClue(Color.RED),
+                    to = "Donald",
                 ),
                 tech = DirectPlayClue,
             ),

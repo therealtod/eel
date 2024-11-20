@@ -1,8 +1,8 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
+import eelst.ilike.engine.action.GameAction
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.player.PlayerPOV
-import eelst.ilike.engine.player.PlayerPOVImpl
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.*
 
@@ -12,8 +12,12 @@ object DelayedPlayClue
     appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
     takesPrecedenceOver = emptySet(),
 ) {
-    override fun getActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
-        val actions = mutableListOf<ConventionalAction>()
+    override fun getConventionalActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
+        TODO()
+    }
+
+    override fun getGameActions(playerPOV: PlayerPOV): Set<GameAction> {
+        val actions = mutableListOf<GameAction>()
 
         playerPOV.forEachTeammate { teammate ->
             teammate
@@ -25,10 +29,10 @@ object DelayedPlayClue
                         connectingCardsAreKnown(card, playerPOV)
                     ) {
                         actions.addAll(
-                            getAllFocusingActions(
+                            getAllFocusingClues(
                                 card = card,
                                 slot = slot,
-                                hand = teammate.hand
+                                teammate = teammate,
                             )
                         )
                     }
