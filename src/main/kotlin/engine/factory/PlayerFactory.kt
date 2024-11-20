@@ -4,7 +4,7 @@ import eelst.ilike.engine.hand.InterpretedHand
 import eelst.ilike.engine.hand.OwnHand
 import eelst.ilike.engine.hand.TeammateHand
 import eelst.ilike.engine.hand.slot.OwnSlot
-import eelst.ilike.engine.player.ActivePlayer
+import eelst.ilike.engine.player.OldActivePlayer
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.PlayerPOVImpl
 import eelst.ilike.engine.player.Teammate
@@ -22,7 +22,7 @@ object PlayerFactory {
         globallyAvailableInfo: GloballyAvailableInfo,
         playersSlotKnowledge: Map<PlayerId, Set<PersonalSlotKnowledge>>,
         teammatesHands: Map<PlayerId, TeammateHand>
-    ): ActivePlayer{
+    ): OldActivePlayer{
         val personalKnowledge = PersonalKnowledgeImpl(
             slotKnowledge = playersSlotKnowledge[playerId]!!,
             teammatesHands = teammatesHands
@@ -54,7 +54,7 @@ object PlayerFactory {
         teammateId: PlayerId,
         globallyAvailableInfo: GloballyAvailableInfo,
         personalKnowledge: PersonalKnowledge,
-        hand: TeammateHand,
+        hand: InterpretedHand,
         seatsGap: Int,
     ): Teammate {
         val globallyAvailablePlayerInfo = globallyAvailableInfo.getPlayerInfo(teammateId)
@@ -66,6 +66,7 @@ object PlayerFactory {
         return Teammate(
             playerId = teammateId,
             playerIndex = globallyAvailablePlayerInfo.playerIndex,
+            /*
             playerPOV = createPlayerPOV(
                 playerId = teammateId,
                 playerIndex = globallyAvailablePlayerInfo.playerIndex,
@@ -73,7 +74,9 @@ object PlayerFactory {
                 ownHand = OwnHand(slots),
                 teammatesHands = ,
             ),
-            hand = hand,
+
+             */
+            hand = TODO(),
             seatsGap = seatsGap
         )
     }
@@ -84,7 +87,7 @@ object PlayerFactory {
         personalKnowledge: PersonalKnowledge,
         teammatesHands: Map<PlayerId, TeammateHand>,
         playersSlotKnowledge: Map<PlayerId, Set<PersonalSlotKnowledge>>,
-    ): ActivePlayer{
+    ): OldActivePlayer{
         val activePlayerGloballyAvailableInfo = globallyAvailableInfo.getPlayerInfo(activePlayerId)
         val slots = createOwnSlots(
             handSize = globallyAvailableInfo.handsSize,
@@ -93,10 +96,11 @@ object PlayerFactory {
         )
         val ownHand = OwnHand(slots)
 
-        return ActivePlayer(
+        return OldActivePlayer(
             playerId = activePlayerGloballyAvailableInfo.playerId,
             playerIndex = activePlayerGloballyAvailableInfo.playerIndex,
             globallyAvailableInfo = globallyAvailableInfo,
+            /*
             playerPOV = createPlayerPOV(
                 playerId = activePlayerGloballyAvailableInfo.playerId,
                 playerIndex = activePlayerGloballyAvailableInfo.playerIndex,
@@ -105,6 +109,8 @@ object PlayerFactory {
                 teammatesHands = teammatesHands + Pair(activePlayerId, ownHand),
                 playersSlotKnowledge = playersSlotKnowledge,
             ),
+
+             */
         )
     }
 

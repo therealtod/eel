@@ -1,9 +1,9 @@
-import eelst.ilike.engine.player.ActivePlayer
+import eelst.ilike.engine.player.OldActivePlayer
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.utils.InputReader
 
 object TestUtils {
-    fun getActivePlayerFromScenario(scenarioId: Int): ActivePlayer {
+    fun getActivePlayerFromScenario(scenarioId: Int): OldActivePlayer {
         return InputReader.getPlayerFromResourceFile("scenarios/scenario$scenarioId/pov.yaml")
     }
 

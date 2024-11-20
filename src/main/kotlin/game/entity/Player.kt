@@ -7,6 +7,4 @@ interface Player<T: Hand> {
     val playerId: PlayerId
     val playerIndex: Int
     val ownHand: T
-
-    fun getCardAtSlot(slotIndex: Int): HanabiCard
 }
