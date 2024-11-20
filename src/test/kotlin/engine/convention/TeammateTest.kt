@@ -1,4 +1,3 @@
 package engine.convention
 
-internal class TeammateTest {
-}
+internal class TeammateTest

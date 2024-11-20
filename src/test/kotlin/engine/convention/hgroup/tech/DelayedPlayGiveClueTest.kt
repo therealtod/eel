@@ -1,9 +1,7 @@
 package engine.convention.hgroup.tech
 
 import TestUtils
-import eelst.ilike.engine.action.GameAction
 import eelst.ilike.engine.action.GiveClue
-import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.tech.DelayedPlayClue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
@@ -23,6 +21,7 @@ internal class DelayedPlayGiveClueTest {
         val expected = setOf(
             GiveClue(
                 clue = RankClue(Rank.TWO),
+                from = "Alice",
                 to = "Bob"
             ),
         )
@@ -39,10 +38,12 @@ internal class DelayedPlayGiveClueTest {
         val expected = setOf(
             GiveClue(
                 clue = RankClue(rank = Rank.FOUR),
+                from = "Alice",
                 to = "Bob"
             ),
             GiveClue(
                 clue = ColorClue(Color.RED),
+                from = "Alice",
                 to = "Bob"
             ),
         )
@@ -59,6 +60,7 @@ internal class DelayedPlayGiveClueTest {
         val expected = setOf(
             GiveClue(
                 clue = ColorClue(Color.RED),
+                from = "Alice",
                 to = "Donald"
             ),
         )

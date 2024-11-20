@@ -5,5 +5,6 @@ import eelst.ilike.game.entity.action.Clue
 
 data class GiveClue(
     val clue: Clue,
+    override val from: PlayerId,
     val to: PlayerId,
-) : GameAction()
+) : GameAction(from)

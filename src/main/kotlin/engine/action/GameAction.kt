@@ -1,3 +1,5 @@
 package eelst.ilike.engine.action
 
-sealed class GameAction
+import eelst.ilike.game.PlayerId
+
+sealed class GameAction(open val from: PlayerId)

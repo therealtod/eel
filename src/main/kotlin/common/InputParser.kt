@@ -1,11 +1,10 @@
 package eelst.ilike.utils
 
 import eelst.ilike.engine.hand.slot.PersonalSlotKnowledgeImpl
+import eelst.ilike.engine.player.knowledge.PersonalSlotKnowledge
 import eelst.ilike.game.GameUtils
 import eelst.ilike.game.GloballyAvailablePlayerInfo
 import eelst.ilike.game.GloballyAvailableSlotInfo
-import eelst.ilike.game.PlayerId
-import eelst.ilike.engine.player.knowledge.PersonalSlotKnowledge
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.PlayingStack
 import eelst.ilike.game.entity.Rank
@@ -43,7 +42,7 @@ object InputParser {
         handSize: Int,
         playerIndex: Int,
     ): GloballyAvailablePlayerInfo {
-        val slotInfo = (1..handSize).map{ index->
+        val slotInfo = (1..handSize).map { index ->
             GloballyAvailableSlotInfo(
                 index = index,
                 positiveClues = dto.slotClues.getOrNull(index - 1)?.let {

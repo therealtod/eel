@@ -1,6 +1,5 @@
 package eelst.ilike.game.entity.suite
 
-import eelst.ilike.engine.action.GiveClue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.Clue

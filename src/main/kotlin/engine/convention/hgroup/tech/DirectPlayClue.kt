@@ -18,8 +18,8 @@ object DirectPlayClue : PlayClue(
                 if (!teammate.knows(slot.index) && playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) == 0) {
                     actions.addAll(
                         getAllFocusingClues(
-                            card = card,
-                            slot = slot,
+                            playerId = playerPOV.playerId,
+                            slot = teammate.getSlot(slot.index),
                             teammate = teammate,
                         )
                     )
@@ -27,9 +27,5 @@ object DirectPlayClue : PlayClue(
             }
         }
         return actions.toSet()
-    }
-
-    override fun getConventionalActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
-        TODO()
     }
 }

@@ -5,8 +5,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import eelst.ilike.engine.factory.PlayerFactory
 import eelst.ilike.engine.hand.VisibleHand
 import eelst.ilike.engine.hand.slot.VisibleSlot
-import eelst.ilike.engine.player.OldActivePlayer
-import eelst.ilike.engine.player.knowledge.PersonalHandKnowledge
+import eelst.ilike.engine.player.ActivePlayer
 import eelst.ilike.engine.player.knowledge.PersonalHandKnowledgeImpl
 import eelst.ilike.engine.player.knowledge.PersonalKnowledgeImpl
 import eelst.ilike.game.GloballyAvailableInfo
@@ -22,7 +21,7 @@ import eelst.ilike.utils.model.dto.TeammateDTO
 object InputReader {
     private val mapper = Utils.yamlObjectMapper
 
-    fun getPlayerFromResourceFile(fileName: String): OldActivePlayer {
+    fun getPlayerFromResourceFile(fileName: String): ActivePlayer {
         val fileText = Utils.getResourceFileContentAsString(fileName)
         val dto: ScenarioDTO = mapper.readValue(fileText)
         val suites = dto.globallyAvailableInfo.suites.map { Suite.fromId(it) }.toSet()

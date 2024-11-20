@@ -1,4 +1,3 @@
 package eelst.ilike.engine.convention
 
-class GeneratedPublicKnowledge {
-}
+class GeneratedPublicKnowledge

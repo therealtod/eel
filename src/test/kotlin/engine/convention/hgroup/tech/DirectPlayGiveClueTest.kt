@@ -2,7 +2,6 @@ package engine.convention.hgroup.tech
 
 import TestUtils
 import eelst.ilike.engine.action.GiveClue
-import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.tech.DirectPlayClue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
@@ -21,10 +20,12 @@ internal class DirectPlayGiveClueTest {
         val expected = setOf(
             GiveClue(
                 clue = RankClue(Rank.TWO),
+                from = "Alice",
                 to = "Cathy",
             ),
             GiveClue(
                 clue = ColorClue(Color.RED),
+                from = "Alice",
                 to = "Cathy",
             ),
         )
@@ -40,26 +41,32 @@ internal class DirectPlayGiveClueTest {
         val expected = setOf(
             GiveClue(
                 clue = ColorClue(Color.PURPLE),
+                from = "Alice",
                 to = "Bob",
             ),
             GiveClue(
                 clue = RankClue(Rank.THREE),
+                from = "Alice",
                 to = "Bob"
             ),
             GiveClue(
                 clue = ColorClue(Color.RED),
+                from = "Alice",
                 to = "Cathy",
             ),
             GiveClue(
                 clue = RankClue(Rank.TWO),
+                from = "Alice",
                 to = "Cathy"
             ),
             GiveClue(
                 clue = ColorClue(Color.PURPLE),
+                from = "Alice",
                 to = "Cathy",
             ),
             GiveClue(
                 clue = RankClue(Rank.ONE),
+                from = "Alice",
                 to = "Cathy"
             ),
         )

@@ -1,9 +1,9 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.action.GameAction
+import eelst.ilike.engine.action.Play
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.PlayTech
-import eelst.ilike.engine.action.Play
 import eelst.ilike.engine.player.PlayerPOV
 
 object PlayKnownPlayable : HGroupTech(
@@ -14,10 +14,10 @@ object PlayKnownPlayable : HGroupTech(
         return playerPOV
             .getOwnKnownPlayableSlots()
             .map {
-                Play(it.index)
+                Play(
+                    from = playerPOV.playerId,
+                    slotIndex = it.index,
+                )
             }.toSet()
-    }
-    override fun getConventionalActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
-        TODO()
     }
 }

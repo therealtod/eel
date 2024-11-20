@@ -12,10 +12,6 @@ object DelayedPlayClue
     appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
     takesPrecedenceOver = emptySet(),
 ) {
-    override fun getConventionalActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
-        TODO()
-    }
-
     override fun getGameActions(playerPOV: PlayerPOV): Set<GameAction> {
         val actions = mutableListOf<GameAction>()
 
@@ -30,8 +26,8 @@ object DelayedPlayClue
                     ) {
                         actions.addAll(
                             getAllFocusingClues(
-                                card = card,
-                                slot = slot,
+                                playerId = playerPOV.playerId,
+                                slot = teammate.getSlot(slot.index),
                                 teammate = teammate,
                             )
                         )

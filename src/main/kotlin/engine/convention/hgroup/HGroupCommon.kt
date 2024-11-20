@@ -103,7 +103,7 @@ object HGroupCommon {
     private fun isPromptedCorrectly(
         card: HanabiCard,
         teammate: Teammate,
-        promptedSlots: Set<VisibleSlot> = emptySet(),
+        promptedSlots: Set<InterpretedSlot> = emptySet(),
         playerPOV: PlayerPOV,
     ): Boolean {
         val promptedTeammateSlot = promptedSlots.firstOrNull { slot ->
@@ -121,17 +121,19 @@ object HGroupCommon {
                     playerPOV = playerPOV
                 )
                         ) || wrongPromptCanBePatched(
-            wrongPromptedCard = promptedTeammateSlot.card,
+            wrongPromptedSlot = promptedTeammateSlot,
             wrongPromptedTeammate = teammate,
             playerPOV = playerPOV
         )
     }
 
     private fun wrongPromptCanBePatched(
-        wrongPromptedCard: HanabiCard,
+        wrongPromptedSlot: InterpretedSlot,
         wrongPromptedTeammate: Teammate,
         playerPOV: PlayerPOV,
     ): Boolean {
+        return false
+        /*
         if (playerPOV.globallyAvailableInfo.getGlobalAwayValue(wrongPromptedCard) < 0) return false
         val preRequisites = wrongPromptedCard.getPrerequisiteCards()
         val cardTeammateMap = preRequisites.associateWith {
@@ -152,11 +154,13 @@ object HGroupCommon {
                     return false
                 }
             }
-            if (cardTeammateMap[card]!!.playsBefore(wrongPromptedTeammate) ) {
+            if (cardTeammateMap[card]!!.playsBefore(wrongPromptedTeammate)) {
                 return false
             }
         }
         return true
+
+         */
     }
 
     fun hasCardOnFinessePosition(card: HanabiCard, teammate: Teammate): Boolean {

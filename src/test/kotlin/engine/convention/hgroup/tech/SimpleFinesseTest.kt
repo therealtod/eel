@@ -3,7 +3,6 @@ package engine.convention.hgroup.tech
 import TestUtils
 import eelst.ilike.engine.action.GameAction
 import eelst.ilike.engine.action.GiveClue
-import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.tech.SimpleFinesse
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.RankClue
@@ -20,6 +19,7 @@ internal class SimpleFinesseTest {
         val expected = setOf(
             GiveClue(
                 clue = RankClue(Rank.THREE),
+                from = "Alice",
                 to = "Cathy",
             )
         )

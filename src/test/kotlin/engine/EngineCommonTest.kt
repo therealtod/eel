@@ -21,6 +21,7 @@ class EngineCommonTest {
             ConventionalAction(
                 action = GiveClue(
                     ColorClue(Color.RED),
+                    from = "Alice",
                     to = "Bob"
                 ),
                 tech = SimplePrompt
@@ -28,6 +29,7 @@ class EngineCommonTest {
             ConventionalAction(
                 action = GiveClue(
                     ColorClue(Color.RED),
+                    from = "Alice",
                     to = "Bob"
                 ),
                 tech = SimpleFinesse
@@ -35,6 +37,7 @@ class EngineCommonTest {
             ConventionalAction(
                 action = GiveClue(
                     RankClue(Rank.TWO),
+                    from = "Alice",
                     to = "Cathy"
                 ),
                 tech = TwoSave
@@ -42,6 +45,7 @@ class EngineCommonTest {
             ConventionalAction(
                 action = GiveClue(
                     RankClue(Rank.TWO),
+                    from = "Alice",
                     to = "Cathy"
                 ),
                 tech = SimpleFinesse
@@ -49,6 +53,7 @@ class EngineCommonTest {
             ConventionalAction(
                 action = GiveClue(
                     RankClue(Rank.FIVE),
+                    from = "Alice",
                     to = "Bob"
                 ),
                 tech = FiveSave
@@ -60,6 +65,7 @@ class EngineCommonTest {
             ConventionalAction(
                 action = GiveClue(
                     ColorClue(Color.RED),
+                    from = "Alice",
                     to = "Bob"
                 ),
                 tech = SimplePrompt
@@ -67,6 +73,7 @@ class EngineCommonTest {
             ConventionalAction(
                 action = GiveClue(
                     RankClue(Rank.TWO),
+                    from = "Alice",
                     to = "Cathy"
                 ),
                 tech = TwoSave
@@ -74,6 +81,7 @@ class EngineCommonTest {
             ConventionalAction(
                 action = GiveClue(
                     RankClue(Rank.FIVE),
+                    from = "Alice",
                     to = "Bob"
                 ),
                 tech = FiveSave

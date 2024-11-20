@@ -2,7 +2,6 @@ package engine.convention.hgroup.tech
 
 import TestUtils
 import eelst.ilike.engine.action.GiveClue
-import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.tech.FiveSave
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.RankClue
@@ -19,6 +18,7 @@ internal class FiveSaveTest {
         val expected = setOf(
             GiveClue(
                 clue = RankClue(Rank.FIVE),
+                from = "Alice",
                 to = "Cathy",
             ),
         )
@@ -35,14 +35,17 @@ internal class FiveSaveTest {
         val expected = setOf(
             GiveClue(
                 clue = RankClue(Rank.FIVE),
+                from = "Alice",
                 to = "Bob",
             ),
             GiveClue(
                 clue = RankClue(Rank.FIVE),
+                from = "Alice",
                 to = "Cathy",
             ),
             GiveClue(
                 clue = RankClue(Rank.FIVE),
+                from = "Alice",
                 to = "Donald",
             ),
         )

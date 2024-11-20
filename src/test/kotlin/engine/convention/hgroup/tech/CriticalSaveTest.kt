@@ -3,7 +3,6 @@ package engine.convention.hgroup.tech
 import TestUtils
 import eelst.ilike.engine.action.GameAction
 import eelst.ilike.engine.action.GiveClue
-import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.tech.CriticalSave
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
@@ -22,10 +21,12 @@ internal class CriticalSaveTest {
         val expected = setOf(
             GiveClue(
                 clue = RankClue(Rank.FOUR),
+                from = "Alice",
                 to = "Cathy"
             ),
             GiveClue(
                 clue = ColorClue(Color.PURPLE),
+                from = "Alice",
                 to = "Cathy"
             ),
         )
@@ -61,26 +62,32 @@ internal class CriticalSaveTest {
         val expected = setOf(
             GiveClue(
                 clue = RankClue(Rank.FOUR),
+                from = "Alice",
                 to = "Cathy"
             ),
             GiveClue(
                 clue = ColorClue(Color.PURPLE),
+                from = "Alice",
                 to = "Cathy"
             ),
             GiveClue(
                 clue = RankClue(Rank.FOUR),
+                from = "Alice",
                 to = "Donald"
             ),
             GiveClue(
                 clue = ColorClue(Color.YELLOW),
+                from = "Alice",
                 to = "Donald"
             ),
             GiveClue(
                 clue = RankClue(Rank.TWO),
+                from = "Alice",
                 to = "Emily"
             ),
             GiveClue(
                 clue = ColorClue(Color.RED),
+                from = "Alice",
                 to = "Emily"
             ),
         )
@@ -97,5 +104,20 @@ internal class CriticalSaveTest {
         val expected = emptySet<GameAction>()
 
         Assertions.assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `Should match a critical save clue action`() {
+        val playerPOV = TestUtils.getPlayerPOVFromScenario(21)
+
+        val action = GiveClue(
+            clue = RankClue(Rank.FOUR),
+            from = "Cathy",
+            to = "Alice",
+        )
+
+        val actual = CriticalSave.matches(action, playerPOV)
+
+        Assertions.assertTrue(actual)
     }
 }

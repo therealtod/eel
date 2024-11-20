@@ -1,3 +1,5 @@
 package eelst.ilike.engine.action
 
-data class Discard(val slotIndex: Int) : GameAction()
+import eelst.ilike.game.PlayerId
+
+data class Discard(override val from: PlayerId, val slotIndex: Int) : GameAction(from)

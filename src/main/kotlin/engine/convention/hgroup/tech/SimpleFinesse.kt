@@ -27,8 +27,8 @@ object SimpleFinesse
                         }) {
                         actions.addAll(
                             getAllFocusingClues(
-                                card = card,
-                                slot = slot,
+                                playerId = playerPOV.playerId,
+                                slot = teammate.getSlot(slot.index),
                                 teammate = teammate,
                             )
                         )
@@ -37,8 +37,5 @@ object SimpleFinesse
             }
         }
         return actions.toSet()
-    }
-    override fun getConventionalActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
-        TODO()
     }
 }

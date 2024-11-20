@@ -1,7 +1,7 @@
 package eelst.ilike.engine.factory
 
 import eelst.ilike.engine.hand.OwnHand
-import eelst.ilike.engine.player.OldActivePlayer
+import eelst.ilike.engine.player.ActivePlayer
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.PlayerPOVImpl
 import eelst.ilike.engine.player.Teammate
@@ -33,10 +33,10 @@ object PlayerFactory {
         activePlayerId: PlayerId,
         globallyAvailableInfo: GloballyAvailableInfo,
         personalKnowledge: PersonalKnowledge,
-    ): OldActivePlayer{
+    ): ActivePlayer {
         val activePlayerGloballyAvailableInfo = globallyAvailableInfo.getPlayerInfo(activePlayerId)
 
-        return OldActivePlayer(
+        return ActivePlayer(
             playerId = activePlayerGloballyAvailableInfo.playerId,
             playerIndex = activePlayerGloballyAvailableInfo.playerIndex,
             globallyAvailableInfo = globallyAvailableInfo,
@@ -60,11 +60,13 @@ object PlayerFactory {
                     seatsGap = GameUtils.getSeatsGap(
                         playerIndex1 = playerIndex,
                         playerIndex2 = it.value.playerIndex,
-                        numberOfPlayers = globallyAvailableInfo.numberOfPlayers),
+                        numberOfPlayers = globallyAvailableInfo.numberOfPlayers
+                    ),
                 )
             }
 
         return PlayerPOVImpl(
+            playerId = playerId,
             globallyAvailableInfo = globallyAvailableInfo,
             ownHand = ownHand,
             teammates = teammates.toSet()

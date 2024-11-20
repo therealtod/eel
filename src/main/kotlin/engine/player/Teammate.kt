@@ -1,8 +1,12 @@
 package eelst.ilike.engine.player
 
 import eelst.ilike.engine.ConventionsUsingPlayer
+import eelst.ilike.engine.factory.PlayerFactory
+import eelst.ilike.engine.hand.InterpretedHand
 import eelst.ilike.engine.hand.VisibleHand
+import eelst.ilike.engine.hand.slot.InterpretedSlot
 import eelst.ilike.engine.hand.slot.OwnSlot
+import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.PlayerId
@@ -29,11 +33,15 @@ class Teammate(
         return ownHand.getSlot(slotIndex)
     }
 
-    fun getCardAtSlot(slotIndex: Int): HanabiCard{
+    fun getSlot(slotIndex: Int): VisibleSlot {
+        return hand.getSlot(slotIndex)
+    }
+
+    fun getCardAtSlot(slotIndex: Int): HanabiCard {
         return hand.getSlot(slotIndex).card
     }
 
     override fun hasCardInSlot(card: HanabiCard, slotIndex: Int): Boolean {
-        return hand.getSlot(slotIndex).card == card
+        return hand.getSlot(slotIndex).contains(card)
     }
 }

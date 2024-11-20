@@ -11,6 +11,7 @@ interface InterpretedHand : Hand<InterpretedSlot> {
     fun holds(card: HanabiCard): Boolean {
         return copiesOf(card) > 0
     }
+
     fun getKnownSlots(): Set<KnownSlot>
     fun copiesOf(card: HanabiCard): Int
     fun getSlotsTouchedBy(clue: Clue): Set<Slot>

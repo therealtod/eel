@@ -4,8 +4,8 @@ import eelst.ilike.engine.action.GameAction
 import eelst.ilike.engine.action.GiveClue
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
-import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.Teammate
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.RankClue
 import eelst.ilike.game.entity.card.HanabiCard
@@ -17,7 +17,7 @@ object TwoSave : SaveClue(
 ) {
     override fun getGameActions(playerPOV: PlayerPOV): Set<GameAction> {
         val actions = mutableListOf<GameAction>()
-        playerPOV.forEachTeammate{ teammate ->
+        playerPOV.forEachTeammate { teammate ->
             val chop = getChop(teammate.ownHand)
             val card = teammate.getCardAtSlot(chop.index)
             if (card.rank == Rank.TWO
@@ -28,15 +28,15 @@ object TwoSave : SaveClue(
                 )
             ) {
                 actions.add(
-                    GiveClue(RankClue(Rank.TWO), teammate.playerId)
+                    GiveClue(
+                        clue = RankClue(Rank.TWO),
+                        from = playerPOV.playerId,
+                        to = teammate.playerId,
+                    )
                 )
             }
         }
         return actions.toSet()
-    }
-
-    override fun getConventionalActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
-        TODO()
     }
 
     private fun canBeTwoSaved(

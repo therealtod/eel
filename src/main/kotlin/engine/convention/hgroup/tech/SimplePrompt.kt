@@ -24,7 +24,9 @@ object SimplePrompt : Prompt(
                     }
 
                     val candidateClues = getAllFocusingClues(
-                        card = card, slot = slot, teammate = teammate
+                        playerId = playerPOV.playerId,
+                        slot = teammate.getSlot(slot.index),
+                        teammate = teammate,
                     )
                     actions.addAll(candidateClues.filter {
                         validatePrompt(
@@ -36,9 +38,5 @@ object SimplePrompt : Prompt(
             }
         }
         return actions.toSet()
-    }
-
-    override fun getConventionalActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
-        TODO()
     }
 }

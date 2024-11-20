@@ -7,7 +7,7 @@ import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.Clue
 import eelst.ilike.game.entity.card.HanabiCard
 
-class VisibleHand(private val slots: Set<VisibleSlot>) : InterpretedHand, Set<InterpretedSlot> by slots{
+class VisibleHand(private val slots: Set<VisibleSlot>) : InterpretedHand, Set<InterpretedSlot> by slots {
     override val size = slots.size
 
     override fun copiesOf(card: HanabiCard): Int {
