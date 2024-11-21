@@ -1,16 +1,16 @@
 package eelst.ilike.engine.convention.hgroup
 
 import eelst.ilike.engine.hand.InterpretedHand
+import eelst.ilike.engine.hand.VisibleHand
 import eelst.ilike.engine.hand.slot.InterpretedSlot
-import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.game.entity.Slot
-import eelst.ilike.game.entity.action.Clue
+import eelst.ilike.game.entity.clue.Clue
 import eelst.ilike.game.entity.card.HanabiCard
 
 object HGroupCommon {
-    fun getClueFocusSlotIndex(clue: Clue, hand: InterpretedHand): Int {
+    fun getClueFocusSlotIndex(clue: Clue, hand: VisibleHand): Int {
         val slotTouchedByClue = hand.getSlotsTouchedBy(clue)
         require(slotTouchedByClue.isNotEmpty()) {
             "Can't determine the focus of a clue which touches no slots"
@@ -30,7 +30,7 @@ object HGroupCommon {
     fun isGloballyKnownPlayable(card: HanabiCard, playerPOV: PlayerPOV): Boolean {
         val prerequisiteCards = card.getPrerequisiteCards()
         val playedCardsForSuite = playerPOV.globallyAvailableInfo.getStackForCard(card).cards
-        val teammatesKnownCards = playerPOV.teammates.flatMap { it.getOwnKnownCards() }
+        val teammatesKnownCards = playerPOV.getTeammates().flatMap { it.getOwnKnownCards() }
         val ownKnownCards = playerPOV.getOwnKnownCards()
         return (playedCardsForSuite + teammatesKnownCards + ownKnownCards).containsAll(prerequisiteCards)
     }
@@ -81,7 +81,7 @@ object HGroupCommon {
         if (sequence.isEmpty()) return true
         val nextInSequence = sequence.first()
         return if (
-            playerPOV.teammates.any { teammate ->
+            playerPOV.getTeammates().any { teammate ->
                 isPromptedCorrectly(
                     card = nextInSequence,
                     teammate = teammate,

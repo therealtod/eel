@@ -1,8 +1,7 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.action.GameAction
+import eelst.ilike.engine.action.PlayerAction
 import eelst.ilike.engine.action.GiveClue
-import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
@@ -15,8 +14,8 @@ object TwoSave : SaveClue(
     name = "2-Save",
     appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
 ) {
-    override fun getGameActions(playerPOV: PlayerPOV): Set<GameAction> {
-        val actions = mutableListOf<GameAction>()
+    override fun getGameActions(playerPOV: PlayerPOV): Set<PlayerAction> {
+        val actions = mutableListOf<PlayerAction>()
         playerPOV.forEachTeammate { teammate ->
             val chop = getChop(teammate.ownHand)
             val card = teammate.getCardAtSlot(chop.index)
@@ -44,7 +43,7 @@ object TwoSave : SaveClue(
         teammate: Teammate,
         playerPOV: PlayerPOV,
     ): Boolean {
-        return playerPOV.teammates.none { otherTeammate ->
+        return playerPOV.getTeammates().none { otherTeammate ->
             otherTeammate.playerId != teammate.playerId &&
                     otherTeammate.hand.copiesOf(card) == 1 &&
                     otherTeammate.getCardAtSlot(getChop(otherTeammate.hand).index) != card

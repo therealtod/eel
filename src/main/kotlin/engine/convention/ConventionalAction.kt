@@ -1,8 +1,8 @@
 package eelst.ilike.engine.convention
 
-import eelst.ilike.engine.action.GameAction
+import eelst.ilike.engine.action.PlayerAction
 
 data class ConventionalAction(
-    val action: GameAction,
+    val action: PlayerAction,
     val tech: ConventionTech,
 )

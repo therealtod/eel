@@ -69,7 +69,7 @@ object PlayerFactory {
             playerId = playerId,
             globallyAvailableInfo = globallyAvailableInfo,
             ownHand = ownHand,
-            teammates = teammates.toSet()
+            teammates = teammates.associateBy { it.playerId }
         )
     }
 }

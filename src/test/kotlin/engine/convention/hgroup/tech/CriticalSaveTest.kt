@@ -1,7 +1,7 @@
 package engine.convention.hgroup.tech
 
 import TestUtils
-import eelst.ilike.engine.action.GameAction
+import eelst.ilike.engine.action.PlayerAction
 import eelst.ilike.engine.action.GiveClue
 import eelst.ilike.engine.convention.hgroup.tech.CriticalSave
 import eelst.ilike.game.entity.Color
@@ -39,7 +39,7 @@ internal class CriticalSaveTest {
 
         val actual = CriticalSave.getGameActions(playerPOV)
 
-        val expected = emptySet<GameAction>()
+        val expected = emptySet<PlayerAction>()
         Assertions.assertEquals(expected, actual)
     }
 
@@ -49,7 +49,7 @@ internal class CriticalSaveTest {
 
         val actual = CriticalSave.getGameActions(playerPOV)
 
-        val expected = emptySet<GameAction>()
+        val expected = emptySet<PlayerAction>()
         Assertions.assertEquals(expected, actual)
     }
 
@@ -101,7 +101,7 @@ internal class CriticalSaveTest {
 
         val actual = CriticalSave.getGameActions(playerPOV)
 
-        val expected = emptySet<GameAction>()
+        val expected = emptySet<PlayerAction>()
 
         Assertions.assertEquals(expected, actual)
     }

@@ -4,7 +4,7 @@ import eelst.ilike.engine.hand.slot.InterpretedSlot
 import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.game.entity.Slot
-import eelst.ilike.game.entity.action.Clue
+import eelst.ilike.game.entity.clue.Clue
 import eelst.ilike.game.entity.card.HanabiCard
 
 class VisibleHand(private val slots: Set<VisibleSlot>) : InterpretedHand, Set<InterpretedSlot> by slots {

@@ -15,7 +15,6 @@ interface PlayerPOV {
     val playerId: PlayerId
     val globallyAvailableInfo: GloballyAvailableInfo
     val ownHand: OwnHand
-    val teammates: Set<Teammate>
 
     fun getPlayerHand(playerId: PlayerId): InterpretedHand
     fun getTeammateHand(playerId: PlayerId): VisibleHand
@@ -25,6 +24,7 @@ interface PlayerPOV {
     fun teamKnowsAllCards(cards: Set<HanabiCard>): Boolean
     fun forEachTeammate(action: (teammate: Teammate) -> Unit)
     fun getTeammate(playerId: PlayerId): Teammate
+    fun getTeammates(): Set<Teammate>
     fun getPreviousTurnPOV(): PlayerPOV
     fun getOwnSlot(slotIndex: Int): OwnSlot
 }

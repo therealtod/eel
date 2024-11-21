@@ -1,7 +1,6 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.action.GameAction
-import eelst.ilike.engine.convention.ConventionalAction
+import eelst.ilike.engine.action.PlayerAction
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.hasCardOnFinessePosition
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.game.entity.suite.*
@@ -12,13 +11,13 @@ object SimpleFinesse
     appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
     takesPrecedenceOver = emptySet(),
 ) {
-    override fun getGameActions(playerPOV: PlayerPOV): Set<GameAction> {
-        val actions = mutableListOf<GameAction>()
+    override fun getGameActions(playerPOV: PlayerPOV): Set<PlayerAction> {
+        val actions = mutableListOf<PlayerAction>()
         playerPOV.forEachTeammate { teammate ->
             teammate.hand.forEach { slot ->
                 val card = teammate.getCardAtSlot(slot.index)
                 if (playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) == 1) {
-                    if (playerPOV.teammates.any { otherTeammate ->
+                    if (playerPOV.getTeammates().any { otherTeammate ->
                             otherTeammate.playsBefore(teammate) &&
                                     hasCardOnFinessePosition(
                                         card = card.suite.cardBefore(card),

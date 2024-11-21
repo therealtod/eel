@@ -5,4 +5,4 @@ import eelst.ilike.game.PlayerId
 data class Play(
     override val from: PlayerId,
     val slotIndex: Int,
-) : GameAction(from)
+) : PlayerAction(from)

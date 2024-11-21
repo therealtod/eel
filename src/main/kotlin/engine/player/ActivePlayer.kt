@@ -1,7 +1,7 @@
 package eelst.ilike.engine.player
 
 import eelst.ilike.engine.ConventionsUsingPlayer
-import eelst.ilike.engine.action.GameAction
+import eelst.ilike.engine.action.PlayerAction
 import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionTech
 import eelst.ilike.engine.convention.ConventionalAction
@@ -67,7 +67,7 @@ class ActivePlayer(
         return actions.toSet()
     }
 
-    fun<T: GameAction> interpret(action: T, conventionSet: ConventionSet): Set<ConventionTech> {
+    fun interpret(action: PlayerAction, conventionSet: ConventionSet): Set<ConventionTech> {
         val techs = conventionSet.getTechs()
         val candidatesTechs = techs.filter {
             it.matches(action, playerPOV)

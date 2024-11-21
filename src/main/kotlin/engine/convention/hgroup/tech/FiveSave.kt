@@ -1,8 +1,7 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.action.GameAction
+import eelst.ilike.engine.action.PlayerAction
 import eelst.ilike.engine.action.GiveClue
-import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.game.entity.Rank
@@ -14,8 +13,8 @@ object FiveSave
     name = "5-Save",
     appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
 ) {
-    override fun getGameActions(playerPOV: PlayerPOV): Set<GameAction> {
-        val actions = mutableListOf<GameAction>()
+    override fun getGameActions(playerPOV: PlayerPOV): Set<PlayerAction> {
+        val actions = mutableListOf<PlayerAction>()
         playerPOV.forEachTeammate { teammate ->
             val chop = getChop(teammate.ownHand)
             val card = teammate.getCardAtSlot(chop.index)

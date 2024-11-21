@@ -1,6 +1,6 @@
 package eelst.ilike.game
 
-import eelst.ilike.game.entity.action.Clue
+import eelst.ilike.game.entity.clue.Clue
 
 
 data class GloballyAvailableSlotInfo(

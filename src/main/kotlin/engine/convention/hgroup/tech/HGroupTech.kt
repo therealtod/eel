@@ -3,17 +3,16 @@ package eelst.ilike.engine.convention.hgroup.tech
 import eelst.ilike.engine.action.GiveClue
 import eelst.ilike.engine.convention.ConventionTech
 import eelst.ilike.engine.convention.hgroup.HGroupCommon
-import eelst.ilike.engine.hand.InterpretedHand
+import eelst.ilike.engine.hand.VisibleHand
 import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.Slot
-import eelst.ilike.game.entity.action.Clue
+import eelst.ilike.game.entity.clue.Clue
 import eelst.ilike.game.entity.action.ColorClue
 import eelst.ilike.game.entity.action.RankClue
-import eelst.ilike.game.entity.card.HanabiCard
 
 abstract class HGroupTech(
     override val name: String,
@@ -55,7 +54,7 @@ abstract class HGroupTech(
 
     private fun getRankCluesFocusing(
         slot: Slot,
-        hand: InterpretedHand,
+        hand: VisibleHand,
         ranks: Set<Rank>,
     ): Set<RankClue> {
         return ranks.map {
@@ -67,7 +66,7 @@ abstract class HGroupTech(
 
     private fun getColorCluesFocusing(
         slot: Slot,
-        hand: InterpretedHand,
+        hand: VisibleHand,
         colors: Set<Color>,
     ): Set<ColorClue> {
         return colors.map {

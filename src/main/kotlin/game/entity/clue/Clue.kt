@@ -1,4 +1,4 @@
-package eelst.ilike.game.entity.action
+package eelst.ilike.game.entity.clue
 
 import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.card.HanabiCard

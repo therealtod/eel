@@ -1,7 +1,8 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.action.GameAction
+import eelst.ilike.engine.action.PlayerAction
 import eelst.ilike.engine.action.GiveClue
+import eelst.ilike.engine.action.ObservedAction
 import eelst.ilike.engine.convention.hgroup.HGroupCommon
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.hasChop
@@ -15,8 +16,8 @@ object CriticalSave
     name = "Critical Save",
     appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
 ) {
-    override fun getGameActions(playerPOV: PlayerPOV): Set<GameAction> {
-        val actions = mutableSetOf<GameAction>()
+    override fun getGameActions(playerPOV: PlayerPOV): Set<PlayerAction> {
+        val actions = mutableSetOf<PlayerAction>()
 
         playerPOV.forEachTeammate { teammate ->
             if (hasChop(teammate.hand)) {
@@ -40,13 +41,13 @@ object CriticalSave
         return actions
     }
 
-    override fun matches(action: GiveClue, playerPOV: PlayerPOV): Boolean {
+    override fun matches(observedAction: ObservedAction, playerPOV: PlayerPOV): Boolean {
+        val action = observedAction.action as GiveClue
         val receiver = action.to
         val previousTurnPOV = playerPOV.getPreviousTurnPOV()
-        val receiverHand = previousTurnPOV.getPlayerHand(receiver)
-        val focusIndex = HGroupCommon.getClueFocusSlotIndex(clue = action.clue, hand = receiverHand)
         if(receiver != playerPOV.playerId) {
             val teammateSnapshot = previousTurnPOV.getTeammate(receiver)
+            val focusIndex = HGroupCommon.getClueFocusSlotIndex(clue = action.clue, hand = teammateSnapshot.hand)
             val card = teammateSnapshot.getCardAtSlot(focusIndex)
             return playerPOV.globallyAvailableInfo.isCritical(card)
         } else {
