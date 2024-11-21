@@ -3,12 +3,14 @@ package eelst.ilike.engine.convention.hgroup.tech
 import eelst.ilike.engine.action.PlayerAction
 import eelst.ilike.engine.action.GiveClue
 import eelst.ilike.engine.action.ObservedAction
+import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.hgroup.HGroupCommon
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.hasChop
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.isGloballyKnownPlayable
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.game.entity.Rank
+import eelst.ilike.game.entity.clue.Clue
 import eelst.ilike.game.entity.suite.*
 
 object CriticalSave
@@ -16,8 +18,8 @@ object CriticalSave
     name = "Critical Save",
     appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
 ) {
-    override fun getGameActions(playerPOV: PlayerPOV): Set<PlayerAction> {
-        val actions = mutableSetOf<PlayerAction>()
+    override fun getGameActions(playerPOV: PlayerPOV): Set<PlayerAction<Clue>> {
+        val actions = mutableSetOf<PlayerAction<Clue>>()
 
         playerPOV.forEachTeammate { teammate ->
             if (hasChop(teammate.hand)) {
@@ -41,9 +43,9 @@ object CriticalSave
         return actions
     }
 
-    override fun matches(observedAction: ObservedAction, playerPOV: PlayerPOV): Boolean {
-        val action = observedAction.action as GiveClue
-        val receiver = action.to
+    override fun matches(observedAction: ObservedClue, playerPOV: PlayerPOV): Boolean {
+        val action = observedAction.executedAction
+        val receiver = action.
         val previousTurnPOV = playerPOV.getPreviousTurnPOV()
         if(receiver != playerPOV.playerId) {
             val teammateSnapshot = previousTurnPOV.getTeammate(receiver)

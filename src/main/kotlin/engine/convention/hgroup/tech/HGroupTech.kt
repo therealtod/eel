@@ -13,11 +13,12 @@ import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.clue.Clue
 import eelst.ilike.game.entity.action.ColorClue
 import eelst.ilike.game.entity.action.RankClue
+import eelst.ilike.game.entity.clue.GameAction
 
-abstract class HGroupTech(
+abstract class HGroupTech<T: GameAction>(
     override val name: String,
-    private val takesPrecedenceOver: Set<HGroupTech>,
-) : ConventionTech {
+    private val takesPrecedenceOver: Set<HGroupTech<T>>,
+) : ConventionTech<T> {
     protected fun getAllFocusingClues(
         playerId: PlayerId,
         slot: VisibleSlot,
@@ -76,7 +77,7 @@ abstract class HGroupTech(
             .toSet()
     }
 
-    override fun overrides(otherTech: ConventionTech): Boolean {
+    override fun overrides(otherTech: ConventionTech<*>): Boolean {
         return takesPrecedenceOver.contains(otherTech)
     }
 
