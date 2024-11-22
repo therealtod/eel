@@ -1,16 +1,15 @@
 package eelst.ilike.engine.convention.hgroup
 
 import eelst.ilike.engine.hand.InterpretedHand
-import eelst.ilike.engine.hand.slot.InterpretedSlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.game.entity.Slot
-import eelst.ilike.game.entity.action.Clue
+import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
 
 object HGroupCommon {
-    fun getClueFocusSlotIndex(clue: Clue, hand: InterpretedHand): Int {
+    fun getClueFocusSlotIndex(clue: ClueAction, hand: InterpretedHand): Int {
         val slotTouchedByClue = hand.getSlotsTouchedBy(clue)
         require(slotTouchedByClue.isNotEmpty()) {
             "Can't determine the focus of a clue which touches no slots"

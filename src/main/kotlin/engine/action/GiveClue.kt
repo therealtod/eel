@@ -1,9 +1,9 @@
 package eelst.ilike.engine.action
 
 import eelst.ilike.game.PlayerId
-import eelst.ilike.game.entity.action.Clue
+import eelst.ilike.game.entity.action.ClueAction
 
 data class GiveClue(
-    val clue: Clue,
+    val clue: ClueAction,
     val to: PlayerId,
 ) : GameAction()

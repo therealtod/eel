@@ -3,10 +3,9 @@ package engine.convention.hgroup.tech
 import TestUtils
 import eelst.ilike.engine.action.GameAction
 import eelst.ilike.engine.action.GiveClue
-import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.tech.TwoSave
 import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.action.RankClue
+import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
@@ -19,7 +18,7 @@ internal class TwoSaveTest {
 
         val expected = setOf(
             GiveClue(
-                clue = RankClue(Rank.TWO),
+                clue = RankClueAction(Rank.TWO),
                 to = "Cathy",
             ),
         )
@@ -46,11 +45,11 @@ internal class TwoSaveTest {
 
         val expected = setOf(
             GiveClue(
-                clue = RankClue(Rank.TWO),
+                clue = RankClueAction(Rank.TWO),
                 to = "Bob",
             ),
             GiveClue(
-                clue = RankClue(Rank.TWO),
+                clue = RankClueAction(Rank.TWO),
                 to = "Cathy",
             ),
         )

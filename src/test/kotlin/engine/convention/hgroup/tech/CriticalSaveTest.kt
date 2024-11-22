@@ -3,12 +3,11 @@ package engine.convention.hgroup.tech
 import TestUtils
 import eelst.ilike.engine.action.GameAction
 import eelst.ilike.engine.action.GiveClue
-import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.tech.CriticalSave
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.action.ColorClue
-import eelst.ilike.game.entity.action.RankClue
+import eelst.ilike.game.entity.action.ColorClueAction
+import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
@@ -21,11 +20,11 @@ internal class CriticalSaveTest {
 
         val expected = setOf(
             GiveClue(
-                clue = RankClue(Rank.FOUR),
+                clue = RankClueAction(Rank.FOUR),
                 to = "Cathy"
             ),
             GiveClue(
-                clue = ColorClue(Color.PURPLE),
+                clue = ColorClueAction(Color.PURPLE),
                 to = "Cathy"
             ),
         )
@@ -60,27 +59,27 @@ internal class CriticalSaveTest {
 
         val expected = setOf(
             GiveClue(
-                clue = RankClue(Rank.FOUR),
+                clue = RankClueAction(Rank.FOUR),
                 to = "Cathy"
             ),
             GiveClue(
-                clue = ColorClue(Color.PURPLE),
+                clue = ColorClueAction(Color.PURPLE),
                 to = "Cathy"
             ),
             GiveClue(
-                clue = RankClue(Rank.FOUR),
+                clue = RankClueAction(Rank.FOUR),
                 to = "Donald"
             ),
             GiveClue(
-                clue = ColorClue(Color.YELLOW),
+                clue = ColorClueAction(Color.YELLOW),
                 to = "Donald"
             ),
             GiveClue(
-                clue = RankClue(Rank.TWO),
+                clue = RankClueAction(Rank.TWO),
                 to = "Emily"
             ),
             GiveClue(
-                clue = ColorClue(Color.RED),
+                clue = ColorClueAction(Color.RED),
                 to = "Emily"
             ),
         )

@@ -6,8 +6,7 @@ import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.action.ColorClue
-import eelst.ilike.game.entity.action.RankClue
+import eelst.ilike.game.entity.action.RankClueAction
 import eelst.ilike.game.entity.suite.*
 
 object FiveSave
@@ -22,7 +21,7 @@ object FiveSave
             val card = teammate.getCardAtSlot(chop.index)
             if (card.rank == Rank.FIVE) {
                 actions.add(
-                     GiveClue(clue = RankClue(Rank.FIVE), to = teammate.playerId),
+                     GiveClue(clue = RankClueAction(Rank.FIVE), to = teammate.playerId),
                 )
             }
         }

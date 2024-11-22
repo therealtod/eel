@@ -2,12 +2,11 @@ package engine.convention.hgroup.tech
 
 import TestUtils
 import eelst.ilike.engine.action.GiveClue
-import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.tech.SimplePrompt
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.action.ColorClue
-import eelst.ilike.game.entity.action.RankClue
+import eelst.ilike.game.entity.action.ColorClueAction
+import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
@@ -20,19 +19,19 @@ internal class SimplePromptTest {
 
         val expected = setOf(
             GiveClue(
-                clue = RankClue(Rank.FOUR),
+                clue = RankClueAction(Rank.FOUR),
                 to = "Bob",
             ),
             GiveClue(
-                clue = ColorClue(Color.BLUE),
+                clue = ColorClueAction(Color.BLUE),
                 to = "Bob"
             ),
             GiveClue(
-                clue = RankClue(Rank.THREE),
+                clue = RankClueAction(Rank.THREE),
                 to = "Cathy",
             ),
             GiveClue(
-                clue = ColorClue(Color.RED),
+                clue = ColorClueAction(Color.RED),
                 to = "Cathy"
             ),
         )
@@ -48,11 +47,11 @@ internal class SimplePromptTest {
 
         val expected = setOf(
             GiveClue(
-                clue = RankClue(Rank.FOUR),
+                clue = RankClueAction(Rank.FOUR),
                 to = "Bob",
             ),
             GiveClue(
-                clue = ColorClue(Color.BLUE),
+                clue = ColorClueAction(Color.BLUE),
                 to = "Bob"
             ),
         )
@@ -68,19 +67,19 @@ internal class SimplePromptTest {
 
         val expected = setOf(
             GiveClue(
-                clue = RankClue(rank = Rank.THREE),
+                clue = RankClueAction(rank = Rank.THREE),
                 to = "Bob",
             ),
             GiveClue(
-                clue = ColorClue(color = Color.RED),
+                clue = ColorClueAction(color = Color.RED),
                 to = "Bob"
             ),
             GiveClue(
-                clue = RankClue(rank = Rank.FOUR),
+                clue = RankClueAction(rank = Rank.FOUR),
                 to = "Cathy",
             ),
             GiveClue(
-                clue = ColorClue(color = Color.BLUE),
+                clue = ColorClueAction(color = Color.BLUE),
                 to = "Cathy"
             ),
         )
@@ -96,11 +95,11 @@ internal class SimplePromptTest {
 
         val expected = setOf(
             GiveClue(
-                clue = RankClue(rank = Rank.FOUR),
+                clue = RankClueAction(rank = Rank.FOUR),
                 to = "Cathy",
             ),
             GiveClue(
-                clue = ColorClue(color = Color.BLUE),
+                clue = ColorClueAction(color = Color.BLUE),
                 to = "Cathy"
             ),
         )

@@ -12,8 +12,8 @@ import eelst.ilike.engine.action.GiveClue
 import eelst.ilike.engine.action.Play
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.action.ColorClue
-import eelst.ilike.game.entity.action.RankClue
+import eelst.ilike.game.entity.action.ColorClueAction
+import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
@@ -28,42 +28,42 @@ class OldActivePlayerTest {
         val expected = setOf(
             ConventionalAction(
                 GiveClue(
-                    clue = RankClue(Rank.FOUR),
+                    clue = RankClueAction(Rank.FOUR),
                     to = "Cathy",
                 ),
                 tech = CriticalSave,
             ),
             ConventionalAction(
                 GiveClue(
-                    clue = ColorClue(Color.PURPLE),
+                    clue = ColorClueAction(Color.PURPLE),
                     to = "Cathy",
                 ),
                 tech = CriticalSave,
             ),
             ConventionalAction(
                 GiveClue(
-                    clue = RankClue(Rank.ONE),
+                    clue = RankClueAction(Rank.ONE),
                     to = "Cathy",
                 ),
                 tech = DirectPlayClue,
             ),
             ConventionalAction(
                 GiveClue(
-                    clue = ColorClue(Color.BLUE),
+                    clue = ColorClueAction(Color.BLUE),
                     to = "Cathy",
                 ),
                 tech = DirectPlayClue,
             ),
             ConventionalAction(
                 GiveClue(
-                    clue = RankClue(Rank.ONE),
+                    clue = RankClueAction(Rank.ONE),
                     to = "Donald",
                 ),
                 tech = DirectPlayClue,
             ),
             ConventionalAction(
                 GiveClue(
-                    clue = ColorClue(Color.RED),
+                    clue = ColorClueAction(Color.RED),
                     to = "Donald",
                 ),
                 tech = DirectPlayClue,

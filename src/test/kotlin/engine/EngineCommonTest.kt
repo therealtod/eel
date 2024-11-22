@@ -9,8 +9,8 @@ import eelst.ilike.engine.convention.hgroup.tech.SimplePrompt
 import eelst.ilike.engine.convention.hgroup.tech.TwoSave
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.action.ColorClue
-import eelst.ilike.game.entity.action.RankClue
+import eelst.ilike.game.entity.action.ColorClueAction
+import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
@@ -20,35 +20,35 @@ class EngineCommonTest {
         val actions = listOf(
             ConventionalAction(
                 action = GiveClue(
-                    ColorClue(Color.RED),
+                    ColorClueAction(Color.RED),
                     to = "Bob"
                 ),
                 tech = SimplePrompt
             ),
             ConventionalAction(
                 action = GiveClue(
-                    ColorClue(Color.RED),
+                    ColorClueAction(Color.RED),
                     to = "Bob"
                 ),
                 tech = SimpleFinesse
             ),
             ConventionalAction(
                 action = GiveClue(
-                    RankClue(Rank.TWO),
+                    RankClueAction(Rank.TWO),
                     to = "Cathy"
                 ),
                 tech = TwoSave
             ),
             ConventionalAction(
                 action = GiveClue(
-                    RankClue(Rank.TWO),
+                    RankClueAction(Rank.TWO),
                     to = "Cathy"
                 ),
                 tech = SimpleFinesse
             ),
             ConventionalAction(
                 action = GiveClue(
-                    RankClue(Rank.FIVE),
+                    RankClueAction(Rank.FIVE),
                     to = "Bob"
                 ),
                 tech = FiveSave
@@ -59,21 +59,21 @@ class EngineCommonTest {
         val expected = setOf(
             ConventionalAction(
                 action = GiveClue(
-                    ColorClue(Color.RED),
+                    ColorClueAction(Color.RED),
                     to = "Bob"
                 ),
                 tech = SimplePrompt
             ),
             ConventionalAction(
                 action = GiveClue(
-                    RankClue(Rank.TWO),
+                    RankClueAction(Rank.TWO),
                     to = "Cathy"
                 ),
                 tech = TwoSave
             ),
             ConventionalAction(
                 action = GiveClue(
-                    RankClue(Rank.FIVE),
+                    RankClueAction(Rank.FIVE),
                     to = "Bob"
                 ),
                 tech = FiveSave

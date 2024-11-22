@@ -2,16 +2,15 @@ package engine.convention.hgroup.tech
 
 import TestUtils
 import eelst.ilike.engine.action.GiveClue
-import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.tech.DirectPlayClue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.action.ColorClue
-import eelst.ilike.game.entity.action.RankClue
+import eelst.ilike.game.entity.action.ColorClueAction
+import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
-internal class DirectPlayGiveClueTest {
+internal class DirectPlayGiveClueActionTest {
     @Test
     fun `Should find the only direct play clue on the board`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(9)
@@ -20,11 +19,11 @@ internal class DirectPlayGiveClueTest {
 
         val expected = setOf(
             GiveClue(
-                clue = RankClue(Rank.TWO),
+                clue = RankClueAction(Rank.TWO),
                 to = "Cathy",
             ),
             GiveClue(
-                clue = ColorClue(Color.RED),
+                clue = ColorClueAction(Color.RED),
                 to = "Cathy",
             ),
         )
@@ -39,27 +38,27 @@ internal class DirectPlayGiveClueTest {
 
         val expected = setOf(
             GiveClue(
-                clue = ColorClue(Color.PURPLE),
+                clue = ColorClueAction(Color.PURPLE),
                 to = "Bob",
             ),
             GiveClue(
-                clue = RankClue(Rank.THREE),
+                clue = RankClueAction(Rank.THREE),
                 to = "Bob"
             ),
             GiveClue(
-                clue = ColorClue(Color.RED),
+                clue = ColorClueAction(Color.RED),
                 to = "Cathy",
             ),
             GiveClue(
-                clue = RankClue(Rank.TWO),
+                clue = RankClueAction(Rank.TWO),
                 to = "Cathy"
             ),
             GiveClue(
-                clue = ColorClue(Color.PURPLE),
+                clue = ColorClueAction(Color.PURPLE),
                 to = "Cathy",
             ),
             GiveClue(
-                clue = RankClue(Rank.ONE),
+                clue = RankClueAction(Rank.ONE),
                 to = "Cathy"
             ),
         )

@@ -1,14 +1,14 @@
 package eelst.ilike.game
 
-import eelst.ilike.game.entity.action.Clue
+import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 
 object GameUtils {
     fun getCardEmpathy(
         visibleCards: List<HanabiCard>,
-        positiveClues: List<Clue>,
-        negativeClues: List<Clue>,
+        positiveClues: List<ClueValue>,
+        negativeClues: List<ClueValue>,
         suites: Set<Suite>
     ): Set<HanabiCard> {
         val allPossibleCards = suites.flatMap { suite ->

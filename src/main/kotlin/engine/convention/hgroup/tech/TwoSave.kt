@@ -7,7 +7,7 @@ import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.action.RankClue
+import eelst.ilike.game.entity.action.RankClueAction
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.*
 
@@ -28,7 +28,7 @@ object TwoSave : SaveClue(
                 )
             ) {
                 actions.add(
-                    GiveClue(RankClue(Rank.TWO), teammate.playerId)
+                    GiveClue(RankClueAction(Rank.TWO), teammate.playerId)
                 )
             }
         }

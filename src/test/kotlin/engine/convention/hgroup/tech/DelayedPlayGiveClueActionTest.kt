@@ -1,18 +1,16 @@
 package engine.convention.hgroup.tech
 
 import TestUtils
-import eelst.ilike.engine.action.GameAction
 import eelst.ilike.engine.action.GiveClue
-import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.tech.DelayedPlayClue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.action.ColorClue
-import eelst.ilike.game.entity.action.RankClue
+import eelst.ilike.game.entity.action.ColorClueAction
+import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
-internal class DelayedPlayGiveClueTest {
+internal class DelayedPlayGiveClueActionTest {
 
     @Test
     fun `Should play clue a red 2 Given that red 1 is known`() {
@@ -22,7 +20,7 @@ internal class DelayedPlayGiveClueTest {
 
         val expected = setOf(
             GiveClue(
-                clue = RankClue(Rank.TWO),
+                clue = RankClueAction(Rank.TWO),
                 to = "Bob"
             ),
         )
@@ -38,11 +36,11 @@ internal class DelayedPlayGiveClueTest {
 
         val expected = setOf(
             GiveClue(
-                clue = RankClue(rank = Rank.FOUR),
+                clue = RankClueAction(rank = Rank.FOUR),
                 to = "Bob"
             ),
             GiveClue(
-                clue = ColorClue(Color.RED),
+                clue = ColorClueAction(Color.RED),
                 to = "Bob"
             ),
         )
@@ -58,7 +56,7 @@ internal class DelayedPlayGiveClueTest {
 
         val expected = setOf(
             GiveClue(
-                clue = ColorClue(Color.RED),
+                clue = ColorClueAction(Color.RED),
                 to = "Donald"
             ),
         )

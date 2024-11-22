@@ -4,15 +4,8 @@ import eelst.ilike.engine.hand.slot.PersonalSlotKnowledgeImpl
 import eelst.ilike.game.GameUtils
 import eelst.ilike.game.GloballyAvailablePlayerInfo
 import eelst.ilike.game.GloballyAvailableSlotInfo
-import eelst.ilike.game.PlayerId
 import eelst.ilike.engine.player.knowledge.PersonalSlotKnowledge
-import eelst.ilike.game.entity.Color
-import eelst.ilike.game.entity.PlayingStack
-import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.TrashPile
-import eelst.ilike.game.entity.action.Clue
-import eelst.ilike.game.entity.action.ColorClue
-import eelst.ilike.game.entity.action.RankClue
+import eelst.ilike.game.entity.*
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.game.entity.suite.SuiteId
@@ -43,7 +36,7 @@ object InputParser {
         handSize: Int,
         playerIndex: Int,
     ): GloballyAvailablePlayerInfo {
-        val slotInfo = (1..handSize).map{ index->
+        val slotInfo = (1..handSize).map { index ->
             GloballyAvailableSlotInfo(
                 index = index,
                 positiveClues = dto.slotClues.getOrNull(index - 1)?.let {
@@ -93,19 +86,11 @@ object InputParser {
         return slots.toSet()
     }
 
-    private fun parseClue(clueAbbreviation: String): Clue {
+    private fun parseClue(clueAbbreviation: String): ClueValue {
         return Color.entries.find { it.name == clueAbbreviation }
-            ?.let {
-                ColorClue(
-                    color = it,
-                )
-            } ?: Rank.entries
-            .find { it.numericalValue == clueAbbreviation.toInt() }
-            ?.let {
-                RankClue(
-                    rank = it,
-                )
-            } ?: throw IllegalArgumentException("Could not parse clue: $clueAbbreviation")
+            ?: Rank.entries
+                .find { it.numericalValue == clueAbbreviation.toInt() }
+            ?: throw IllegalArgumentException("Could not parse clue: $clueAbbreviation")
 
     }
 

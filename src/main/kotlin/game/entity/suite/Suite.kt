@@ -1,11 +1,8 @@
 package eelst.ilike.game.entity.suite
 
-import eelst.ilike.engine.action.GiveClue
+import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.action.Clue
-import eelst.ilike.game.entity.action.ColorClue
-import eelst.ilike.game.entity.action.RankClue
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.utils.Configuration
 
@@ -38,10 +35,10 @@ abstract class Suite(
         }
     }
 
-    open fun clueTouches(card: HanabiCard, clue: Clue): Boolean {
+    open fun clueTouches(card: HanabiCard, clue: ClueValue): Boolean {
         return when (clue) {
-            is RankClue -> getRanksTouching(card.rank).contains(clue.rank)
-            is ColorClue -> getColorsTouching(card.rank).contains(clue.color)
+            is Rank -> getRanksTouching(card.rank).contains(clue.rank)
+            is Color -> getColorsTouching(card.rank).contains(clue.color)
         }
     }
 
