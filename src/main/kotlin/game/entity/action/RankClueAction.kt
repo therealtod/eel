@@ -12,8 +12,4 @@ class RankClueAction(
     clueGiver = clueGiver,
     clueReceiver = clueReceiver,
     value = rank
-) {
-    override fun touches(card: HanabiCard): Boolean {
-        return card.suite.getRanksTouching(card.rank).contains(rank)
-    }
-}
+)

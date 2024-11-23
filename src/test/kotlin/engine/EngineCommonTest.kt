@@ -1,7 +1,6 @@
 package engine
 
 import eelst.ilike.engine.EngineCommon
-import eelst.ilike.engine.action.GiveClue
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.tech.FiveSave
 import eelst.ilike.engine.convention.hgroup.tech.SimpleFinesse

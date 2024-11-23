@@ -9,22 +9,7 @@ import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
 
 object HGroupCommon {
-    fun getClueFocusSlotIndex(clue: ClueAction, hand: InterpretedHand): Int {
-        val slotTouchedByClue = hand.getSlotsTouchedBy(clue)
-        require(slotTouchedByClue.isNotEmpty()) {
-            "Can't determine the focus of a clue which touches no slots"
-        }
-        if (hasChop(hand)) {
-            val chop = getChop(hand)
-            return if (slotTouchedByClue.contains(chop)) {
-                chop.index
-            } else {
-                (slotTouchedByClue.firstOrNull { !it.isTouched() } ?: slotTouchedByClue.first()).index
-            }
-        } else {
-            return slotTouchedByClue.first().index
-        }
-    }
+
 
     fun isGloballyKnownPlayable(card: HanabiCard, playerPOV: PlayerPOV): Boolean {
         val prerequisiteCards = card.getPrerequisiteCards()

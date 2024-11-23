@@ -1,3 +1,5 @@
 package eelst.ilike.engine.convention
 
-interface PlayTech : ConventionTech
+import eelst.ilike.game.entity.action.PlayAction
+
+interface PlayTech : ConventionTech<PlayAction>

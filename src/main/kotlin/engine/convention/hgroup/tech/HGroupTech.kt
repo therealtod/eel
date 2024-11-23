@@ -1,79 +1,73 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.action.GiveClue
 import eelst.ilike.engine.convention.ConventionTech
 import eelst.ilike.engine.convention.hgroup.HGroupCommon
+import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
+import eelst.ilike.engine.convention.hgroup.HGroupCommon.hasChop
+import eelst.ilike.engine.factory.GameActionFactory
 import eelst.ilike.engine.hand.InterpretedHand
+import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
-import eelst.ilike.game.PlayerId
+import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.ColorClueAction
-import eelst.ilike.game.entity.action.RankClueAction
+import eelst.ilike.game.entity.action.GameAction
 import eelst.ilike.game.entity.card.HanabiCard
 
-abstract class HGroupTech(
+abstract class HGroupTech<T: GameAction>(
     override val name: String,
-    private val takesPrecedenceOver: Set<HGroupTech>,
-) : ConventionTech {
+    private val takesPrecedenceOver: Set<HGroupTech<T>> = emptySet(),
+) : ConventionTech<T> {
     protected fun getAllFocusingClues(
-        giverId: PlayerId,
+        playerPOV: PlayerPOV,
         card: HanabiCard,
-        slot: Slot,
         teammate: Teammate,
     ): Set<ClueAction> {
-        val hand = teammate.hand
         val ranks = card.getRanksTouchingCard()
         val colors = card.getColorsTouchingCard()
-        val rankClues = ranks.map { RankClueAction(rank = it) }
-        val colorClues = colors.map {
-            ColorClueAction(
-                clueGiver = giverId,
-                clueReceiver = teammate.playerId,
-                color = it
-            )
-        }
-        val clues = ( rankClues + colorClues).filter {
-            val focusSlotIndex = HGroupCommon.getClueFocusSlotIndex(clue = it, hand = hand)
-            teammate.getCardAtSlot(focusSlotIndex) == card
+        val clueValues = (ranks + colors).filter {
+            getFocusedSlot(
+                playerPOV = playerPOV,
+                hand = teammate.hand,
+                clueValue = it
+            ).contains(card)
         }
 
-        return clues.map {
-            GiveClue(
-                clue = it,
-                to = teammate.playerId,
+        return clueValues.map {
+            GameActionFactory.createClueAction(
+                clueGiver = playerPOV.playerId,
+                clueReceiver = teammate.playerId,
+                clueValue = it
             )
         }.toSet()
     }
 
-    private fun getRankCluesFocusing(
-        slot: Slot,
-        hand: InterpretedHand,
-        ranks: Set<Rank>,
-    ): Set<RankClueAction>{
-        return ranks.map {
-            RankClueAction(rank = it)
-        }
-            .filter { HGroupCommon.getClueFocusSlotIndex(clue = it, hand = hand) == slot.index }
-            .toSet()
+    override fun overrides(otherTech: ConventionTech<T>): Boolean {
+        TODO("Not yet implemented")
     }
 
-    private fun getColorCluesFocusing(
-        slot: Slot,
+    fun getFocusedSlot(
+        playerPOV: PlayerPOV,
         hand: InterpretedHand,
-        colors: Set<Color>,
-    ): Set<ColorClueAction> {
-        return colors.map {
-            ColorClueAction(color = it)
+        clueValue: ClueValue,
+    ): Slot {
+        val touchedSlots = hand.getSlotsTouchedBy(clueValue)
+        require(touchedSlots.isNotEmpty()) {
+            "Can't determine the focus of a clue which touches no slots"
         }
-            .filter { HGroupCommon.getClueFocusSlotIndex(clue = it, hand) == slot.index }
-            .toSet()
-    }
-
-    override fun overrides(otherTech: ConventionTech): Boolean {
-        return takesPrecedenceOver.contains(otherTech)
+        if (hasChop(hand)) {
+            val chop = getChop(hand)
+            return if (touchedSlots.contains(chop)) {
+                chop
+            } else {
+                (touchedSlots.firstOrNull { !it.isTouched() } ?: touchedSlots.first())
+            }
+        } else {
+            return touchedSlots.first()
+        }
     }
 
     override fun toString() = name

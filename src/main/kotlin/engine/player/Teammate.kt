@@ -1,6 +1,5 @@
 package eelst.ilike.engine.player
 
-import eelst.ilike.engine.ConventionsUsingPlayer
 import eelst.ilike.engine.hand.VisibleHand
 import eelst.ilike.engine.hand.slot.OwnSlot
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge

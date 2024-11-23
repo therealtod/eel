@@ -1,7 +1,6 @@
 package engine.convention.hgroup.tech
 
 import TestUtils
-import eelst.ilike.engine.action.GiveClue
 import eelst.ilike.engine.convention.hgroup.tech.DirectPlayClue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
@@ -10,7 +9,7 @@ import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
-internal class DirectPlayGiveClueActionTest {
+internal class DirectPlayActionGiveClueActionTest {
     @Test
     fun `Should find the only direct play clue on the board`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(9)

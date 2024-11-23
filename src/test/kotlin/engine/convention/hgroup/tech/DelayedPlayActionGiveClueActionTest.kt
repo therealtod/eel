@@ -1,7 +1,6 @@
 package engine.convention.hgroup.tech
 
 import TestUtils
-import eelst.ilike.engine.action.GiveClue
 import eelst.ilike.engine.convention.hgroup.tech.DelayedPlayClue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
@@ -10,7 +9,7 @@ import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
-internal class DelayedPlayGiveClueActionTest {
+internal class DelayedPlayActionGiveClueActionTest {
 
     @Test
     fun `Should play clue a red 2 Given that red 1 is known`() {

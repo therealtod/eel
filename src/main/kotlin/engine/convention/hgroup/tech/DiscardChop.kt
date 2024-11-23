@@ -1,24 +1,19 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.convention.DiscardTech
 import eelst.ilike.engine.convention.hgroup.HGroupCommon
-import eelst.ilike.engine.action.Discard
-import eelst.ilike.engine.action.GameAction
+import eelst.ilike.game.entity.action.DiscardAction
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.player.PlayerPOV
 
-object DiscardChop : HGroupTech(
+object DiscardChop : HGroupTech<DiscardAction>(
     name = "Discard Chop",
     takesPrecedenceOver = emptySet(),
-), DiscardTech {
-    override fun getConventionalActions(playerPOV: PlayerPOV): Set<ConventionalAction> {
-        TODO("Not yet implemented")
-    }
-
-    override fun getGameActions(playerPOV: PlayerPOV): Set<GameAction> {
+) {
+    override fun getGameActions(playerPOV: PlayerPOV): Set<DiscardAction> {
         return if (playerPOV.globallyAvailableInfo.clueTokens < 8) {
             return setOf(
-                Discard(
+                DiscardAction(
+                    playerId = playerPOV.playerId,
                     HGroupCommon.getChop(playerPOV.ownHand).index
                 )
             )

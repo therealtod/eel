@@ -1,4 +1,4 @@
-package eelst.ilike.engine
+package eelst.ilike.engine.player
 
 import eelst.ilike.engine.factory.HandFactory
 import eelst.ilike.engine.hand.InterpretedHand

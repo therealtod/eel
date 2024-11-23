@@ -1,8 +1,6 @@
 package engine.convention.hgroup.tech
 
 import TestUtils
-import eelst.ilike.engine.action.GameAction
-import eelst.ilike.engine.action.GiveClue
 import eelst.ilike.engine.convention.hgroup.tech.CriticalSave
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank

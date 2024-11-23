@@ -35,10 +35,11 @@ abstract class Suite(
         }
     }
 
-    open fun clueTouches(card: HanabiCard, clue: ClueValue): Boolean {
-        return when (clue) {
-            is Rank -> getRanksTouching(card.rank).contains(clue.rank)
-            is Color -> getColorsTouching(card.rank).contains(clue.color)
+    open fun clueTouches(card: HanabiCard, clueValue: ClueValue): Boolean {
+        return when (clueValue) {
+            is Rank -> getRanksTouching(card.rank).contains(clueValue)
+            is Color -> getColorsTouching(card.rank).contains(clueValue)
+            else -> throw IllegalArgumentException("Unsupported clue value $clueValue")
         }
     }
 

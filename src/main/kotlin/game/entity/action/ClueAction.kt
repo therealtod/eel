@@ -8,6 +8,4 @@ sealed class ClueAction (
     val clueGiver: PlayerId,
     val clueReceiver: PlayerId,
     val value: ClueValue
-): GameAction(actionExecutor = clueGiver, actionType = GameActionType.CLUE) {
-    abstract fun touches(card: HanabiCard): Boolean
-}
+): GameAction(actionExecutor = clueGiver, actionType = GameActionType.CLUE)

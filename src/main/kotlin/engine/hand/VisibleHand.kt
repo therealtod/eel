@@ -3,6 +3,7 @@ package eelst.ilike.engine.hand
 import eelst.ilike.engine.hand.slot.InterpretedSlot
 import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
+import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
@@ -14,8 +15,8 @@ class VisibleHand(private val slots: Set<VisibleSlot>) : InterpretedHand, Set<In
         return slots.count { it.card == card }
     }
 
-    override fun getSlotsTouchedBy(clue: ClueAction): Set<Slot> {
-        return slots.filter { clue.touches(it.card) }.toSet()
+    override fun getSlotsTouchedBy(clueValue: ClueValue): Set<Slot> {
+        return slots.filter { it.card.suite.clueTouches(it.card, clueValue ) }.toSet()
     }
 
     override fun getKnownSlots(): Set<KnownSlot> {

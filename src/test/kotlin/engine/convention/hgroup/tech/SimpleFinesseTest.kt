@@ -1,8 +1,6 @@
 package engine.convention.hgroup.tech
 
 import TestUtils
-import eelst.ilike.engine.action.GameAction
-import eelst.ilike.engine.action.GiveClue
 import eelst.ilike.engine.convention.hgroup.tech.SimpleFinesse
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.RankClueAction

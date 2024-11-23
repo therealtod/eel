@@ -6,8 +6,9 @@ import eelst.ilike.game.entity.suite.Suite
 
 interface Slot {
     val index: Int
-    val positiveClues: List<ClueAction>
-    val negativeClues: List<ClueAction>
+    val positiveClues: List<ClueValue>
+    val negativeClues: List<ClueValue>
     fun isTouched(): Boolean
     fun getEmpathy(visibleCards: List<HanabiCard>, suites: Set<Suite>): Set<HanabiCard>
+    fun contains(card: HanabiCard): Boolean
 }
