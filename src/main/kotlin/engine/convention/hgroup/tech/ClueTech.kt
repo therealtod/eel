@@ -5,6 +5,6 @@ import eelst.ilike.game.entity.suite.Suite
 
 abstract class ClueTech(
     name: String,
-    takesPrecedenceOver: Set<HGroupTech<ClueAction>>,
+    takesPrecedenceOver: Set<HGroupTech>,
     val appliesTo: Set<Suite>,
-) : HGroupTech<ClueAction>(name, takesPrecedenceOver)
+) : HGroupTech(name, takesPrecedenceOver)

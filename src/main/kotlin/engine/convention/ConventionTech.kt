@@ -4,8 +4,8 @@ import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.game.entity.action.GameAction
 
 
-interface ConventionTech <T: GameAction> {
+interface ConventionTech {
     val name: String
-    fun getGameActions(playerPOV: PlayerPOV): Set<T>
-    fun overrides(otherTech: ConventionTech<T>): Boolean
+    fun getGameActions(playerPOV: PlayerPOV): Set<GameAction>
+    fun overrides(otherTech: ConventionTech): Boolean
 }

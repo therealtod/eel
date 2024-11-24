@@ -4,10 +4,10 @@ import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.card.HanabiCard
 
-class ColorClueAction(
-    clueGiver: PlayerId,
-    clueReceiver: PlayerId,
-    color: Color
+data class ColorClueAction(
+    override val clueGiver: PlayerId,
+    override val clueReceiver: PlayerId,
+    val color: Color
 ): ClueAction(
     clueGiver = clueGiver,
     clueReceiver = clueReceiver,

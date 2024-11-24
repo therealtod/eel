@@ -9,7 +9,7 @@ import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
-internal class DelayedPlayActionGiveClueActionTest {
+internal class DelayedPlayActionClueActionActionTest {
 
     @Test
     fun `Should play clue a red 2 Given that red 1 is known`() {
@@ -18,9 +18,10 @@ internal class DelayedPlayActionGiveClueActionTest {
         val actual = DelayedPlayClue.getGameActions(playerPOV)
 
         val expected = setOf(
-            GiveClue(
-                clue = RankClueAction(Rank.TWO),
-                to = "Bob"
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Bob",
+                rank = Rank.TWO,
             ),
         )
 
@@ -34,13 +35,15 @@ internal class DelayedPlayActionGiveClueActionTest {
         val actual = DelayedPlayClue.getGameActions(playerPOV)
 
         val expected = setOf(
-            GiveClue(
-                clue = RankClueAction(rank = Rank.FOUR),
-                to = "Bob"
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Bob",
+                rank = Rank.FOUR,
             ),
-            GiveClue(
-                clue = ColorClueAction(Color.RED),
-                to = "Bob"
+            ColorClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Bob",
+                color = Color.RED,
             ),
         )
 
@@ -54,9 +57,10 @@ internal class DelayedPlayActionGiveClueActionTest {
         val actual = DelayedPlayClue.getGameActions(playerPOV)
 
         val expected = setOf(
-            GiveClue(
-                clue = ColorClueAction(Color.RED),
-                to = "Donald"
+            ColorClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Donald",
+                color = Color.RED,
             ),
         )
 

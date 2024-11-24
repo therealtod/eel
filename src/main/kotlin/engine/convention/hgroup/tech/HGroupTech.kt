@@ -17,10 +17,10 @@ import eelst.ilike.game.entity.action.ColorClueAction
 import eelst.ilike.game.entity.action.GameAction
 import eelst.ilike.game.entity.card.HanabiCard
 
-abstract class HGroupTech<T: GameAction>(
+abstract class HGroupTech(
     override val name: String,
-    private val takesPrecedenceOver: Set<HGroupTech<T>> = emptySet(),
-) : ConventionTech<T> {
+    private val takesPrecedenceOver: Set<HGroupTech> = emptySet(),
+) : ConventionTech {
     protected fun getAllFocusingClues(
         playerPOV: PlayerPOV,
         card: HanabiCard,
@@ -45,10 +45,6 @@ abstract class HGroupTech<T: GameAction>(
         }.toSet()
     }
 
-    override fun overrides(otherTech: ConventionTech<T>): Boolean {
-        TODO("Not yet implemented")
-    }
-
     fun getFocusedSlot(
         playerPOV: PlayerPOV,
         hand: InterpretedHand,
@@ -68,6 +64,10 @@ abstract class HGroupTech<T: GameAction>(
         } else {
             return touchedSlots.first()
         }
+    }
+
+    override fun overrides(otherTech: ConventionTech): Boolean {
+        return false
     }
 
     override fun toString() = name

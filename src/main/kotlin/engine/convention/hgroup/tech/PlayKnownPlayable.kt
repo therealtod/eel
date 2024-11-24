@@ -4,7 +4,7 @@ import eelst.ilike.engine.convention.PlayTech
 import eelst.ilike.game.entity.action.PlayAction
 import eelst.ilike.engine.player.PlayerPOV
 
-object PlayKnownPlayable : HGroupTech<PlayAction>(
+object PlayKnownPlayable : HGroupTech(
     name = "Play Known Playable",
     takesPrecedenceOver = emptySet()
 ), PlayTech {

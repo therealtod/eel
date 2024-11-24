@@ -4,9 +4,9 @@ import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.card.HanabiCard
 
-class RankClueAction(
-    clueGiver: PlayerId,
-    clueReceiver: PlayerId,
+data class RankClueAction(
+    override val clueGiver: PlayerId,
+    override val clueReceiver: PlayerId,
     val rank: Rank
 ): ClueAction(
     clueGiver = clueGiver,

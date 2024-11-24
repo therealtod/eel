@@ -1,5 +1,6 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
+import eelst.ilike.engine.convention.ConventionTech
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.game.entity.action.ClueAction
@@ -45,5 +46,9 @@ data object DelayedPlayClue
             stack.suite.getCardsBetween(stack.currentCard(), card)
         }
         return playerPOV.teamKnowsAllCards(missingCards)
+    }
+
+    override fun overrides(otherTech: ConventionTech): Boolean {
+        return otherTech !is SaveClue && otherTech !is DirectPlayClue
     }
 }

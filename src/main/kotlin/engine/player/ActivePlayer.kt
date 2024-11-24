@@ -43,17 +43,35 @@ class ActivePlayer(
         )
     }.toSet()
 
-    fun getLegalActions(conventionSet: ConventionSet): Set<ConventionalAction<*>> {
+    fun getLegalActions(conventionSet: ConventionSet): Set<ConventionalAction> {
         val candidateActions = conventionSet
-            .getTechs().associateWith { it.getGameActions(playerPOV) }
-        return getPrunedAction(candidateActions)
+            .getTechs()
+            .flatMap { tech->
+                tech.getGameActions(playerPOV)
+                    .map {
+                        ConventionalAction(
+                            action = it,
+                            tech = tech,
+                        )
+                    }
+            }
+        return getPruned(candidateActions)
     }
 
     override fun hasCardInSlot(card: HanabiCard, slotIndex: Int): Boolean {
         return getOwnSlot(slotIndex).contains(card)
     }
 
-    fun<T: GameAction> getPruned(actions: Collection<T>) {
-        val overlappingGroups = actions.groupBy { it. }
+    private fun getPruned(actions: Collection<ConventionalAction>): Set<ConventionalAction> {
+        val overlappingGroups = actions.groupBy { it.action }
+        return overlappingGroups.map { group ->
+            group.value.fold(listOf(group.value.first())) { curr, next ->
+                if (curr.any { it.tech.overrides(next.tech) })
+                    curr
+                else
+                    curr + next
+            }
+        }.flatten()
+            .toSet()
     }
 }

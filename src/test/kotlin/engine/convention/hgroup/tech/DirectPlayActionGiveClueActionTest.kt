@@ -9,7 +9,7 @@ import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
-internal class DirectPlayActionGiveClueActionTest {
+internal class DirectPlayActionClueActionActionTest {
     @Test
     fun `Should find the only direct play clue on the board`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(9)
@@ -17,13 +17,15 @@ internal class DirectPlayActionGiveClueActionTest {
         val actual = DirectPlayClue.getGameActions(playerPOV)
 
         val expected = setOf(
-            GiveClue(
-                clue = RankClueAction(Rank.TWO),
-                to = "Cathy",
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Cathy",
+                rank = Rank.TWO,
             ),
-            GiveClue(
-                clue = ColorClueAction(Color.RED),
-                to = "Cathy",
+            ColorClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Cathy",
+                color = Color.RED,
             ),
         )
         Assertions.assertEquals(expected, actual)
@@ -36,29 +38,35 @@ internal class DirectPlayActionGiveClueActionTest {
         val actual = DirectPlayClue.getGameActions(playerPOV)
 
         val expected = setOf(
-            GiveClue(
-                clue = ColorClueAction(Color.PURPLE),
-                to = "Bob",
+            ColorClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Bob",
+                color = Color.PURPLE,
             ),
-            GiveClue(
-                clue = RankClueAction(Rank.THREE),
-                to = "Bob"
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Bob",
+                rank = Rank.THREE,
             ),
-            GiveClue(
-                clue = ColorClueAction(Color.RED),
-                to = "Cathy",
+            ColorClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Cathy",
+                color = Color.RED,
             ),
-            GiveClue(
-                clue = RankClueAction(Rank.TWO),
-                to = "Cathy"
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Cathy",
+                rank = Rank.TWO,
             ),
-            GiveClue(
-                clue = ColorClueAction(Color.PURPLE),
-                to = "Cathy",
+            ColorClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Cathy",
+                color = Color.PURPLE,
             ),
-            GiveClue(
-                clue = RankClueAction(Rank.ONE),
-                to = "Cathy"
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Cathy",
+                rank = Rank.ONE,
             ),
         )
         Assertions.assertEquals(expected, actual)

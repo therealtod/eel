@@ -5,6 +5,7 @@ import eelst.ilike.engine.convention.hgroup.tech.CriticalSave
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.ColorClueAction
+import eelst.ilike.game.entity.action.GameAction
 import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -17,13 +18,15 @@ internal class CriticalSaveTest {
         val actual = CriticalSave.getGameActions(playerPOV)
 
         val expected = setOf(
-            GiveClue(
-                clue = RankClueAction(Rank.FOUR),
-                to = "Cathy"
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Cathy",
+                rank = Rank.FOUR,
             ),
-            GiveClue(
-                clue = ColorClueAction(Color.PURPLE),
-                to = "Cathy"
+            ColorClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Cathy",
+                color = Color.PURPLE,
             ),
         )
         Assertions.assertEquals(actual, expected)
@@ -56,30 +59,36 @@ internal class CriticalSaveTest {
         val actual = CriticalSave.getGameActions(playerPOV)
 
         val expected = setOf(
-            GiveClue(
-                clue = RankClueAction(Rank.FOUR),
-                to = "Cathy"
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Cathy",
+                rank = Rank.FOUR,
             ),
-            GiveClue(
-                clue = ColorClueAction(Color.PURPLE),
-                to = "Cathy"
+            ColorClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Cathy",
+                color = Color.PURPLE,
             ),
-            GiveClue(
-                clue = RankClueAction(Rank.FOUR),
-                to = "Donald"
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Donald",
+                rank = Rank.FOUR,
             ),
-            GiveClue(
-                clue = ColorClueAction(Color.YELLOW),
-                to = "Donald"
+            ColorClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Donald",
+                color = Color.YELLOW,
             ),
-            GiveClue(
-                clue = RankClueAction(Rank.TWO),
-                to = "Emily"
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Emily",
+                rank = Rank.TWO,
             ),
-            GiveClue(
-                clue = ColorClueAction(Color.RED),
-                to = "Emily"
-            ),
+            ColorClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Emily",
+                color = Color.RED,
+            )
         )
 
         Assertions.assertEquals(expected, actual)

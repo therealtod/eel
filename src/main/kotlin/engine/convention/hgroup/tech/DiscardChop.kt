@@ -5,7 +5,7 @@ import eelst.ilike.game.entity.action.DiscardAction
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.player.PlayerPOV
 
-object DiscardChop : HGroupTech<DiscardAction>(
+object DiscardChop : HGroupTech(
     name = "Discard Chop",
     takesPrecedenceOver = emptySet(),
 ) {

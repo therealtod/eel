@@ -5,7 +5,7 @@ import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.card.HanabiCard
 
 sealed class ClueAction (
-    val clueGiver: PlayerId,
-    val clueReceiver: PlayerId,
-    val value: ClueValue
+    open val clueGiver: PlayerId,
+    open val clueReceiver: PlayerId,
+    open val value: ClueValue
 ): GameAction(actionExecutor = clueGiver, actionType = GameActionType.CLUE)

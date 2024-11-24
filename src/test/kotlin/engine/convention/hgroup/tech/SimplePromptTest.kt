@@ -17,21 +17,25 @@ internal class SimplePromptTest {
         val actual = SimplePrompt.getGameActions(playerPOV)
 
         val expected = setOf(
-            GiveClue(
-                clue = RankClueAction(Rank.FOUR),
-                to = "Bob",
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Bob",
+                rank = Rank.FOUR,
             ),
-            GiveClue(
-                clue = ColorClueAction(Color.BLUE),
-                to = "Bob"
+            ColorClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Bob",
+                color = Color.BLUE,
             ),
-            GiveClue(
-                clue = RankClueAction(Rank.THREE),
-                to = "Cathy",
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Cathy",
+                rank = Rank.THREE,
             ),
-            GiveClue(
-                clue = ColorClueAction(Color.RED),
-                to = "Cathy"
+            ColorClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Cathy",
+                color = Color.RED,
             ),
         )
 
@@ -45,13 +49,15 @@ internal class SimplePromptTest {
         val actual = SimplePrompt.getGameActions(playerPOV)
 
         val expected = setOf(
-            GiveClue(
-                clue = RankClueAction(Rank.FOUR),
-                to = "Bob",
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Bob",
+                rank = Rank.FOUR,
             ),
-            GiveClue(
-                clue = ColorClueAction(Color.BLUE),
-                to = "Bob"
+            ColorClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Bob",
+                color = Color.BLUE,
             ),
         )
 
@@ -65,21 +71,25 @@ internal class SimplePromptTest {
         val actual = SimplePrompt.getGameActions(playerPOV)
 
         val expected = setOf(
-            GiveClue(
-                clue = RankClueAction(rank = Rank.THREE),
-                to = "Bob",
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Bob",
+                rank = Rank.THREE,
             ),
-            GiveClue(
-                clue = ColorClueAction(color = Color.RED),
-                to = "Bob"
+            ColorClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Bob",
+                color = Color.RED,
             ),
-            GiveClue(
-                clue = RankClueAction(rank = Rank.FOUR),
-                to = "Cathy",
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Cathy",
+                rank = Rank.FOUR,
             ),
-            GiveClue(
-                clue = ColorClueAction(color = Color.BLUE),
-                to = "Cathy"
+            ColorClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Cathy",
+                color = Color.BLUE,
             ),
         )
 
@@ -93,13 +103,15 @@ internal class SimplePromptTest {
         val actual = SimplePrompt.getGameActions(playerPOV)
 
         val expected = setOf(
-            GiveClue(
-                clue = RankClueAction(rank = Rank.FOUR),
-                to = "Cathy",
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Cathy",
+                rank = Rank.FOUR,
             ),
-            GiveClue(
-                clue = ColorClueAction(color = Color.BLUE),
-                to = "Cathy"
+            ColorClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Cathy",
+                color = Color.BLUE,
             ),
         )
 

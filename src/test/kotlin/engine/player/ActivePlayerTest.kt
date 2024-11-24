@@ -26,55 +26,63 @@ class ActivePlayerTest {
 
         val expected = setOf(
             ConventionalAction(
-                GiveClue(
-                    clue = RankClueAction(Rank.FOUR),
-                    to = "Cathy",
+                RankClueAction(
+                    clueGiver = "Alice",
+                    clueReceiver = "Cathy",
+                    rank = Rank.FOUR,
                 ),
                 tech = CriticalSave,
             ),
             ConventionalAction(
-                GiveClue(
-                    clue = ColorClueAction(Color.PURPLE),
-                    to = "Cathy",
+                ColorClueAction(
+                    clueGiver = "Alice",
+                    clueReceiver = "Cathy",
+                    color = Color.PURPLE,
                 ),
                 tech = CriticalSave,
             ),
             ConventionalAction(
-                GiveClue(
-                    clue = RankClueAction(Rank.ONE),
-                    to = "Cathy",
+                RankClueAction(
+                    clueGiver = "Alice",
+                    clueReceiver = "Cathy",
+                    rank = Rank.ONE,
                 ),
                 tech = DirectPlayClue,
             ),
             ConventionalAction(
-                GiveClue(
-                    clue = ColorClueAction(Color.BLUE),
-                    to = "Cathy",
+                ColorClueAction(
+                    clueGiver = "Alice",
+                    clueReceiver = "Cathy",
+                    color = Color.BLUE,
                 ),
                 tech = DirectPlayClue,
             ),
             ConventionalAction(
-                GiveClue(
-                    clue = RankClueAction(Rank.ONE),
-                    to = "Donald",
+                RankClueAction(
+                    clueGiver = "Alice",
+                    clueReceiver = "Donald",
+                    rank = Rank.ONE,
                 ),
                 tech = DirectPlayClue,
             ),
             ConventionalAction(
-                GiveClue(
-                    clue = ColorClueAction(Color.RED),
-                    to = "Donald",
+                ColorClueAction(
+                    clueGiver = "Alice",
+                    clueReceiver = "Donald",
+                    color = Color.RED,
                 ),
                 tech = DirectPlayClue,
             ),
             ConventionalAction(
                 action = DiscardAction(
+                    playerId = "Alice",
                     slotIndex = 3,
                 ),
                 tech = DiscardChop,
             ),
             ConventionalAction(
                 action = PlayAction(
+                    playerId = "Alice",
                     slotIndex = 4
                 ),
                 tech = PlayKnownPlayable,

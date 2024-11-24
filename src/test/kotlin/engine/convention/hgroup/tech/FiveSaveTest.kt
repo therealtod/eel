@@ -15,9 +15,10 @@ internal class FiveSaveTest {
         val actual = FiveSave.getGameActions(playerPOV)
 
         val expected = setOf(
-            GiveClue(
-                clue = RankClueAction(Rank.FIVE),
-                to = "Cathy",
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Cathy",
+                rank = Rank.FIVE,
             ),
         )
 
@@ -31,17 +32,20 @@ internal class FiveSaveTest {
         val actual = FiveSave.getGameActions(playerPOV)
 
         val expected = setOf(
-            GiveClue(
-                clue = RankClueAction(Rank.FIVE),
-                to = "Bob",
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Bob",
+                rank = Rank.FIVE,
             ),
-            GiveClue(
-                clue = RankClueAction(Rank.FIVE),
-                to = "Cathy",
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Cathy",
+                rank = Rank.FIVE,
             ),
-            GiveClue(
-                clue = RankClueAction(Rank.FIVE),
-                to = "Donald",
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Donald",
+                rank = Rank.FIVE,
             ),
         )
 

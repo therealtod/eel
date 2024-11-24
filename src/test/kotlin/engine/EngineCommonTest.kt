@@ -18,64 +18,72 @@ class EngineCommonTest {
     fun `Should prune conflicting actions`() {
         val actions = listOf(
             ConventionalAction(
-                action = GiveClue(
-                    ColorClueAction(Color.RED),
-                    to = "Bob"
+                action = ColorClueAction(
+                    clueGiver = "Alice",
+                    clueReceiver = "Bob",
+                    color = Color.RED,
                 ),
-                tech = SimplePrompt
+                tech = SimplePrompt,
             ),
             ConventionalAction(
-                action = GiveClue(
-                    ColorClueAction(Color.RED),
-                    to = "Bob"
+                action = ColorClueAction(
+                    clueGiver = "Alice",
+                    clueReceiver = "Bob",
+                    color = Color.RED,
                 ),
-                tech = SimpleFinesse
+                tech = SimpleFinesse,
             ),
             ConventionalAction(
-                action = GiveClue(
-                    RankClueAction(Rank.TWO),
-                    to = "Cathy"
+                action = RankClueAction(
+                    clueGiver = "Alice",
+                    clueReceiver = "Cathy",
+                    rank = Rank.TWO,
                 ),
-                tech = TwoSave
+                tech = TwoSave,
             ),
             ConventionalAction(
-                action = GiveClue(
-                    RankClueAction(Rank.TWO),
-                    to = "Cathy"
+                action = RankClueAction(
+                    clueGiver = "Alice",
+                    clueReceiver = "Cathy",
+                    rank = Rank.TWO,
                 ),
-                tech = SimpleFinesse
+                tech = SimpleFinesse,
             ),
             ConventionalAction(
-                action = GiveClue(
-                    RankClueAction(Rank.FIVE),
-                    to = "Bob"
+                action = RankClueAction(
+                    clueGiver = "Alice",
+                    clueReceiver = "Bob",
+                    rank = Rank.FIVE,
                 ),
-                tech = FiveSave
+                tech = FiveSave,
             ),
         )
 
         val actual = EngineCommon.getPrunedAction(actions)
         val expected = setOf(
             ConventionalAction(
-                action = GiveClue(
-                    ColorClueAction(Color.RED),
-                    to = "Bob"
+                action = ColorClueAction(
+                    clueGiver = "Alice",
+                    clueReceiver = "Bob",
+                    color = Color.RED,
                 ),
-                tech = SimplePrompt
+                tech = SimplePrompt,
             ),
             ConventionalAction(
-                action = GiveClue(
-                    RankClueAction(Rank.TWO),
-                    to = "Cathy"
+                action = RankClueAction(
+                    clueGiver = "Alice",
+                    clueReceiver = "Cathy",
+                    rank = Rank.TWO,
                 ),
-                tech = TwoSave
+                tech = TwoSave,
             ),
             ConventionalAction(
-                action = GiveClue(
-                    RankClueAction(Rank.FIVE),
-                    to = "Bob"
+                action = RankClueAction(
+                    clueGiver = "Alice",
+                    clueReceiver = "Bob",
+                    rank = Rank.FIVE,
                 ),
-                tech = FiveSave
+                tech = FiveSave,
             ),
         )
 

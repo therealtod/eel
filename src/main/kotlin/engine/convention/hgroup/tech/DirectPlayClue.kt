@@ -1,5 +1,6 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
+import eelst.ilike.engine.convention.ConventionTech
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.game.entity.action.ClueAction
@@ -27,5 +28,9 @@ object DirectPlayClue : PlayClue(
             }
         }
         return actions.toSet()
+    }
+
+    override fun overrides(otherTech: ConventionTech): Boolean {
+        return otherTech !is SaveClue && otherTech is PlayClue
     }
 }

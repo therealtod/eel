@@ -3,6 +3,7 @@ package engine.convention.hgroup.tech
 import TestUtils
 import eelst.ilike.engine.convention.hgroup.tech.SimpleFinesse
 import eelst.ilike.game.entity.Rank
+import eelst.ilike.game.entity.action.GameAction
 import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -15,10 +16,11 @@ internal class SimpleFinesseTest {
         val actual = SimpleFinesse.getGameActions(playerPOV)
 
         val expected = setOf(
-            GiveClue(
-                clue = RankClueAction(Rank.THREE),
-                to = "Cathy",
-            )
+            RankClueAction(
+                clueGiver = "Alice",
+                clueReceiver = "Cathy",
+                rank = Rank.THREE,
+            ),
         )
 
         Assertions.assertEquals(expected, actual)
