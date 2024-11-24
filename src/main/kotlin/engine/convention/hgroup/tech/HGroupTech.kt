@@ -70,6 +70,10 @@ abstract class HGroupTech(
         return false
     }
 
+    override fun matches(action: GameAction, playerPOV: PlayerPOV): Boolean {
+        return TODO()
+    }
+
     override fun toString() = name
 }
 

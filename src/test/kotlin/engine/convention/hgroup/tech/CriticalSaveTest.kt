@@ -104,4 +104,34 @@ internal class CriticalSaveTest {
 
         Assertions.assertEquals(expected, actual)
     }
+
+    @Test
+    fun `Should match a clue which saves a critical card on a teammate hand`() {
+        val playerPOV = TestUtils.getPlayerPOVFromScenario(1)
+
+        val action = RankClueAction(
+            clueGiver = "Bob",
+            clueReceiver = "Cathy",
+            rank = Rank.FOUR,
+        )
+
+        val actual = CriticalSave.matches(action, playerPOV)
+
+        Assertions.assertTrue(actual)
+    }
+
+    @Test
+    fun `Should recognize a clue as a CriticalSave if the chop can be a critical card`() {
+        val playerPOV = TestUtils.getPlayerPOVFromScenario(21)
+
+        val action = RankClueAction(
+            clueGiver = "Bob",
+            clueReceiver = "Alice",
+            rank = Rank.FOUR,
+        )
+
+        val actual = CriticalSave.matches(action, playerPOV)
+
+        Assertions.assertTrue(actual)
+    }
 }

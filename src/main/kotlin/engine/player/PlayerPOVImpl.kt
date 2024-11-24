@@ -1,6 +1,7 @@
 package eelst.ilike.engine.player
 
 import eelst.ilike.engine.factory.PlayerFactory
+import eelst.ilike.engine.hand.InterpretedHand
 import eelst.ilike.engine.hand.OwnHand
 import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
@@ -39,5 +40,16 @@ class PlayerPOVImpl(
 
     override fun forEachTeammate(action: (teammate: Teammate) -> Unit) {
         return teammates.forEach(action)
+    }
+
+    override fun getTeammate(teammateplayerId: PlayerId): Teammate {
+        return teammates.find { it.playerId == teammateplayerId }
+            ?: throw IllegalArgumentException("I can't see any teammate with id $teammateplayerId")
+    }
+
+    override fun getHand(playerId: PlayerId): InterpretedHand {
+        return if (playerId == this.playerId) {
+            ownHand
+        } else getTeammate(playerId).hand
     }
 }
