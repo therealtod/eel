@@ -9,8 +9,7 @@ import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
-internal class DelayedPlayActionClueActionActionTest {
-
+internal class DelayedPlayClueTest {
     @Test
     fun `Should play clue a red 2 Given that red 1 is known`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(6)
@@ -65,5 +64,10 @@ internal class DelayedPlayActionClueActionActionTest {
         )
 
         Assertions.assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `Should recognize a delayed play clue when given to a teammate`() {
+
     }
 }

@@ -1,7 +1,9 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
+import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.ConventionTech
 import eelst.ilike.engine.convention.ConventionalAction
+import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
@@ -48,7 +50,18 @@ data object DelayedPlayClue
         return playerPOV.teamKnowsAllCards(missingCards)
     }
 
-    override fun overrides(otherTech: ConventionTech): Boolean {
+    override fun overrides(otherTech: ConventionTech<ClueAction>): Boolean {
         return otherTech !is SaveClue && otherTech !is DirectPlayClue
+    }
+
+    override fun matchesClue(action: ObservedClue, playerPOV: PlayerPOV): Boolean {
+        val clueReceiver = action.gameAction.clueReceiver
+        val receiverHand = playerPOV.getHand(clueReceiver)
+        val touchedSlotIndexes = action.slotsTouched
+        val chop = getChop(receiverHand)
+        val focus = CriticalSave.getFocusedSlot(
+            hand = receiverHand,
+            touchedSlotsIndexes = touchedSlotIndexes
+        )
     }
 }

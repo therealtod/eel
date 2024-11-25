@@ -9,7 +9,7 @@ import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
-internal class DirectPlayActionClueActionActionTest {
+internal class DirectPlayClueTest {
     @Test
     fun `Should find the only direct play clue on the board`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(9)

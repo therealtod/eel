@@ -1,5 +1,7 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
+import eelst.ilike.engine.action.ObservedAction
+import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.hgroup.HGroupCommon
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
@@ -41,15 +43,18 @@ object CriticalSave
         return actions
     }
 
-    override fun matches(action: GameAction, playerPOV: PlayerPOV): Boolean {
-        if (action !is ClueAction) return false
-        val clueReceiver = action.clueReceiver
+    override fun matchesClue (action: ObservedClue, playerPOV: PlayerPOV): Boolean {
+        val clueReceiver = action.gameAction.clueReceiver
         val receiverHand = playerPOV.getHand(clueReceiver)
+        val touchedSlotIndexes = action.slotsTouched
+        val chop = getChop(receiverHand)
         val focus = getFocusedSlot(
-            playerPOV = playerPOV,
             hand = receiverHand,
-            clueValue = action.value
+            touchedSlotsIndexes = touchedSlotIndexes
         )
+        if (chop.index != focus.index) {
+            return false
+        }
         if (clueReceiver == playerPOV.playerId) {
             val ownHand = playerPOV.ownHand
             val focusedSlot = ownHand.getSlot(focus.index)

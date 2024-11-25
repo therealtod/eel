@@ -7,9 +7,9 @@ import eelst.ilike.game.entity.suite.Suite
 sealed class IndirectPlayClue(
     name: String,
     appliesTo: Set<Suite>,
-    takesPrecedenceOver: Set<HGroupTech>,
+    takesPrecedenceOver: Set<HGroupTech<ClueAction>>,
 ) : PlayClue(name = name, appliesTo = appliesTo, takesPrecedenceOver = takesPrecedenceOver) {
-    override fun overrides(otherTech: ConventionTech): Boolean {
+    override fun overrides(otherTech: ConventionTech<ClueAction>): Boolean {
         return otherTech !is SaveClue && otherTech !is DirectPlayClue
     }
 }

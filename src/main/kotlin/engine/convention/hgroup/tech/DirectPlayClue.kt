@@ -30,7 +30,7 @@ object DirectPlayClue : PlayClue(
         return actions.toSet()
     }
 
-    override fun overrides(otherTech: ConventionTech): Boolean {
+    override fun overrides(otherTech: ConventionTech<ClueAction>): Boolean {
         return otherTech !is SaveClue && otherTech is PlayClue
     }
 }

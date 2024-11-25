@@ -1,13 +1,12 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.convention.PlayTech
 import eelst.ilike.game.entity.action.PlayAction
 import eelst.ilike.engine.player.PlayerPOV
 
-object PlayKnownPlayable : HGroupTech(
+object PlayKnownPlayable : HGroupTech<PlayAction>(
     name = "Play Known Playable",
     takesPrecedenceOver = emptySet()
-), PlayTech {
+) {
     override fun getGameActions(playerPOV: PlayerPOV): Set<PlayAction> {
         return playerPOV
             .getOwnKnownPlayableSlots()

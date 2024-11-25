@@ -1,11 +1,14 @@
 package eelst.ilike.engine.convention
 
-abstract class ConventionSet(
-    val name: String,
-    val includes: Set<ConventionSet> = emptySet(),
-    private val techs: Set<ConventionTech>
-) {
-    fun getTechs(): Set<ConventionTech> {
-        return techs + includes.flatMap { it.getTechs() }
-    }
+import eelst.ilike.game.entity.action.ClueAction
+import eelst.ilike.game.entity.action.DiscardAction
+import eelst.ilike.game.entity.action.PlayAction
+
+interface ConventionSet {
+    val name: String
+    val includes: Set<ConventionSet>
+    fun getPlayTechs(): Set<ConventionTech<PlayAction>>
+    fun getDiscardTechs(): Set<ConventionTech<DiscardAction>>
+    fun getClueTechs(): Set<ConventionTech<ClueAction>>
+    fun getTechs(): Set<ConventionTech<*>>
 }
