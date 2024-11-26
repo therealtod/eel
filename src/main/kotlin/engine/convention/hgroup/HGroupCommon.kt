@@ -5,7 +5,6 @@ import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.game.entity.Slot
-import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
 
 object HGroupCommon {
@@ -136,7 +135,7 @@ object HGroupCommon {
                     return false
                 }
             }
-            if (cardTeammateMap[card]!!.playsBefore(wrongPromptedTeammate) ) {
+            if (cardTeammateMap[card]!!.playsBefore(wrongPromptedTeammate)) {
                 return false
             }
         }

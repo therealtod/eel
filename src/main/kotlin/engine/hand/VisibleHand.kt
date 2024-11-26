@@ -5,10 +5,9 @@ import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.Slot
-import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
 
-class VisibleHand(private val slots: Set<VisibleSlot>) : InterpretedHand, Set<InterpretedSlot> by slots{
+class VisibleHand(private val slots: Set<VisibleSlot>) : InterpretedHand, Set<InterpretedSlot> by slots {
     override val size = slots.size
 
     override fun copiesOf(card: HanabiCard): Int {
@@ -16,7 +15,7 @@ class VisibleHand(private val slots: Set<VisibleSlot>) : InterpretedHand, Set<In
     }
 
     override fun getSlotsTouchedBy(clueValue: ClueValue): Set<Slot> {
-        return slots.filter { it.card.suite.clueTouches(it.card, clueValue ) }.toSet()
+        return slots.filter { it.card.suite.clueTouches(it.card, clueValue) }.toSet()
     }
 
     override fun getKnownSlots(): Set<KnownSlot> {

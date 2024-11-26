@@ -33,7 +33,7 @@ object PlayerFactory {
         activePlayerId: PlayerId,
         globallyAvailableInfo: GloballyAvailableInfo,
         personalKnowledge: PersonalKnowledge,
-    ): ActivePlayer{
+    ): ActivePlayer {
         val activePlayerGloballyAvailableInfo = globallyAvailableInfo.getPlayerInfo(activePlayerId)
 
         return ActivePlayer(
@@ -60,7 +60,8 @@ object PlayerFactory {
                     seatsGap = GameUtils.getSeatsGap(
                         playerIndex1 = playerIndex,
                         playerIndex2 = it.value.playerIndex,
-                        numberOfPlayers = globallyAvailableInfo.numberOfPlayers),
+                        numberOfPlayers = globallyAvailableInfo.numberOfPlayers
+                    ),
                 )
             }
 

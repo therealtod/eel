@@ -9,4 +9,4 @@ sealed class Finesse(name: String, appliesTo: Set<Suite>, takesPrecedenceOver: S
     override fun overrides(otherTech: ConventionTech<ClueAction>): Boolean {
         return otherTech !is SaveClue && otherTech !is DirectPlayClue && otherTech !is Prompt
     }
-    }
+}

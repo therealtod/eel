@@ -14,18 +14,20 @@ object GameActionFactory {
         clueReceiver: PlayerId,
         clueValue: ClueValue
     ): ClueAction {
-        return when(clueValue) {
+        return when (clueValue) {
             is Rank -> RankClueAction(
-                    clueGiver = clueGiver,
-                    clueReceiver = clueReceiver,
-                    rank = clueValue,
+                clueGiver = clueGiver,
+                clueReceiver = clueReceiver,
+                rank = clueValue,
 
-                    )
-            is Color -> ColorClueAction (
-                    clueGiver = clueGiver,
-                    clueReceiver = clueReceiver,
-                    color = clueValue,
                 )
+
+            is Color -> ColorClueAction(
+                clueGiver = clueGiver,
+                clueReceiver = clueReceiver,
+                color = clueValue,
+            )
+
             else -> throw IllegalArgumentException("Unrecognized clue value $clueValue")
         }
     }

@@ -1,6 +1,7 @@
 package engine.convention.hgroup.tech
 
 import TestUtils
+import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.hgroup.tech.DelayedPlayClue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
@@ -68,6 +69,18 @@ internal class DelayedPlayClueTest {
 
     @Test
     fun `Should recognize a delayed play clue when given to a teammate`() {
+        val playerPOV = TestUtils.getPlayerPOVFromScenario(7)
+        val action = ObservedClue(
+            clueAction = ColorClueAction(
+                clueGiver = "Cathy",
+                clueReceiver = "Bob",
+                color = Color.RED,
+            ),
+            slotsTouched = setOf(1, 3),
+        )
 
+        val actual = DelayedPlayClue.matchesClue(action, playerPOV)
+
+        Assertions.assertTrue(actual)
     }
 }

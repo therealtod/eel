@@ -134,7 +134,7 @@ internal class CriticalSaveTest {
                 clueReceiver = "Alice",
                 rank = Rank.FOUR,
             ),
-            slotsTouched = setOf(1,3)
+            slotsTouched = setOf(1, 3)
         )
 
         val actual = CriticalSave.matches(action, playerPOV)
@@ -145,7 +145,6 @@ internal class CriticalSaveTest {
     @Test
     fun `Should not recognize a clue as a CriticalSave if the focus is not the chop`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(21)
-
         val action = ObservedClue(
             clueAction = RankClueAction(
                 clueGiver = "Bob",

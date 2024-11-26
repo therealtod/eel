@@ -9,7 +9,7 @@ import eelst.ilike.game.entity.action.PlayAction
 sealed class HGroupLevel(
     name: String,
     includes: Set<HGroupLevel> = emptySet(),
-    playTechs: Set<ConventionTech<PlayAction>>  = emptySet(),
+    playTechs: Set<ConventionTech<PlayAction>> = emptySet(),
     discardTechs: Set<ConventionTech<DiscardAction>> = emptySet(),
     clueTechs: Set<ConventionTech<ClueAction>> = emptySet(),
     val rank: Int,

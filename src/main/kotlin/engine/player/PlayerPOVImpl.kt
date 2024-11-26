@@ -1,10 +1,8 @@
 package eelst.ilike.engine.player
 
-import eelst.ilike.engine.factory.PlayerFactory
 import eelst.ilike.engine.hand.InterpretedHand
 import eelst.ilike.engine.hand.OwnHand
 import eelst.ilike.engine.hand.slot.KnownSlot
-import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Slot
@@ -29,9 +27,9 @@ class PlayerPOVImpl(
         return knownSlots.filter { globallyAvailableInfo.isImmediatelyPlayable(it.card) }.toSet()
     }
 
-    override fun teamKnowsAllCards(cards: Set<HanabiCard>): Boolean{
+    override fun teamKnowsAllCards(cards: Set<HanabiCard>): Boolean {
         return cards
-            .all { card->
+            .all { card ->
                 teammates.any { teammate ->
                     teammate.getOwnKnownCards().contains(card)
                 }

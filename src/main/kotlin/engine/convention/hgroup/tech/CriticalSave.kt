@@ -7,7 +7,10 @@ import eelst.ilike.engine.convention.hgroup.HGroupCommon
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.hasChop
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.isGloballyKnownPlayable
+import eelst.ilike.engine.hand.slot.InterpretedSlot
+import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.Teammate
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.GameAction
@@ -18,22 +21,28 @@ object CriticalSave
     name = "Critical Save",
     appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
 ) {
+    override fun teammateSlotMatchesCondition(teammate: Teammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
+        val card = teammate.getCardAtSlot(slotIndex)
+        return appliesTo.contains(card.suite) &&
+                card.rank != Rank.FIVE &&
+                playerPOV.globallyAvailableInfo.isCritical(card) &&
+                !isGloballyKnownPlayable(card, playerPOV)
+    }
+
     override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
         val actions = mutableSetOf<ClueAction>()
 
         playerPOV.forEachTeammate { teammate ->
             if (hasChop(teammate.hand)) {
                 val chop = getChop(teammate.hand)
-                val card = teammate.getCardAtSlot(chop.index)
-                if (appliesTo.contains(card.suite) &&
-                    card.rank != Rank.FIVE &&
-                    playerPOV.globallyAvailableInfo.isCritical(card) &&
-                    !isGloballyKnownPlayable(card, playerPOV)
+                val teammateSlot = teammate.hand.getSlot(chop.index)
+                if (
+                    teammateSlotMatchesCondition(teammate, chop.index, playerPOV)
                 ) {
                     actions.addAll(
                         getAllFocusingClues(
                             playerPOV = playerPOV,
-                            card = card,
+                            slot = teammateSlot,
                             teammate = teammate,
                         )
                     )
@@ -43,7 +52,7 @@ object CriticalSave
         return actions
     }
 
-    override fun matchesClue (action: ObservedClue, playerPOV: PlayerPOV): Boolean {
+    override fun matchesClue(action: ObservedClue, playerPOV: PlayerPOV): Boolean {
         val clueReceiver = action.gameAction.clueReceiver
         val receiverHand = playerPOV.getHand(clueReceiver)
         val touchedSlotIndexes = action.slotsTouched
@@ -55,15 +64,19 @@ object CriticalSave
         if (chop.index != focus.index) {
             return false
         }
-        if (clueReceiver == playerPOV.playerId) {
-            val ownHand = playerPOV.ownHand
-            val focusedSlot = ownHand.getSlot(focus.index)
-            return focusedSlot.getPossibleIdentities()
-                .any { playerPOV.globallyAvailableInfo.isCritical(it) }
-        } else {
+        if (clueReceiver != playerPOV.playerId) {
             val teammate = playerPOV.getTeammate(clueReceiver)
-            val focusedCard = teammate.getCardAtSlot(focus.index)
-            return playerPOV.globallyAvailableInfo.isCritical(focusedCard)
+            return teammateSlotMatchesCondition(
+                teammate = teammate,
+                slotIndex = focus.index,
+                playerPOV = playerPOV
+            )
         }
+
+        val ownHand = playerPOV.ownHand
+        val focusedSlot = ownHand.getSlot(focus.index)
+        return focusedSlot.getPossibleIdentities()
+            .any { playerPOV.globallyAvailableInfo.isCritical(it) }
+
     }
 }

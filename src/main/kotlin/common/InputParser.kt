@@ -1,10 +1,10 @@
 package eelst.ilike.utils
 
 import eelst.ilike.engine.hand.slot.PersonalSlotKnowledgeImpl
+import eelst.ilike.engine.player.knowledge.PersonalSlotKnowledge
 import eelst.ilike.game.GameUtils
 import eelst.ilike.game.GloballyAvailablePlayerInfo
 import eelst.ilike.game.GloballyAvailableSlotInfo
-import eelst.ilike.engine.player.knowledge.PersonalSlotKnowledge
 import eelst.ilike.game.entity.*
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite

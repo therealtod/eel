@@ -18,5 +18,5 @@ data object Level1 : HGroupLevel(
         SimpleFinesse,
         DirectPlayClue,
         FiveSave,
-        )
+    )
 )

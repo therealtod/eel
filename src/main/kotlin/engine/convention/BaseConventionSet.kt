@@ -10,9 +10,9 @@ abstract class BaseConventionSet(
     private val playTechs: Set<ConventionTech<PlayAction>> = emptySet(),
     private val discardTechs: Set<ConventionTech<DiscardAction>> = emptySet(),
     private val clueTechs: Set<ConventionTech<ClueAction>> = emptySet(),
-): ConventionSet {
+) : ConventionSet {
     override fun getPlayTechs(): Set<ConventionTech<PlayAction>> {
-        return playTechs + includes.flatMap { it.getPlayTechs()}
+        return playTechs + includes.flatMap { it.getPlayTechs() }
     }
 
     override fun getDiscardTechs(): Set<ConventionTech<DiscardAction>> {

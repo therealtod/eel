@@ -28,7 +28,7 @@ class Teammate(
         return ownHand.getSlot(slotIndex)
     }
 
-    fun getCardAtSlot(slotIndex: Int): HanabiCard{
+    fun getCardAtSlot(slotIndex: Int): HanabiCard {
         return hand.getSlot(slotIndex).card
     }
 

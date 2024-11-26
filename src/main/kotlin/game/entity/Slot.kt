@@ -1,6 +1,5 @@
 package eelst.ilike.game.entity
 
-import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 

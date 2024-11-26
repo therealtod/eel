@@ -7,11 +7,11 @@ import eelst.ilike.engine.convention.hgroup.tech.CriticalSave
 import eelst.ilike.engine.convention.hgroup.tech.DirectPlayClue
 import eelst.ilike.engine.convention.hgroup.tech.DiscardChop
 import eelst.ilike.engine.convention.hgroup.tech.PlayKnownPlayable
-import eelst.ilike.game.entity.action.DiscardAction
-import eelst.ilike.game.entity.action.PlayAction
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.ColorClueAction
+import eelst.ilike.game.entity.action.DiscardAction
+import eelst.ilike.game.entity.action.PlayAction
 import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test

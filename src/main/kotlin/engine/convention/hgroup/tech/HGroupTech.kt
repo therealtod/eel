@@ -9,23 +9,24 @@ import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.hasChop
 import eelst.ilike.engine.factory.GameActionFactory
 import eelst.ilike.engine.hand.InterpretedHand
+import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.GameAction
-import eelst.ilike.game.entity.card.HanabiCard
 
-abstract class HGroupTech<T: GameAction>(
+abstract class HGroupTech<T : GameAction>(
     override val name: String,
     private val takesPrecedenceOver: Set<HGroupTech<T>> = emptySet(),
 ) : ConventionTech<T> {
     protected fun getAllFocusingClues(
         playerPOV: PlayerPOV,
-        card: HanabiCard,
+        slot: VisibleSlot,
         teammate: Teammate,
     ): Set<ClueAction> {
+        val card = slot.card
         val ranks = card.getRanksTouchingCard()
         val colors = card.getColorsTouchingCard()
         val clueValues = (ranks + colors).filter {
@@ -77,7 +78,7 @@ abstract class HGroupTech<T: GameAction>(
     }
 
     override fun matches(action: ObservedAction<T>, playerPOV: PlayerPOV): Boolean {
-        return when(action) {
+        return when (action) {
             is ObservedPlay -> matchesPlay(action, playerPOV)
             is ObservedDiscard -> matchesDiscard(action, playerPOV)
             is ObservedClue -> matchesClue(action, playerPOV)

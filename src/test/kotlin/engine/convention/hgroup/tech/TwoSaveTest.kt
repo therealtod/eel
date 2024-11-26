@@ -2,9 +2,7 @@ package engine.convention.hgroup.tech
 
 import TestUtils
 import eelst.ilike.engine.convention.hgroup.tech.TwoSave
-import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.action.ColorClueAction
 import eelst.ilike.game.entity.action.GameAction
 import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
