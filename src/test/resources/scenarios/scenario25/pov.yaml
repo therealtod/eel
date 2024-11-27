@@ -1,5 +1,5 @@
-id: 18
-description: "A board where y2 cannot be saved from Alice's POV because of the visible rule"
+id: 25
+description: "A board with an available finesse"
 globally_available_info:
   suites:
     - "red"
@@ -22,15 +22,16 @@ player_pov:
   teammates:
     - player_id: "Bob"
       hand:
-        - card: "y2"
-        - card: "b3"
-        - card: "y4"
-        - card: "b1"
-        - card: "g5"
-    - player_id: "Cathy"
-      hand:
-        - card: "r2"
+        - card: "b4"
         - card: "r3"
         - card: "p2"
         - card: "p2"
+        - card: "r1"
+    - player_id: "Cathy"
+      hand:
+        - card: "p4"
+        - card: "b5"
+        - card: "p1"
         - card: "y2"
+        - card: "g3"
+

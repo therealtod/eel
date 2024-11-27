@@ -32,7 +32,8 @@ class PlayerPOVImpl(
             .all { card ->
                 teammates.any { teammate ->
                     teammate.getOwnKnownCards().contains(card)
-                }
+                } ||
+                        getOwnKnownCards().contains(card)
             }
     }
 

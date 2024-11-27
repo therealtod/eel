@@ -12,7 +12,6 @@ globally_available_info:
   strikes: 0
   efficiency: 1.00
   pace: 15
-  score: 0
   clue_tokens: 5
   players:
     - player_id: "Alice"

@@ -1,5 +1,6 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
+import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.ConventionTech
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
@@ -36,5 +37,30 @@ object DirectPlayClue : PlayClue(
 
     override fun overrides(otherTech: ConventionTech<ClueAction>): Boolean {
         return otherTech !is SaveClue && otherTech is PlayClue
+    }
+
+    override fun matchesClue(action: ObservedClue, playerPOV: PlayerPOV): Boolean {
+        val clueReceiver = action.gameAction.clueReceiver
+        val receiverHand = playerPOV.getHand(clueReceiver)
+        val touchedSlotIndexes = action.slotsTouched
+        val focus = getFocusedSlot(
+            hand = receiverHand,
+            touchedSlotsIndexes = touchedSlotIndexes
+        )
+        if (clueReceiver != playerPOV.playerId) {
+            val teammate = playerPOV.getTeammate(clueReceiver)
+            return teammateSlotMatchesCondition(
+                teammate = teammate,
+                slotIndex = focus.index,
+                playerPOV = playerPOV,
+            )
+        }
+        val ownHand = playerPOV.ownHand
+        val focusedSlot = ownHand.getSlot(focus.index)
+        return focusedSlot
+            .getPossibleIdentities()
+            .any {
+                playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) == 0
+            }
     }
 }

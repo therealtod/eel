@@ -1,5 +1,5 @@
-id: 18
-description: "A board where y2 cannot be saved from Alice's POV because of the visible rule"
+id: 23
+description: "A board where r1 is played and receiving a red clue could mean direct play clue"
 globally_available_info:
   suites:
     - "red"
@@ -7,7 +7,7 @@ globally_available_info:
     - "green"
     - "blue"
     - "purple"
-  playing_stacks: [ [ "r1" ], [ ], [ ], [ "b2" ], [ ] ]
+  playing_stacks: [ [ "r1" ], [ ], [ ], [ ], [ ] ]
   trash_pile: [ ]
   strikes: 0
   efficiency: 1.00
@@ -22,15 +22,15 @@ player_pov:
   teammates:
     - player_id: "Bob"
       hand:
-        - card: "y2"
-        - card: "b3"
-        - card: "y4"
-        - card: "b1"
         - card: "g5"
+        - card: "r4"
+        - card: "g2"
+        - card: "b2"
+        - card: "r1"
     - player_id: "Cathy"
       hand:
-        - card: "r2"
-        - card: "r3"
-        - card: "p2"
-        - card: "p2"
-        - card: "y2"
+        - card: "p5"
+        - card: "p3"
+        - card: "y4"
+        - card: "b1"
+        - card: "g3"

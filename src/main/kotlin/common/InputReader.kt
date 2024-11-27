@@ -43,7 +43,6 @@ object InputReader {
             strikes = dto.globallyAvailableInfo.strikes,
             efficiency = dto.globallyAvailableInfo.efficiency,
             pace = dto.globallyAvailableInfo.pace,
-            score = dto.globallyAvailableInfo.score,
             variant = variant,
             players = playersGlobalInfo.associateBy { it.playerId },
             clueTokens = dto.globallyAvailableInfo.clueTokens,

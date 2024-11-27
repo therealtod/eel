@@ -79,7 +79,24 @@ internal class DelayedPlayClueTest {
             slotsTouched = setOf(1, 3),
         )
 
-        val actual = DelayedPlayClue.matchesClue(action, playerPOV)
+        val actual = DelayedPlayClue.matches(action, playerPOV)
+
+        Assertions.assertTrue(actual)
+    }
+
+    @Test
+    fun `Should recognize a delayed play clue when receiving it`() {
+        val playerPOV = TestUtils.getPlayerPOVFromScenario(22)
+        val action = ObservedClue(
+            clueAction = ColorClueAction(
+                clueGiver = "Cathy",
+                clueReceiver = "Alice",
+                color = Color.RED,
+            ),
+            slotsTouched = setOf(1, 3),
+        )
+
+        val actual = DelayedPlayClue.matches(action, playerPOV)
 
         Assertions.assertTrue(actual)
     }

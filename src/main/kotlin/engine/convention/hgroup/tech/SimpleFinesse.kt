@@ -1,5 +1,7 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
+import eelst.ilike.engine.action.ObservedClue
+import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.hasCardOnFinessePosition
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
@@ -41,5 +43,33 @@ object SimpleFinesse
             }
         }
         return actions.toSet()
+    }
+
+    override fun matchesClue(action: ObservedClue, playerPOV: PlayerPOV): Boolean {
+        val clueReceiver = action.gameAction.clueReceiver
+        if (clueReceiver == playerPOV.playerId) {
+            return false
+        }
+        val receiverHand = playerPOV.getHand(clueReceiver)
+        val touchedSlotIndexes = action.slotsTouched
+        val focus = getFocusedSlot(
+            hand = receiverHand,
+            touchedSlotsIndexes = touchedSlotIndexes
+        )
+        if (playerPOV.teammates
+            .filter { it.playerId != clueReceiver }
+            .any {
+                teammateSlotMatchesCondition(
+                    teammate = it,
+                    slotIndex = focus.index,
+                    playerPOV = playerPOV,
+                )
+        }
+            )
+            return true
+
+        val receivingTeammate = playerPOV.getTeammate(clueReceiver)
+        val focusedCard = receivingTeammate.getCardAtSlot(focus.index)
+        return playerPOV.globallyAvailableInfo.getGlobalAwayValue(focusedCard) == 1
     }
 }

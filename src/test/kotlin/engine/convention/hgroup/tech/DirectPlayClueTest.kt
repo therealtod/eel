@@ -1,6 +1,7 @@
 package engine.convention.hgroup.tech
 
 import TestUtils
+import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.hgroup.tech.DirectPlayClue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
@@ -70,5 +71,39 @@ internal class DirectPlayClueTest {
             ),
         )
         Assertions.assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `Should recognise a direct play clue given to a teammate`() {
+        val playerPOV = TestUtils.getPlayerPOVFromScenario(9)
+        val action = ObservedClue(
+            clueAction = RankClueAction(
+                clueGiver = "Bob",
+                clueReceiver = "Cathy",
+                rank = Rank.TWO,
+            ),
+            slotsTouched = setOf(4),
+        )
+
+        val actual = DirectPlayClue.matches(action, playerPOV)
+
+        Assertions.assertTrue(actual)
+    }
+
+    @Test
+    fun `Should recognise a direct play clue when receiving it`() {
+        val playerPOV = TestUtils.getPlayerPOVFromScenario(23)
+        val action = ObservedClue(
+            clueAction = RankClueAction(
+                clueGiver = "Bob",
+                clueReceiver = "Alice",
+                rank = Rank.TWO,
+            ),
+            slotsTouched = setOf(3),
+        )
+
+        val actual = DirectPlayClue.matches(action, playerPOV)
+
+        Assertions.assertTrue(actual)
     }
 }

@@ -43,16 +43,6 @@ data object DelayedPlayClue
         return actions.toSet()
     }
 
-    private fun connectingCardsAreKnown(card: HanabiCard, playerPOV: PlayerPOV): Boolean {
-        val stack = playerPOV.globallyAvailableInfo.getStackForCard(card)
-        val missingCards = if (stack.isEmpty()) {
-            card.getPrerequisiteCards().toSet()
-        } else {
-            stack.suite.getCardsBetween(stack.currentCard(), card)
-        }
-        return playerPOV.teamKnowsAllCards(missingCards)
-    }
-
     override fun overrides(otherTech: ConventionTech<ClueAction>): Boolean {
         return otherTech !is SaveClue && otherTech !is DirectPlayClue
     }
@@ -61,7 +51,7 @@ data object DelayedPlayClue
         val clueReceiver = action.gameAction.clueReceiver
         val receiverHand = playerPOV.getHand(clueReceiver)
         val touchedSlotIndexes = action.slotsTouched
-        val focus = CriticalSave.getFocusedSlot(
+        val focus = getFocusedSlot(
             hand = receiverHand,
             touchedSlotsIndexes = touchedSlotIndexes
         )
@@ -75,7 +65,22 @@ data object DelayedPlayClue
         }
         val ownHand = playerPOV.ownHand
         val focusedSlot = ownHand.getSlot(focus.index)
+        return focusedSlot
+            .getPossibleIdentities()
+            .any {
+                playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) > 0 &&
+                        connectingCardsAreKnown(it, playerPOV)
+            }
 
+    }
 
+    private fun connectingCardsAreKnown(card: HanabiCard, playerPOV: PlayerPOV): Boolean {
+        val stack = playerPOV.globallyAvailableInfo.getStackForCard(card)
+        val missingCards = if (stack.isEmpty()) {
+            card.getPrerequisiteCards().toSet()
+        } else {
+            stack.suite.getCardsBetween(stack.currentCard(), card)
+        }
+        return playerPOV.teamKnowsAllCards(missingCards)
     }
 }

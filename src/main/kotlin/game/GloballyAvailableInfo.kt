@@ -15,7 +15,6 @@ data class GloballyAvailableInfo(
     val strikes: Int,
     val efficiency: Float,
     val pace: Int,
-    val score: Int,
     val variant: Variant,
     val clueTokens: Int,
     val players: Map<PlayerId, GloballyAvailablePlayerInfo>,
@@ -23,6 +22,7 @@ data class GloballyAvailableInfo(
     val cardsOnStacks = playingStacks.flatMap { it.value.cards }
     val handsSize = Utils.getHandSize(players.size)
     val numberOfPlayers = players.size
+    val score = cardsOnStacks.size
 
     fun getStackForCard(card: HanabiCard): PlayingStack {
         val suiteId = card.suite.id

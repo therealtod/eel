@@ -1,5 +1,5 @@
-id: 8
-description: "A board where not enough cards are know for giving a delayed play clue or r4"
+id: 22
+description: "A board where Alice can receive a delayed play clue"
 globally_available_info:
   suites:
     - "red"
@@ -18,34 +18,26 @@ globally_available_info:
     - player_id: "Bob"
     - player_id: "Cathy"
     - player_id: "Donald"
-      slot_clues:
-        - positive_clues: [ ]
-          negative_clues: [ ]
-        - positive_clues: [ ]
-          negative_clues: [ ]
-        - positive_clues: [ ]
-          negative_clues: [ ]
-        - positive_clues: [ "RED" ]
-          negative_clues: [ ]
 player_pov:
   player_id: "Alice"
+  hand: ["x", "x", "r2", "x"]
   teammates:
     - player_id: "Bob"
       hand:
-        - card: "r4"
-        - card: "y2"
-        - card: "r2"
-          thinks: "r2"
+        - card: "r1"
+        - card: "y5"
+        - card: "b4"
         - card: "b2"
     - player_id: "Cathy"
       hand:
-        - card: "b1"
         - card: "p3"
         - card: "g4"
+        - card: "y1"
         - card: "p4"
     - player_id: "Donald"
       hand:
         - card: "y3"
-        - card: "p1"
+        - card: "r1"
         - card: "b4"
         - card: "r3"
+          thinks: "r3"
