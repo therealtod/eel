@@ -1,6 +1,7 @@
 package engine.convention.hgroup.tech
 
 import TestUtils
+import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.hgroup.tech.TwoSave
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.GameAction
@@ -57,5 +58,56 @@ internal class TwoSaveTest {
         )
 
         Assertions.assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `Should recognise a two save when given to a teammate`() {
+        val playerPOV = TestUtils.getPlayerPOVFromScenario(17)
+        val action = ObservedClue(
+            clueAction = RankClueAction(
+                clueGiver = "Bob",
+                clueReceiver = "Cathy",
+                rank = Rank.TWO,
+            ),
+            slotsTouched = setOf(1, 4, 5)
+        )
+
+        val actual = TwoSave.matches(action, playerPOV)
+
+        Assertions.assertTrue(actual)
+    }
+
+    @Test
+    fun `Should recognise a two save when receiving it`() {
+        val playerPOV = TestUtils.getPlayerPOVFromScenario(17)
+        val action = ObservedClue(
+            clueAction = RankClueAction(
+                clueGiver = "Cathy",
+                clueReceiver = "Alice",
+                rank = Rank.TWO,
+            ),
+            slotsTouched = setOf(4, 5)
+        )
+
+        val actual = TwoSave.matches(action, playerPOV)
+
+        Assertions.assertTrue(actual)
+    }
+
+    @Test
+    fun `Should notice that a 2 clue on chop is not a 2 save if the other copy is visible by te clue giver`() {
+        val playerPOV = TestUtils.getPlayerPOVFromScenario(27)
+        val action = ObservedClue(
+            clueAction = RankClueAction(
+                clueGiver = "Donald",
+                clueReceiver = "Cathy",
+                rank = Rank.TWO,
+            ),
+            slotsTouched = setOf(2, 4)
+        )
+
+        val actual = TwoSave.matches(action, playerPOV)
+
+        Assertions.assertFalse(actual)
     }
 }

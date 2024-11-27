@@ -1,6 +1,7 @@
 package engine.convention.hgroup.tech
 
 import TestUtils
+import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.hgroup.tech.SimplePrompt
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
@@ -116,5 +117,22 @@ internal class SimplePromptTest {
         )
 
         Assertions.assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `Should recognize a prompt when it given to a teammate`() {
+        val playerPOV = TestUtils.getPlayerPOVFromScenario(26)
+        val action = ObservedClue(
+            clueAction = ColorClueAction(
+                clueGiver = "Donald",
+                clueReceiver = "Bob",
+                color = Color.BLUE,
+            ),
+            slotsTouched = setOf(1)
+        )
+
+        val actual = SimplePrompt.matches(action, playerPOV)
+
+        Assertions.assertTrue(actual)
     }
 }

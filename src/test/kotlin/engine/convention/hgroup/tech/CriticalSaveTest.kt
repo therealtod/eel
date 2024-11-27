@@ -125,6 +125,24 @@ internal class CriticalSaveTest {
     }
 
     @Test
+    fun `Should not recognize a clue as a CriticalSave if the chop cannot be a critical card`() {
+        val playerPOV = TestUtils.getPlayerPOVFromScenario(1)
+
+        val action = ObservedClue(
+            clueAction = RankClueAction(
+                clueGiver = "Bob",
+                clueReceiver = "Alice",
+                rank = Rank.FOUR,
+            ),
+            slotsTouched = setOf(1, 3)
+        )
+
+        val actual = CriticalSave.matches(action, playerPOV)
+
+        Assertions.assertTrue(actual)
+    }
+
+    @Test
     fun `Should recognize a clue as a CriticalSave if the chop can be a critical card`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(21)
 

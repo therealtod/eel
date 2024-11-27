@@ -1,5 +1,6 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
+import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
 import eelst.ilike.engine.factory.GameActionFactory
 import eelst.ilike.engine.player.PlayerPOV
@@ -18,8 +19,7 @@ object TwoSave : SaveClue(
         return card.rank == Rank.TWO
                 && canBeTwoSaved(
             card = card,
-            teammate = teammate,
-            playerPOV = playerPOV,
+            teammates = playerPOV.teammates.filter { it.playerId != teammate.playerId },
         )
 
     }
@@ -41,15 +41,49 @@ object TwoSave : SaveClue(
         return actions.toSet()
     }
 
+    override fun matchesClue(action: ObservedClue, playerPOV: PlayerPOV): Boolean {
+        val clueReceiver = action.gameAction.clueReceiver
+        val receiverHand = playerPOV.getHand(clueReceiver)
+        val touchedSlotIndexes = action.slotsTouched
+        val chop = getChop(receiverHand)
+        val focus = getFocusedSlot(
+            hand = receiverHand,
+            touchedSlotsIndexes = touchedSlotIndexes
+        )
+        if (focus.index != chop.index) {
+            return false
+        }
+        if (clueReceiver != playerPOV.playerId) {
+            val teammate = playerPOV.getTeammate(clueReceiver)
+            return teammateSlotMatchesCondition(
+                teammate = teammate,
+                slotIndex = focus.index,
+                playerPOV = playerPOV,
+            )
+        }
+        val saveableTwos = playerPOV
+            .globallyAvailableInfo
+            .suites
+            .flatMap { it.getAllUniqueCards() }
+            .filter {
+                it.rank == Rank.TWO &&
+                playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) > 0 &&
+                        canBeTwoSaved(
+                            card = it,
+                            teammates = playerPOV.teammates
+                        )
+            }
+        val ownSlot = playerPOV.ownHand.getSlot(focus.index)
+        return ownSlot.getPossibleIdentities().intersect(saveableTwos).isNotEmpty()
+    }
+
     private fun canBeTwoSaved(
         card: HanabiCard,
-        teammate: Teammate,
-        playerPOV: PlayerPOV,
+        teammates: Collection<Teammate>,
     ): Boolean {
-        return playerPOV.teammates.none { otherTeammate ->
-            otherTeammate.playerId != teammate.playerId &&
-                    otherTeammate.hand.copiesOf(card) == 1 &&
-                    otherTeammate.getCardAtSlot(getChop(otherTeammate.hand).index) != card
+        return teammates.none { teammate ->
+                    teammate.hand.copiesOf(card) == 1 &&
+                    teammate.getCardAtSlot(getChop(teammate.hand).index) != card
         }
     }
 }
