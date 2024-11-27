@@ -63,9 +63,9 @@ object InputParser {
         knowledge: List<String>,
         suites: Set<Suite>,
         visibleCards: List<HanabiCard>,
-    ): Set<PersonalSlotKnowledge> {
+    ): Map<Int, PersonalSlotKnowledge> {
         val slots = knowledge.mapIndexed { index, dto ->
-            PersonalSlotKnowledgeImpl(
+            index to PersonalSlotKnowledgeImpl(
                 impliedIdentities = parseCards(dto, suites),
                 empathy = GameUtils.getCardEmpathy(
                     visibleCards = visibleCards,
@@ -83,7 +83,7 @@ object InputParser {
                 )
             )
         }
-        return slots.toSet()
+        return slots.associate { it.first + 1 to it.second }
     }
 
     private fun parseClue(clueAbbreviation: String): ClueValue {
@@ -110,7 +110,7 @@ object InputParser {
         teammateDTO: TeammateDTO,
         suites: Set<Suite>,
         visibleCards: List<HanabiCard>,
-    ): Set<PersonalSlotKnowledge> {
+    ): Map<Int, PersonalSlotKnowledge> {
         return parsePlayerSlotKnowledge(
             globallyAvailablePlayerInfo = globallyAvailablePlayerInfo,
             knowledge = teammateDTO.hand.map { it.thinks },

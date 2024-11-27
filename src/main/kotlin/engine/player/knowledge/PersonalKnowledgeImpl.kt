@@ -5,7 +5,7 @@ import eelst.ilike.game.PlayerId
 
 class PersonalKnowledgeImpl(
     private val personalHandKnowledge: Map<PlayerId, PersonalHandKnowledge>,
-    private val visibleHands: Map<PlayerId, VisibleHand>
+    private val visibleHands: Map<PlayerId, VisibleHand> = emptyMap()
 ) : PersonalKnowledge {
     override fun getOwnHandKnowledge(playerId: PlayerId): PersonalHandKnowledge {
         return personalHandKnowledge[playerId]!!

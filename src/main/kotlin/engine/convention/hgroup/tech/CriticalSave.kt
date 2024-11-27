@@ -7,10 +7,12 @@ import eelst.ilike.engine.convention.hgroup.HGroupCommon
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.hasChop
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.isGloballyKnownPlayable
+import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.hand.slot.InterpretedSlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.GameAction
@@ -78,5 +80,17 @@ object CriticalSave
         return focusedSlot.getPossibleIdentities()
             .any { playerPOV.globallyAvailableInfo.isCritical(it) }
 
+    }
+
+    override fun getGeneratedKnowledge(action: ObservedAction<ClueAction>, playerPOV: PlayerPOV): PersonalKnowledge {
+        val clueReceiver = action.gameAction.clueReceiver
+        val receiverHand = playerPOV.getHand(clueReceiver)
+        val touchedSlotIndexes = TODO()
+        val chop = getChop(receiverHand)
+        val focus = getFocusedSlot(
+            hand = receiverHand,
+            touchedSlotsIndexes = touchedSlotIndexes
+        )
+        return TODO()
     }
 }

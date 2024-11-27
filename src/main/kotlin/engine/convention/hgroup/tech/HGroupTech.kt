@@ -99,4 +99,3 @@ abstract class HGroupTech<T : GameAction>(
 
     override fun toString() = name
 }
-

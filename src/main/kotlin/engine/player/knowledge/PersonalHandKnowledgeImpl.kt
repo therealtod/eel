@@ -1,7 +1,9 @@
 package eelst.ilike.engine.player.knowledge
 
-class PersonalHandKnowledgeImpl(private val slotKnowledge: Set<PersonalSlotKnowledge>) : PersonalHandKnowledge {
+import eelst.ilike.engine.factory.KnowledgeFactory
+
+class PersonalHandKnowledgeImpl(private val slotKnowledge: Map<Int, PersonalSlotKnowledge>) : PersonalHandKnowledge {
     override fun getKnowledge(slotIndex: Int): PersonalSlotKnowledge {
-        return slotKnowledge.elementAt(slotIndex - 1)
+        return slotKnowledge[slotIndex] ?: KnowledgeFactory.createEmptyPersonalSlotKnowledge()
     }
 }

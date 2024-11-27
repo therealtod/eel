@@ -1,9 +1,11 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
+import eelst.ilike.engine.action.ObservedAction
 import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.ConventionTech
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.suite.*
 
@@ -62,5 +64,9 @@ object DirectPlayClue : PlayClue(
             .any {
                 playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) == 0
             }
+    }
+
+    override fun getGeneratedKnowledge(action: ObservedAction<ClueAction>, playerPOV: PlayerPOV): PersonalKnowledge {
+        TODO("Not yet implemented")
     }
 }

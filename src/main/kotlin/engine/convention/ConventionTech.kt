@@ -6,6 +6,7 @@ import eelst.ilike.engine.action.ObservedDiscard
 import eelst.ilike.engine.action.ObservedPlay
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.entity.action.GameAction
 
 
@@ -18,4 +19,5 @@ interface ConventionTech<T : GameAction> {
     fun matchesPlay(action: ObservedPlay, playerPOV: PlayerPOV): Boolean
     fun matchesDiscard(action: ObservedDiscard, playerPOV: PlayerPOV): Boolean
     fun matchesClue(action: ObservedClue, playerPOV: PlayerPOV): Boolean
+    fun getGeneratedKnowledge(action: ObservedAction<T>, playerPOV: PlayerPOV): PersonalKnowledge
 }

@@ -1,7 +1,9 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
+import eelst.ilike.engine.action.ObservedAction
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.entity.action.PlayAction
 
 object PlayKnownPlayable : HGroupTech<PlayAction>(
@@ -23,5 +25,9 @@ object PlayKnownPlayable : HGroupTech<PlayAction>(
                     slotIndex = it.index
                 )
             }.toSet()
+    }
+
+    override fun getGeneratedKnowledge(action: ObservedAction<PlayAction>, playerPOV: PlayerPOV): PersonalKnowledge {
+        TODO("Not yet implemented")
     }
 }

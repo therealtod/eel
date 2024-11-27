@@ -1,8 +1,10 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
+import eelst.ilike.engine.action.ObservedAction
 import eelst.ilike.engine.convention.hgroup.HGroupCommon
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.entity.action.DiscardAction
 
 object DiscardChop : HGroupTech<DiscardAction>(
@@ -22,5 +24,9 @@ object DiscardChop : HGroupTech<DiscardAction>(
                 )
             )
         } else emptySet()
+    }
+
+    override fun getGeneratedKnowledge(action: ObservedAction<DiscardAction>, playerPOV: PlayerPOV): PersonalKnowledge {
+        TODO("Not yet implemented")
     }
 }
