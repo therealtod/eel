@@ -1,10 +1,6 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.action.ObservedAction
-import eelst.ilike.engine.action.ObservedClue
-import eelst.ilike.engine.action.ObservedDiscard
-import eelst.ilike.engine.action.ObservedPlay
-import eelst.ilike.engine.convention.ConventionTech
+import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.hasChop
 import eelst.ilike.engine.factory.GameActionFactory
@@ -16,12 +12,14 @@ import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.GameAction
+import eelst.ilike.game.entity.card.HanabiCard
+import eelst.ilike.game.entity.suite.Suite
+import eelst.ilike.game.variant.Variant
 
-abstract class HGroupTech<T : GameAction>(
-    override val name: String,
-    private val takesPrecedenceOver: Set<HGroupTech<T>> = emptySet(),
-) : ConventionTech<T> {
-    protected fun getAllFocusingClues(
+interface HGroupTech: ConventionTech {
+    fun appliesTo(card: HanabiCard, variant: Variant): Boolean
+
+    fun getAllFocusingClues(
         playerPOV: PlayerPOV,
         slot: VisibleSlot,
         teammate: Teammate,
@@ -73,29 +71,7 @@ abstract class HGroupTech<T : GameAction>(
         }
     }
 
-    override fun overrides(otherTech: ConventionTech<T>): Boolean {
+    override fun overrides(otherTech: ConventionTech): Boolean {
         return false
     }
-
-    override fun matches(action: ObservedAction<T>, playerPOV: PlayerPOV): Boolean {
-        return when (action) {
-            is ObservedPlay -> matchesPlay(action, playerPOV)
-            is ObservedDiscard -> matchesDiscard(action, playerPOV)
-            is ObservedClue -> matchesClue(action, playerPOV)
-        }
-    }
-
-    override fun matchesPlay(action: ObservedPlay, playerPOV: PlayerPOV): Boolean {
-        return false
-    }
-
-    override fun matchesDiscard(action: ObservedDiscard, playerPOV: PlayerPOV): Boolean {
-        return false
-    }
-
-    override fun matchesClue(action: ObservedClue, playerPOV: PlayerPOV): Boolean {
-        return false
-    }
-
-    override fun toString() = name
 }

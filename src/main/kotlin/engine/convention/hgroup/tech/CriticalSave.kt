@@ -16,16 +16,21 @@ import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.GameAction
+import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.*
+import eelst.ilike.game.variant.Variant
 
 object CriticalSave
-    : SaveClue(
-    name = "Critical Save",
-    appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
-) {
+    : SaveClue() {
+    override val name = "Critical Save"
+
+    override fun appliesTo(card: HanabiCard, variant: Variant): Boolean {
+        return true
+    }
+
     override fun teammateSlotMatchesCondition(teammate: Teammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
         val card = teammate.getCardAtSlot(slotIndex)
-        return appliesTo.contains(card.suite) &&
+        return appliesTo(card, playerPOV.globallyAvailableInfo.variant) &&
                 card.rank != Rank.FIVE &&
                 playerPOV.globallyAvailableInfo.isCritical(card) &&
                 !isGloballyKnownPlayable(card, playerPOV)
@@ -55,7 +60,7 @@ object CriticalSave
     }
 
     override fun matchesClue(action: ObservedClue, playerPOV: PlayerPOV): Boolean {
-        val clueReceiver = action.gameAction.clueReceiver
+        val clueReceiver = action.clueAction.clueReceiver
         val receiverHand = playerPOV.getHand(clueReceiver)
         val touchedSlotIndexes = action.slotsTouched
         val chop = getChop(receiverHand)
@@ -82,15 +87,7 @@ object CriticalSave
 
     }
 
-    override fun getGeneratedKnowledge(action: ObservedAction<ClueAction>, playerPOV: PlayerPOV): PersonalKnowledge {
-        val clueReceiver = action.gameAction.clueReceiver
-        val receiverHand = playerPOV.getHand(clueReceiver)
-        val touchedSlotIndexes = TODO()
-        val chop = getChop(receiverHand)
-        val focus = getFocusedSlot(
-            hand = receiverHand,
-            touchedSlotsIndexes = touchedSlotIndexes
-        )
-        return TODO()
+    override fun getGeneratedKnowledge(action: ObservedClue, playerPOV: PlayerPOV): PersonalKnowledge {
+        TODO("Not yet implemented")
     }
 }

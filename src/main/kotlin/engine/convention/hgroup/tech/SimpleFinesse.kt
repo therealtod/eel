@@ -8,14 +8,13 @@ import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.entity.action.ClueAction
+import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.*
+import eelst.ilike.game.variant.Variant
 
-object SimpleFinesse
-    : Finesse(
-    name = "Simple Finesse",
-    appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
-    takesPrecedenceOver = emptySet(),
-) {
+object SimpleFinesse: Finesse() {
+    override val name = "Simple Finesse"
+
     override fun teammateSlotMatchesCondition(teammate: Teammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
         val card = teammate.getCardAtSlot(slotIndex)
         return playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) == 1 &&
@@ -48,7 +47,7 @@ object SimpleFinesse
     }
 
     override fun matchesClue(action: ObservedClue, playerPOV: PlayerPOV): Boolean {
-        val clueReceiver = action.gameAction.clueReceiver
+        val clueReceiver = action.clueAction.clueReceiver
         if (clueReceiver == playerPOV.playerId) {
             return false
         }
@@ -75,7 +74,7 @@ object SimpleFinesse
         return playerPOV.globallyAvailableInfo.getGlobalAwayValue(focusedCard) == 1
     }
 
-    override fun getGeneratedKnowledge(action: ObservedAction<ClueAction>, playerPOV: PlayerPOV): PersonalKnowledge {
+    override fun getGeneratedKnowledge(action: ObservedClue, playerPOV: PlayerPOV): PersonalKnowledge {
         TODO("Not yet implemented")
     }
 }

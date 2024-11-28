@@ -2,20 +2,23 @@ package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.action.ObservedAction
 import eelst.ilike.engine.action.ObservedClue
-import eelst.ilike.engine.convention.ConventionTech
+import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.*
+import eelst.ilike.game.variant.Variant
 
 data object DelayedPlayClue
-    : IndirectPlayClue(
-    name = "Delayed Play Clue",
-    appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
-    takesPrecedenceOver = emptySet(),
-) {
+    : IndirectPlayClue() {
+    override val name = "Delayed Play Clue"
+
+    override fun appliesTo(card: HanabiCard, variant: Variant): Boolean {
+        return true
+    }
+
     override fun teammateSlotMatchesCondition(teammate: Teammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
         val card = teammate.getCardAtSlot(slotIndex)
         return !teammate.knows(slotIndex) &&
@@ -44,12 +47,12 @@ data object DelayedPlayClue
         return actions.toSet()
     }
 
-    override fun overrides(otherTech: ConventionTech<ClueAction>): Boolean {
+    override fun overrides(otherTech: ConventionTech): Boolean {
         return otherTech !is SaveClue && otherTech !is DirectPlayClue
     }
 
     override fun matchesClue(action: ObservedClue, playerPOV: PlayerPOV): Boolean {
-        val clueReceiver = action.gameAction.clueReceiver
+        val clueReceiver = action.clueAction.clueReceiver
         val receiverHand = playerPOV.getHand(clueReceiver)
         val touchedSlotIndexes = action.slotsTouched
         val focus = getFocusedSlot(
@@ -85,7 +88,7 @@ data object DelayedPlayClue
         return playerPOV.teamKnowsAllCards(missingCards)
     }
 
-    override fun getGeneratedKnowledge(action: ObservedAction<ClueAction>, playerPOV: PlayerPOV): PersonalKnowledge {
+    override fun getGeneratedKnowledge(action: ObservedClue, playerPOV: PlayerPOV): PersonalKnowledge {
         TODO("Not yet implemented")
     }
 }

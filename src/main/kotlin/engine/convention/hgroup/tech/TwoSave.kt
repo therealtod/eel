@@ -11,11 +11,15 @@ import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.*
+import eelst.ilike.game.variant.Variant
 
-object TwoSave : SaveClue(
-    name = "2-Save",
-    appliesTo = setOf(Red, Yellow, Green, Blue, Purple),
-) {
+object TwoSave: SaveClue() {
+    override val name = "2-Save"
+
+    override fun appliesTo(card: HanabiCard, variant: Variant): Boolean {
+        return true
+    }
+
     override fun teammateSlotMatchesCondition(teammate: Teammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
         val card = teammate.getCardAtSlot(slotIndex)
         return card.rank == Rank.TWO
@@ -44,7 +48,7 @@ object TwoSave : SaveClue(
     }
 
     override fun matchesClue(action: ObservedClue, playerPOV: PlayerPOV): Boolean {
-        val clueReceiver = action.gameAction.clueReceiver
+        val clueReceiver = action.clueAction.clueReceiver
         val receiverHand = playerPOV.getHand(clueReceiver)
         val touchedSlotIndexes = action.slotsTouched
         val chop = getChop(receiverHand)
@@ -89,7 +93,7 @@ object TwoSave : SaveClue(
         }
     }
 
-    override fun getGeneratedKnowledge(action: ObservedAction<ClueAction>, playerPOV: PlayerPOV): PersonalKnowledge {
+    override fun getGeneratedKnowledge(action: ObservedClue, playerPOV: PlayerPOV): PersonalKnowledge {
         TODO("Not yet implemented")
     }
 }

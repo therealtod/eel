@@ -5,13 +5,9 @@ import eelst.ilike.engine.convention.hgroup.tech.*
 data object Level1 : HGroupLevel(
     name = "Level 1",
     rank = 1,
-    playTechs = setOf(
+    definedTechs = setOf(
         PlayKnownPlayable,
-    ),
-    discardTechs = setOf(
         DiscardChop,
-    ),
-    clueTechs = setOf(
         CriticalSave,
         DelayedPlayClue,
         SimplePrompt,

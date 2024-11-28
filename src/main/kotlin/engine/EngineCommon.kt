@@ -6,7 +6,7 @@ import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.action.GameAction
 
 object EngineCommon {
-    fun <T : GameAction> getPrunedAction(actions: Collection<ConventionalAction<T>>): Set<ConventionalAction<T>> {
+    fun getPrunedAction(actions: Collection<ConventionalAction>): Set<ConventionalAction> {
         val groupedActions = actions.groupBy { it.action }
         return groupedActions.map {
             it.value.fold(it.value.first()) { curr, next ->

@@ -1,5 +1,6 @@
 package eelst.ilike.engine.convention
 
+import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.DiscardAction
 import eelst.ilike.game.entity.action.PlayAction
@@ -7,23 +8,12 @@ import eelst.ilike.game.entity.action.PlayAction
 abstract class BaseConventionSet(
     override val name: String,
     override val includes: Set<ConventionSet> = emptySet(),
-    private val playTechs: Set<ConventionTech<PlayAction>> = emptySet(),
-    private val discardTechs: Set<ConventionTech<DiscardAction>> = emptySet(),
-    private val clueTechs: Set<ConventionTech<ClueAction>> = emptySet(),
+    private val definedTechs: Set<ConventionTech>,
+    // private val playTechs: Set<ConventionTech> = emptySet(),
+    // private val discardTechs: Set<ConventionTech> = emptySet(),
+    // private val clueTechs: Set<ConventionTech> = emptySet(),
 ) : ConventionSet {
-    override fun getPlayTechs(): Set<ConventionTech<PlayAction>> {
-        return playTechs + includes.flatMap { it.getPlayTechs() }
-    }
-
-    override fun getDiscardTechs(): Set<ConventionTech<DiscardAction>> {
-        return discardTechs + includes.flatMap { it.getDiscardTechs() }
-    }
-
-    override fun getClueTechs(): Set<ConventionTech<ClueAction>> {
-        return clueTechs + includes.flatMap { it.getClueTechs() }
-    }
-
-    override fun getTechs(): Set<ConventionTech<*>> {
-        return getPlayTechs() + getDiscardTechs() + getClueTechs()
+    override fun getTechs(): Set<ConventionTech> {
+        return definedTechs + includes.flatMap { it.getTechs() }
     }
 }

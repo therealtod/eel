@@ -1,7 +1,7 @@
 package eelst.ilike.engine.player
 
 import eelst.ilike.engine.convention.BaseConventionSet
-import eelst.ilike.engine.convention.ConventionTech
+import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.factory.PlayerFactory
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
@@ -44,19 +44,17 @@ class ActivePlayer(
         )
     }.toSet()
 
-    fun getLegalActions(conventionSet: BaseConventionSet): Set<ConventionalAction<*>> {
-        return prune(getCandidateActions(conventionSet.getPlayTechs())) +
-                prune(getCandidateActions(conventionSet.getDiscardTechs())) +
-                prune(getCandidateActions(conventionSet.getClueTechs()))
+    fun getLegalActions(conventionSet: BaseConventionSet): Set<ConventionalAction> {
+        return getCandidateActions(conventionSet.getTechs()).toSet()
     }
 
     override fun hasCardInSlot(card: HanabiCard, slotIndex: Int): Boolean {
         return getOwnSlot(slotIndex).contains(card)
     }
 
-    private fun <T : GameAction> getCandidateActions(
-        techs: Collection<ConventionTech<T>>
-    ): Collection<ConventionalAction<T>> {
+    private fun getCandidateActions(
+        techs: Collection<ConventionTech>
+    ): Collection<ConventionalAction> {
         return techs
             .flatMap { tech ->
                 tech.getGameActions(playerPOV)
@@ -69,7 +67,7 @@ class ActivePlayer(
             }
     }
 
-    private fun <T : GameAction> prune(actions: Collection<ConventionalAction<T>>): Set<ConventionalAction<T>> {
+    private fun prune(actions: Collection<ConventionalAction>): Set<ConventionalAction> {
         val overlappingGroups = actions.groupBy { it.action }
         return overlappingGroups.map { group ->
             group.value.fold(listOf(group.value.first())) { curr, next ->
