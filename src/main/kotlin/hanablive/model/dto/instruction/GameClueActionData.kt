@@ -6,7 +6,7 @@ data class GameClueActionData(
     val list: List<Int>,
     val target: Int,
     val turn: Int,
-): GameActionData(GameActionType.CLUE) {
+) : GameActionData(GameActionType.CLUE) {
     data class Clue(
         val type: Int,
         val value: Int,

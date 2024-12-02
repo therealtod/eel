@@ -4,7 +4,7 @@ import eelst.ilike.hanablive.bot.HanabLiveBot
 import eelst.ilike.hanablive.model.dto.HanabLiveInstructionType
 import eelst.ilike.hanablive.model.dto.instruction.GetGameInfo1
 
-class TableStartHandler: HanabLiveInstructionHandler() {
+class TableStartHandler : HanabLiveInstructionHandler() {
     override fun supports(instructionType: HanabLiveInstructionType): Boolean {
         return instructionType == HanabLiveInstructionType.TABLE_START
     }

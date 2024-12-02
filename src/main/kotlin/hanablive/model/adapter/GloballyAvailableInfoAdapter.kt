@@ -1,23 +1,31 @@
 package eelst.ilike.hanablive.model.adapter
 
-import eelst.ilike.game.GloballyAvailableInfo
+import eelst.ilike.game.BaseGloballyAvailableInfo
+import eelst.ilike.game.DynamicGloballyAvailableInfo
+import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.PlayingStack
-import eelst.ilike.game.entity.suite.Suite
-import eelst.ilike.game.entity.suite.SuiteId
-import eelst.ilike.game.variant.Variant
+import eelst.ilike.game.entity.TrashPile
 import eelst.ilike.hanablive.model.dto.command.GameActionData
 import eelst.ilike.hanablive.model.dto.command.GameInitData
 import eelst.ilike.hanablive.model.dto.metadata.SuiteMetadata
 import eelst.ilike.hanablive.model.dto.metadata.VariantMetadata
 
 class GloballyAvailableInfoAdapter(
-    private val gameInitData: GameInitData,
-    private val initialActions: List<GameActionData>,
-    variantsMetadata: Collection<VariantMetadata>,
+    playerIds: Set<PlayerId>,
+    variantMetadata: VariantMetadata,
     suitsMetadata: Collection<SuiteMetadata>,
-): GloballyAvailableInfo {
-    override val clueTokens = TODO()
-
+) : BaseGloballyAvailableInfo(
+    playersIds = playerIds,
+    globallyAvailablePlayerInfo = TODO(),
+    dynamicGloballyAvailableInfo = DynamicGloballyAvailableInfo(
+        playingStacks = TODO(),
+        trashPile = TrashPile(),
+        strikes = 0,
+        clueTokens = 8,
+        pace = TODO(),
+        efficiency = TODO(),
+    )
+) {
     override val efficiency = TODO()
 
     override val handsSize = TODO()
@@ -28,12 +36,10 @@ class GloballyAvailableInfoAdapter(
 
     override val players = TODO()
 
-    override val playingStacks: Map<SuiteId, PlayingStack>
-        get() = TODO("Not yet implemented")
+    override val variant = VariantAdapter(
+        variantMetadata = variantMetadata,
+        suitsMetadata = suitsMetadata,
+    )
 
-    override val score = 0
-
-    override val strikes = 0
-
-    override val variant = Variant.getVariantByName()
+    override val suits = variant.suits
 }

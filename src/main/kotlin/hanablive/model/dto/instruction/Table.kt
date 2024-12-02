@@ -35,7 +35,7 @@ data class Table(
         val deckPlays: Boolean,
         val emptyClues: Boolean,
         val oneExtraCard: Boolean,
-        val oneLessCard:Boolean,
+        val oneLessCard: Boolean,
         val allOrNothing: Boolean,
         val detrimentalCharacters: Boolean
     )

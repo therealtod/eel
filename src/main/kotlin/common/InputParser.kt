@@ -24,7 +24,7 @@ object InputParser {
     fun parseCard(cardAbbreviation: String, suites: Set<Suite>): HanabiCard {
         val suiteAbbreviation = cardAbbreviation.first()
         val rank = Rank.getByNumericalValue(cardAbbreviation.last().toString().toInt())
-        val suite = Suite.fromAbbreviation(suiteAbbreviation, suites)
+        val suite = suites.first { it.abbreviations.contains(suiteAbbreviation.toString()) }
         return HanabiCard(
             suite = suite,
             rank = rank,

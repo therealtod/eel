@@ -1,10 +1,10 @@
 package eelst.ilike.game.entity.suite
 
+import eelst.ilike.common.model.metadata.SuiteMetadata
 import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.card.HanabiCard
-import eelst.ilike.utils.Configuration
 
 abstract class Suite(
     val id: SuiteId,
@@ -15,7 +15,7 @@ abstract class Suite(
     val suiteDirection: SuiteDirection = SuiteDirection.UP,
 ) {
     private val ranks: Set<Rank> = setOf(Rank.ONE, Rank.TWO, Rank.THREE, Rank.FOUR, Rank.FIVE)
-        .filter { it.numericalValue > stackSize }
+        .filter { it.numericalValue <= stackSize }
         .plus(specialRanks)
         .toSet()
 
@@ -43,14 +43,14 @@ abstract class Suite(
 
     open fun clueTouches(card: HanabiCard, clueValue: ClueValue): Boolean {
         return when (clueValue) {
-            is Rank -> getRanksTouching(card.rank).contains(clueValue)
-            is Color -> getColorsTouching(card.rank).contains(clueValue)
+            is Rank -> return cluedRankTouches(card.rank, clueValue)
+            is Color -> return cluedColorTouches(card.rank, clueValue)
             else -> throw IllegalArgumentException("Unsupported clue value $clueValue")
         }
     }
 
     fun cardAfter(card: HanabiCard): HanabiCard {
-        val nextRank = ranks.firstOrNull{ it > card.rank }
+        val nextRank = ranks.firstOrNull { it > card.rank }
             ?: throw IllegalArgumentException("$card is the last card for suite $this")
         return HanabiCard(
             suite = this,
@@ -59,7 +59,7 @@ abstract class Suite(
     }
 
     fun cardBefore(card: HanabiCard): HanabiCard {
-        val nextRank = ranks.firstOrNull{ it < card.rank }
+        val nextRank = ranks.lastOrNull { it < card.rank }
             ?: throw IllegalArgumentException("$card is the first card for suite $this")
         return HanabiCard(
             suite = this,
@@ -78,9 +78,9 @@ abstract class Suite(
             .toSet()
     }
 
-    abstract fun getRanksTouching(rank: Rank): Set<Rank>
+    abstract fun cluedRankTouches(thisSuiteRank: Rank, cluedRank: Rank): Boolean
 
-    abstract fun getColorsTouching(rank: Rank): Set<Color>
+    abstract fun cluedColorTouches(thisSuiteRank: Rank, cluedColor: Color): Boolean
 
     abstract fun getPlayingOrder(card: HanabiCard): Int
 
@@ -103,19 +103,13 @@ abstract class Suite(
         return result
     }
 
-    companion object {
-        fun fromId(suiteId: SuiteId): Suite {
-            return Configuration.registeredSuitesMap[suiteId]
-                ?: throw IllegalArgumentException("The suite with id $suiteId is unregistered")
-        }
-
-        fun fromAbbreviation(abbreviation: String, suites: Set<Suite>): Suite {
-            return suites.firstOrNull { it.abbreviations.contains(abbreviation) }
-                ?: Unknown
-        }
-    }
-
     override fun toString(): String {
         return name
+    }
+
+    companion object {
+        fun fromMetadata(metadata: SuiteMetadata): Suite {
+            TODO()
+        }
     }
 }

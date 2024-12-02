@@ -3,23 +3,21 @@ package eelst.ilike.hanablive.bot
 import eelst.ilike.bot.Bot
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.ClueValue
-import eelst.ilike.hanablive.bot.state.HanabLiveBotState
 import eelst.ilike.hanablive.HanabLiveWebSocketSession
+import eelst.ilike.hanablive.bot.state.HanabLiveBotState
 import eelst.ilike.hanablive.bot.state.InitialState
 import eelst.ilike.hanablive.handler.HanabLiveInstructionHandler
-import eelst.ilike.hanablive.handler.TableListHandler
 import eelst.ilike.hanablive.handler.WelcomeHandler
 import eelst.ilike.hanablive.model.dto.HanabLiveInstructionType
 import eelst.ilike.hanablive.model.dto.command.GameInitData
 import eelst.ilike.hanablive.model.dto.command.Table
 import eelst.ilike.hanablive.model.dto.instruction.GetGameInfo1
-import eelst.ilike.hanablive.model.dto.instruction.GetGameInfo2
 import eelst.ilike.hanablive.model.dto.instruction.HanabLiveInstruction
 
 class HanabLiveBot(
     private val username: String,
     private val password: String,
-): Bot {
+) : Bot {
     var state: HanabLiveBotState = InitialState(
         this,
         username = username,

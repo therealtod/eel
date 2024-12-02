@@ -11,7 +11,7 @@ class InitialState(
     bot: HanabLiveBot,
     username: String,
     password: String,
-): HanabLiveBotState(bot) {
+) : HanabLiveBotState(bot) {
     override suspend fun setTables(tables: Collection<Table>) {
         val newState = LoggedInState(tables = tables.associateBy { it.id }.toMutableMap(), bot = bot)
         bot.state = newState

@@ -7,4 +7,13 @@ enum class Color : ClueValue {
     GREEN,
     BLUE,
     PURPLE;
+
+    companion object {
+        fun getFromStringFormat(color: String): Color {
+            return entries.find { it.name.equals(color, ignoreCase = true) }
+                ?: throw IllegalArgumentException(
+                    "Could not find a color corresponding to the string $color"
+                )
+        }
+    }
 }

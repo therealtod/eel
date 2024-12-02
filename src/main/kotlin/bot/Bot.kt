@@ -1,9 +1,7 @@
 package eelst.ilike.bot
 
-import eelst.ilike.common.model.metadata.TableMetadata
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.ClueValue
-import eelst.ilike.hanablive.model.dto.command.Table
 
 interface Bot {
     suspend fun run()

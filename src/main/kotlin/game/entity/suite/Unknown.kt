@@ -1,9 +1,6 @@
 package eelst.ilike.game.entity.suite
 
-import eelst.ilike.game.entity.Color
-import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.card.HanabiCard
-
+/*
 object Unknown : Suite(
     id = "unknown",
     name = "Unknown",
@@ -40,3 +37,5 @@ object Unknown : Suite(
         TODO("Not yet implemented")
     }
 }
+
+ */

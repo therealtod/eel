@@ -6,4 +6,4 @@ data class GameStrikeActionData(
     val num: Int,
     val turn: Int,
     val order: InterpretedHand,
-): GameActionData(GameActionType.STRIKE)
+) : GameActionData(GameActionType.STRIKE)

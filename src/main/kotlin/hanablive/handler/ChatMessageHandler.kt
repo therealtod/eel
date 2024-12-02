@@ -1,14 +1,14 @@
 package eelst.ilike.hanablive.handler
 
-import eelst.ilike.hanablive.model.dto.HanabLiveInstructionType
-import eelst.ilike.utils.Configuration
 import com.fasterxml.jackson.module.kotlin.readValue
 import eelst.ilike.bot.handler.request.CommandType
 import eelst.ilike.bot.handler.request.JoinMyTableHandler
 import eelst.ilike.hanablive.bot.HanabLiveBot
+import eelst.ilike.hanablive.model.dto.HanabLiveInstructionType
 import eelst.ilike.hanablive.model.dto.command.ChatMessage
+import eelst.ilike.utils.Configuration
 
-data object ChatMessageHandler: HanabLiveInstructionHandler() {
+data object ChatMessageHandler : HanabLiveInstructionHandler() {
     private val commandHandler = JoinMyTableHandler
 
     override fun supports(instructionType: HanabLiveInstructionType): Boolean {
@@ -37,5 +37,3 @@ data object ChatMessageHandler: HanabLiveInstructionHandler() {
     override val nextHandler: HanabLiveInstructionHandler
         get() = NoOpMessageHandler
 }
-
-// {"msg":"pls joinme","who":"ilikeeelst","discord":false,"server":false,"datetime":"2024-12-01T15:17:36.843550073Z","room":"","recipient":"eel-bot-1"}

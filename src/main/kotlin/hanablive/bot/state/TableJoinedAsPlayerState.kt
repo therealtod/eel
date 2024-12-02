@@ -1,6 +1,5 @@
 package eelst.ilike.hanablive.bot.state
 
-import eelst.ilike.bot.Bot
 import eelst.ilike.game.PlayerId
 import eelst.ilike.hanablive.bot.HanabLiveBot
 import eelst.ilike.hanablive.model.TableId
@@ -8,7 +7,7 @@ import eelst.ilike.hanablive.model.dto.command.GameInitData
 import eelst.ilike.hanablive.model.dto.command.Table
 import eelst.ilike.hanablive.model.dto.instruction.GameActionListData
 
-class TableJoinedAsPlayerState(val tableId: TableId, bot: HanabLiveBot): HanabLiveBotState(bot=bot) {
+class TableJoinedAsPlayerState(val tableId: TableId, bot: HanabLiveBot) : HanabLiveBotState(bot = bot) {
     override suspend fun putTable(table: Table) {
     }
 

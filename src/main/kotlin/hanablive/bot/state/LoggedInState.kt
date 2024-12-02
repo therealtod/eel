@@ -9,7 +9,7 @@ import eelst.ilike.hanablive.model.dto.instruction.GameActionListData
 import eelst.ilike.hanablive.model.dto.instruction.PasswordProtectedTableJoin
 import eelst.ilike.hanablive.model.dto.instruction.TableJoin
 
-class LoggedInState(bot: HanabLiveBot, private val tables: MutableMap<Int, Table>): HanabLiveBotState(bot) {
+class LoggedInState(bot: HanabLiveBot, private val tables: MutableMap<Int, Table>) : HanabLiveBotState(bot) {
     override suspend fun setTables(tables: Collection<Table>) {
         this.tables.clear()
         this.tables.putAll(tables.associateBy { it.id })

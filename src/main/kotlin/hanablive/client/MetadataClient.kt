@@ -1,5 +1,6 @@
 package eelst.ilike.hanablive.client
 
+import com.fasterxml.jackson.module.kotlin.readValue
 import eelst.ilike.hanablive.HanabLiveConstants
 import eelst.ilike.hanablive.model.dto.metadata.SuiteMetadata
 import eelst.ilike.hanablive.model.dto.metadata.VariantMetadata
@@ -12,7 +13,6 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
-import com.fasterxml.jackson.module.kotlin.readValue
 
 object MetadataClient {
     private val httpClient = HttpClient(CIO) {

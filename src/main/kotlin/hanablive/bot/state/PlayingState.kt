@@ -8,7 +8,7 @@ import eelst.ilike.hanablive.model.dto.command.GameInitData
 import eelst.ilike.hanablive.model.dto.command.Table
 import eelst.ilike.hanablive.model.dto.instruction.GameActionListData
 
-class GameStartedState(val playerPOV: PlayerPOV, bot: HanabLiveBot): HanabLiveBotState(bot) {
+class GameStartedState(val playerPOV: PlayerPOV, bot: HanabLiveBot) : HanabLiveBotState(bot) {
     override suspend fun setTables(tables: Collection<Table>) {
         TODO("Not yet implemented")
     }

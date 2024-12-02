@@ -5,13 +5,14 @@ import eelst.ilike.hanablive.client.HanabLiveHttpClient
 import eelst.ilike.hanablive.client.HanabLiveWebSocketClient
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.*
+import kotlinx.coroutines.channels.produce
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
-class HanabLiveWebSocketSession(val username: String, val password: String): CoroutineScope {
+class HanabLiveWebSocketSession(val username: String, val password: String) : CoroutineScope {
     private lateinit var webSocketSession: ClientWebSocketSession
 
     suspend fun startSession() {
@@ -27,13 +28,13 @@ class HanabLiveWebSocketSession(val username: String, val password: String): Cor
         val responseHeaders = serverResponse.headers
         val cookieHeaderValue = responseHeaders[HanabLiveConstants.COOKIE_NAME]
             ?: throw IllegalStateException()
-            webSocketSession = HanabLiveWebSocketClient.connect(cookieHeaderValue)
+        webSocketSession = HanabLiveWebSocketClient.connect(cookieHeaderValue)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun getIncomingMessages(): ReceiveChannel<String> = produce {
         for (frame in webSocketSession.incoming) {
-            when(frame) {
+            when (frame) {
                 is Frame.Text -> send(frame.readText())
                 else -> {}
             }

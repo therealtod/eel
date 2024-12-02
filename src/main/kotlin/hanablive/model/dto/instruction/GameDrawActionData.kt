@@ -6,4 +6,4 @@ data class GameDrawActionData(
     val order: Int,
     val suitIndex: Int,
     val rank: Int,
-): GameActionData(GameActionType.DRAW)
+) : GameActionData(GameActionType.DRAW)

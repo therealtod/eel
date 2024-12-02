@@ -57,7 +57,7 @@ object TwoSave : SaveClue("2-Save") {
     private fun getSaveableTwos(playerPOV: PlayerPOV): Set<HanabiCard> {
         return playerPOV
             .globallyAvailableInfo
-            .suites
+            .suits
             .flatMap { it.getAllUniqueCards() }
             .filter {
                 it.rank == Rank.TWO &&

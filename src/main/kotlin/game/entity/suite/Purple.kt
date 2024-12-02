@@ -6,7 +6,7 @@ import eelst.ilike.game.entity.Color
 object Purple : ClassicSuite(
     id = "purple",
     name = "purple",
-    abbreviations = setOf('p'),
+    abbreviations = listOf("p"),
 ) {
     override val suiteColors = setOf(Color.PURPLE)
 }

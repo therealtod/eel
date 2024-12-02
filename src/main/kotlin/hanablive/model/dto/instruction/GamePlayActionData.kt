@@ -5,4 +5,4 @@ data class GamePlayActionData(
     val order: Int,
     val suitIndex: Int,
     val rank: Int
-): GameActionData(GameActionType.PLAY)
+) : GameActionData(GameActionType.PLAY)

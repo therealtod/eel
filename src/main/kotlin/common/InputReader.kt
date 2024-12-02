@@ -2,15 +2,15 @@ package eelst.ilike.utils
 
 
 import com.fasterxml.jackson.module.kotlin.readValue
+import eelst.ilike.common.model.metadata.MetadataProvider
+import eelst.ilike.common.model.metadata.MetadataProviderImpl
 import eelst.ilike.engine.factory.PlayerFactory
 import eelst.ilike.engine.hand.VisibleHand
 import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.ActivePlayer
 import eelst.ilike.engine.player.knowledge.PersonalHandKnowledgeImpl
 import eelst.ilike.engine.player.knowledge.PersonalKnowledgeImpl
-import eelst.ilike.game.GloballyAvailableInfoImpl
-import eelst.ilike.game.GloballyAvailableSlotInfo
-import eelst.ilike.game.PlayerId
+import eelst.ilike.game.*
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.game.variant.Variant
@@ -20,11 +20,17 @@ import eelst.ilike.utils.model.dto.TeammateDTO
 
 object InputReader {
     private val mapper = Utils.yamlObjectMapper
+    private val metadataProvider = MetadataProviderImpl
 
     fun getPlayerFromResourceFile(fileName: String): ActivePlayer {
         val fileText = Utils.getResourceFileContentAsString(fileName)
         val dto: ScenarioDTO = mapper.readValue(fileText)
-        val suites = dto.globallyAvailableInfo.suites.map { Suite.fromId(it) }.toSet()
+        val variantMetadata = metadataProvider.getVariantMetadata(dto.globallyAvailableInfo.variant)
+        val suites = dto.globallyAvailableInfo
+            .suites
+            .map { metadataProvider.getSuiteMetadata(it) }
+            .map { SuiteFactory.createSuite(it, variantMetadata) }
+            .toSet()
         val playingStacks = InputParser.parsePlayingStacks(suites, dto.globallyAvailableInfo.playingStacks)
         val trashPile = InputParser.parseTrashPile(dto.globallyAvailableInfo.trashPile, suites)
         val variant = Variant.getVariantByName(dto.globallyAvailableInfo.variant)
@@ -37,15 +43,17 @@ object InputReader {
         }
         val activePlayerId = playersGlobalInfo.first().playerId
         val globallyAvailableInfo = GloballyAvailableInfoImpl(
-            playingStacks = playingStacks,
-            suites = suites,
-            trashPile = trashPile,
-            strikes = dto.globallyAvailableInfo.strikes,
-            efficiency = dto.globallyAvailableInfo.efficiency,
-            pace = dto.globallyAvailableInfo.pace,
+            suits = suites,
             variant = variant,
             players = playersGlobalInfo.associateBy { it.playerId },
-            clueTokens = dto.globallyAvailableInfo.clueTokens,
+            dynamicGloballyAvailableInfo = DynamicGloballyAvailableInfo(
+                playingStacks = playingStacks,
+                trashPile = trashPile,
+                strikes = dto.globallyAvailableInfo.strikes,
+                clueTokens = dto.globallyAvailableInfo.clueTokens,
+                pace = dto.globallyAvailableInfo.pace,
+                efficiency = dto.globallyAvailableInfo.efficiency,
+            )
         )
         val activePlayerGloballyAvailableInfo = globallyAvailableInfo.getPlayerInfo(activePlayerId)
         val playersGlobalInfoMap = playersGlobalInfo.associateBy { it.playerId }
@@ -127,7 +135,7 @@ object InputReader {
                 playerId = player.key,
                 publiclyVisibleCards = cardsInStacks + cardsInTrash + activePlayerKnownCards,
                 teammates = playerPOV.teammates.associateBy { it.playerId },
-                suites = globallyAvailableInfo.suites,
+                suits = globallyAvailableInfo.suits,
             )
         }
     }
@@ -136,13 +144,13 @@ object InputReader {
         playerId: PlayerId,
         publiclyVisibleCards: List<HanabiCard>,
         teammates: Map<PlayerId, TeammateDTO>,
-        suites: Set<Suite>,
+        suits: Set<Suite>,
     ): List<HanabiCard> {
         val cardInTeammatesHands = teammates
             .filterKeys { it != playerId }
             .flatMap { teammate ->
                 teammate.value.hand.map {
-                    InputParser.parseCard(it.card, suites)
+                    InputParser.parseCard(it.card, suits)
                 }
             }
         return publiclyVisibleCards + cardInTeammatesHands

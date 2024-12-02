@@ -1,6 +1,8 @@
 package eelst.ilike.game
 
+import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.PlayingStack
+import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.TrashPile
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
@@ -9,7 +11,7 @@ import eelst.ilike.game.variant.Variant
 
 interface GloballyAvailableInfo {
     val playingStacks: Map<SuiteId, PlayingStack>
-    val suites: Set<Suite>
+    val suits: Set<Suite>
     val trashPile: TrashPile
     val strikes: Int
     val efficiency: Float
@@ -33,4 +35,6 @@ interface GloballyAvailableInfo {
     fun getGlobalAwayValue(card: HanabiCard): Int
     fun isImmediatelyPlayable(card: HanabiCard): Boolean
     fun getPlayerInfo(playerId: PlayerId): GloballyAvailablePlayerInfo
+    fun getCluableRanks(): Set<Rank>
+    fun getCluableColors(): Set<Color>
 }

@@ -1,8 +1,6 @@
 package eelst.ilike.game.entity.suite
 
-import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.card.HanabiCard
-
+/*
 abstract class UpwardsSuite(
     id: SuiteId,
     name: String,
@@ -70,3 +68,5 @@ abstract class UpwardsSuite(
         return card.rank.numericalValue
     }
 }
+
+ */

@@ -9,7 +9,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import org.slf4j.LoggerFactory
 
 object Utils {
-    val jsonObjectMapper: ObjectMapper =  jacksonObjectMapper().registerModule(JavaTimeModule())
+    val jsonObjectMapper: ObjectMapper = jacksonObjectMapper().registerModule(JavaTimeModule())
     val yamlObjectMapper: ObjectMapper = ObjectMapper(YAMLFactory())
         .registerKotlinModule()
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
@@ -28,5 +28,5 @@ object Utils {
         }
     }
 
-    fun<T> createLoggerFor(clazz: Class<T>) = LoggerFactory.getLogger(clazz)
+    fun <T> createLoggerFor(clazz: Class<T>) = LoggerFactory.getLogger(clazz)
 }

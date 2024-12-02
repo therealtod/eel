@@ -3,7 +3,7 @@ package eelst.ilike.hanablive.handler
 import eelst.ilike.hanablive.bot.HanabLiveBot
 import eelst.ilike.hanablive.model.dto.HanabLiveInstructionType
 
-data object NoOpMessageHandler: HanabLiveInstructionHandler() {
+data object NoOpMessageHandler : HanabLiveInstructionHandler() {
     override fun supports(instructionType: HanabLiveInstructionType): Boolean {
         return true
     }

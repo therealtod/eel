@@ -1,11 +1,11 @@
-package eelst.ilike.hanablive.model.dto.metadata
+package eelst.ilike.common.model.metadata
 
 data class VariantMetadata(
     val id: Int,
     val newID: String,
     val name: String,
     val suits: List<String>,
-    val clueColors: List<String> = emptyList(),
+    val clueColors: List<Any> = emptyList(),
     val specialRank: Int,
     val specialRankAllClueColors: Boolean = false,
     val specialRankAllClueRanks: Boolean = false,

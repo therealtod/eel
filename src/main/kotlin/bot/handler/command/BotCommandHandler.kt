@@ -11,7 +11,7 @@ sealed class BotCommandHandler(private val supportedCommandType: CommandType) {
         requestSender: String,
         bot: Bot
     ) {
-        return if(commandType == supportedCommandType) {
+        return if (commandType == supportedCommandType) {
             doHandle(commandArgs, requestSender, bot)
         } else {
             nextHandler.handle(commandType, commandArgs, requestSender, bot)

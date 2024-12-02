@@ -1,10 +1,9 @@
 package eelst.ilike.hanablive.handler
 
 import eelst.ilike.hanablive.bot.HanabLiveBot
-import eelst.ilike.hanablive.client.MetadataClient
 import eelst.ilike.hanablive.model.dto.HanabLiveInstructionType
 
-data object WelcomeHandler: HanabLiveInstructionHandler() {
+data object WelcomeHandler : HanabLiveInstructionHandler() {
     override fun supports(instructionType: HanabLiveInstructionType): Boolean {
         return instructionType == HanabLiveInstructionType.WELCOME
     }

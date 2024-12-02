@@ -59,8 +59,8 @@ abstract class HGroupClue(override val name: String) : HGroupTech, ClueTech() {
         teammate: Teammate,
     ): Set<ClueAction> {
         val card = slot.card
-        val ranks = card.getRanksTouchingCard()
-        val colors = card.getColorsTouchingCard()
+        val ranks = playerPOV.globallyAvailableInfo.getCluableRanks().filter { card.isTouchedBy(it) }
+        val colors = playerPOV.globallyAvailableInfo.getCluableColors().filter { card.isTouchedBy(it) }
         val clueValues = (ranks + colors).filter {
             getFocusedSlot(
                 hand = teammate.hand,

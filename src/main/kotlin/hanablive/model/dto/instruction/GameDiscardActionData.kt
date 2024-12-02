@@ -6,4 +6,4 @@ data class GameDiscardActionData(
     val suitIndex: Int,
     val rank: Int,
     val failed: Boolean,
-): GameActionData(GameActionType.DISCARD)
+) : GameActionData(GameActionType.DISCARD)

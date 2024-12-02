@@ -1,11 +1,11 @@
 package eelst.ilike.hanablive.handler
 
-import eelst.ilike.hanablive.model.dto.HanabLiveInstructionType
-import eelst.ilike.hanablive.model.dto.command.Table
 import com.fasterxml.jackson.module.kotlin.readValue
 import eelst.ilike.hanablive.bot.HanabLiveBot
+import eelst.ilike.hanablive.model.dto.HanabLiveInstructionType
+import eelst.ilike.hanablive.model.dto.command.Table
 
-data object TableHandler: HanabLiveInstructionHandler() {
+data object TableHandler : HanabLiveInstructionHandler() {
     override fun supports(instructionType: HanabLiveInstructionType): Boolean {
         return instructionType == HanabLiveInstructionType.TABLE
     }

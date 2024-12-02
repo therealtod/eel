@@ -12,11 +12,11 @@ data class HanabiCard(
         return suite.getCardsBefore(this)
     }
 
-    fun getRanksTouchingCard(): Set<Rank> {
-        return suite.getRanksTouching(rank)
+    fun isTouchedBy(rank: Rank): Boolean {
+        return suite.cluedRankTouches(this.rank, rank)
     }
 
-    fun getColorsTouchingCard(): Set<Color> {
-        return suite.getColorsTouching(rank)
+    fun isTouchedBy(color: Color): Boolean {
+        return suite.cluedColorTouches(this.rank, color)
     }
 }

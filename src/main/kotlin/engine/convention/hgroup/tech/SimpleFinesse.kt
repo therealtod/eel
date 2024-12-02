@@ -2,7 +2,6 @@ package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.hgroup.HGroupCommon.hasCardOnFinessePosition
-import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge

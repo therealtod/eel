@@ -5,7 +5,7 @@ import eelst.ilike.hanablive.HanabLiveActionType
 data class EndGameAction(
     override val target: Int,
     val value: Int
-): Action(
+) : Action(
     type = HanabLiveActionType.END_GAME,
     target = target,
 )
