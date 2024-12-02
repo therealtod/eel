@@ -1,9 +1,7 @@
 package eelst.ilike.hanablive.client
 
 import eelst.ilike.hanablive.HanabLiveConstants
-import eelst.ilike.hanablive.model.dto.LoginResponse
 import io.ktor.client.*
-import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.resources.*
@@ -14,12 +12,11 @@ import kotlinx.coroutines.runBlocking
 
 object HanabLiveHttpClient {
     private val httpClient = HttpClient(CIO) {
-        install(Resources)
         defaultRequest {
             url {
                 protocol = URLProtocol.HTTPS
                 host = HanabLiveConstants.HOSTNAME
-                port = HanabLiveConstants.PORT
+                port = HanabLiveConstants.HANAB_LIVE_HTTP_PORT
                 path(HanabLiveConstants.LOGIN_PATH)
             }
             headers {
@@ -30,9 +27,10 @@ object HanabLiveHttpClient {
     }
 
     suspend fun login(username: String, password: String): HttpResponse {
-        return httpClient.post(LoginResponse()) {
+        val response = httpClient.post {
             setBody("username=${username}&password=${password}&version=bot")
         }
+        return response
     }
 
     fun loginBlocking(username: String, password: String): HttpResponse {

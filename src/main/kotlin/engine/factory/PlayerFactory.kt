@@ -7,13 +7,13 @@ import eelst.ilike.engine.player.PlayerPOVImpl
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.GameUtils
-import eelst.ilike.game.GloballyAvailableInfo
+import eelst.ilike.game.GloballyAvailableInfoImpl
 import eelst.ilike.game.PlayerId
 
 object PlayerFactory {
     fun createTeammate(
         teammateId: PlayerId,
-        globallyAvailableInfo: GloballyAvailableInfo,
+        globallyAvailableInfo: GloballyAvailableInfoImpl,
         personalKnowledge: PersonalKnowledge,
         seatsGap: Int,
     ): Teammate {
@@ -31,7 +31,7 @@ object PlayerFactory {
 
     fun createActivePlayer(
         activePlayerId: PlayerId,
-        globallyAvailableInfo: GloballyAvailableInfo,
+        globallyAvailableInfo: GloballyAvailableInfoImpl,
         personalKnowledge: PersonalKnowledge,
     ): ActivePlayer {
         val activePlayerGloballyAvailableInfo = globallyAvailableInfo.getPlayerInfo(activePlayerId)
@@ -47,7 +47,7 @@ object PlayerFactory {
     fun createPlayerPOV(
         playerId: PlayerId,
         playerIndex: Int,
-        globallyAvailableInfo: GloballyAvailableInfo,
+        globallyAvailableInfo: GloballyAvailableInfoImpl,
         ownHand: OwnHand,
         personalKnowledge: PersonalKnowledge,
     ): PlayerPOV {

@@ -5,7 +5,7 @@ import eelst.ilike.game.entity.suite.Suite
 
 sealed class Variant(
     val name: String,
-    val suites: Set<Suite>,
+    val suits: Set<Suite>,
 ) {
     companion object {
         private val registeredVariants = mapOf(

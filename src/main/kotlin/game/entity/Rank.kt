@@ -5,7 +5,8 @@ enum class Rank(val numericalValue: Int) : ClueValue {
     TWO(2),
     THREE(3),
     FOUR(4),
-    FIVE(5);
+    FIVE(5),
+    START(0);
 
     companion object {
         fun getByNumericalValue(numericalValue: Int): Rank {

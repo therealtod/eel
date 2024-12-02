@@ -5,7 +5,7 @@ import eelst.ilike.engine.hand.InterpretedHand
 import eelst.ilike.engine.hand.slot.InterpretedSlot
 import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
-import eelst.ilike.game.GloballyAvailableInfo
+import eelst.ilike.game.GloballyAvailableInfoImpl
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Player
 import eelst.ilike.game.entity.card.HanabiCard
@@ -13,7 +13,7 @@ import eelst.ilike.game.entity.card.HanabiCard
 abstract class ConventionsUsingPlayer(
     final override val playerId: PlayerId,
     final override val playerIndex: Int,
-    val globallyAvailableInfo: GloballyAvailableInfo,
+    val globallyAvailableInfo: GloballyAvailableInfoImpl,
     val personalKnowledge: PersonalKnowledge,
 ) : Player<InterpretedHand> {
     override val ownHand = HandFactory.createOwnHand(

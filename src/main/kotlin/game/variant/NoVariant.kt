@@ -6,7 +6,7 @@ import eelst.ilike.game.entity.suite.*
 data object NoVariant
     : Variant(
     name = "No Variant",
-    suites = setOf(
+    suits = setOf(
         Red,
         Yellow,
         Green,

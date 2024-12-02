@@ -3,14 +3,14 @@ package eelst.ilike.engine.player
 import eelst.ilike.engine.hand.InterpretedHand
 import eelst.ilike.engine.hand.OwnHand
 import eelst.ilike.engine.hand.slot.KnownSlot
-import eelst.ilike.game.GloballyAvailableInfo
+import eelst.ilike.game.GloballyAvailableInfoImpl
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.card.HanabiCard
 
 class PlayerPOVImpl(
     override val playerId: PlayerId,
-    override val globallyAvailableInfo: GloballyAvailableInfo,
+    override val globallyAvailableInfo: GloballyAvailableInfoImpl,
     override val ownHand: OwnHand,
     override val teammates: Set<Teammate>,
 ) : PlayerPOV {

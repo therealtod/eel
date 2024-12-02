@@ -8,7 +8,7 @@ import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.ActivePlayer
 import eelst.ilike.engine.player.knowledge.PersonalHandKnowledgeImpl
 import eelst.ilike.engine.player.knowledge.PersonalKnowledgeImpl
-import eelst.ilike.game.GloballyAvailableInfo
+import eelst.ilike.game.GloballyAvailableInfoImpl
 import eelst.ilike.game.GloballyAvailableSlotInfo
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.card.HanabiCard
@@ -36,7 +36,7 @@ object InputReader {
             )
         }
         val activePlayerId = playersGlobalInfo.first().playerId
-        val globallyAvailableInfo = GloballyAvailableInfo(
+        val globallyAvailableInfo = GloballyAvailableInfoImpl(
             playingStacks = playingStacks,
             suites = suites,
             trashPile = trashPile,
@@ -114,7 +114,7 @@ object InputReader {
 
     private fun computeVisibleCardsMap(
         playerPOV: PlayerPOVDTO,
-        globallyAvailableInfo: GloballyAvailableInfo,
+        globallyAvailableInfo: GloballyAvailableInfoImpl,
         suites: Set<Suite>,
     ): Map<PlayerId, List<HanabiCard>> {
         val cardsInTrash = globallyAvailableInfo.trashPile.cards

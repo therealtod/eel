@@ -21,10 +21,12 @@ data class Table(
     val maxPlayers: Int,
 ) {
     data class TableOptions(
+        val maxPlayers: Int? = null,
         val numPlayers: Int,
         val startingPlayer: Int,
-        val variantId: Int,
+        val variantID: Int,
         val variantName: String,
+        val tableName: String? = null,
         val timed: Boolean,
         val timeBase: Int,
         val timePerTurn: Int,

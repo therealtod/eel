@@ -3,14 +3,14 @@ package eelst.ilike.engine.player
 import eelst.ilike.engine.hand.VisibleHand
 import eelst.ilike.engine.hand.slot.OwnSlot
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
-import eelst.ilike.game.GloballyAvailableInfo
+import eelst.ilike.game.GloballyAvailableInfoImpl
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.card.HanabiCard
 
 class Teammate(
     playerId: PlayerId,
     playerIndex: Int,
-    globallyAvailableInfo: GloballyAvailableInfo,
+    globallyAvailableInfo: GloballyAvailableInfoImpl,
     personalKnowledge: PersonalKnowledge,
     val hand: VisibleHand,
     val seatsGap: Int,

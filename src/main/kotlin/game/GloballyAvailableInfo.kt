@@ -6,59 +6,31 @@ import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.game.entity.suite.SuiteId
 import eelst.ilike.game.variant.Variant
-import eelst.ilike.utils.Utils
 
-data class GloballyAvailableInfo(
-    val playingStacks: Map<SuiteId, PlayingStack>,
-    val suites: Set<Suite>,
-    val trashPile: TrashPile,
-    val strikes: Int,
-    val efficiency: Float,
-    val pace: Int,
-    val variant: Variant,
-    val clueTokens: Int,
-    val players: Map<PlayerId, GloballyAvailablePlayerInfo>,
-) {
-    val cardsOnStacks = playingStacks.flatMap { it.value.cards }
-    val handsSize = Utils.getHandSize(players.size)
-    val numberOfPlayers = players.size
-    val score = cardsOnStacks.size
-
-    fun getStackForCard(card: HanabiCard): PlayingStack {
-        val suiteId = card.suite.id
-        return playingStacks[suiteId]
-            ?: throw IllegalArgumentException("No stack in this game corresponding to the card $card")
-    }
-
-    private fun isAlreadyPlayed(card: HanabiCard): Boolean {
-        return getStackForCard(card).contains(card)
-    }
-
+interface GloballyAvailableInfo {
+    val playingStacks: Map<SuiteId, PlayingStack>
+    val suites: Set<Suite>
+    val trashPile: TrashPile
+    val strikes: Int
+    val efficiency: Float
+    val pace: Int
+    val variant: Variant
+    val clueTokens: Int
+    val players: Map<PlayerId, GloballyAvailablePlayerInfo>
+    val handsSize: Int
+    val numberOfPlayers: Int
+    val score: Int
+    fun getCardsOnStacks(): List<HanabiCard>
+    fun getStackForCard(card: HanabiCard): PlayingStack
+    fun isAlreadyPlayed(card: HanabiCard): Boolean
     fun isCritical(
         card: HanabiCard,
-    ): Boolean {
-        return !isAlreadyPlayed(card) && trashPile.copiesOf(card) == card.suite.copiesOf(card.rank) - 1
-    }
+    ): Boolean
 
     /**
      * @return n as in "the slot is n-from playable"
      */
-    fun getGlobalAwayValue(card: HanabiCard): Int {
-        val stack = getStackForCard(card)
-        val suite = card.suite
-        return if (stack.isEmpty()) {
-            suite.getPlayingOrder(card) - 1
-        } else {
-            suite.getPlayingOrder(card) - suite.getPlayingOrder(stack.currentCard()) - 1
-        }
-    }
-
-    fun isImmediatelyPlayable(card: HanabiCard): Boolean {
-        return getGlobalAwayValue(card) == 0
-    }
-
-    fun getPlayerInfo(playerId: PlayerId): GloballyAvailablePlayerInfo {
-        return players[playerId]
-            ?: throw IllegalArgumentException("No player with id: $playerId in this game")
-    }
+    fun getGlobalAwayValue(card: HanabiCard): Int
+    fun isImmediatelyPlayable(card: HanabiCard): Boolean
+    fun getPlayerInfo(playerId: PlayerId): GloballyAvailablePlayerInfo
 }

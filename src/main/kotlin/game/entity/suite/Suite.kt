@@ -9,10 +9,16 @@ import eelst.ilike.utils.Configuration
 abstract class Suite(
     val id: SuiteId,
     val name: String,
-    val abbreviations: Set<Char>,
-    private val ranks: Set<Rank> = setOf(Rank.ONE, Rank.TWO, Rank.THREE, Rank.FOUR, Rank.FIVE),
+    val abbreviations: List<String>,
+    specialRanks: Set<Rank> = emptySet(),
+    stackSize: Int,
     val suiteDirection: SuiteDirection = SuiteDirection.UP,
 ) {
+    private val ranks: Set<Rank> = setOf(Rank.ONE, Rank.TWO, Rank.THREE, Rank.FOUR, Rank.FIVE)
+        .filter { it.numericalValue > stackSize }
+        .plus(specialRanks)
+        .toSet()
+
     val maxRank = ranks.last()
 
     // For hashing purposes
@@ -43,13 +49,34 @@ abstract class Suite(
         }
     }
 
-    abstract fun cardAfter(card: HanabiCard): HanabiCard
+    fun cardAfter(card: HanabiCard): HanabiCard {
+        val nextRank = ranks.firstOrNull{ it > card.rank }
+            ?: throw IllegalArgumentException("$card is the last card for suite $this")
+        return HanabiCard(
+            suite = this,
+            rank = nextRank
+        )
+    }
 
-    abstract fun cardBefore(card: HanabiCard): HanabiCard
+    fun cardBefore(card: HanabiCard): HanabiCard {
+        val nextRank = ranks.firstOrNull{ it < card.rank }
+            ?: throw IllegalArgumentException("$card is the first card for suite $this")
+        return HanabiCard(
+            suite = this,
+            rank = nextRank
+        )
+    }
 
-    abstract fun getCardsBefore(card: HanabiCard): List<HanabiCard>
+    open fun getCardsBefore(card: HanabiCard): List<HanabiCard> {
+        return ranks.filter { it < card.rank }
+            .map { HanabiCard(suite = this, rank = it) }
+    }
 
-    abstract fun getCardsBetween(firstCard: HanabiCard, secondCard: HanabiCard): Set<HanabiCard>
+    open fun getCardsBetween(firstCard: HanabiCard, secondCard: HanabiCard): Set<HanabiCard> {
+        return ranks.filter { it > firstCard.rank && it > secondCard.rank }
+            .map { HanabiCard(suite = this, rank = it) }
+            .toSet()
+    }
 
     abstract fun getRanksTouching(rank: Rank): Set<Rank>
 
@@ -82,7 +109,7 @@ abstract class Suite(
                 ?: throw IllegalArgumentException("The suite with id $suiteId is unregistered")
         }
 
-        fun fromAbbreviation(abbreviation: Char, suites: Set<Suite>): Suite {
+        fun fromAbbreviation(abbreviation: String, suites: Set<Suite>): Suite {
             return suites.firstOrNull { it.abbreviations.contains(abbreviation) }
                 ?: Unknown
         }
