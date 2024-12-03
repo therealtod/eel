@@ -16,7 +16,7 @@ object HGroupCommon {
     fun isGloballyKnownPlayable(card: HanabiCard, playerPOV: PlayerPOV): Boolean {
         val prerequisiteCards = card.getPrerequisiteCards()
         val playedCardsForSuite = playerPOV.globallyAvailableInfo.getStackForCard(card).cards
-        val teammatesKnownCards = playerPOV.getTeammates().flatMap { it.getOwnKnownCards() }
+        val teammatesKnownCards = playerPOV.getTeammates().flatMap { playerPOV.getCardsKnownByTeammate(it.playerId) }
         val ownKnownCards = playerPOV.getOwnKnownCards()
         return (playedCardsForSuite + teammatesKnownCards + ownKnownCards).containsAll(prerequisiteCards)
     }

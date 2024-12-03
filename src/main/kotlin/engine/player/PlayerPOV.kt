@@ -26,7 +26,8 @@ interface PlayerPOV {
     fun forEachTeammate(action: (teammate: Teammate) -> Unit)
     fun getHand(playerId: PlayerId): InterpretedHand
     fun getTeammate(teammatePlayerId: PlayerId): Teammate
-    fun getTeammates(): Set<Teammate>
+    fun getTeammates(): Set<Player<InterpretedSlot>>
     fun getOwnSlot(slotIndex: Int): OwnSlot
     fun getOwnChop(): OwnSlot
+    fun getCardsKnownByTeammate(playerId: PlayerId): List<HanabiCard>
 }

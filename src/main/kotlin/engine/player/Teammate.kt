@@ -2,25 +2,21 @@ package eelst.ilike.engine.player
 
 import eelst.ilike.engine.hand.InterpretedHand
 import eelst.ilike.engine.hand.VisibleHand
+import eelst.ilike.engine.hand.slot.InterpretedSlot
 import eelst.ilike.engine.hand.slot.OwnSlot
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.GloballyAvailableInfoImpl
 import eelst.ilike.game.PlayerId
+import eelst.ilike.game.entity.Player
 import eelst.ilike.game.entity.card.HanabiCard
 
-class Teammate(
-    playerId: PlayerId,
-    playerIndex: Int,
-    globallyAvailableInfo: GloballyAvailableInfoImpl,
+abstract class Teammate(
+    override val playerId: PlayerId,
+    override val playerIndex: Int,
     personalKnowledge: PersonalKnowledge,
     val hand: InterpretedHand,
     val seatsGap: Int,
-) : ConventionsUsingPlayer(
-    playerId = playerId,
-    playerIndex = playerIndex,
-    globallyAvailableInfo = globallyAvailableInfo,
-    personalKnowledge = personalKnowledge,
-) {
+) : Player<InterpretedSlot> {
     fun playsBefore(otherTeammate: Teammate): Boolean {
         return seatsGap < otherTeammate.seatsGap
     }
@@ -29,4 +25,5 @@ class Teammate(
         return ownHand.getSlot(slotIndex)
     }
 
+    fun getOwnKnownCards(): List<HanabiCard>
 }
