@@ -205,6 +205,7 @@ pub fn build_from_scenario(
         deck,
         hands,
         scenario.player_on_turn,
+        0, // turn_counter
         playing_stacks,
         scenario.strikes,
         discard_pile,

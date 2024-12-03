@@ -1,5 +1,5 @@
-use crate::game::{MAX_HAND_SIZE, MAX_PLAYERS_IN_GAME};
 use crate::game::card::CardDeckIndex;
+use crate::game::{MAX_HAND_SIZE, MAX_PLAYERS_IN_GAME};
 use std::hash::{Hash, Hasher};
 
 #[derive(Clone, Debug)]

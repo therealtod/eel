@@ -1,3 +1,4 @@
+use crate::game::MAX_HAND_SIZE;
 use crate::game::MAX_PLAYERS_IN_GAME;
 use crate::game::card::DeckCardsBitField;
 use crate::game::card::copies_counting_card_collection::CopiesCountingCardCollection;
@@ -10,7 +11,6 @@ use crate::game::playing_stacks::PlayingStacks;
 use crate::game::static_game_data::StaticGameData;
 use crate::game::variant::Variant;
 use smallvec::SmallVec;
-use crate::game::MAX_HAND_SIZE;
 
 /// The state of the table of a game of Hanabi
 ///
@@ -29,6 +29,7 @@ pub struct TableState {
     pub hands: [Hand; MAX_PLAYERS_IN_GAME],
     pub all_hand_bits: DeckCardsBitField,
     pub player_on_turn_index: usize,
+    pub current_turn: usize,
     pub playing_stacks: PlayingStacks,
     pub strike_tokens: u8,
     pub discard_pile: CopiesCountingCardCollection,
@@ -43,6 +44,7 @@ impl TableState {
         deck: Deck,
         hands: [Hand; MAX_PLAYERS_IN_GAME],
         player_on_turn_index: usize,
+        current_turn: usize,
         playing_stacks: PlayingStacks,
         strike_tokens: u8,
         discard_pile: CopiesCountingCardCollection,
@@ -55,6 +57,7 @@ impl TableState {
             all_hand_bits: 0,
             hands,
             player_on_turn_index,
+            current_turn,
             playing_stacks,
             strike_tokens,
             discard_pile,
@@ -67,10 +70,24 @@ impl TableState {
             Deck::new(&static_game_data.variant),
             Hand::empty_array(),
             0,
+            0,
             PlayingStacks::empty(),
             0,
             CopiesCountingCardCollection::empty(),
         )
+    }
+
+    /// Returns the index of the player whose turn it is.
+    #[inline]
+    pub fn active_player_index(&self) -> usize {
+        self.player_on_turn_index
+    }
+
+    /// Advances to the next player's turn (increments `turn_counter` and wraps player index).
+    #[inline]
+    pub fn advance_turn(&mut self, num_players: usize) {
+        self.current_turn += 1;
+        self.player_on_turn_index = (self.player_on_turn_index + 1) % num_players;
     }
 
     /// Update this [crate::game::game_state::GameState] when the player draws the given card with
@@ -262,7 +279,8 @@ pub mod unit_test_constants {
                 clue_token_bank,
                 deck,
                 hands,
-                0,
+                0, // player_on_turn_index
+                0, // turn_counter
                 playing_stacks,
                 strike_tokens,
                 discard_pile,
@@ -284,9 +302,13 @@ pub mod unit_test_constants {
                 clue_touched_cards: 0,
                 clues_given: 0,
                 deck,
-                all_hand_bits: (0..=3u64).chain(5..=9).chain(10..=13).fold(0u64, |acc, i| acc | (1 << i)),
+                all_hand_bits: (0..=3u64)
+                    .chain(5..=9)
+                    .chain(10..=13)
+                    .fold(0u64, |acc, i| acc | (1 << i)),
                 hands,
                 player_on_turn_index,
+                current_turn: 0,
                 playing_stacks,
                 strike_tokens: 0,
                 discard_pile,
@@ -312,9 +334,13 @@ pub mod unit_test_constants {
                 clue_touched_cards: 0,
                 clues_given: 0,
                 deck,
-                all_hand_bits: (0..=4u64).chain(5..=9).chain(10..=13).fold(0u64, |acc, i| acc | (1 << i)),
+                all_hand_bits: (0..=4u64)
+                    .chain(5..=9)
+                    .chain(10..=13)
+                    .fold(0u64, |acc, i| acc | (1 << i)),
                 hands,
                 player_on_turn_index,
+                current_turn: 0,
                 playing_stacks,
                 strike_tokens: 0,
                 discard_pile,
