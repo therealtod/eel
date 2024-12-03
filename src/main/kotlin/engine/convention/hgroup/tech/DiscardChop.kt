@@ -27,8 +27,8 @@ object DiscardChop : HGroupTech, DiscardTech() {
         return if (playerPOV.globallyAvailableInfo.clueTokens < 8) {
             return setOf(
                 DiscardAction(
-                    playerId = playerPOV.playerId,
-                    HGroupCommon.getChop(playerPOV.ownHand).index
+                    playerId = playerPOV.getOwnPlayerId(),
+                    slotIndex = playerPOV.getOwnChop().index
                 )
             )
         } else emptySet()

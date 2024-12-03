@@ -35,10 +35,10 @@ object TwoSave : SaveClue("2-Save") {
         val actions = mutableListOf<ClueAction>()
         playerPOV.forEachTeammate { teammate ->
             val chop = getChop(teammate.ownHand)
-            if (teammateSlotMatchesCondition(teammate, slotIndex = chop.index, playerPOV)) {
+            if (teammateSlotMatchesCondition(teammate, slotIndex = chop.index, playerPOV,)) {
                 actions.add(
                     GameActionFactory.createClueAction(
-                        clueGiver = playerPOV.playerId,
+                        clueGiver = playerPOV.getOwnPlayerId(),
                         clueReceiver = teammate.playerId,
                         clueValue = Rank.TWO
                     )
@@ -84,7 +84,7 @@ object TwoSave : SaveClue("2-Save") {
         val possibleFocusIdentities = focusedSlot.getPossibleIdentities()
             .intersect(getSaveableTwos(playerPOV))
         return KnowledgeFactory.createKnowledge(
-            playerId = playerPOV.playerId,
+            playerId = playerPOV.getOwnPlayerId(),
             slotIndex = focusIndex,
             possibleIdentities = possibleFocusIdentities.toSet()
         )

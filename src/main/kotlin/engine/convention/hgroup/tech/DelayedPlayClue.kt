@@ -31,7 +31,7 @@ data object DelayedPlayClue
             teammate
                 .ownHand
                 .forEach { slot ->
-                    if (teammateSlotMatchesCondition(teammate, slot.index, playerPOV)) {
+                    if (teammateSlotMatchesCondition(teammate, slot.index, playerPOV,)) {
                         actions.addAll(
                             getAllFocusingClues(
                                 playerPOV = playerPOV,
@@ -50,8 +50,7 @@ data object DelayedPlayClue
     }
 
     override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
-        val ownHand = playerPOV.ownHand
-        val focusedSlot = ownHand.getSlot(focusIndex)
+        val focusedSlot = playerPOV.getOwnSlot(focusIndex)
         return focusedSlot
             .getPossibleIdentities()
             .any {
@@ -71,13 +70,13 @@ data object DelayedPlayClue
     }
 
     override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PersonalKnowledge {
-        val focusedSlot = playerPOV.ownHand.getSlot(focusIndex)
+        val focusedSlot = playerPOV.getOwnSlot(focusIndex)
         val possibleIdentities = focusedSlot.getPossibleIdentities()
             .filter {
                 playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) > 0
             }
         return KnowledgeFactory.createKnowledge(
-            playerId = playerPOV.playerId,
+            playerId = playerPOV.getOwnPlayerId(),
             slotIndex = focusIndex,
             possibleIdentities = possibleIdentities.toSet()
         )

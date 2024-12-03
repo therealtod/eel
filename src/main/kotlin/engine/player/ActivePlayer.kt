@@ -56,7 +56,7 @@ class ActivePlayer(
     ): Collection<ConventionalAction> {
         return techs
             .flatMap { tech ->
-                tech.getGameActions(playerPOV)
+                tech.getGameActions(playerPOV,)
                     .map {
                         ConventionalAction(
                             action = it,

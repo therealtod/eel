@@ -9,5 +9,4 @@ interface Slot {
     val negativeClues: List<ClueValue>
     fun isTouched(): Boolean
     fun getEmpathy(visibleCards: List<HanabiCard>, suites: Set<Suite>): Set<HanabiCard>
-    fun contains(card: HanabiCard): Boolean
 }

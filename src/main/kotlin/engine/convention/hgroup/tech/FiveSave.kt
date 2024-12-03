@@ -30,10 +30,10 @@ object FiveSave : SaveClue("5-Save") {
         val actions = mutableListOf<ClueAction>()
         playerPOV.forEachTeammate { teammate ->
             val chop = getChop(teammate.ownHand)
-            if (teammateSlotMatchesCondition(teammate, chop.index, playerPOV)) {
+            if (teammateSlotMatchesCondition(teammate, chop.index, playerPOV,)) {
                 actions.add(
                     RankClueAction(
-                        clueGiver = playerPOV.playerId,
+                        clueGiver = playerPOV.getOwnPlayerId(),
                         clueReceiver = teammate.playerId,
                         rank = Rank.FIVE,
                     ),

@@ -16,7 +16,7 @@ internal class CriticalSaveTest {
     fun `Should return 2 actions which save the only critical card on chop visible on the board`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(1)
 
-        val actual = CriticalSave.getGameActions(playerPOV)
+        val actual = CriticalSave.getGameActions(playerPOV,)
 
         val expected = setOf(
             RankClueAction(
@@ -37,7 +37,7 @@ internal class CriticalSaveTest {
     fun `Should return no actions Given there is nothing in the trash`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(2)
 
-        val actual = CriticalSave.getGameActions(playerPOV)
+        val actual = CriticalSave.getGameActions(playerPOV,)
 
         val expected = emptySet<GameAction>()
         Assertions.assertEquals(expected, actual)
@@ -47,7 +47,7 @@ internal class CriticalSaveTest {
     fun `Should not save 5s on chop`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(3)
 
-        val actual = CriticalSave.getGameActions(playerPOV)
+        val actual = CriticalSave.getGameActions(playerPOV,)
 
         val expected = emptySet<GameAction>()
         Assertions.assertEquals(expected, actual)
@@ -57,7 +57,7 @@ internal class CriticalSaveTest {
     fun `Should find all critical saves Given a state with multiple critical cards on chop`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(4)
 
-        val actual = CriticalSave.getGameActions(playerPOV)
+        val actual = CriticalSave.getGameActions(playerPOV,)
 
         val expected = setOf(
             RankClueAction(
@@ -99,7 +99,7 @@ internal class CriticalSaveTest {
     fun `Should not save critical playables`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(5)
 
-        val actual = CriticalSave.getGameActions(playerPOV)
+        val actual = CriticalSave.getGameActions(playerPOV,)
 
         val expected = emptySet<GameAction>()
 

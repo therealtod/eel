@@ -15,7 +15,7 @@ internal class DirectPlayClueTest {
     fun `Should find the only direct play clue on the board`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(9)
 
-        val actual = DirectPlayClue.getGameActions(playerPOV)
+        val actual = DirectPlayClue.getGameActions(playerPOV,)
 
         val expected = setOf(
             RankClueAction(
@@ -36,7 +36,7 @@ internal class DirectPlayClueTest {
     fun `Should find all direct play clues on the board`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(10)
 
-        val actual = DirectPlayClue.getGameActions(playerPOV)
+        val actual = DirectPlayClue.getGameActions(playerPOV,)
 
         val expected = setOf(
             ColorClueAction(

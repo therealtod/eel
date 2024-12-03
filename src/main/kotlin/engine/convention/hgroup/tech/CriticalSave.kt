@@ -38,7 +38,7 @@ object CriticalSave : SaveClue("Critical Save") {
                 val chop = getChop(teammate.hand)
                 val teammateSlot = teammate.hand.getSlot(chop.index)
                 if (
-                    teammateSlotMatchesCondition(teammate, chop.index, playerPOV)
+                    teammateSlotMatchesCondition(teammate, chop.index, playerPOV,)
                 ) {
                     actions.addAll(
                         getAllFocusingClues(
@@ -54,20 +54,19 @@ object CriticalSave : SaveClue("Critical Save") {
     }
 
     override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
-        val ownHand = playerPOV.ownHand
-        val focusedSlot = ownHand.getSlot(focusIndex)
+        val focusedSlot = playerPOV.getOwnSlot(focusIndex)
         return focusedSlot.getPossibleIdentities()
             .any { playerPOV.globallyAvailableInfo.isCritical(it) }
 
     }
 
     override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PersonalKnowledge {
-        val focusedSlot = playerPOV.ownHand.getSlot(focusIndex)
+        val focusedSlot = playerPOV.getOwnSlot(focusIndex)
         val possibleFocusIdentities = focusedSlot.getPossibleIdentities().filter {
             playerPOV.globallyAvailableInfo.isCritical(it)
         }
         return KnowledgeFactory.createKnowledge(
-            playerId = playerPOV.playerId,
+            playerId = playerPOV.getOwnPlayerId(),
             slotIndex = focusIndex,
             possibleIdentities = possibleFocusIdentities.toSet()
         )

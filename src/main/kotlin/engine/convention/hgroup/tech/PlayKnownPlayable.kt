@@ -28,7 +28,7 @@ object PlayKnownPlayable : HGroupTech, PlayTech() {
             .getOwnKnownPlayableSlots()
             .map {
                 PlayAction(
-                    playerId = playerPOV.playerId,
+                    playerId = playerPOV.getOwnPlayerId(),
                     slotIndex = it.index
                 )
             }.toSet()

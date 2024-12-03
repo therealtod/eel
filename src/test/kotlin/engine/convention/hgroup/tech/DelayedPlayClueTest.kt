@@ -15,7 +15,7 @@ internal class DelayedPlayClueTest {
     fun `Should play clue a red 2 Given that red 1 is known`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(6)
 
-        val actual = DelayedPlayClue.getGameActions(playerPOV)
+        val actual = DelayedPlayClue.getGameActions(playerPOV,)
 
         val expected = setOf(
             RankClueAction(
@@ -32,7 +32,7 @@ internal class DelayedPlayClueTest {
     fun `Should play clue a red 4 Given that the entire required sequence is played or known`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(7)
 
-        val actual = DelayedPlayClue.getGameActions(playerPOV)
+        val actual = DelayedPlayClue.getGameActions(playerPOV,)
 
         val expected = setOf(
             RankClueAction(
@@ -54,7 +54,7 @@ internal class DelayedPlayClueTest {
     fun `Should not play clue red 4 When the required sequence is only partially known`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(8)
 
-        val actual = DelayedPlayClue.getGameActions(playerPOV)
+        val actual = DelayedPlayClue.getGameActions(playerPOV,)
 
         val expected = setOf(
             ColorClueAction(

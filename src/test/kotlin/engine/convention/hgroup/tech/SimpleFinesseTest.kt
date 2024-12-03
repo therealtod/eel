@@ -14,7 +14,7 @@ internal class SimpleFinesseTest {
     fun `Should find the only available finesse`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(16)
 
-        val actual = SimpleFinesse.getGameActions(playerPOV)
+        val actual = SimpleFinesse.getGameActions(playerPOV,)
 
         val expected = setOf(
             RankClueAction(
@@ -31,7 +31,7 @@ internal class SimpleFinesseTest {
     fun `Should not give a reverse finesse`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(17)
 
-        val actual = SimpleFinesse.getGameActions(playerPOV)
+        val actual = SimpleFinesse.getGameActions(playerPOV,)
 
         val expected = emptySet<GameAction>()
 

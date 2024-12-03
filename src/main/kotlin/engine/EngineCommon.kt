@@ -13,8 +13,4 @@ object EngineCommon {
             }
         }.toSet()
     }
-
-    fun getTouchedSlots(clueValue: ClueValue, hand: InterpretedHand): Set<Int> {
-        return hand.getSlotsTouchedBy(clueValue).map { it.index }.toSet()
-    }
 }

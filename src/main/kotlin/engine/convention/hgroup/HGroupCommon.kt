@@ -1,6 +1,8 @@
 package eelst.ilike.engine.convention.hgroup
 
 import eelst.ilike.engine.hand.InterpretedHand
+import eelst.ilike.engine.hand.VisibleHand
+import eelst.ilike.engine.hand.slot.InterpretedSlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
@@ -14,25 +16,21 @@ object HGroupCommon {
     fun isGloballyKnownPlayable(card: HanabiCard, playerPOV: PlayerPOV): Boolean {
         val prerequisiteCards = card.getPrerequisiteCards()
         val playedCardsForSuite = playerPOV.globallyAvailableInfo.getStackForCard(card).cards
-        val teammatesKnownCards = playerPOV.teammates.flatMap { it.getOwnKnownCards() }
+        val teammatesKnownCards = playerPOV.getTeammates().flatMap { it.getOwnKnownCards() }
         val ownKnownCards = playerPOV.getOwnKnownCards()
         return (playedCardsForSuite + teammatesKnownCards + ownKnownCards).containsAll(prerequisiteCards)
     }
 
-    private fun isLocked(hand: InterpretedHand): Boolean {
-        return hand.all { it.isTouched() }
-    }
-
     fun hasChop(hand: InterpretedHand): Boolean {
-        return !isLocked(hand)
+        return hand.any { !it.isTouched() }
     }
 
-    fun getChop(hand: InterpretedHand): Slot {
+    fun getChop(hand: InterpretedHand): InterpretedSlot {
         return hand.last { !it.isTouched() }
     }
 
     private fun hasFinessePosition(hand: InterpretedHand): Boolean {
-        return !isLocked(hand)
+        return hand.any { !it.isTouched() }
     }
 
     private fun getFinessePosition(hand: InterpretedHand): Slot {
@@ -40,9 +38,9 @@ object HGroupCommon {
     }
 
     fun getFocusedSlot(
-        hand: InterpretedHand,
+        hand: VisibleHand,
         clueValue: ClueValue,
-    ): Slot {
+    ): InterpretedSlot {
         val touchedSlotsIndexes = hand.getSlotsTouchedBy(clueValue)
         return getFocusedSlot(hand, touchedSlotsIndexes.map { it.index }.toSet())
     }
@@ -50,7 +48,7 @@ object HGroupCommon {
     fun getFocusedSlot(
         hand: InterpretedHand,
         touchedSlotsIndexes: Set<Int>,
-    ): Slot {
+    ): InterpretedSlot {
         require(touchedSlotsIndexes.isNotEmpty()) {
             "Can't determine the focus of a clue which touches no slots"
         }
@@ -93,7 +91,7 @@ object HGroupCommon {
         if (sequence.isEmpty()) return true
         val nextInSequence = sequence.first()
         return if (
-            playerPOV.teammates.any { teammate ->
+            playerPOV.getTeammates().any { teammate ->
                 isPromptedCorrectly(
                     card = nextInSequence,
                     teammate = teammate,
@@ -147,7 +145,7 @@ object HGroupCommon {
         if (playerPOV.globallyAvailableInfo.getGlobalAwayValue(wrongPromptedCard) < 0) return false
         val preRequisites = wrongPromptedCard.getPrerequisiteCards()
         val cardTeammateMap = preRequisites.associateWith {
-            playerPOV.teammates.find { teammate ->
+            playerPOV.getTeammates().find { teammate ->
                 teammate.getOwnKnownCards().contains(it)
             }
         }

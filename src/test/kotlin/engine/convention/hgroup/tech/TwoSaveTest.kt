@@ -14,7 +14,7 @@ internal class TwoSaveTest {
     fun `Should save the only visible copy of y2`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(17)
 
-        val actual = TwoSave.getGameActions(playerPOV)
+        val actual = TwoSave.getGameActions(playerPOV,)
 
         val expected = setOf(
             RankClueAction(
@@ -31,7 +31,7 @@ internal class TwoSaveTest {
     fun `Should not save Cathy's y2 When the other copy is visible in Bob's hand`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(18)
 
-        val actual = TwoSave.getGameActions(playerPOV)
+        val actual = TwoSave.getGameActions(playerPOV,)
 
         val expected = emptySet<GameAction>()
 
@@ -42,7 +42,7 @@ internal class TwoSaveTest {
     fun `Should save either Bob's or Cathy's y2 when both copies are on chop`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(19)
 
-        val actual = TwoSave.getGameActions(playerPOV)
+        val actual = TwoSave.getGameActions(playerPOV,)
 
         val expected = setOf(
             RankClueAction(

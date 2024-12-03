@@ -13,7 +13,7 @@ internal class FiveSaveTest {
     fun `Should find the only 5 save on the board`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(11)
 
-        val actual = FiveSave.getGameActions(playerPOV)
+        val actual = FiveSave.getGameActions(playerPOV,)
 
         val expected = setOf(
             RankClueAction(
@@ -30,7 +30,7 @@ internal class FiveSaveTest {
     fun `Should find all the 5 saves available on the board`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(20)
 
-        val actual = FiveSave.getGameActions(playerPOV)
+        val actual = FiveSave.getGameActions(playerPOV,)
 
         val expected = setOf(
             RankClueAction(

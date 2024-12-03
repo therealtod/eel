@@ -15,7 +15,7 @@ internal class SimplePromptTest {
     fun `Should find simple prompts`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(12)
 
-        val actual = SimplePrompt.getGameActions(playerPOV)
+        val actual = SimplePrompt.getGameActions(playerPOV,)
 
         val expected = setOf(
             RankClueAction(
@@ -47,7 +47,7 @@ internal class SimplePromptTest {
     fun `Should avoid wrong prompt`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(13)
 
-        val actual = SimplePrompt.getGameActions(playerPOV)
+        val actual = SimplePrompt.getGameActions(playerPOV,)
 
         val expected = setOf(
             RankClueAction(
@@ -69,7 +69,7 @@ internal class SimplePromptTest {
     fun `Should give a wrong prompt if it can be patched in time`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(14)
 
-        val actual = SimplePrompt.getGameActions(playerPOV)
+        val actual = SimplePrompt.getGameActions(playerPOV,)
 
         val expected = setOf(
             RankClueAction(
@@ -101,7 +101,7 @@ internal class SimplePromptTest {
     fun `Should give a wrong prompt if it cannot be patched in time`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(15)
 
-        val actual = SimplePrompt.getGameActions(playerPOV)
+        val actual = SimplePrompt.getGameActions(playerPOV,)
 
         val expected = setOf(
             RankClueAction(

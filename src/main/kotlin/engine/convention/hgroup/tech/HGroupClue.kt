@@ -5,6 +5,8 @@ import eelst.ilike.engine.convention.hgroup.HGroupCommon
 import eelst.ilike.engine.convention.tech.ClueTech
 import eelst.ilike.engine.factory.GameActionFactory
 import eelst.ilike.engine.hand.InterpretedHand
+import eelst.ilike.engine.hand.VisibleHand
+import eelst.ilike.engine.hand.slot.InterpretedSlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
@@ -21,8 +23,9 @@ abstract class HGroupClue(override val name: String) : HGroupTech, ClueTech() {
     protected fun getFocusedSlot(
         hand: InterpretedHand,
         clueValue: ClueValue,
-    ): Slot {
-        val touchedSlots = hand.getSlotsTouchedBy(clueValue)
+        playerPOV: PlayerPOV,
+    ): InterpretedSlot {
+        val touchedSlots = hand.getSlotsTouchedBy(clueValue, playerPOV)
         return HGroupCommon.getFocusedSlot(hand, touchedSlots.map { it.index }.toSet())
     }
 
@@ -34,9 +37,10 @@ abstract class HGroupClue(override val name: String) : HGroupTech, ClueTech() {
     }
 
     protected fun getFocusedSlotIndex(
-        hand: InterpretedHand,
+        hand: VisibleHand,
         clueValue: ClueValue,
     ): Int {
+
         return HGroupCommon.getFocusedSlot(
             hand = hand,
             clueValue = clueValue,
@@ -70,7 +74,7 @@ abstract class HGroupClue(override val name: String) : HGroupTech, ClueTech() {
 
         return clueValues.map {
             GameActionFactory.createClueAction(
-                clueGiver = playerPOV.playerId,
+                clueGiver = playerPOV.getOwnPlayerId(),
                 clueReceiver = teammate.playerId,
                 clueValue = it
             )
@@ -92,12 +96,12 @@ abstract class HGroupClue(override val name: String) : HGroupTech, ClueTech() {
         if (!matchesClueBySlot(focusIndex, receiverHand)) {
             return false
         }
-        if (clueReceiver != playerPOV.playerId) {
+        if (clueReceiver != playerPOV.getOwnPlayerId()) {
             val teammate = playerPOV.getTeammate(clueReceiver)
             return teammateSlotMatchesCondition(
                 teammate = teammate,
                 slotIndex = focusIndex,
-                playerPOV = playerPOV,
+                playerPOV = playerPOV
             )
         } else {
             return matchesReceivedClue(

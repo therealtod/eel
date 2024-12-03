@@ -33,7 +33,7 @@ object SimplePrompt : Prompt("Simple Prompt") {
         val actions = mutableListOf<ClueAction>()
         playerPOV.forEachTeammate { teammate ->
             teammate.hand.forEach { slot ->
-                if (teammateSlotMatchesCondition(teammate, slot.index, playerPOV))
+                if (teammateSlotMatchesCondition(teammate, slot.index, playerPOV,))
                     actions.addAll(
                         getAllFocusingClues(
                             playerPOV = playerPOV,
