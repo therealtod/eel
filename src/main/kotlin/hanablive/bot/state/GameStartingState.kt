@@ -6,7 +6,7 @@ import eelst.ilike.hanablive.bot.HanabLiveBot
 import eelst.ilike.hanablive.client.MetadataClient
 import eelst.ilike.hanablive.model.TableId
 import eelst.ilike.hanablive.model.adapter.GloballyAvailableInfoAdapter
-import eelst.ilike.hanablive.model.dto.command.GameActionData
+import eelst.ilike.hanablive.model.dto.instruction.GameActionData
 import eelst.ilike.hanablive.model.dto.command.GameInitData
 import eelst.ilike.hanablive.model.dto.command.Table
 import eelst.ilike.hanablive.model.dto.instruction.GameActionListData
@@ -54,7 +54,6 @@ class GameStartingState(bot: HanabLiveBot) : HanabLiveBotState(bot) {
     }
 
     override suspend fun onGameActionListReceived(gameActionListData: GameActionListData) {
-            val actionList = gameActionListData.list
-        TODO()
+        val orderedActions = gameActionListData.list.so
     }
 }

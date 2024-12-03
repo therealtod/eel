@@ -2,8 +2,9 @@ package eelst.ilike.game.entity
 
 import eelst.ilike.game.PlayerId
 
-interface Player<T : Hand<*>> {
+interface Player {
     val playerId: PlayerId
     val playerIndex: Int
-    val ownHand: T
+
+    fun getTeammates(): Set<Player>
 }
