@@ -23,4 +23,8 @@ class VisibleSlot(
     override fun isKnown(): Boolean {
         return true
     }
+
+    override fun getPossibleIdentities(): Set<HanabiCard> {
+        return setOf(card)
+    }
 }

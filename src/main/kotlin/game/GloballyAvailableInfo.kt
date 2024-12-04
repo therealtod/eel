@@ -19,7 +19,7 @@ interface GloballyAvailableInfo {
     val variant: Variant
     val clueTokens: Int
     val players: Map<PlayerId, GloballyAvailablePlayerInfo>
-    val handsSize: Int
+    val defaultHandsSize: Int
     val numberOfPlayers: Int
     val score: Int
     fun getCardsOnStacks(): List<HanabiCard>
@@ -35,6 +35,7 @@ interface GloballyAvailableInfo {
     fun getGlobalAwayValue(card: HanabiCard): Int
     fun isImmediatelyPlayable(card: HanabiCard): Boolean
     fun getPlayerInfo(playerId: PlayerId): GloballyAvailablePlayerInfo
+    fun getPlayerInfo(playerIndex: Int): GloballyAvailablePlayerInfo
     fun getCluableRanks(): Set<Rank>
     fun getCluableColors(): Set<Color>
 }

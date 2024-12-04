@@ -4,8 +4,8 @@ import eelst.ilike.engine.action.ObservedAction
 import eelst.ilike.engine.action.ObservedPlay
 import eelst.ilike.engine.player.PlayerPOV
 
-abstract class PlayTech : ConventionTech {
-    abstract fun matchesPlay(action: ObservedPlay, playerPOV: PlayerPOV): Boolean
+interface PlayTech : ConventionTech {
+    fun matchesPlay(action: ObservedPlay, playerPOV: PlayerPOV): Boolean
 
     override fun matches(action: ObservedAction, playerPOV: PlayerPOV): Boolean {
         return if (action is ObservedPlay) {

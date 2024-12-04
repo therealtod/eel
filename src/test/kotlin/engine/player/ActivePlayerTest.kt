@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test
 class ActivePlayerTest {
     @Test
     fun `Should find all possible actions in the scenario`() {
-        val activePlayer = TestUtils.getActivePlayerFromScenario(1)
+        val activePlayer = TestUtils.getPlayerPOVFromScenario(1)
 
         val actual = activePlayer.getLegalActions(Level1)
 

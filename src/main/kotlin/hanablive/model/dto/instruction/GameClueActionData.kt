@@ -1,6 +1,6 @@
-package eelst.ilike.hanablive.model.dto.command
+package eelst.ilike.hanablive.model.dto.instruction
 
-import eelst.ilike.hanablive.model.dto.instruction.GameActionData
+import eelst.ilike.hanablive.model.dto.command.GameActionType
 
 data class GameClueActionData(
     val clue: Clue,

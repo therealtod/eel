@@ -1,5 +1,6 @@
 package eelst.ilike.engine.hand.slot
 
+import eelst.ilike.engine.player.knowledge.PersonalSlotKnowledge
 import eelst.ilike.game.GameUtils
 import eelst.ilike.game.GloballyAvailableSlotInfo
 import eelst.ilike.game.entity.Slot
@@ -29,6 +30,10 @@ abstract class InterpretedSlot(
     abstract fun isKnown(): Boolean
 
     abstract fun asKnown(): KnownSlot
+
+    abstract fun getPossibleIdentities(): Set<HanabiCard>
+
+    abstract fun contains(hanabiCard: HanabiCard): Boolean
 
     open fun isClued(): Boolean {
         return positiveClues.isNotEmpty()

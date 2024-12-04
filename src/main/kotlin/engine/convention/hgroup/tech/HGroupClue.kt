@@ -1,21 +1,18 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.action.ObservedClue
-import eelst.ilike.engine.convention.hgroup.HGroupCommon
 import eelst.ilike.engine.convention.tech.ClueTech
 import eelst.ilike.engine.factory.GameActionFactory
 import eelst.ilike.engine.hand.InterpretedHand
 import eelst.ilike.engine.hand.VisibleHand
 import eelst.ilike.engine.hand.slot.InterpretedSlot
-import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.PlayerPOV
-import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.VisibleTeammate
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.entity.ClueValue
-import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
 
-abstract class HGroupClue(override val name: String) : HGroupTech, ClueTech() {
+abstract class HGroupClue(override val name: String) : HGroupTech(), ClueTech {
     abstract fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean
 
     abstract fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PersonalKnowledge
@@ -26,49 +23,61 @@ abstract class HGroupClue(override val name: String) : HGroupTech, ClueTech() {
         playerPOV: PlayerPOV,
     ): InterpretedSlot {
         val touchedSlots = hand.getSlotsTouchedBy(clueValue, playerPOV)
-        return HGroupCommon.getFocusedSlot(hand, touchedSlots.map { it.index }.toSet())
+        return getFocusedSlot(hand, touchedSlots.map { it.index }.toSet())
+    }
+
+    protected fun getFocusedSlot(
+        hand: VisibleHand,
+        clueValue: ClueValue,
+        playerPOV: PlayerPOV,
+    ): InterpretedSlot {
+        val touchedSlotsIndexes = hand.getSlotsTouchedBy(clueValue, playerPOV)
+        return getFocusedSlot(hand, touchedSlotsIndexes.map { it.index }.toSet())
     }
 
     protected fun getFocusedSlot(
         hand: InterpretedHand,
         touchedSlotsIndexes: Set<Int>,
-    ): Slot {
-        return HGroupCommon.getFocusedSlot(hand, touchedSlotsIndexes)
-    }
-
-    protected fun getFocusedSlotIndex(
-        hand: VisibleHand,
-        clueValue: ClueValue,
-    ): Int {
-
-        return HGroupCommon.getFocusedSlot(
-            hand = hand,
-            clueValue = clueValue,
-        ).index
+    ): InterpretedSlot {
+        require(touchedSlotsIndexes.isNotEmpty()) {
+            "Can't determine the focus of a clue which touches no slots"
+        }
+        val touchedSlots = touchedSlotsIndexes.map { hand.getSlot(it) }
+        if (hasChop(hand)) {
+            val chop = getChop(hand)
+            return if (touchedSlotsIndexes.contains(chop.index)) {
+                chop
+            } else {
+                (touchedSlots.firstOrNull { !it.isTouched() } ?: touchedSlots.first())
+            }
+        } else {
+            return touchedSlots.first()
+        }
     }
 
     protected fun getFocusedSlotIndex(
         hand: InterpretedHand,
         touchedSlotsIndexes: Set<Int>,
     ): Int {
-        return HGroupCommon.getFocusedSlot(
+        return getFocusedSlot(
             hand = hand,
             touchedSlotsIndexes = touchedSlotsIndexes
         ).index
     }
 
-    protected fun getAllFocusingClues(
+    protected fun getAllCluesFocusing(
+        slotIndex: Int,
+        teammate: VisibleTeammate,
         playerPOV: PlayerPOV,
-        slot: VisibleSlot,
-        teammate: Teammate,
     ): Set<ClueAction> {
-        val card = slot.card
+        val card = teammate.getVisibleHand().getCardinSlot(slotIndex)
         val ranks = playerPOV.globallyAvailableInfo.getCluableRanks().filter { card.isTouchedBy(it) }
         val colors = playerPOV.globallyAvailableInfo.getCluableColors().filter { card.isTouchedBy(it) }
         val clueValues = (ranks + colors).filter {
             getFocusedSlot(
-                hand = teammate.hand,
-                clueValue = it
+                hand = teammate.getVisibleHand(),
+                clueValue = it,
+                playerPOV = playerPOV
             ).contains(card)
         }
 
@@ -97,7 +106,7 @@ abstract class HGroupClue(override val name: String) : HGroupTech, ClueTech() {
             return false
         }
         if (clueReceiver != playerPOV.getOwnPlayerId()) {
-            val teammate = playerPOV.getTeammate(clueReceiver)
+            val teammate = playerPOV.getTeammate(clueReceiver).asVisible()
             return teammateSlotMatchesCondition(
                 teammate = teammate,
                 slotIndex = focusIndex,

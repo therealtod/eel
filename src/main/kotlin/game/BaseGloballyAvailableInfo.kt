@@ -27,7 +27,7 @@ abstract class BaseGloballyAvailableInfo(
 
     override val players = playersIds.zip(globallyAvailablePlayerInfo).associate { it.first to it.second }
 
-    override val handsSize = Utils.getHandSize(playersIds.size)
+    override val defaultHandsSize = Utils.getHandSize(playersIds.size)
 
     override fun getCardsOnStacks(): List<HanabiCard> {
         return dynamicGloballyAvailableInfo.playingStacks.values.flatten()
@@ -77,5 +77,10 @@ abstract class BaseGloballyAvailableInfo(
 
     override fun getCluableColors(): Set<Color> {
         return variant.getCluableColors()
+    }
+
+    override fun getPlayerInfo(playerIndex: Int): GloballyAvailablePlayerInfo {
+        return players.values.find { it.playerIndex == playerIndex }
+            ?: throw IllegalArgumentException("Could not find any player with player index $playerIndex")
     }
 }

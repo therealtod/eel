@@ -9,7 +9,7 @@ import eelst.ilike.game.GameUtils
 import eelst.ilike.game.GloballyAvailableInfoImpl
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.card.HanabiCard
-
+/*
 class ActivePlayer(
     playerId: PlayerId,
     playerIndex: Int,
@@ -30,7 +30,7 @@ class ActivePlayer(
     )
 
     val teammates: Set<Teammate> = globallyAvailableInfo.players.filter { it.key != playerId }.map {
-        PlayerFactory.createTeammate(
+        PlayerFactory.createVisibleTeammate(
             teammateId = it.key,
             globallyAvailableInfo = globallyAvailableInfo,
             personalKnowledge = personalKnowledge,
@@ -79,3 +79,5 @@ class ActivePlayer(
             .toSet()
     }
 }
+
+ */

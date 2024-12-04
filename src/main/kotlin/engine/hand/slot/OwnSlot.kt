@@ -8,7 +8,7 @@ class OwnSlot(
     globalInfo: GloballyAvailableSlotInfo,
     private val slotKnowledge: PersonalSlotKnowledge,
 ) : InterpretedSlot(globalInfo) {
-    fun getPossibleIdentities(): Set<HanabiCard> {
+    override fun getPossibleIdentities(): Set<HanabiCard> {
         return slotKnowledge.getPossibleSlotIdentities()
     }
 

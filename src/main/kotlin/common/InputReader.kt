@@ -2,12 +2,11 @@ package eelst.ilike.utils
 
 
 import com.fasterxml.jackson.module.kotlin.readValue
-import eelst.ilike.common.model.metadata.MetadataProvider
 import eelst.ilike.common.model.metadata.MetadataProviderImpl
 import eelst.ilike.engine.factory.PlayerFactory
 import eelst.ilike.engine.hand.VisibleHand
 import eelst.ilike.engine.hand.slot.VisibleSlot
-import eelst.ilike.engine.player.ActivePlayer
+import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.knowledge.PersonalHandKnowledgeImpl
 import eelst.ilike.engine.player.knowledge.PersonalKnowledgeImpl
 import eelst.ilike.game.*
@@ -22,7 +21,7 @@ object InputReader {
     private val mapper = Utils.yamlObjectMapper
     private val metadataProvider = MetadataProviderImpl
 
-    fun getPlayerFromResourceFile(fileName: String): ActivePlayer {
+    fun getPlayerFromResourceFile(fileName: String): PlayerPOV {
         val fileText = Utils.getResourceFileContentAsString(fileName)
         val dto: ScenarioDTO = mapper.readValue(fileText)
         val variantMetadata = metadataProvider.getVariantMetadata(dto.globallyAvailableInfo.variant)
@@ -93,7 +92,7 @@ object InputReader {
                     }.toSet()
                 )
             }
-        val activePlayerSlotsKnowledge = (0..<globallyAvailableInfo.handsSize).map {
+        val activePlayerSlotsKnowledge = (0..<globallyAvailableInfo.defaultHandsSize).map {
             dto.playerPOV.hand.getOrNull(it) ?: "x"
         }
         val activePlayerPersonalSlotKnowledge = InputParser.parsePlayerSlotKnowledge(
@@ -113,8 +112,8 @@ object InputReader {
             visibleHands = visibleHands,
         )
 
-        return PlayerFactory.createActivePlayer(
-            activePlayerId = activePlayerId,
+        return PlayerFactory.createPlayerPOV(
+            playerId = activePlayerId,
             globallyAvailableInfo = globallyAvailableInfo,
             personalKnowledge = personalKnowledge,
         )

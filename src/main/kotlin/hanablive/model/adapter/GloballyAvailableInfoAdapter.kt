@@ -25,7 +25,7 @@ class GloballyAvailableInfoAdapter(
 ) {
     override val efficiency = TODO()
 
-    override val handsSize = TODO()
+    override val defaultHandsSize = TODO()
 
     override val numberOfPlayers = TODO()
 

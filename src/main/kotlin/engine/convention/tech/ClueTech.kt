@@ -6,9 +6,9 @@ import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 
-abstract class ClueTech : ConventionTech {
-    abstract fun matchesClue(action: ObservedClue, playerPOV: PlayerPOV): Boolean
-    abstract fun getGeneratedKnowledge(action: ObservedClue, playerPOV: PlayerPOV): PersonalKnowledge
+interface ClueTech : ConventionTech {
+    fun matchesClue(action: ObservedClue, playerPOV: PlayerPOV): Boolean
+    fun getGeneratedKnowledge(action: ObservedClue, playerPOV: PlayerPOV): PersonalKnowledge
 
     override fun matches(action: ObservedAction, playerPOV: PlayerPOV): Boolean {
         return if (action is ObservedClue) {

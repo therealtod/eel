@@ -2,9 +2,7 @@ package eelst.ilike.game.entity
 
 import eelst.ilike.game.PlayerId
 
-interface Player<T: Slot> {
+interface Player {
     val playerId: PlayerId
     val playerIndex: Int
-
-    fun getHand(): Hand<T>
 }

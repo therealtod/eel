@@ -1,9 +1,8 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.action.ObservedClue
-import eelst.ilike.engine.convention.hgroup.HGroupCommon.validatePrompt
 import eelst.ilike.engine.player.PlayerPOV
-import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.VisibleTeammate
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
@@ -14,8 +13,8 @@ object SimplePrompt : Prompt("Simple Prompt") {
         return true
     }
 
-    override fun teammateSlotMatchesCondition(teammate: Teammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
-        val card = teammate.getCardAtSlot(slotIndex)
+    override fun teammateSlotMatchesCondition(teammate: VisibleTeammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
+        val card = teammate.getCardInSlot(slotIndex)
         if (playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) == 1) {
             val stack = playerPOV.globallyAvailableInfo.getStackForCard(card)
             val connectingCards = if (stack.isEmpty()) {
@@ -31,14 +30,14 @@ object SimplePrompt : Prompt("Simple Prompt") {
 
     override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
         val actions = mutableListOf<ClueAction>()
-        playerPOV.forEachTeammate { teammate ->
-            teammate.hand.forEach { slot ->
+        playerPOV.forEachVisibleTeammate { teammate ->
+            teammate.getSlots().forEach { slot ->
                 if (teammateSlotMatchesCondition(teammate, slot.index, playerPOV,))
                     actions.addAll(
-                        getAllFocusingClues(
-                            playerPOV = playerPOV,
-                            slot = teammate.hand.getSlot(slot.index),
+                        getAllCluesFocusing(
+                            slotIndex = slot.index,
                             teammate = teammate,
+                            playerPOV = playerPOV,
                         )
                     )
             }

@@ -14,6 +14,6 @@ class GloballyAvailableInfoImpl(
     globallyAvailablePlayerInfo = players.values.toSet(),
     dynamicGloballyAvailableInfo = dynamicGloballyAvailableInfo,
 ) {
-    override val handsSize = Utils.getHandSize(players.size)
+    override val defaultHandsSize = Utils.getHandSize(players.size)
     override val numberOfPlayers = players.size
 }

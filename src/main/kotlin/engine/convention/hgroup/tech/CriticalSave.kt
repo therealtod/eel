@@ -1,12 +1,9 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.action.ObservedClue
-import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
-import eelst.ilike.engine.convention.hgroup.HGroupCommon.hasChop
-import eelst.ilike.engine.convention.hgroup.HGroupCommon.isGloballyKnownPlayable
 import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.player.PlayerPOV
-import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.VisibleTeammate
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.ClueAction
@@ -18,12 +15,16 @@ object CriticalSave : SaveClue("Critical Save") {
         return true
     }
 
-    override fun teammateSlotMatchesCondition(teammate: Teammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
-        val chop = getChop(teammate.hand)
+    override fun teammateSlotMatchesCondition(
+        teammate: VisibleTeammate,
+        slotIndex: Int,
+        playerPOV: PlayerPOV
+    ): Boolean {
+        val chop = getChop(teammate.getVisibleHand())
         if (chop.index != slotIndex) {
             return false
         }
-        val card = teammate.getCardAtSlot(slotIndex)
+        val card = teammate.getCardInSlot(slotIndex)
         return appliesTo(card, playerPOV.globallyAvailableInfo.variant) &&
                 card.rank != Rank.FIVE &&
                 playerPOV.globallyAvailableInfo.isCritical(card) &&
@@ -33,18 +34,18 @@ object CriticalSave : SaveClue("Critical Save") {
     override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
         val actions = mutableSetOf<ClueAction>()
 
-        playerPOV.forEachTeammate { teammate ->
-            if (hasChop(teammate.hand)) {
-                val chop = getChop(teammate.hand)
-                val teammateSlot = teammate.hand.getSlot(chop.index)
+        playerPOV.forEachVisibleTeammate { teammate ->
+            if (hasChop(teammate.getVisibleHand())) {
+                val chop = getChop(teammate.getVisibleHand())
+                val teammateSlot = teammate.getSlot(chop.index)
                 if (
-                    teammateSlotMatchesCondition(teammate, chop.index, playerPOV,)
+                    teammateSlotMatchesCondition(teammate, chop.index, playerPOV)
                 ) {
                     actions.addAll(
-                        getAllFocusingClues(
-                            playerPOV = playerPOV,
-                            slot = teammateSlot,
+                        getAllCluesFocusing(
+                            slotIndex = teammateSlot.index,
                             teammate = teammate,
+                            playerPOV = playerPOV,
                         )
                     )
                 }

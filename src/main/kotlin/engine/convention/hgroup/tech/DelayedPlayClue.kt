@@ -4,7 +4,7 @@ import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.player.PlayerPOV
-import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.VisibleTeammate
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
@@ -17,9 +17,9 @@ data object DelayedPlayClue
         return true
     }
 
-    override fun teammateSlotMatchesCondition(teammate: Teammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
-        val card = teammate.getCardAtSlot(slotIndex)
-        return !teammate.knows(slotIndex) &&
+    override fun teammateSlotMatchesCondition(teammate: VisibleTeammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
+        val card = teammate.getCardInSlot(slotIndex)
+        return !teammate.knowsIdentityOfOwnSlot(slotIndex) &&
                 playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) > 0 &&
                 connectingCardsAreKnown(card, playerPOV)
     }
@@ -27,16 +27,16 @@ data object DelayedPlayClue
     override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
         val actions = mutableListOf<ClueAction>()
 
-        playerPOV.forEachTeammate { teammate ->
+        playerPOV.forEachVisibleTeammate { teammate ->
             teammate
-                .ownHand
+                .getSlots()
                 .forEach { slot ->
                     if (teammateSlotMatchesCondition(teammate, slot.index, playerPOV,)) {
                         actions.addAll(
-                            getAllFocusingClues(
-                                playerPOV = playerPOV,
-                                slot = teammate.hand.getSlot(slot.index),
+                            getAllCluesFocusing(
+                                slotIndex = slot.index,
                                 teammate = teammate,
+                                playerPOV = playerPOV,
                             )
                         )
                     }

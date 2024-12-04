@@ -1,11 +1,11 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.action.ObservedClue
-import eelst.ilike.engine.convention.hgroup.HGroupCommon.getChop
 import eelst.ilike.engine.factory.GameActionFactory
 import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.VisibleTeammate
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.ClueAction
@@ -17,24 +17,25 @@ object TwoSave : SaveClue("2-Save") {
         return true
     }
 
-    override fun teammateSlotMatchesCondition(teammate: Teammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
-        val chop = getChop(teammate.hand)
+    override fun teammateSlotMatchesCondition(teammate: VisibleTeammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
+        val chop = getChop(teammate.getVisibleHand())
         if (chop.index != slotIndex) {
             return false
         }
-        val card = teammate.getCardAtSlot(slotIndex)
+        val card = teammate.getCardInSlot(slotIndex)
         return card.rank == Rank.TWO
                 && canBeTwoSaved(
             card = card,
-            teammates = playerPOV.teammates.filter { it.playerId != teammate.playerId },
+            teammates = playerPOV.getTeammates().filter { it.playerId != teammate.playerId },
+            playerPOV = playerPOV
         )
 
     }
 
     override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
         val actions = mutableListOf<ClueAction>()
-        playerPOV.forEachTeammate { teammate ->
-            val chop = getChop(teammate.ownHand)
+        playerPOV.forEachVisibleTeammate { teammate ->
+            val chop = getChop(teammate.getVisibleHand())
             if (teammateSlotMatchesCondition(teammate, slotIndex = chop.index, playerPOV,)) {
                 actions.add(
                     GameActionFactory.createClueAction(
@@ -50,7 +51,7 @@ object TwoSave : SaveClue("2-Save") {
 
     override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
         val saveableTwos = getSaveableTwos(playerPOV)
-        val ownSlot = playerPOV.ownHand.getSlot(focusIndex)
+        val ownSlot = playerPOV.getOwnSlot(focusIndex)
         return ownSlot.getPossibleIdentities().intersect(saveableTwos).isNotEmpty()
     }
 
@@ -64,7 +65,8 @@ object TwoSave : SaveClue("2-Save") {
                         playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) > 0 &&
                         canBeTwoSaved(
                             card = it,
-                            teammates = playerPOV.teammates
+                            teammates = playerPOV.getTeammates(),
+                            playerPOV = playerPOV,
                         )
             }.toSet()
     }
@@ -72,15 +74,16 @@ object TwoSave : SaveClue("2-Save") {
     private fun canBeTwoSaved(
         card: HanabiCard,
         teammates: Collection<Teammate>,
+        playerPOV: PlayerPOV,
     ): Boolean {
         return teammates.none { teammate ->
-            teammate.hand.copiesOf(card) == 1 &&
-                    teammate.getCardAtSlot(getChop(teammate.hand).index) != card
+            teammate.hand.copiesOf(card, playerPOV) == 1 &&
+                    teammate.getSlot(getChop(teammate.hand).index).contains(card)
         }
     }
 
     override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PersonalKnowledge {
-        val focusedSlot = playerPOV.ownHand.getSlot(focusIndex)
+        val focusedSlot = playerPOV.getOwnSlot(focusIndex)
         val possibleFocusIdentities = focusedSlot.getPossibleIdentities()
             .intersect(getSaveableTwos(playerPOV))
         return KnowledgeFactory.createKnowledge(
