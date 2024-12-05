@@ -6,6 +6,7 @@ import eelst.ilike.engine.player.knowledge.PersonalHandKnowledge
 import eelst.ilike.engine.player.knowledge.PersonalHandKnowledgeImpl
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.PlayerId
+import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.hanablive.model.dto.instruction.GameDrawActionData
 
 class PersonalKnowledgeAdapter(
@@ -33,10 +34,6 @@ class PersonalKnowledgeAdapter(
         }.toMap()
     }
 
-    override fun getVisibleHands(): Map<PlayerId, VisibleHand> {
-        return visibleHands
-    }
-
     override fun accessibleTo(playerId: PlayerId): PersonalKnowledge {
         TODO("Not yet implemented")
     }
@@ -48,5 +45,9 @@ class PersonalKnowledgeAdapter(
     override fun getVisibleHand(playerId: PlayerId): VisibleHand {
         return visibleHands[playerId]
             ?: throw IllegalArgumentException("No player $playerId with visible hand could be found")
+    }
+
+    override fun getSlotIdentity(slotIndex: Int, playerId: PlayerId): HanabiCard {
+        TODO("Not yet implemented")
     }
 }

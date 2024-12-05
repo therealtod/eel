@@ -27,12 +27,6 @@ abstract class InterpretedSlot(
         return positiveClues.isNotEmpty()
     }
 
-    abstract fun isKnown(): Boolean
-
-    abstract fun asKnown(): KnownSlot
-
-    abstract fun getPossibleIdentities(): Set<HanabiCard>
-
     abstract fun contains(hanabiCard: HanabiCard): Boolean
 
     open fun isClued(): Boolean {

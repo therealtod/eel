@@ -8,7 +8,7 @@ class OwnSlot(
     globalInfo: GloballyAvailableSlotInfo,
     private val slotKnowledge: PersonalSlotKnowledge,
 ) : InterpretedSlot(globalInfo) {
-    override fun getPossibleIdentities(): Set<HanabiCard> {
+    fun getPossibleIdentities(): Set<HanabiCard> {
         return slotKnowledge.getPossibleSlotIdentities()
     }
 
@@ -16,11 +16,11 @@ class OwnSlot(
         return isKnown() && getPossibleIdentities().first() == card
     }
 
-    override fun isKnown(): Boolean {
+    fun isKnown(): Boolean {
         return getPossibleIdentities().size == 1
     }
-
-    override fun asKnown(): KnownSlot {
+/*
+    fun asKnown(): KnownSlot {
         require(isKnown()) {
             "Cannot get an unknown slot as known"
         }
@@ -29,6 +29,8 @@ class OwnSlot(
             card = getPossibleIdentities().first()
         )
     }
+
+ */
 
     override fun isClued(): Boolean {
         return globalInfo.positiveClues.isNotEmpty()

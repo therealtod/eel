@@ -1,25 +1,33 @@
 package eelst.ilike.engine.player
 
+import eelst.ilike.engine.factory.HandFactory
 import eelst.ilike.engine.hand.InterpretedHand
 import eelst.ilike.engine.hand.slot.InterpretedSlot
+import eelst.ilike.engine.hand.slot.OwnSlot
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
+import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.GloballyAvailablePlayerInfo
 import eelst.ilike.game.entity.Player
 import eelst.ilike.game.entity.card.HanabiCard
 
 abstract class Teammate(
     globallyAvailablePlayerInfo: GloballyAvailablePlayerInfo,
-    personalKnowledge: PersonalKnowledge,
+    val personalKnowledge: PersonalKnowledge,
     open val hand: InterpretedHand,
 ) : Player {
-    override val playerId = globallyAvailablePlayerInfo.playerId
+    final override val playerId = globallyAvailablePlayerInfo.playerId
     override val playerIndex = globallyAvailablePlayerInfo.playerIndex
+    private val handFromTeammatePOV = HandFactory.createOwnHand(
+        handSize = personalKnowledge.getOwnHandKnowledge(playerId).getHandSize(),
+        playerGlobalInfo = globallyAvailablePlayerInfo,
+        personalHandKnowledge = personalKnowledge.getOwnHandKnowledge(playerId)
+    )
 
     abstract fun isPOVProjection(): Boolean
     abstract fun asVisible(): VisibleTeammate
 
-    fun getSlot(slotIndex: Int): InterpretedSlot {
-        return hand.getSlot(slotIndex)
+    fun getSlotFromTeammatePOV(slotIndex: Int): OwnSlot {
+        return handFromTeammatePOV.getSlot(slotIndex)
     }
 
     fun playsBefore(otherTeammate: Teammate, playerPOV: PlayerPOV): Boolean {
@@ -27,10 +35,10 @@ abstract class Teammate(
     }
 
     fun getOwnKnownCards(): List<HanabiCard> {
-        TODO()
+        return handFromTeammatePOV.getKnownCards()
     }
 
     fun knowsIdentityOfOwnSlot(slotIndex: Int): Boolean {
-        TODO()
+        return handFromTeammatePOV.getSlot(slotIndex).isKnown()
     }
 }

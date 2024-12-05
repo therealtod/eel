@@ -2,6 +2,7 @@ package eelst.ilike.engine.player.knowledge
 
 import eelst.ilike.engine.hand.VisibleHand
 import eelst.ilike.game.PlayerId
+import eelst.ilike.game.entity.card.HanabiCard
 
 class PersonalKnowledgeImpl(
     private val personalHandKnowledge: Map<PlayerId, PersonalHandKnowledge>,
@@ -15,14 +16,14 @@ class PersonalKnowledgeImpl(
         return visibleHands[playerId]!!
     }
 
-    override fun getVisibleHands(): Map<PlayerId, VisibleHand> {
-        return visibleHands
-    }
-
     override fun accessibleTo(playerId: PlayerId): PersonalKnowledge {
         return PersonalKnowledgeImpl(
             personalHandKnowledge = personalHandKnowledge,
             visibleHands = visibleHands.minus(playerId)
         )
+    }
+
+    override fun getSlotIdentity(slotIndex: Int, playerId: PlayerId): HanabiCard {
+        TODO("Not yet implemented")
     }
 }

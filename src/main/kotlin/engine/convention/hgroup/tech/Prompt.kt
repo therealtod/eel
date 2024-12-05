@@ -63,7 +63,7 @@ sealed class Prompt(name: String) : IndirectPlayClue(name) {
     ): Boolean {
         val promptedTeammateSlot = promptedSlots.firstOrNull { slot ->
             slot.isClued() &&
-                    teammate.getSlot(slot.index)
+                    teammate.getSlotFromTeammatePOV(slot.index)
                         .getPossibleIdentities()
                         .contains(card)
         } ?: return false

@@ -78,7 +78,7 @@ object TwoSave : SaveClue("2-Save") {
     ): Boolean {
         return teammates.none { teammate ->
             teammate.hand.copiesOf(card, playerPOV) == 1 &&
-                    teammate.getSlot(getChop(teammate.hand).index).contains(card)
+                    getChop(teammate.hand).contains(card)
         }
     }
 

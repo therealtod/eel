@@ -37,13 +37,12 @@ object CriticalSave : SaveClue("Critical Save") {
         playerPOV.forEachVisibleTeammate { teammate ->
             if (hasChop(teammate.getVisibleHand())) {
                 val chop = getChop(teammate.getVisibleHand())
-                val teammateSlot = teammate.getSlot(chop.index)
                 if (
                     teammateSlotMatchesCondition(teammate, chop.index, playerPOV)
                 ) {
                     actions.addAll(
                         getAllCluesFocusing(
-                            slotIndex = teammateSlot.index,
+                            slotIndex = chop.index,
                             teammate = teammate,
                             playerPOV = playerPOV,
                         )
