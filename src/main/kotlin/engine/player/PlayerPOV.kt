@@ -1,6 +1,7 @@
 package eelst.ilike.engine.player
 
 import eelst.ilike.engine.convention.ConventionSet
+import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.hand.InterpretedHand
 import eelst.ilike.engine.hand.OwnHand
 import eelst.ilike.engine.hand.slot.KnownSlot
@@ -28,5 +29,5 @@ interface PlayerPOV {
     fun getSeatsGapFrom(teammate: Teammate): Int
     fun getOwnHand(): OwnHand
     fun getHandFromTeammatePOV(teammatePlayerId: PlayerId): OwnHand
-    fun getLegalActions(conventionSet: ConventionSet)
+    fun getLegalActions(conventionSet: ConventionSet): Collection<ConventionalAction>
 }

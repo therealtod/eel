@@ -25,12 +25,6 @@ object KnowledgeFactory {
         slotIndex: Int,
         possibleIdentities: Set<HanabiCard>
     ): PersonalKnowledge {
-        return PersonalKnowledgeImpl(
-            personalHandKnowledge = mapOf(
-                playerId to PersonalHandKnowledgeImpl(
-                    TODO()
-                )
-            )
-        )
+        return TODO()
     }
 }

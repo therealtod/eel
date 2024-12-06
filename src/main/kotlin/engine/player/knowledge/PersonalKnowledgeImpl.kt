@@ -22,8 +22,4 @@ class PersonalKnowledgeImpl(
             visibleHands = visibleHands.minus(playerId)
         )
     }
-
-    override fun getSlotIdentity(slotIndex: Int, playerId: PlayerId): HanabiCard {
-        TODO("Not yet implemented")
-    }
 }

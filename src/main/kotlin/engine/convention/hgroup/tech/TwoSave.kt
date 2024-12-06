@@ -36,7 +36,7 @@ object TwoSave : SaveClue("2-Save") {
         val actions = mutableListOf<ClueAction>()
         playerPOV.forEachVisibleTeammate { teammate ->
             val chop = getChop(teammate.getVisibleHand())
-            if (teammateSlotMatchesCondition(teammate, slotIndex = chop.index, playerPOV,)) {
+            if (teammateSlotMatchesCondition(teammate, slotIndex = chop.index, playerPOV)) {
                 actions.add(
                     GameActionFactory.createClueAction(
                         clueGiver = playerPOV.getOwnPlayerId(),
@@ -77,8 +77,8 @@ object TwoSave : SaveClue("2-Save") {
         playerPOV: PlayerPOV,
     ): Boolean {
         return teammates.none { teammate ->
-            teammate.hand.copiesOf(card, playerPOV) == 1 &&
-                    getChop(teammate.hand).contains(card)
+            teammate.hand.copiesOf(card, playerPOV) > 0 &&
+                    !getChop(teammate.hand).contains(card)
         }
     }
 

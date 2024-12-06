@@ -73,7 +73,7 @@ abstract class Suite(
     }
 
     open fun getCardsBetween(firstCard: HanabiCard, secondCard: HanabiCard): Set<HanabiCard> {
-        return ranks.filter { it > firstCard.rank && it > secondCard.rank }
+        return ranks.filter { it > firstCard.rank && it < secondCard.rank }
             .map { HanabiCard(suite = this, rank = it) }
             .toSet()
     }

@@ -102,9 +102,15 @@ object InputReader {
             visibleCards = visibleCardsMap[activePlayerId]!!
         )
 
-        val activePlayerPersonalHandKnowledge = PersonalHandKnowledgeImpl(activePlayerPersonalSlotKnowledge)
+        val activePlayerPersonalHandKnowledge = PersonalHandKnowledgeImpl(
+            handSize = globallyAvailableInfo.defaultHandsSize,
+            activePlayerPersonalSlotKnowledge,
+        )
         val personalHandKnowledge = teammatesPersonalSlotKnowledge.mapValues {
-            PersonalHandKnowledgeImpl(slotKnowledge = it.value)
+            PersonalHandKnowledgeImpl(
+                handSize = globallyAvailableInfo.defaultHandsSize,
+                slotKnowledge = it.value
+            )
         } + Pair(activePlayerId, activePlayerPersonalHandKnowledge)
 
         val personalKnowledge = PersonalKnowledgeImpl(

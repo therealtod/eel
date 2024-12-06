@@ -1,6 +1,8 @@
 package eelst.ilike.engine.player
 
 import eelst.ilike.engine.convention.ConventionSet
+import eelst.ilike.engine.convention.ConventionalAction
+import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.factory.HandFactory
 import eelst.ilike.engine.hand.InterpretedHand
 import eelst.ilike.engine.hand.OwnHand
@@ -97,7 +99,35 @@ class PlayerPOVImpl(
         )
     }
 
-    override fun getLegalActions(conventionSet: ConventionSet) {
-        TODO("Not yet implemented")
+    override fun getLegalActions(conventionSet: ConventionSet): Collection<ConventionalAction> {
+        return getCandidateActions(conventionSet.getTechs()).toSet()
+    }
+
+    private fun getCandidateActions(
+        techs: Collection<ConventionTech>
+    ): Collection<ConventionalAction> {
+        return techs
+            .flatMap { tech ->
+                tech.getGameActions(this)
+                    .map {
+                        ConventionalAction(
+                            action = it,
+                            tech = tech,
+                        )
+                    }
+            }
+    }
+
+    private fun prune(actions: Collection<ConventionalAction>): Set<ConventionalAction> {
+        val overlappingGroups = actions.groupBy { it.action }
+        return overlappingGroups.map { group ->
+            group.value.fold(listOf(group.value.first())) { curr, next ->
+                if (curr.any { it.tech.overrides(next.tech) })
+                    curr
+                else
+                    curr + next
+            }
+        }.flatten()
+            .toSet()
     }
 }

@@ -39,15 +39,11 @@ class PersonalKnowledgeAdapter(
     }
 
     override fun getOwnHandKnowledge(playerId: PlayerId): PersonalHandKnowledge {
-        return PersonalHandKnowledgeImpl(emptyMap())
+        return PersonalHandKnowledgeImpl(botDraws.size, emptyMap())
     }
 
     override fun getVisibleHand(playerId: PlayerId): VisibleHand {
         return visibleHands[playerId]
             ?: throw IllegalArgumentException("No player $playerId with visible hand could be found")
-    }
-
-    override fun getSlotIdentity(slotIndex: Int, playerId: PlayerId): HanabiCard {
-        TODO("Not yet implemented")
     }
 }
