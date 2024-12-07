@@ -1,0 +1,42 @@
+id: 28
+description: "A board with a 2 on chop that cannot be saved because the active player knows already has such card"
+globally_available_info:
+  suites:
+    - "red"
+    - "yellow"
+    - "green"
+    - "blue"
+    - "purple"
+  playing_stacks: [ [ "r1" ], [ ], [ ], [ "b2" ], [ ] ]
+  trash_pile: [ ]
+  strikes: 0
+  efficiency: 1.00
+  pace: 15
+  clue_tokens: 5
+  players:
+    - player_id: "Alice"
+      slot_clues:
+        - positive_clues: [ ]
+        - positive_clues: [ "YELLOW", "2" ]
+        - positive_clues: [ ]
+        - positive_clues: [ ]
+        - positive_clues: [ ]
+    - player_id: "Bob"
+    - player_id: "Cathy"
+player_pov:
+  player_id: "Alice"
+  teammates:
+    - player_id: "Bob"
+      hand:
+        - card: "r3"
+        - card: "b3"
+        - card: "y4"
+        - card: "b1"
+        - card: "g5"
+    - player_id: "Cathy"
+      hand:
+        - card: "r2"
+        - card: "r3"
+        - card: "p2"
+        - card: "p2"
+        - card: "y2"

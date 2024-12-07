@@ -9,6 +9,7 @@ import eelst.ilike.game.entity.action.ColorClueAction
 import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
 
 internal class DelayedPlayClueTest {
     @Test
@@ -99,5 +100,10 @@ internal class DelayedPlayClueTest {
         val actual = DelayedPlayClue.matches(action, playerPOV)
 
         Assertions.assertTrue(actual)
+    }
+
+    @Test
+    fun `Should acknowledge that the focused card can be playable via the already globally known cards`() {
+        fail(NotImplementedError())
     }
 }

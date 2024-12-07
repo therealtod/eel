@@ -1,16 +1,15 @@
 package eelst.ilike.engine.factory
 
-import eelst.ilike.engine.hand.OwnHand
 import eelst.ilike.engine.player.*
 import eelst.ilike.engine.player.knowledge.PersonalKnowledge
-import eelst.ilike.game.GameUtils
+import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.GloballyAvailableInfoImpl
 import eelst.ilike.game.PlayerId
 
 object PlayerFactory {
     fun createVisibleTeammate(
         teammateId: PlayerId,
-        globallyAvailableInfo: GloballyAvailableInfoImpl,
+        globallyAvailableInfo: GloballyAvailableInfo,
         personalKnowledge: PersonalKnowledge,
     ): VisibleTeammate {
         val globallyAvailablePlayerInfo = globallyAvailableInfo.getPlayerInfo(teammateId)
@@ -22,27 +21,9 @@ object PlayerFactory {
         )
     }
 
-    /*
-    fun createActivePlayer(
-        activePlayerId: PlayerId,
-        globallyAvailableInfo: GloballyAvailableInfoImpl,
-        personalKnowledge: PersonalKnowledge,
-    ): ActivePlayer {
-        val activePlayerGloballyAvailableInfo = globallyAvailableInfo.getPlayerInfo(activePlayerId)
-
-        return ActivePlayer(
-            playerId = activePlayerGloballyAvailableInfo.playerId,
-            playerIndex = activePlayerGloballyAvailableInfo.playerIndex,
-            globallyAvailableInfo = globallyAvailableInfo,
-            personalKnowledge = personalKnowledge
-        )
-    }
-
-
-     */
     fun createPlayerPOV(
         playerId: PlayerId,
-        globallyAvailableInfo: GloballyAvailableInfoImpl,
+        globallyAvailableInfo: GloballyAvailableInfo,
         personalKnowledge: PersonalKnowledge,
     ): PlayerPOV {
         val teammates = globallyAvailableInfo.players.filterKeys { it != playerId }
@@ -59,6 +40,19 @@ object PlayerFactory {
             globallyAvailableInfo = globallyAvailableInfo,
             personalKnowledge = personalKnowledge,
             teammates = teammates.toSet()
+        )
+    }
+
+    fun createPOVProjectionAsTeammate(
+        playerPOV: PlayerPOV,
+    ): POVProjectionAsTeammate {
+        val globallyAvailableInfo = playerPOV.globallyAvailableInfo
+        val playerInfo = globallyAvailableInfo.getPlayerInfo(playerPOV.getOwnPlayerId())
+        return POVProjectionAsTeammate(
+            globallyAvailableInfo = globallyAvailableInfo,
+            globallyAvailablePlayerInfo = playerInfo,
+            personalKnowledge = playerPOV.getPersonalKnowledge(),
+            hand = playerPOV.getOwnHand()
         )
     }
 }

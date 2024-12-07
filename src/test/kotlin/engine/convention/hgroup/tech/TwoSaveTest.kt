@@ -4,6 +4,7 @@ import TestUtils
 import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.hgroup.tech.TwoSave
 import eelst.ilike.game.entity.Rank
+import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.GameAction
 import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
@@ -14,7 +15,7 @@ internal class TwoSaveTest {
     fun `Should save the only visible copy of y2`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(17)
 
-        val actual = TwoSave.getGameActions(playerPOV,)
+        val actual = TwoSave.getGameActions(playerPOV)
 
         val expected = setOf(
             RankClueAction(
@@ -31,7 +32,7 @@ internal class TwoSaveTest {
     fun `Should not save Cathy's y2 When the other copy is visible in Bob's hand`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(18)
 
-        val actual = TwoSave.getGameActions(playerPOV,)
+        val actual = TwoSave.getGameActions(playerPOV)
 
         val expected = emptySet<GameAction>()
 
@@ -121,6 +122,34 @@ internal class TwoSaveTest {
                 rank = Rank.TWO,
             ),
             slotsTouched = setOf(4)
+        )
+
+        val actual = TwoSave.matches(action, playerPOV)
+
+        Assertions.assertFalse(actual)
+    }
+
+    @Test
+    fun `Should not give a 2 save if the same card is fully known in the player's hand`() {
+        val playerPOV = TestUtils.getPlayerPOVFromScenario(28)
+
+        val actual = TwoSave.getGameActions(playerPOV)
+
+        val expected = emptySet<ClueAction>()
+
+        Assertions.assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `Should not think a 2 clue to a teammate is a 2 save if the same card is fully known in the player's hand`() {
+        val playerPOV = TestUtils.getPlayerPOVFromScenario(28)
+        val action = ObservedClue(
+            clueAction = RankClueAction(
+                clueGiver = "Bob",
+                clueReceiver = "Cathy",
+                rank = Rank.TWO,
+            ),
+            slotsTouched = setOf(1,3,4,5)
         )
 
         val actual = TwoSave.matches(action, playerPOV)

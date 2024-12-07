@@ -6,6 +6,7 @@ import eelst.ilike.engine.hand.InterpretedHand
 import eelst.ilike.engine.hand.OwnHand
 import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.hand.slot.OwnSlot
+import eelst.ilike.engine.player.knowledge.PersonalKnowledge
 import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Slot
@@ -18,6 +19,7 @@ interface PlayerPOV {
     fun getOwnPlayerId(): PlayerId
     fun getOwnKnownCards(): List<HanabiCard>
     fun getOwnKnownSlots(): Set<KnownSlot>
+    fun getPersonalKnowledge(): PersonalKnowledge
     fun getOwnKnownPlayableSlots(): Set<Slot>
     fun teamKnowsAllCards(cards: Set<HanabiCard>): Boolean
     fun forEachVisibleTeammate(action: (teammate: VisibleTeammate) -> Unit)
@@ -30,4 +32,5 @@ interface PlayerPOV {
     fun getOwnHand(): OwnHand
     fun getHandFromTeammatePOV(teammatePlayerId: PlayerId): OwnHand
     fun getLegalActions(conventionSet: ConventionSet): Collection<ConventionalAction>
+    fun asTeammate(): Teammate
 }

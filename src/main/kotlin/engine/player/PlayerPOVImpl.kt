@@ -4,6 +4,7 @@ import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.factory.HandFactory
+import eelst.ilike.engine.factory.PlayerFactory
 import eelst.ilike.engine.hand.InterpretedHand
 import eelst.ilike.engine.hand.OwnHand
 import eelst.ilike.engine.hand.slot.KnownSlot
@@ -18,7 +19,7 @@ import eelst.ilike.game.entity.card.HanabiCard
 class PlayerPOVImpl(
     playerId: PlayerId,
     override val globallyAvailableInfo: GloballyAvailableInfo,
-    val personalKnowledge: PersonalKnowledge,
+    private val personalKnowledge: PersonalKnowledge,
     private val teammates: Set<Teammate>,
 ) : PlayerPOV {
     private val visibleTeammates = teammates.filterIsInstance<VisibleTeammate>().toSet()
@@ -101,6 +102,14 @@ class PlayerPOVImpl(
 
     override fun getLegalActions(conventionSet: ConventionSet): Collection<ConventionalAction> {
         return getCandidateActions(conventionSet.getTechs()).toSet()
+    }
+
+    override fun asTeammate(): Teammate {
+        return PlayerFactory.createPOVProjectionAsTeammate(playerPOV = this)
+    }
+
+    override fun getPersonalKnowledge(): PersonalKnowledge {
+        return personalKnowledge
     }
 
     private fun getCandidateActions(

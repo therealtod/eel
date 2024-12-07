@@ -23,13 +23,18 @@ object TwoSave : SaveClue("2-Save") {
             return false
         }
         val card = teammate.getCardInSlot(slotIndex)
-        return card.rank == Rank.TWO
-                && canBeTwoSaved(
-            card = card,
-            teammates = playerPOV.getTeammates().filter { it.playerId != teammate.playerId },
-            playerPOV = playerPOV
-        )
+        val otherPlayers = playerPOV
+            .getTeammates()
+            .filter { it.playerId != teammate.playerId } +
+                playerPOV.asTeammate()
 
+        val isCardRankTwo = card.rank == Rank.TWO
+        val isTwoSaveLegal = canBeTwoSaved(
+            card = card,
+            otherPlayers = otherPlayers,
+            playerPOV = playerPOV,
+        )
+        return isCardRankTwo && isTwoSaveLegal
     }
 
     override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
@@ -65,7 +70,7 @@ object TwoSave : SaveClue("2-Save") {
                         playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) > 0 &&
                         canBeTwoSaved(
                             card = it,
-                            teammates = playerPOV.getTeammates(),
+                            otherPlayers = playerPOV.getTeammates(),
                             playerPOV = playerPOV,
                         )
             }.toSet()
@@ -73,10 +78,10 @@ object TwoSave : SaveClue("2-Save") {
 
     private fun canBeTwoSaved(
         card: HanabiCard,
-        teammates: Collection<Teammate>,
+        otherPlayers: Collection<Teammate>,
         playerPOV: PlayerPOV,
     ): Boolean {
-        return teammates.none { teammate ->
+        return otherPlayers.none { teammate ->
             teammate.hand.copiesOf(card, playerPOV) > 0 &&
                     !getChop(teammate.hand).contains(card)
         }
