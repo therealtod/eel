@@ -1,5 +1,7 @@
 use crate::engine::convention::convention_tech::ClueTech;
-use crate::engine::convention::hgroup::h_group_core::{clues_for_player_with_focus, get_clue_focus};
+use crate::engine::convention::hgroup::h_group_core::{
+    clues_for_player_with_focus, get_clue_focus,
+};
 use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, PlayClueTech, priority};
 use crate::engine::game_state_snapshot::GameStateSnapshot;
 use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
@@ -44,7 +46,6 @@ impl DelayedPlayClue {
             })
         })
     }
-
 }
 
 impl ClueTech for DelayedPlayClue {
@@ -243,7 +244,11 @@ mod tests {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
         use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards::R1;
-        table_state.update_with_play_action_of_specific_card(0, R1.as_variant_card_id(), &static_data);
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            R1.as_variant_card_id(),
+            &static_data,
+        );
         table_state.player_on_turn_index = 0;
         table_state.update_with_draw_action(10); // R3 in player 0's own hand
         table_state.player_on_turn_index = 1;
