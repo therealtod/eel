@@ -78,7 +78,7 @@ abstract class HGroupClue(override val name: String) : HGroupTech(), ClueTech {
                 hand = teammate.getVisibleHand(),
                 clueValue = it,
                 playerPOV = playerPOV
-            ).contains(card)
+            ).contains(card, playerPOV)
         }
 
         return clueValues.map {

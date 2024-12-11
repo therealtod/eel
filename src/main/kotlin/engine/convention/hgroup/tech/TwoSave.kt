@@ -57,7 +57,12 @@ object TwoSave : SaveClue("2-Save") {
     override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
         val saveableTwos = getSaveableTwos(playerPOV)
         val ownSlot = playerPOV.getOwnSlot(focusIndex)
-        return ownSlot.getPossibleIdentities().intersect(saveableTwos).isNotEmpty()
+        return ownSlot.getPossibleIdentities(
+            visibleCards = playerPOV.getVisibleCards(),
+            suits = playerPOV.globallyAvailableInfo.suits,
+        )
+            .intersect(saveableTwos)
+            .isNotEmpty()
     }
 
     private fun getSaveableTwos(playerPOV: PlayerPOV): Set<HanabiCard> {
@@ -83,18 +88,19 @@ object TwoSave : SaveClue("2-Save") {
     ): Boolean {
         return otherPlayers.none { teammate ->
             teammate.hand.copiesOf(card, playerPOV) > 0 &&
-                    !getChop(teammate.hand).contains(card)
+                    !getChop(teammate.hand).contains(card, playerPOV)
         }
     }
 
     override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PersonalKnowledge {
         val focusedSlot = playerPOV.getOwnSlot(focusIndex)
-        val possibleFocusIdentities = focusedSlot.getPossibleIdentities()
+        val possibleFocusIdentities = focusedSlot.getPossibleIdentities(
+            visibleCards = playerPOV.getVisibleCards(),
+            suits = playerPOV.globallyAvailableInfo.suits,
+        )
             .intersect(getSaveableTwos(playerPOV))
-        return KnowledgeFactory.createKnowledge(
-            playerId = playerPOV.getOwnPlayerId(),
-            slotIndex = focusIndex,
-            possibleIdentities = possibleFocusIdentities.toSet()
+        return KnowledgeFactory.createOwnSlotKnowledge(
+            impliedIdentities = possibleFocusIdentities.toSet()
         )
     }
 }

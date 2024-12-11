@@ -1,8 +1,7 @@
 package eelst.ilike.utils
 
-import eelst.ilike.engine.hand.slot.PersonalSlotKnowledgeImpl
 import eelst.ilike.engine.player.knowledge.PersonalSlotKnowledge
-import eelst.ilike.game.GameUtils
+import eelst.ilike.engine.player.knowledge.VisibleSlotKnowledge
 import eelst.ilike.game.GloballyAvailablePlayerInfo
 import eelst.ilike.game.GloballyAvailableSlotInfo
 import eelst.ilike.game.entity.*
@@ -58,29 +57,15 @@ object InputParser {
         )
     }
 
-    fun parsePlayerSlotKnowledge(
-        globallyAvailablePlayerInfo: GloballyAvailablePlayerInfo,
-        knowledge: List<String>,
+    fun parseActivePlayerKnowledge(
+        knowledgeAsNote: Collection<String>,
         suites: Set<Suite>,
-        visibleCards: List<HanabiCard>,
+        visibleCards: Collection<HanabiCard>,
     ): Map<Int, PersonalSlotKnowledge> {
-        val slots = knowledge.mapIndexed { index, dto ->
-            index to PersonalSlotKnowledgeImpl(
+        val slots = knowledgeAsNote.mapIndexed { index, dto ->
+            index to VisibleSlotKnowledge(
                 impliedIdentities = parseCards(dto, suites),
-                empathy = GameUtils.getCardEmpathy(
-                    visibleCards = visibleCards,
-                    positiveClues = globallyAvailablePlayerInfo
-                        .hand
-                        .elementAtOrNull(index)
-                        ?.positiveClues
-                        ?: emptyList(),
-                    negativeClues = globallyAvailablePlayerInfo
-                        .hand
-                        .elementAtOrNull(index)
-                        ?.negativeClues
-                        ?: emptyList(),
-                    suites = suites,
-                )
+                slotIdentity = visibleCards.elementAt(index),
             )
         }
         return slots.associate { it.first + 1 to it.second }
@@ -105,17 +90,14 @@ object InputParser {
             }
     }
 
-    fun parseTeammateSlotKnownledge(
-        globallyAvailablePlayerInfo: GloballyAvailablePlayerInfo,
+    fun parseTeammateSlotKnowledge(
         teammateDTO: TeammateDTO,
         suites: Set<Suite>,
-        visibleCards: List<HanabiCard>,
     ): Map<Int, PersonalSlotKnowledge> {
-        return parsePlayerSlotKnowledge(
-            globallyAvailablePlayerInfo = globallyAvailablePlayerInfo,
-            knowledge = teammateDTO.hand.map { it.thinks },
+        return parseActivePlayerKnowledge(
+            knowledgeAsNote = teammateDTO.hand.map { it.thinks },
             suites = suites,
-            visibleCards = visibleCards
+            visibleCards = teammateDTO.hand.map { parseCard(it.card, suites) }
         )
     }
 

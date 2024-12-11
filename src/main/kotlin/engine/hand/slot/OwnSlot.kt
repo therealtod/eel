@@ -1,23 +1,25 @@
 package eelst.ilike.engine.hand.slot
 
+import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.knowledge.PersonalSlotKnowledge
 import eelst.ilike.game.GloballyAvailableSlotInfo
 import eelst.ilike.game.entity.card.HanabiCard
+import eelst.ilike.game.entity.suite.Suite
 
 class OwnSlot(
     globalInfo: GloballyAvailableSlotInfo,
     private val slotKnowledge: PersonalSlotKnowledge,
 ) : InterpretedSlot(globalInfo) {
-    fun getPossibleIdentities(): Set<HanabiCard> {
-        return slotKnowledge.getPossibleSlotIdentities()
+    fun getPossibleIdentities(visibleCards: List<HanabiCard>, suits: Set<Suite>): Set<HanabiCard> {
+        return slotKnowledge.getImpliedIdentities().ifEmpty { getPossibleIdentities(visibleCards, suits) }
     }
 
-    fun hasKnownIdentity(card: HanabiCard): Boolean {
-        return isKnown() && getPossibleIdentities().first() == card
+    fun hasKnownIdentity(card: HanabiCard, visibleCards: List<HanabiCard>, suits: Set<Suite>): Boolean {
+        return isKnown(visibleCards, suits) && getPossibleIdentities(visibleCards, suits).first() == card
     }
 
-    fun isKnown(): Boolean {
-        return getPossibleIdentities().size == 1
+    fun isKnown(visibleCards: List<HanabiCard>, suits: Set<Suite>): Boolean {
+        return getPossibleIdentities(visibleCards, suits).size == 1
     }
 /*
     fun asKnown(): KnownSlot {
@@ -36,7 +38,11 @@ class OwnSlot(
         return globalInfo.positiveClues.isNotEmpty()
     }
 
-    override fun contains(card: HanabiCard): Boolean {
-        return hasKnownIdentity(card)
+    override fun contains(card: HanabiCard, playerPOV: PlayerPOV): Boolean {
+        return hasKnownIdentity(
+            card = card,
+            visibleCards = playerPOV.getVisibleCards(),
+            suits = playerPOV.globallyAvailableInfo.suits,
+        )
     }
 }

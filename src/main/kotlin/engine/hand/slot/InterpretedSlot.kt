@@ -1,5 +1,6 @@
 package eelst.ilike.engine.hand.slot
 
+import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.knowledge.PersonalSlotKnowledge
 import eelst.ilike.game.GameUtils
 import eelst.ilike.game.GloballyAvailableSlotInfo
@@ -27,7 +28,7 @@ abstract class InterpretedSlot(
         return positiveClues.isNotEmpty()
     }
 
-    abstract fun contains(hanabiCard: HanabiCard): Boolean
+    abstract fun contains(card: HanabiCard, playerPOV: PlayerPOV): Boolean
 
     open fun isClued(): Boolean {
         return positiveClues.isNotEmpty()

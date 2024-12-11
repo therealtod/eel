@@ -1,11 +1,7 @@
 package eelst.ilike.engine.factory
 
-import eelst.ilike.engine.hand.slot.PersonalSlotKnowledgeImpl
-import eelst.ilike.engine.player.knowledge.PersonalHandKnowledgeImpl
-import eelst.ilike.engine.player.knowledge.PersonalKnowledge
-import eelst.ilike.engine.player.knowledge.PersonalKnowledgeImpl
-import eelst.ilike.engine.player.knowledge.PersonalSlotKnowledge
-import eelst.ilike.game.PlayerId
+import eelst.ilike.engine.player.knowledge.PersonalSlotKnowledgeImpl
+import eelst.ilike.engine.player.knowledge.*
 import eelst.ilike.game.entity.card.HanabiCard
 
 object KnowledgeFactory {
@@ -20,11 +16,19 @@ object KnowledgeFactory {
         )
     }
 
-    fun createKnowledge(
-        playerId: PlayerId,
-        slotIndex: Int,
-        possibleIdentities: Set<HanabiCard>
-    ): PersonalKnowledge {
-        return TODO()
+    fun createVisibleSlotKnowledge(
+        visibleCard: HanabiCard,
+        impliedIdentities: Set<HanabiCard>
+    ): PersonalSlotKnowledge {
+        return VisibleSlotKnowledge(
+            impliedIdentities = impliedIdentities,
+            slotIdentity = visibleCard,
+        )
+    }
+
+    fun createOwnSlotKnowledge(
+        impliedIdentities: Set<HanabiCard>,
+    ): PersonalSlotKnowledge {
+        TODO()
     }
 }

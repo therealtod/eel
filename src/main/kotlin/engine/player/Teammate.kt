@@ -18,7 +18,7 @@ abstract class Teammate(
     final override val playerId = globallyAvailablePlayerInfo.playerId
     override val playerIndex = globallyAvailablePlayerInfo.playerIndex
     private val handFromTeammatePOV = HandFactory.createOwnHand(
-        handSize = personalKnowledge.getOwnHandKnowledge(playerId).getHandSize(),
+        handSize = TODO(),
         playerGlobalInfo = globallyAvailablePlayerInfo,
         personalHandKnowledge = personalKnowledge.getOwnHandKnowledge(playerId)
     )

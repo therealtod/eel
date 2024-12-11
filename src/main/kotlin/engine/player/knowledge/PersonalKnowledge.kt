@@ -6,7 +6,8 @@ import eelst.ilike.game.entity.card.HanabiCard
 
 
 interface PersonalKnowledge {
-    fun getVisibleHand(playerId: PlayerId): VisibleHand
-    fun getOwnHandKnowledge(playerId: PlayerId): PersonalHandKnowledge
+    fun getImpliedIdentities(slotIndex: Int, playerId: PlayerId): Set<HanabiCard>
+    fun getVisibleCard(slotIndex: Int, playerId: PlayerId): HanabiCard
     fun accessibleTo(playerId: PlayerId): PersonalKnowledge
+    operator fun plus(knowledge: PersonalKnowledge): PersonalKnowledge
 }

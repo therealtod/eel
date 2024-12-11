@@ -55,20 +55,24 @@ object CriticalSave : SaveClue("Critical Save") {
 
     override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
         val focusedSlot = playerPOV.getOwnSlot(focusIndex)
-        return focusedSlot.getPossibleIdentities()
+        return focusedSlot.getPossibleIdentities(
+            visibleCards = playerPOV.getVisibleCards(),
+            suits = playerPOV.globallyAvailableInfo.suits
+        )
             .any { playerPOV.globallyAvailableInfo.isCritical(it) }
 
     }
 
     override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PersonalKnowledge {
         val focusedSlot = playerPOV.getOwnSlot(focusIndex)
-        val possibleFocusIdentities = focusedSlot.getPossibleIdentities().filter {
+        val possibleFocusIdentities = focusedSlot.getPossibleIdentities(
+            visibleCards = playerPOV.getVisibleCards(),
+            suits = playerPOV.globallyAvailableInfo.suits
+        ).filter {
             playerPOV.globallyAvailableInfo.isCritical(it)
         }
-        return KnowledgeFactory.createKnowledge(
-            playerId = playerPOV.getOwnPlayerId(),
-            slotIndex = focusIndex,
-            possibleIdentities = possibleFocusIdentities.toSet()
+        return KnowledgeFactory.createOwnSlotKnowledge(
+            impliedIdentities = possibleFocusIdentities.toSet()
         )
     }
 }

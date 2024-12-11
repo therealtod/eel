@@ -52,7 +52,10 @@ data object DelayedPlayClue
     override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
         val focusedSlot = playerPOV.getOwnSlot(focusIndex)
         return focusedSlot
-            .getPossibleIdentities()
+            .getPossibleIdentities(
+                visibleCards = playerPOV.getVisibleCards(),
+                suits = playerPOV.globallyAvailableInfo.suits,
+            )
             .any {
                 playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) > 0 &&
                         connectingCardsAreKnown(it, playerPOV)
@@ -71,14 +74,15 @@ data object DelayedPlayClue
 
     override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PersonalKnowledge {
         val focusedSlot = playerPOV.getOwnSlot(focusIndex)
-        val possibleIdentities = focusedSlot.getPossibleIdentities()
+        val possibleIdentities = focusedSlot.getPossibleIdentities(
+            visibleCards = playerPOV.getVisibleCards(),
+            suits = playerPOV.globallyAvailableInfo.suits,
+        )
             .filter {
                 playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) > 0
             }
-        return KnowledgeFactory.createKnowledge(
-            playerId = playerPOV.getOwnPlayerId(),
-            slotIndex = focusIndex,
-            possibleIdentities = possibleIdentities.toSet()
+        return KnowledgeFactory.createOwnSlotKnowledge(
+            impliedIdentities = possibleIdentities.toSet()
         )
     }
 }

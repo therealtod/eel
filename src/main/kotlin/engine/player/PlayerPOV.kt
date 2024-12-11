@@ -27,6 +27,7 @@ interface PlayerPOV {
     fun getTeammate(teammatePlayerId: PlayerId): Teammate
     fun getTeammates(): Set<Teammate>
     fun getVisibleTeammates(): Set<VisibleTeammate>
+    fun getVisibleCards(): List<HanabiCard>
     fun getOwnSlot(slotIndex: Int): OwnSlot
     fun getSeatsGapFrom(teammate: Teammate): Int
     fun getOwnHand(): OwnHand

@@ -10,7 +10,11 @@ import eelst.ilike.game.entity.card.HanabiCard
 
 class OwnHand(private val slots: Set<OwnSlot>) : InterpretedHand, Set<InterpretedSlot> by slots {
     override fun copiesOf(card: HanabiCard, playerPOV: PlayerPOV): Int {
-        return slots.count { it.hasKnownIdentity(card) }
+        return slots.count { it.hasKnownIdentity(
+            card = card,
+            visibleCards = playerPOV.getVisibleCards(),
+            suits = playerPOV.globallyAvailableInfo.suits,
+        ) }
     }
 
     override fun getSlotsTouchedBy(clueValue: ClueValue, playerPOV: PlayerPOV): Set<Slot> {
@@ -18,11 +22,11 @@ class OwnHand(private val slots: Set<OwnSlot>) : InterpretedHand, Set<Interprete
     }
 
     override fun holds(card: HanabiCard, playerPOV: PlayerPOV): Boolean {
-        return getKnownCards().any { it == card }
+        return getKnownCards(playerPOV).any { it == card }
     }
 
-    fun getKnownCards(): List<HanabiCard> {
-        return getKnownSlots().map { it.card }
+    fun getKnownCards(playerPOV: PlayerPOV): List<HanabiCard> {
+        return getKnownSlots(playerPOV).map { it.card }
     }
 
     override fun isVisibleFrom(playerPOV: PlayerPOV): Boolean {
@@ -41,12 +45,18 @@ class OwnHand(private val slots: Set<OwnSlot>) : InterpretedHand, Set<Interprete
         return slots
     }
 
-    fun getKnownSlots(): Set<KnownSlot> {
-        return slots.filter { it.isKnown() }
+    fun getKnownSlots(playerPOV: PlayerPOV): Set<KnownSlot> {
+        return slots.filter { it.isKnown(
+            visibleCards = playerPOV.getVisibleCards(),
+            suits = playerPOV.globallyAvailableInfo.suits,
+        ) }
             .map {
                 KnownSlot(
                     globallyAvailableInfo = it.globalInfo,
-                    card = it.getPossibleIdentities().first()
+                    card = it.getPossibleIdentities(
+                        visibleCards = playerPOV.getVisibleCards(),
+                        suits = playerPOV.globallyAvailableInfo.suits,
+                    ).first()
                 )
             }.toSet()
     }
