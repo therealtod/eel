@@ -5,6 +5,7 @@ import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.VisibleTeammate
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
+import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
@@ -54,14 +55,15 @@ object CriticalSave : SaveClue("Critical Save") {
     }
 
     override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
-        return playerPOV.getPossibleSlotIdentities(focusIndex, playerPOV.getOwnPlayerId())
+        return playerPOV.getOwnSlotPossibleIdentities(focusIndex)
             .any { playerPOV.globallyAvailableInfo.isCritical(it) }
 
     }
 
     override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PlayerPersonalKnowledge {
-        val possibleFocusIdentities = playerPOV
-            .getPossibleSlotIdentities(focusIndex, action.clueAction.clueReceiver).filter {
+        val receiverPOV = playerPOV.getTeammate(action.clueAction.clueReceiver).getPOV(playerPOV)
+        val possibleFocusIdentities = receiverPOV
+            .getOwnSlotPossibleIdentities(focusIndex).filter {
             playerPOV.globallyAvailableInfo.isCritical(it)
         }
         return KnowledgeFactory.createKnowledge(

@@ -84,7 +84,7 @@ abstract class HGroupClue(override val name: String) : HGroupTech(), ClueTech {
         }.toSet()
     }
 
-    open fun matchesClueBySlot(focusIndex: Int, hand: Hand): Boolean {
+    open fun matchesClueBySlot(focusIndex: Int, hand: Hand, playerPOV: PlayerPOV): Boolean {
         return true
     }
 
@@ -97,7 +97,7 @@ abstract class HGroupClue(override val name: String) : HGroupTech(), ClueTech {
             touchedSlotsIndexes = touchedSlotIndexes,
             playerPOV = playerPOV,
         )
-        if (!matchesClueBySlot(focusIndex, receiverHand)) {
+        if (!matchesClueBySlot(focusIndex, receiverHand, playerPOV)) {
             return false
         }
         if (clueReceiver != playerPOV.getOwnPlayerId()) {

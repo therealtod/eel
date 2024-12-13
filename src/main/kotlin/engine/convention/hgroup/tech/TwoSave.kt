@@ -25,7 +25,7 @@ object TwoSave : SaveClue("2-Save") {
         val otherPlayers = playerPOV
             .getTeammates()
             .filter { it.playerId != teammate.playerId } +
-                playerPOV.asTeammate()
+                playerPOV.asTeammateOf(teammate.playerId)
 
         val isCardRankTwo = card.rank == Rank.TWO
         val isTwoSaveLegal = canBeTwoSaved(
@@ -55,7 +55,7 @@ object TwoSave : SaveClue("2-Save") {
 
     override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
         val saveableTwos = getSaveableTwos(playerPOV)
-        return playerPOV.getPossibleSlotIdentities(focusIndex, playerPOV.getOwnPlayerId())
+        return playerPOV.getOwnSlotPossibleIdentities(focusIndex)
             .intersect(saveableTwos).isNotEmpty()
     }
 

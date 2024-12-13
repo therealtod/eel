@@ -4,7 +4,6 @@ import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.VisibleTeammate
-import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.variant.Variant

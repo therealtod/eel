@@ -1,6 +1,8 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.convention.tech.ConventionTech
+import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.game.entity.Hand
 
 
 sealed class SaveClue(name: String) : HGroupClue(name) {
@@ -8,11 +10,8 @@ sealed class SaveClue(name: String) : HGroupClue(name) {
         return otherTech !is SaveClue
     }
 
-    /*
-    override fun matchesClueBySlot(focusIndex: Int, hand: InterpretedHand): Boolean {
-        val chop = getChop(hand)
+    override fun matchesClueBySlot(focusIndex: Int, hand: Hand, playerPOV: PlayerPOV): Boolean {
+        val chop = getChop(hand, playerPOV)
         return focusIndex == chop.index
     }
-
-     */
 }

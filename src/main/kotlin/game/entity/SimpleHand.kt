@@ -5,7 +5,6 @@ import eelst.ilike.game.entity.card.HanabiCard
 
 class SimpleHand(
     override val ownerId: PlayerId,
-    override val size: Int,
     private val slots: Set<Slot>
 ): Hand, Set<Slot> by slots {
     override fun getSlots(): Set<Slot> {

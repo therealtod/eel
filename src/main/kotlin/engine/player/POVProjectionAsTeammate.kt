@@ -13,7 +13,6 @@ class POVProjectionAsTeammate(
 
 ) : Teammate(
     globallyAvailablePlayerInfo = globallyAvailablePlayerInfo,
-    personalKnowledge = personalKnowledge,
     hand = hand,
 ) {
     override fun isPOVProjection(): Boolean {

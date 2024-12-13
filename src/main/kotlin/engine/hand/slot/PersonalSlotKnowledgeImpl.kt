@@ -10,4 +10,8 @@ class PersonalSlotKnowledgeImpl(
     override fun getPossibleSlotIdentities(): Set<HanabiCard> {
         return impliedIdentities.ifEmpty { empathy }
     }
+
+    override fun isSlotKnown(): Boolean {
+        return getPossibleSlotIdentities().size == 1
+    }
 }

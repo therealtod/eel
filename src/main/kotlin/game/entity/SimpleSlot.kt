@@ -26,6 +26,6 @@ class SimpleSlot(
     }
 
     override fun containsCard(card: HanabiCard): Boolean {
-        TODO()
+        return false
     }
 }

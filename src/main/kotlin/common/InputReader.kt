@@ -89,13 +89,14 @@ object InputReader {
 
         val personalKnowledge = PlayerPersonalKnowledgeImpl(
             personalHandKnowledge = personalHandKnowledge,
-            visibleHands = TODO(),
+            visibleHands = visibleHands
         )
 
         return PlayerFactory.createPlayerPOV(
             playerId = activePlayerId,
             globallyAvailableInfo = globallyAvailableInfo,
             personalKnowledge = personalKnowledge,
+
         )
     }
 

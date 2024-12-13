@@ -65,8 +65,8 @@ sealed class Prompt(name: String) : IndirectPlayClue(name) {
     ): Boolean {
         val promptedTeammateSlot = promptedSlots.firstOrNull { slot ->
             slot.isTouched() &&
-                    teammate.getPOV()
-                        .getPossibleSlotIdentities(slotIndex = slot.index, playerId = teammate.playerId)
+                    teammate.getPOV(playerPOV)
+                        .getOwnSlotPossibleIdentities(slotIndex = slot.index)
                         .contains(card)
         } ?: return false
         return teammate.holdsCardInSlot(card, promptedTeammateSlot.index) ||
@@ -93,7 +93,7 @@ sealed class Prompt(name: String) : IndirectPlayClue(name) {
         val preRequisites = wrongPromptedCard.getPrerequisiteCards()
         val cardTeammateMap = preRequisites.associateWith {
             playerPOV.getTeammates().find { teammate ->
-                teammate.getOwnKnownCards().contains(it)
+                teammate.getPOV(playerPOV).getOwnKnownCards().contains(it)
             }
         }
         if (cardTeammateMap.entries.any { it.value == null }) {

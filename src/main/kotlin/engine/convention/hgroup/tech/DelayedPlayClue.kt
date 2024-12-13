@@ -19,7 +19,9 @@ data object DelayedPlayClue
 
     override fun teammateSlotMatchesCondition(teammate: VisibleTeammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
         val card = teammate.getCardInSlot(slotIndex)
-        return !teammate.knowsIdentityOfOwnSlot(slotIndex) &&
+        val teammatePOV = teammate.getPOV(playerPOV)
+        val teammateKnowsOwnSlot = teammatePOV.isSlotKnown(slotIndex)
+        return !teammateKnowsOwnSlot&&
                 playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) > 0 &&
                 connectingCardsAreKnown(card, playerPOV)
     }
@@ -50,7 +52,7 @@ data object DelayedPlayClue
     }
 
     override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
-        return playerPOV.getPossibleSlotIdentities(focusIndex, playerPOV.getOwnPlayerId())
+        return playerPOV.getOwnSlotPossibleIdentities(focusIndex)
             .any {
                 playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) > 0 &&
                         connectingCardsAreKnown(it, playerPOV)
@@ -68,7 +70,8 @@ data object DelayedPlayClue
     }
 
     override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PlayerPersonalKnowledge {
-        val possibleIdentities = playerPOV.getPossibleSlotIdentities(focusIndex, action.clueAction.clueReceiver)
+        val receiverPOV = playerPOV.getTeammate(action.clueAction.clueReceiver).getPOV(playerPOV)
+        val possibleIdentities = receiverPOV.getOwnSlotPossibleIdentities(focusIndex)
             .filter {
                 playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) > 0
             }

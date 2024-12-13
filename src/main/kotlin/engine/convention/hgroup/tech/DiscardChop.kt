@@ -27,7 +27,7 @@ object DiscardChop : HGroupTech(), DiscardTech {
             return setOf(
                 DiscardAction(
                     playerId = playerPOV.getOwnPlayerId(),
-                    slotIndex = getOwnChop(playerPOV).index
+                    slotIndex = getChop(playerPOV.getHand(playerPOV.getOwnPlayerId()), playerPOV).index
                 )
             )
         } else emptySet()

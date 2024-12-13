@@ -16,7 +16,9 @@ object DirectPlayClue : PlayClue("Direct Play Clue") {
 
     override fun teammateSlotMatchesCondition(teammate: VisibleTeammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
         val card = teammate.getCardInSlot(slotIndex)
-        return !teammate.knowsIdentityOfOwnSlot(slotIndex) && playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) == 0
+        val teammatePOV = teammate.getPOV(playerPOV)
+        val teammateKnowsOwnSlot = teammatePOV.isSlotKnown(slotIndex)
+        return !teammateKnowsOwnSlot && playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) == 0
     }
 
     override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
@@ -42,7 +44,7 @@ object DirectPlayClue : PlayClue("Direct Play Clue") {
     }
 
     override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
-        return playerPOV.getPossibleSlotIdentities(focusIndex, playerPOV.getOwnPlayerId())
+        return playerPOV.getOwnSlotPossibleIdentities(focusIndex)
             .any {
                 playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) == 0
             }

@@ -6,6 +6,7 @@ import eelst.ilike.engine.player.knowledge.PersonalHandKnowledge
 import eelst.ilike.engine.player.knowledge.PersonalHandKnowledgeImpl
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.PlayerId
+import eelst.ilike.game.entity.Hand
 import eelst.ilike.hanablive.model.dto.instruction.GameDrawActionData
 
 class PersonalKnowledgeAdapter(
@@ -29,6 +30,10 @@ class PersonalKnowledgeAdapter(
                     slots = TODO()
                 )
         }.associateBy { it.ownerId }
+    }
+
+    override fun canSee(playerId: PlayerId): Boolean {
+        return visibleHands.keys.contains(playerId)
     }
 
     override fun accessibleTo(playerId: PlayerId): PlayerPersonalKnowledge {

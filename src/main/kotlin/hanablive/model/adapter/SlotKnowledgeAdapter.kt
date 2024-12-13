@@ -9,4 +9,8 @@ class SlotKnowledgeAdapter(drawActionData: GameDrawActionData)
     override fun getPossibleSlotIdentities(): Set<HanabiCard> {
         TODO("Not yet implemented")
     }
+
+    override fun isSlotKnown(): Boolean {
+        TODO("Not yet implemented")
+    }
 }

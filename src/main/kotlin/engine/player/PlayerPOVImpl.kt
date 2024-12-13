@@ -28,11 +28,11 @@ class PlayerPOVImpl(
     )
 
     override fun getHand(playerId: PlayerId): Hand {
-        return myself.hand
-    }
-
-    override fun getPossibleSlotIdentities(slotIndex: Int, playerId: PlayerId): Set<HanabiCard> {
-        TODO("Not yet implemented")
+        return if (playerId == myself.playerId) {
+            myself.hand
+        } else {
+            getTeammate(playerId).hand
+        }
     }
 
     override fun getOwnPlayerId(): PlayerId {
@@ -40,7 +40,18 @@ class PlayerPOVImpl(
     }
 
     override fun getOwnKnownCards(): List<HanabiCard> {
-        TODO()
+        val ownHandKnowledge = personalKnowledge.getOwnHandKnowledge(playerId = myself.playerId)
+        return myself.hand.map {
+            ownHandKnowledge.getKnowledge(it.index)
+        }
+            .filter { it.isSlotKnown() }
+            .map { it.getPossibleSlotIdentities().first() }
+    }
+
+    override fun isSlotKnown(slotIndex: Int): Boolean {
+        return personalKnowledge
+            .getOwnHandKnowledge(myself.playerId).getKnowledge(slotIndex)
+            .isSlotKnown()
     }
 
     override fun getOwnKnownPlayableSlots(): Set<Slot> {
@@ -48,11 +59,17 @@ class PlayerPOVImpl(
         return knownSlots.filter { globallyAvailableInfo.isImmediatelyPlayable(it.inferredIdentity) }.toSet()
     }
 
+    override fun getOwnSlotPossibleIdentities(slotIndex: Int): Set<HanabiCard> {
+        return personalKnowledge
+            .getOwnHandKnowledge(myself.playerId).getKnowledge(slotIndex)
+            .getPossibleSlotIdentities()
+    }
+
     override fun teamKnowsAllCards(cards: Set<HanabiCard>): Boolean {
         return cards
             .all { card ->
                 teammates.any { teammate ->
-                    teammate.getOwnKnownCards().contains(card)
+                    teammate.getPOV(this).getOwnKnownCards().contains(card)
                 } ||
                         getOwnKnownCards().contains(card)
             }
@@ -87,8 +104,8 @@ class PlayerPOVImpl(
         return getCandidateActions(conventionSet.getTechs()).toSet()
     }
 
-    override fun asTeammate(): Teammate {
-        return PlayerFactory.createPOVProjectionAsTeammate(playerPOV = this)
+    override fun asTeammateOf(teammatePlayerId: PlayerId): Teammate {
+        return PlayerFactory.createPOVProjectionAsTeammate(teammateId = teammatePlayerId, playerPOV = this)
     }
 
     override fun getPersonalKnowledge(): PlayerPersonalKnowledge {
@@ -111,7 +128,7 @@ class PlayerPOVImpl(
     }
 
     private fun getOwnKnownSlots(): Collection<KnownSlot> {
-        TODO()
+        return myself.hand.getSlots().filterIsInstance<KnownSlot>()
     }
 
     private fun prune(actions: Collection<ConventionalAction>): Set<ConventionalAction> {
