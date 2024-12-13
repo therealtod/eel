@@ -2,11 +2,10 @@ package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.factory.GameActionFactory
-import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.VisibleTeammate
-import eelst.ilike.engine.player.knowledge.PersonalKnowledge
+import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
@@ -18,7 +17,7 @@ object TwoSave : SaveClue("2-Save") {
     }
 
     override fun teammateSlotMatchesCondition(teammate: VisibleTeammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
-        val chop = getChop(teammate.getVisibleHand())
+        val chop = getChop(teammate.hand, playerPOV)
         if (chop.index != slotIndex) {
             return false
         }
@@ -40,7 +39,7 @@ object TwoSave : SaveClue("2-Save") {
     override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
         val actions = mutableListOf<ClueAction>()
         playerPOV.forEachVisibleTeammate { teammate ->
-            val chop = getChop(teammate.getVisibleHand())
+            val chop = getChop(teammate.hand, playerPOV)
             if (teammateSlotMatchesCondition(teammate, slotIndex = chop.index, playerPOV)) {
                 actions.add(
                     GameActionFactory.createClueAction(
@@ -56,8 +55,8 @@ object TwoSave : SaveClue("2-Save") {
 
     override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
         val saveableTwos = getSaveableTwos(playerPOV)
-        val ownSlot = playerPOV.getOwnSlot(focusIndex)
-        return ownSlot.getPossibleIdentities().intersect(saveableTwos).isNotEmpty()
+        return playerPOV.getPossibleSlotIdentities(focusIndex, playerPOV.getOwnPlayerId())
+            .intersect(saveableTwos).isNotEmpty()
     }
 
     private fun getSaveableTwos(playerPOV: PlayerPOV): Set<HanabiCard> {
@@ -82,13 +81,14 @@ object TwoSave : SaveClue("2-Save") {
         playerPOV: PlayerPOV,
     ): Boolean {
         return otherPlayers.none { teammate ->
-            teammate.hand.copiesOf(card, playerPOV) > 0 &&
-                    !getChop(teammate.hand).contains(card)
+            val chop = getChop(teammate.hand, playerPOV)
+            teammate.hand.countCopiesOf(card) > 0 &&
+                    !chop.containsCard(card)
         }
     }
 
-    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PersonalKnowledge {
-        val focusedSlot = playerPOV.getOwnSlot(focusIndex)
+    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PlayerPersonalKnowledge {
+        /*
         val possibleFocusIdentities = focusedSlot.getPossibleIdentities()
             .intersect(getSaveableTwos(playerPOV))
         return KnowledgeFactory.createKnowledge(
@@ -96,5 +96,8 @@ object TwoSave : SaveClue("2-Save") {
             slotIndex = focusIndex,
             possibleIdentities = possibleFocusIdentities.toSet()
         )
+
+         */
+        TODO()
     }
 }

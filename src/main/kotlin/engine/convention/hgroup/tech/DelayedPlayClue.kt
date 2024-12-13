@@ -5,7 +5,7 @@ import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.VisibleTeammate
-import eelst.ilike.engine.player.knowledge.PersonalKnowledge
+import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.variant.Variant
@@ -31,7 +31,7 @@ data object DelayedPlayClue
             teammate
                 .getSlots()
                 .forEach { slot ->
-                    if (teammateSlotMatchesCondition(teammate, slot.index, playerPOV,)) {
+                    if (teammateSlotMatchesCondition(teammate, slot.index, playerPOV)) {
                         actions.addAll(
                             getAllCluesFocusing(
                                 slotIndex = slot.index,
@@ -50,9 +50,7 @@ data object DelayedPlayClue
     }
 
     override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
-        val focusedSlot = playerPOV.getOwnSlot(focusIndex)
-        return focusedSlot
-            .getPossibleIdentities()
+        return playerPOV.getPossibleSlotIdentities(focusIndex, playerPOV.getOwnPlayerId())
             .any {
                 playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) > 0 &&
                         connectingCardsAreKnown(it, playerPOV)
@@ -69,9 +67,8 @@ data object DelayedPlayClue
         return playerPOV.teamKnowsAllCards(missingCards)
     }
 
-    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PersonalKnowledge {
-        val focusedSlot = playerPOV.getOwnSlot(focusIndex)
-        val possibleIdentities = focusedSlot.getPossibleIdentities()
+    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PlayerPersonalKnowledge {
+        val possibleIdentities = playerPOV.getPossibleSlotIdentities(focusIndex, action.clueAction.clueReceiver)
             .filter {
                 playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) > 0
             }

@@ -1,38 +1,31 @@
 package eelst.ilike.engine.player
 
-import eelst.ilike.engine.hand.VisibleHand
-import eelst.ilike.engine.hand.slot.VisibleSlot
-import eelst.ilike.engine.player.knowledge.PersonalKnowledge
+import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.GloballyAvailablePlayerInfo
+import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.card.HanabiCard
 
 class VisibleTeammate(
     globallyAvailablePlayerInfo: GloballyAvailablePlayerInfo,
-    personalKnowledge: PersonalKnowledge,
-    override val hand: VisibleHand,
+    personalKnowledge: PlayerPersonalKnowledge,
+    hand: Hand,
+    private val cards: List<HanabiCard>
 ): Teammate(
     globallyAvailablePlayerInfo = globallyAvailablePlayerInfo,
     personalKnowledge = personalKnowledge,
     hand = hand,
 ) {
-    fun getSlots(): Set<VisibleSlot> {
-        return hand.getSlots()
-    }
 
     override fun asVisible(): VisibleTeammate {
         return this
     }
 
     fun getCardInSlot(slotIndex: Int): HanabiCard {
-        return hand.getCardinSlot(slotIndex)
-    }
-
-    fun getVisibleHand(): VisibleHand {
-        return hand
+        return cards[slotIndex - 1]
     }
 
     fun holdsCardInSlot(card: HanabiCard, slotIndex: Int): Boolean {
-        return hand.getCardinSlot(slotIndex) == card
+        return getCardInSlot(slotIndex) == card
     }
 
     override fun isPOVProjection(): Boolean {

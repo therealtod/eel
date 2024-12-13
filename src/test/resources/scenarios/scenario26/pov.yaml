@@ -1,7 +1,7 @@
 id: 26
 description: "A board where a teammate can give a simple prompt to Bob"
 globally_available_info:
-  suites:
+  suits:
     - "red"
     - "yellow"
     - "green"

@@ -1,7 +1,7 @@
 id: 21
 description: "A board with in which Alice chop could be a critical card"
 globally_available_info:
-  suites:
+  suits:
     - "red"
     - "yellow"
     - "green"

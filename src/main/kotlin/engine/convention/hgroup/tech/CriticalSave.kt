@@ -4,7 +4,7 @@ import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.VisibleTeammate
-import eelst.ilike.engine.player.knowledge.PersonalKnowledge
+import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
@@ -20,7 +20,7 @@ object CriticalSave : SaveClue("Critical Save") {
         slotIndex: Int,
         playerPOV: PlayerPOV
     ): Boolean {
-        val chop = getChop(teammate.getVisibleHand())
+        val chop = getChop(teammate.hand, playerPOV)
         if (chop.index != slotIndex) {
             return false
         }
@@ -35,8 +35,8 @@ object CriticalSave : SaveClue("Critical Save") {
         val actions = mutableSetOf<ClueAction>()
 
         playerPOV.forEachVisibleTeammate { teammate ->
-            if (hasChop(teammate.getVisibleHand())) {
-                val chop = getChop(teammate.getVisibleHand())
+            if (hasChop(teammate.hand, playerPOV)) {
+                val chop = getChop(teammate.hand, playerPOV)
                 if (
                     teammateSlotMatchesCondition(teammate, chop.index, playerPOV)
                 ) {
@@ -54,15 +54,14 @@ object CriticalSave : SaveClue("Critical Save") {
     }
 
     override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
-        val focusedSlot = playerPOV.getOwnSlot(focusIndex)
-        return focusedSlot.getPossibleIdentities()
+        return playerPOV.getPossibleSlotIdentities(focusIndex, playerPOV.getOwnPlayerId())
             .any { playerPOV.globallyAvailableInfo.isCritical(it) }
 
     }
 
-    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PersonalKnowledge {
-        val focusedSlot = playerPOV.getOwnSlot(focusIndex)
-        val possibleFocusIdentities = focusedSlot.getPossibleIdentities().filter {
+    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PlayerPersonalKnowledge {
+        val possibleFocusIdentities = playerPOV
+            .getPossibleSlotIdentities(focusIndex, action.clueAction.clueReceiver).filter {
             playerPOV.globallyAvailableInfo.isCritical(it)
         }
         return KnowledgeFactory.createKnowledge(

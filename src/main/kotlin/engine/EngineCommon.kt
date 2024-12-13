@@ -1,7 +1,6 @@
 package eelst.ilike.engine
 
 import eelst.ilike.engine.convention.ConventionalAction
-import eelst.ilike.engine.hand.InterpretedHand
 import eelst.ilike.game.entity.ClueValue
 
 object EngineCommon {

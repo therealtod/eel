@@ -1,7 +1,7 @@
 id: 22
 description: "A board where Alice can receive a delayed play clue"
 globally_available_info:
-  suites:
+  suits:
     - "red"
     - "yellow"
     - "green"

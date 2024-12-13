@@ -1,7 +1,7 @@
 id: 23
 description: "A board where r1 is played and receiving a red clue could mean direct play clue"
 globally_available_info:
-  suites:
+  suits:
     - "red"
     - "yellow"
     - "green"

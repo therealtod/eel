@@ -1,7 +1,7 @@
 id: 17
 description: "A board with a 2 on chop that needs to be saved"
 globally_available_info:
-  suites:
+  suits:
     - "red"
     - "yellow"
     - "green"

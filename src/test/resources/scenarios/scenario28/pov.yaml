@@ -1,7 +1,7 @@
 id: 28
 description: "A board with a 2 on chop that cannot be saved because the active player knows already has such card"
 globally_available_info:
-  suites:
+  suits:
     - "red"
     - "yellow"
     - "green"

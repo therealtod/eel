@@ -1,7 +1,7 @@
 id: 25
 description: "A board with an available finesse"
 globally_available_info:
-  suites:
+  suits:
     - "red"
     - "yellow"
     - "green"

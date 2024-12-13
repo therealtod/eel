@@ -1,7 +1,7 @@
 id: 8
 description: "A board where not enough cards are know for giving a delayed play clue or r4"
 globally_available_info:
-  suites:
+  suits:
     - "red"
     - "yellow"
     - "green"

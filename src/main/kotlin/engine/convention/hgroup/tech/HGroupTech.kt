@@ -1,11 +1,11 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.convention.tech.ConventionTech
-import eelst.ilike.engine.hand.InterpretedHand
-import eelst.ilike.engine.hand.VisibleHand
-import eelst.ilike.engine.hand.slot.InterpretedSlot
 import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.Teammate
 import eelst.ilike.game.entity.ClueValue
+import eelst.ilike.game.entity.Hand
+import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.variant.Variant
 
@@ -52,15 +52,23 @@ abstract class HGroupTech : ConventionTech {
         return (playedCardsForSuite + teammatesKnownCards + ownKnownCards).containsAll(prerequisiteCards)
     }
 
-    fun hasChop(hand: InterpretedHand): Boolean {
-        return hand.any { !it.isTouched() }
+    fun hasChop(hand: Hand, playerPOV: PlayerPOV): Boolean {
+        return hand.any { !isSlotTouched(it.index, hand, playerPOV) }
     }
 
-    fun getChop(hand: InterpretedHand): InterpretedSlot {
-        return hand.last { !it.isTouched() }
+    fun getOwnChop(playerPOV: PlayerPOV): Slot{
+        TODO()
+    }
+
+    fun getChop(hand: Hand, playerPOV: PlayerPOV): Slot {
+        return hand.last { !isSlotTouched(it.index, hand, playerPOV) }
     }
 
     override fun overrides(otherTech: ConventionTech): Boolean {
         return false
+    }
+
+    protected fun isSlotTouched(slotIndex: Int, hand: Hand, playerPOV: PlayerPOV): Boolean {
+        TODO()
     }
 }

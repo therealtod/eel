@@ -1,7 +1,7 @@
 id: 19
 description: "A board where y2 can be saved because the other visible copy is on Bob's chop"
 globally_available_info:
-  suites:
+  suits:
     - "red"
     - "yellow"
     - "green"

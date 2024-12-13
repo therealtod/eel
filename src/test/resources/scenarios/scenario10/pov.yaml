@@ -1,7 +1,7 @@
 id: 10
 description: "A board with multiple possible direct play clues"
 globally_available_info:
-  suites:
+  suits:
     - "red"
     - "yellow"
     - "green"

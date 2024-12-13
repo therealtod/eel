@@ -1,7 +1,7 @@
 id: 12
 description: "A board with possible simple prompts"
 globally_available_info:
-  suites:
+  suits:
     - "red"
     - "yellow"
     - "green"

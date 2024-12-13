@@ -1,7 +1,7 @@
 id: 7
 description: "A board where is possible to give a delayed play clue with multiple stacked cards"
 globally_available_info:
-  suites:
+  suits:
     - "red"
     - "yellow"
     - "green"

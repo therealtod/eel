@@ -1,7 +1,7 @@
 id: 3
 description: "A board with no critical cards and a 5 on chop"
 globally_available_info:
-  suites:
+  suits:
     - "red"
     - "yellow"
     - "green"

@@ -3,52 +3,43 @@ package eelst.ilike.engine.convention.hgroup.tech
 import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.tech.ClueTech
 import eelst.ilike.engine.factory.GameActionFactory
-import eelst.ilike.engine.hand.InterpretedHand
-import eelst.ilike.engine.hand.VisibleHand
-import eelst.ilike.engine.hand.slot.InterpretedSlot
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.VisibleTeammate
-import eelst.ilike.engine.player.knowledge.PersonalKnowledge
+import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.ClueValue
+import eelst.ilike.game.entity.Hand
+import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
 
 abstract class HGroupClue(override val name: String) : HGroupTech(), ClueTech {
     abstract fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean
 
-    abstract fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PersonalKnowledge
+    abstract fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PlayerPersonalKnowledge
 
     protected fun getFocusedSlot(
-        hand: InterpretedHand,
+        hand: Hand,
         clueValue: ClueValue,
         playerPOV: PlayerPOV,
-    ): InterpretedSlot {
-        val touchedSlots = hand.getSlotsTouchedBy(clueValue, playerPOV)
-        return getFocusedSlot(hand, touchedSlots.map { it.index }.toSet())
+    ): Slot {
+        val touchedSlotsIndexes = hand.getSlotsTouchedBy(clueValue)
+        return getFocusedSlot(touchedSlotsIndexes, hand, playerPOV)
     }
 
     protected fun getFocusedSlot(
-        hand: VisibleHand,
-        clueValue: ClueValue,
-        playerPOV: PlayerPOV,
-    ): InterpretedSlot {
-        val touchedSlotsIndexes = hand.getSlotsTouchedBy(clueValue, playerPOV)
-        return getFocusedSlot(hand, touchedSlotsIndexes.map { it.index }.toSet())
-    }
-
-    protected fun getFocusedSlot(
-        hand: InterpretedHand,
         touchedSlotsIndexes: Set<Int>,
-    ): InterpretedSlot {
+        hand: Hand,
+        playerPOV: PlayerPOV,
+    ): Slot {
         require(touchedSlotsIndexes.isNotEmpty()) {
             "Can't determine the focus of a clue which touches no slots"
         }
-        val touchedSlots = touchedSlotsIndexes.map { hand.getSlot(it) }
-        if (hasChop(hand)) {
-            val chop = getChop(hand)
+        val touchedSlots = touchedSlotsIndexes.map {hand.getSlot(it) }
+        if (hasChop(hand, playerPOV)) {
+            val chop = getChop(hand, playerPOV)
             return if (touchedSlotsIndexes.contains(chop.index)) {
                 chop
             } else {
-                (touchedSlots.firstOrNull { !it.isTouched() } ?: touchedSlots.first())
+                (touchedSlots.firstOrNull { !isSlotTouched(it.index, hand, playerPOV) } ?: touchedSlots.first())
             }
         } else {
             return touchedSlots.first()
@@ -56,12 +47,14 @@ abstract class HGroupClue(override val name: String) : HGroupTech(), ClueTech {
     }
 
     protected fun getFocusedSlotIndex(
-        hand: InterpretedHand,
+        hand: Hand,
         touchedSlotsIndexes: Set<Int>,
+        playerPOV: PlayerPOV,
     ): Int {
         return getFocusedSlot(
+            touchedSlotsIndexes = touchedSlotsIndexes,
             hand = hand,
-            touchedSlotsIndexes = touchedSlotsIndexes
+            playerPOV = playerPOV,
         ).index
     }
 
@@ -70,15 +63,16 @@ abstract class HGroupClue(override val name: String) : HGroupTech(), ClueTech {
         teammate: VisibleTeammate,
         playerPOV: PlayerPOV,
     ): Set<ClueAction> {
-        val card = teammate.getVisibleHand().getCardinSlot(slotIndex)
+        val card = teammate.getCardInSlot(slotIndex)
         val ranks = playerPOV.globallyAvailableInfo.getCluableRanks().filter { card.isTouchedBy(it) }
         val colors = playerPOV.globallyAvailableInfo.getCluableColors().filter { card.isTouchedBy(it) }
         val clueValues = (ranks + colors).filter {
             getFocusedSlot(
-                hand = teammate.getVisibleHand(),
+                hand = teammate.hand,
                 clueValue = it,
                 playerPOV = playerPOV
-            ).contains(card)
+
+            ).index == slotIndex
         }
 
         return clueValues.map {
@@ -90,7 +84,7 @@ abstract class HGroupClue(override val name: String) : HGroupTech(), ClueTech {
         }.toSet()
     }
 
-    open fun matchesClueBySlot(focusIndex: Int, hand: InterpretedHand): Boolean {
+    open fun matchesClueBySlot(focusIndex: Int, hand: Hand): Boolean {
         return true
     }
 
@@ -100,7 +94,8 @@ abstract class HGroupClue(override val name: String) : HGroupTech(), ClueTech {
         val touchedSlotIndexes = action.slotsTouched
         val focusIndex = getFocusedSlotIndex(
             hand = receiverHand,
-            touchedSlotsIndexes = touchedSlotIndexes
+            touchedSlotsIndexes = touchedSlotIndexes,
+            playerPOV = playerPOV,
         )
         if (!matchesClueBySlot(focusIndex, receiverHand)) {
             return false
@@ -121,10 +116,14 @@ abstract class HGroupClue(override val name: String) : HGroupTech(), ClueTech {
         }
     }
 
-    override fun getGeneratedKnowledge(action: ObservedClue, playerPOV: PlayerPOV): PersonalKnowledge {
+    override fun getGeneratedKnowledge(action: ObservedClue, playerPOV: PlayerPOV): PlayerPersonalKnowledge {
         val receiverId = action.clueAction.clueReceiver
         val receiverHand = playerPOV.getHand(receiverId)
-        val focusIndex = getFocusedSlotIndex(hand = receiverHand, touchedSlotsIndexes = action.slotsTouched)
+        val focusIndex = getFocusedSlotIndex(
+            hand = receiverHand,
+            touchedSlotsIndexes = action.slotsTouched,
+            playerPOV = playerPOV,
+            )
         return getGeneratedKnowledge(action, focusIndex, playerPOV)
     }
 }

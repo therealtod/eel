@@ -1,7 +1,7 @@
 id: 24
 description: "A board where a simple finesse can be given to a teammate"
 globally_available_info:
-  suites:
+  suits:
     - "red"
     - "yellow"
     - "green"

@@ -6,7 +6,7 @@ import eelst.ilike.game.entity.suite.SuiteId
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy::class)
 data class GloballyAvailableInfoDTO(
-    val suites: List<SuiteId>,
+    val suits: List<SuiteId>,
     val playingStacks: List<List<String>>,
     val trashPile: List<String>,
     val strikes: Int,

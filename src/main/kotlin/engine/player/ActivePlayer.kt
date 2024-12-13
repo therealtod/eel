@@ -1,14 +1,5 @@
 package eelst.ilike.engine.player
 
-import eelst.ilike.engine.convention.BaseConventionSet
-import eelst.ilike.engine.convention.ConventionalAction
-import eelst.ilike.engine.convention.tech.ConventionTech
-import eelst.ilike.engine.factory.PlayerFactory
-import eelst.ilike.engine.player.knowledge.PersonalKnowledge
-import eelst.ilike.game.GameUtils
-import eelst.ilike.game.GloballyAvailableInfoImpl
-import eelst.ilike.game.PlayerId
-import eelst.ilike.game.entity.card.HanabiCard
 /*
 class ActivePlayer(
     playerId: PlayerId,

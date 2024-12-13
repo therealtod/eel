@@ -1,7 +1,7 @@
 id: 4
 description: "A board with multiple critical cards on chop"
 globally_available_info:
-  suites:
+  suits:
     - "red"
     - "yellow"
     - "green"

@@ -1,7 +1,7 @@
 id: 13
 description: "A board with a good prompt and a wrong prompt that cannot be patched"
 globally_available_info:
-  suites:
+  suits:
     - "red"
     - "yellow"
     - "green"

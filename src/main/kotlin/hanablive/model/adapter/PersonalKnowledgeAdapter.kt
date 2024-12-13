@@ -1,23 +1,22 @@
 package eelst.ilike.hanablive.model.adapter
 
-import eelst.ilike.engine.factory.KnowledgeFactory
-import eelst.ilike.engine.hand.VisibleHand
+import eelst.ilike.engine.hand.slot.VisibleHand
+import eelst.ilike.engine.player.knowledge.Knowledge
 import eelst.ilike.engine.player.knowledge.PersonalHandKnowledge
 import eelst.ilike.engine.player.knowledge.PersonalHandKnowledgeImpl
-import eelst.ilike.engine.player.knowledge.PersonalKnowledge
+import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.PlayerId
-import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.hanablive.model.dto.instruction.GameDrawActionData
 
 class PersonalKnowledgeAdapter(
     drawActions: Collection<GameDrawActionData>,
     botPlayerIndex: Int,
     playerIndexToPlayerIdMap: Map<Int, PlayerId>,
-): PersonalKnowledge {
+): PlayerPersonalKnowledge {
     private val botDraws: List<GameDrawActionData>
     private val teammatesDraws: Map<Int, List<GameDrawActionData>>
-    private val visibleHands: Map<PlayerId, VisibleHand>
 
+    val visibleHands: Map<PlayerId, VisibleHand>
     init {
         val drawsGroupedByPlayer = drawActions.groupBy { it.playerIndex }
         botDraws = drawsGroupedByPlayer[botPlayerIndex] ?: throw IllegalStateException(
@@ -25,16 +24,14 @@ class PersonalKnowledgeAdapter(
         )
         teammatesDraws = drawsGroupedByPlayer.minus(botPlayerIndex)
         visibleHands = teammatesDraws.map {
-            Pair(
-                playerIndexToPlayerIdMap[it.key] ?: throw IllegalStateException("No player with player index ${it.key}"),
                 VisibleHand(
-                    TODO()
+                    ownerId = playerIndexToPlayerIdMap[it.key] ?: throw IllegalStateException("No player with player index ${it.key}"),
+                    slots = TODO()
                 )
-            )
-        }.toMap()
+        }.associateBy { it.ownerId }
     }
 
-    override fun accessibleTo(playerId: PlayerId): PersonalKnowledge {
+    override fun accessibleTo(playerId: PlayerId): PlayerPersonalKnowledge {
         TODO("Not yet implemented")
     }
 
@@ -43,7 +40,10 @@ class PersonalKnowledgeAdapter(
     }
 
     override fun getVisibleHand(playerId: PlayerId): VisibleHand {
-        return visibleHands[playerId]
-            ?: throw IllegalArgumentException("No player $playerId with visible hand could be found")
+        TODO("Not yet implemented")
+    }
+
+    override fun getUpdatedWith(knowledge: Knowledge): Knowledge {
+        TODO("Not yet implemented")
     }
 }

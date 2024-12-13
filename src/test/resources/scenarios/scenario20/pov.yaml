@@ -1,7 +1,7 @@
 id: 20
 description: "A board with multiple players with 5s on their chop"
 globally_available_info:
-  suites:
+  suits:
     - "red"
     - "yellow"
     - "green"

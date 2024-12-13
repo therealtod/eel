@@ -2,10 +2,9 @@ package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.tech.ConventionTech
-import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.VisibleTeammate
-import eelst.ilike.engine.player.knowledge.PersonalKnowledge
+import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.variant.Variant
@@ -43,17 +42,16 @@ object DirectPlayClue : PlayClue("Direct Play Clue") {
     }
 
     override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
-        val focusedSlot = playerPOV.getOwnSlot(focusIndex)
-        return focusedSlot
-            .getPossibleIdentities()
+        return playerPOV.getPossibleSlotIdentities(focusIndex, playerPOV.getOwnPlayerId())
             .any {
                 playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) == 0
             }
     }
 
-    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PersonalKnowledge {
-        val focusedSlot = playerPOV.getOwnSlot(focusIndex)
-        val possibleIdentities = focusedSlot.getPossibleIdentities()
+    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PlayerPersonalKnowledge {
+        /*
+        val focusedSlot = playerPOV.getSlot(focusIndex)
+        val possibleIdentities = playerPOV.getPossibleSlotIdentities(focusedSlot)
             .filter {
                 playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) == 0
             }
@@ -62,5 +60,8 @@ object DirectPlayClue : PlayClue("Direct Play Clue") {
             slotIndex = focusIndex,
             possibleIdentities = possibleIdentities.toSet()
         )
+
+         */
+        TODO()
     }
 }

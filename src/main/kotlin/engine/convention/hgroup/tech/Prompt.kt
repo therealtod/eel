@@ -1,8 +1,10 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.hand.slot.VisibleSlot
+
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.VisibleTeammate
+import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.card.HanabiCard
 
 sealed class Prompt(name: String) : IndirectPlayClue(name) {
@@ -57,17 +59,17 @@ sealed class Prompt(name: String) : IndirectPlayClue(name) {
 
     private fun isPromptedCorrectly(
         card: HanabiCard,
-        teammate: Teammate,
-        promptedSlots: Set<VisibleSlot> = emptySet(),
+        teammate: VisibleTeammate,
+        promptedSlots: Set<Slot> = emptySet(),
         playerPOV: PlayerPOV,
     ): Boolean {
         val promptedTeammateSlot = promptedSlots.firstOrNull { slot ->
-            slot.isClued() &&
-                    teammate.getSlotFromTeammatePOV(slot.index)
-                        .getPossibleIdentities()
+            slot.isTouched() &&
+                    teammate.getPOV()
+                        .getPossibleSlotIdentities(slotIndex = slot.index, playerId = teammate.playerId)
                         .contains(card)
         } ?: return false
-        return (promptedTeammateSlot.contains(card)) ||
+        return teammate.holdsCardInSlot(card, promptedTeammateSlot.index) ||
                 (playerPOV.globallyAvailableInfo.isImmediatelyPlayable(card)
                         && isPromptedCorrectly(
                     card = card,
@@ -76,7 +78,7 @@ sealed class Prompt(name: String) : IndirectPlayClue(name) {
                     playerPOV = playerPOV
                 )
                         ) || wrongPromptCanBePatched(
-            wrongPromptedCard = promptedTeammateSlot.card,
+            wrongPromptedCard = teammate.getCardInSlot(promptedTeammateSlot.index),
             wrongPromptedTeammate = teammate,
             playerPOV = playerPOV
         )

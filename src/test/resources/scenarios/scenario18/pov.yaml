@@ -1,7 +1,7 @@
 id: 18
 description: "A board where y2 cannot be saved from Alice's POV because of the visible rule"
 globally_available_info:
-  suites:
+  suits:
     - "red"
     - "yellow"
     - "green"
