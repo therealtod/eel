@@ -11,8 +11,13 @@ object KnowledgeFactory {
         TODO()
     }
 
-    fun createEmptyPersonalSlotKnowledge(): PersonalSlotKnowledge {
+    fun createEmptyPersonalSlotKnowledge(
+        ownerPlayerId: PlayerId,
+        slotIndex: Int,
+    ): PersonalSlotKnowledge {
         return PersonalSlotKnowledgeImpl(
+            ownerId = ownerPlayerId,
+            slotIndex = slotIndex,
             impliedIdentities = emptySet(),
             empathy = emptySet(),
         )

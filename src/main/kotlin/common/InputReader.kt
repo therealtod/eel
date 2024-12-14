@@ -77,11 +77,13 @@ object InputReader {
         )
 
         val activePlayerPersonalHandKnowledge = PersonalHandKnowledgeImpl(
+            ownerPlayerId = activePlayerId,
             handSize = globallyAvailableInfo.defaultHandsSize,
             activePlayerPersonalSlotKnowledge,
         )
         val personalHandKnowledge = teammatesPersonalSlotKnowledge.mapValues {
             PersonalHandKnowledgeImpl(
+                ownerPlayerId = it.key,
                 handSize = globallyAvailableInfo.defaultHandsSize,
                 slotKnowledge = it.value
             )

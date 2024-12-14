@@ -41,7 +41,7 @@ class PersonalKnowledgeAdapter(
     }
 
     override fun getOwnHandKnowledge(playerId: PlayerId): PersonalHandKnowledge {
-        return PersonalHandKnowledgeImpl(botDraws.size, emptyMap())
+        return PersonalHandKnowledgeImpl(playerId, botDraws.size, emptyMap())
     }
 
     override fun getVisibleHand(playerId: PlayerId): VisibleHand {

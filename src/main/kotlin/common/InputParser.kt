@@ -99,6 +99,8 @@ object InputParser {
     ): Map<Int, PersonalSlotKnowledge> {
         val slots = knowledge.mapIndexed { index, dto ->
             index to PersonalSlotKnowledgeImpl(
+                ownerId = globallyAvailablePlayerInfo.playerId,
+                slotIndex = index + 1,
                 impliedIdentities = parseCards(dto, suits),
                 empathy = GameUtils.getCardEmpathy(
                     visibleCards = visibleCards,
