@@ -4,6 +4,7 @@ import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.VisibleTeammate
+import eelst.ilike.engine.player.knowledge.Knowledge
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Rank
@@ -60,7 +61,7 @@ object CriticalSave : SaveClue("Critical Save") {
 
     }
 
-    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PlayerPersonalKnowledge {
+    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Knowledge {
         val receiverPOV = playerPOV.getTeammate(action.clueAction.clueReceiver).getPOV(playerPOV)
         val possibleFocusIdentities = receiverPOV
             .getOwnSlotPossibleIdentities(focusIndex).filter {
@@ -69,7 +70,8 @@ object CriticalSave : SaveClue("Critical Save") {
         return KnowledgeFactory.createKnowledge(
             playerId = playerPOV.getOwnPlayerId(),
             slotIndex = focusIndex,
-            possibleIdentities = possibleFocusIdentities.toSet()
+            possibleIdentities = possibleFocusIdentities.toSet(),
+            empathy = receiverPOV.getOwnSlotEmpathy(focusIndex)
         )
     }
 }

@@ -19,18 +19,18 @@ class VisibleHand(
     }
 
     fun getCardInSlot(slotIndex: Int): HanabiCard {
-        return slots.elementAt(slotIndex - 1).visibleCard
+        return slots.elementAt(slotIndex - 1).knownIdentity
     }
 
     override fun getSlotsTouchedBy(clueValue: ClueValue): Set<Int> {
         return slots.filter {
-            it.visibleCard.isTouchedBy(clueValue)
+            it.knownIdentity.isTouchedBy(clueValue)
         }
             .map { it.index }
             .toSet()
     }
 
     override fun countCopiesOf(card: HanabiCard): Int {
-        return slots.count { it.visibleCard == card }
+        return slots.count { it.knownIdentity == card }
     }
 }

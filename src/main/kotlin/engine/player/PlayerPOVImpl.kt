@@ -4,7 +4,9 @@ import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.factory.PlayerFactory
+import eelst.ilike.engine.hand.slot.FullEmpathySlot
 import eelst.ilike.engine.hand.slot.KnownSlot
+import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.GameUtils
 import eelst.ilike.game.GloballyAvailableInfo
@@ -56,7 +58,7 @@ class PlayerPOVImpl(
 
     override fun getOwnKnownPlayableSlots(): Set<Slot> {
         val knownSlots = getOwnKnownSlots()
-        return knownSlots.filter { globallyAvailableInfo.isImmediatelyPlayable(it.inferredIdentity) }.toSet()
+        return knownSlots.filter { globallyAvailableInfo.isImmediatelyPlayable(it.knownIdentity) }.toSet()
     }
 
     override fun getOwnSlotPossibleIdentities(slotIndex: Int): Set<HanabiCard> {
@@ -110,6 +112,26 @@ class PlayerPOVImpl(
 
     override fun getPersonalKnowledge(): PlayerPersonalKnowledge {
         return personalKnowledge
+    }
+
+    override fun getOwnSlotEmpathy(slotIndex: Int): Set<HanabiCard> {
+        TODO("Not yet implemented")
+    }
+
+    override fun getVisibleCards(): List<HanabiCard> {
+        val cardsOnPlayingStacks = globallyAvailableInfo.getCardsOnStacks()
+        val cardsInTrash = globallyAvailableInfo.trashPile.cards
+        val teammatesSlots = teammates.flatMap {
+            it.hand.getSlots()
+        }
+        val visibleTeammatesCards = teammatesSlots
+            .filterIsInstance<VisibleSlot>()
+            .map { it.knownIdentity }
+        val ownFullEmpathyCards = myself.hand.getSlots()
+            .filterIsInstance<FullEmpathySlot>()
+            .map { it.knownIdentity }
+
+        return cardsOnPlayingStacks + cardsInTrash + visibleTeammatesCards + ownFullEmpathyCards
     }
 
     private fun getCandidateActions(

@@ -27,13 +27,6 @@ object HandFactory {
         }
     }
 
-    fun createVisibleHand(
-        teammateId: PlayerId,
-        personalKnowledge: PlayerPersonalKnowledge,
-        ): VisibleHand {
-        TODO()
-    }
-
     fun createOwnHand(
         playerId: PlayerId,
         handSize: Int,

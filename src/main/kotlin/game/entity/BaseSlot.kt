@@ -1,8 +1,6 @@
-package eelst.ilike.engine.hand.slot
+package eelst.ilike.game.entity
 
 import eelst.ilike.game.GameUtils
-import eelst.ilike.game.entity.ClueValue
-import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 

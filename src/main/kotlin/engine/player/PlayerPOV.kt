@@ -28,4 +28,6 @@ interface PlayerPOV {
     fun getLegalActions(conventionSet: ConventionSet): Collection<ConventionalAction>
     fun asTeammateOf(teammatePlayerId: PlayerId): Teammate
     fun getOwnSlotPossibleIdentities(slotIndex: Int): Set<HanabiCard>
+    fun getOwnSlotEmpathy(slotIndex: Int): Set<HanabiCard>
+    fun getVisibleCards(): List<HanabiCard>
 }

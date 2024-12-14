@@ -16,7 +16,7 @@ object SlotFactory {
                 index = globalInfo.index,
                 positiveClues = globalInfo.positiveClues,
                 negativeClues = globalInfo.negativeClues,
-                inferredIdentity = knowledge.getPossibleSlotIdentities().first()
+                knownIdentity = knowledge.getPossibleSlotIdentities().first()
             )
         } else {
             SimpleSlot(

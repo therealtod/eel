@@ -5,6 +5,7 @@ import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.VisibleTeammate
+import eelst.ilike.engine.player.knowledge.Knowledge
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
@@ -69,7 +70,7 @@ data object DelayedPlayClue
         return playerPOV.teamKnowsAllCards(missingCards)
     }
 
-    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PlayerPersonalKnowledge {
+    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Knowledge {
         val receiverPOV = playerPOV.getTeammate(action.clueAction.clueReceiver).getPOV(playerPOV)
         val possibleIdentities = receiverPOV.getOwnSlotPossibleIdentities(focusIndex)
             .filter {
@@ -78,7 +79,8 @@ data object DelayedPlayClue
         return KnowledgeFactory.createKnowledge(
             playerId = playerPOV.getOwnPlayerId(),
             slotIndex = focusIndex,
-            possibleIdentities = possibleIdentities.toSet()
+            possibleIdentities = possibleIdentities.toSet(),
+            empathy = receiverPOV.getOwnSlotEmpathy(focusIndex),
         )
     }
 }
