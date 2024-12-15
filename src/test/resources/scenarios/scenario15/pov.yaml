@@ -42,25 +42,31 @@ globally_available_info:
     - player_id: "Donald"
 player_pov:
   player_id: "Alice"
-  teammates:
+  players:
+    - player_id: "Alice"
+      hand:
+        - card: "x"
+        - card: "x"
+        - card: "x"
+        - card: "x"
     - player_id: "Bob"
       hand:
-        - card: "r1"
         - card: "b3"
+          positive_clues: [ "BLUE" ]
         - card: "y4"
         - card: "b1"
         - card: "r3"
     - player_id: "Cathy"
       hand:
-        - card: "b4"
         - card: "r4"
         - card: "p2"
+          positive_clues: [2]
         - card: "r2"
-        - card: "r1"
+          positive_clues: [2]
+        - card: "b4"
     - player_id: "Donald"
       hand:
         - card: "y2"
         - card: "p1"
-        - card: "p5"
         - card: "y3"
         - card: "y1"

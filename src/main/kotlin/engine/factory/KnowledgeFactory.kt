@@ -7,7 +7,7 @@ import eelst.ilike.game.entity.card.HanabiCard
 
 object KnowledgeFactory {
     fun createEmptyPersonalKnowledge(): PlayerPersonalKnowledge {
-        return PlayersHandKnowledge()
+        return PlayersHandKnowledge(emptyMap())
     }
 
     fun createEmptyPersonalSlotKnowledge(

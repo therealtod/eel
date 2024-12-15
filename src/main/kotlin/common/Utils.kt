@@ -19,14 +19,5 @@ object Utils {
             ?: throw IllegalArgumentException("No resource with fileName $fileName could be found in the classPath")
     }
 
-    fun getHandSize(numberOfPlayers: Int): Int {
-        return when (numberOfPlayers) {
-            6 -> 3
-            4, 5 -> 4
-            2, 3 -> 5
-            else -> throw IllegalStateException("Invalid number of players: $numberOfPlayers")
-        }
-    }
-
     fun <T> createLoggerFor(clazz: Class<T>) = LoggerFactory.getLogger(clazz)
 }

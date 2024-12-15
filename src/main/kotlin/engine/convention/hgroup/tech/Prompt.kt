@@ -1,9 +1,10 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
 
+import eelst.ilike.engine.hand.slot.KnownSlot
+import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
-import eelst.ilike.engine.player.VisibleTeammate
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.card.HanabiCard
 
@@ -33,7 +34,7 @@ sealed class Prompt(name: String) : IndirectPlayClue(name) {
     ): Boolean {
         if (sequence.isEmpty()) return true
         val nextInSequence = sequence.first()
-        val promptableTeammates = playerPOV.getVisibleTeammates()
+        val promptableTeammates = playerPOV.getTeammates()
 
         return if (
             promptableTeammates.any { teammate ->
@@ -57,17 +58,19 @@ sealed class Prompt(name: String) : IndirectPlayClue(name) {
 
     private fun isPromptedCorrectly(
         card: HanabiCard,
-        teammate: VisibleTeammate,
+        teammate: Teammate,
         promptedSlots: Set<Slot> = emptySet(),
         playerPOV: PlayerPOV,
     ): Boolean {
         val promptedTeammateSlot = promptedSlots.firstOrNull { slot ->
             slot.isTouched() &&
                     teammate.getPOV(playerPOV)
-                        .getOwnSlotPossibleIdentities(slotIndex = slot.index)
+                        .getOwnHand()
+                        .getSlot(slot.index)
+                        .getPossibleIdentities()
                         .contains(card)
         } ?: return false
-        return teammate.holdsCardInSlot(card, promptedTeammateSlot.index) ||
+        return promptedTeammateSlot.matches { _, identity -> identity == card } ||
                 (playerPOV.globallyAvailableInfo.isImmediatelyPlayable(card)
                         && isPromptedCorrectly(
                     card = card,
@@ -76,17 +79,21 @@ sealed class Prompt(name: String) : IndirectPlayClue(name) {
                     playerPOV = playerPOV
                 )
                         ) || wrongPromptCanBePatched(
-            wrongPromptedCard = teammate.getCardInSlot(promptedTeammateSlot.index),
+            wrongPromptedSlot = promptedTeammateSlot,
             wrongPromptedTeammate = teammate,
             playerPOV = playerPOV
         )
     }
 
     private fun wrongPromptCanBePatched(
-        wrongPromptedCard: HanabiCard,
+        wrongPromptedSlot: Slot,
         wrongPromptedTeammate: Teammate,
         playerPOV: PlayerPOV,
     ): Boolean {
+        if (wrongPromptedSlot !is VisibleSlot) {
+            return false
+        }
+        val wrongPromptedCard = wrongPromptedSlot.knownIdentity
         if (playerPOV.globallyAvailableInfo.getGlobalAwayValue(wrongPromptedCard) < 0) return false
         val preRequisites = wrongPromptedCard.getPrerequisiteCards()
         val cardTeammateMap = preRequisites.associateWith {

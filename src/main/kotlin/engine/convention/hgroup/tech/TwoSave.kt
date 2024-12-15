@@ -24,7 +24,7 @@ object TwoSave : SaveClue("2-Save") {
         val otherPlayers = playerPOV
             .getTeammates()
             .filter { it.playerId != teammate.playerId } +
-                playerPOV.asTeammateOf(teammate.playerId)
+                playerPOV.getAsPlayer()
 
         return slot.matches{ slotIndex, card ->
             slotIndex == chop.index && run {
@@ -41,7 +41,7 @@ object TwoSave : SaveClue("2-Save") {
 
     override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
         val actions = mutableListOf<ClueAction>()
-        playerPOV.forEachVisibleTeammate { teammate ->
+        playerPOV.forEachTeammate { teammate ->
             val chop = getChop(teammate.hand, playerPOV)
             if (teammateSlotMatchesCondition(teammate, slot = chop, playerPOV)) {
                 actions.add(
@@ -58,7 +58,7 @@ object TwoSave : SaveClue("2-Save") {
 
     override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
         val saveableTwos = getSaveableTwos(playerPOV)
-        return playerPOV.getOwnSlotPossibleIdentities(focusIndex)
+        return playerPOV.getOwnHand().getSlot(focusIndex).getPossibleIdentities()
             .intersect(saveableTwos).isNotEmpty()
     }
 

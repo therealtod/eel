@@ -3,6 +3,7 @@ package eelst.ilike.engine.convention.hgroup.tech
 import eelst.ilike.engine.action.ObservedAction
 import eelst.ilike.engine.action.ObservedPlay
 import eelst.ilike.engine.convention.tech.PlayTech
+import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
@@ -19,15 +20,18 @@ object PlayKnownPlayable : HGroupTech(), PlayTech {
     }
 
     override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
-        val teammatePOV = teammate.getPOV(playerPOV)
-        val teammateKnowsOwnSlot = teammatePOV.isSlotKnown(slot.index)
+        val teammateKnowsOwnSlot = teammate.getHandFromPlayerPOV().getSlot(slot.index) is KnownSlot
         return teammateKnowsOwnSlot &&
                 slot.matches { _, card -> playerPOV.globallyAvailableInfo.isImmediatelyPlayable(card) }
     }
 
     override fun getGameActions(playerPOV: PlayerPOV): Set<PlayAction> {
         return playerPOV
-            .getOwnKnownPlayableSlots()
+            .getOwnHand()
+            .filterIsInstance<KnownSlot>()
+            .filter {
+                playerPOV.globallyAvailableInfo.isImmediatelyPlayable(it.knownIdentity)
+            }
             .map {
                 PlayAction(
                     playerId = playerPOV.getOwnPlayerId(),

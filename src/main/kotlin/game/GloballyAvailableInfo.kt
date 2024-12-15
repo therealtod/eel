@@ -1,9 +1,6 @@
 package eelst.ilike.game
 
-import eelst.ilike.game.entity.Color
-import eelst.ilike.game.entity.PlayingStack
-import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.TrashPile
+import eelst.ilike.game.entity.*
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.game.entity.suite.SuiteId
@@ -36,6 +33,5 @@ interface GloballyAvailableInfo {
     fun isImmediatelyPlayable(card: HanabiCard): Boolean
     fun getPlayerInfo(playerId: PlayerId): GloballyAvailablePlayerInfo
     fun getPlayerInfo(playerIndex: Int): GloballyAvailablePlayerInfo
-    fun getCluableRanks(): Set<Rank>
-    fun getCluableColors(): Set<Color>
+    fun getAvailableClueValues(): Set<ClueValue>
 }

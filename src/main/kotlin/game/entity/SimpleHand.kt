@@ -19,7 +19,7 @@ class SimpleHand(
     }
 
     override fun getSlotsTouchedBy(clueValue: ClueValue): Set<Int> {
-        TODO("Not yet implemented")
+        return slots.filter { it.isTouchedBy(clueValue) }.map { it.index }.toSet()
     }
 
     override fun countCopiesOf(card: HanabiCard): Int {

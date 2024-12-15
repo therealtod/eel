@@ -13,46 +13,30 @@ globally_available_info:
   efficiency: 1.00
   pace: 15
   clue_tokens: 5
-  players:
-    - player_id: "Alice"
-    - player_id: "Bob"
-      slot_clues:
-        - positive_clues: [ ]
-          negative_clues: [ ]
-        - positive_clues: [ ]
-          negative_clues: [ ]
-        - positive_clues: [ 2 ]
-          negative_clues: [ ]
-        - positive_clues: [ 2 ]
-          negative_clues: [ ]
-        - positive_clues: [ ]
-          negative_clues: [ ]
-    - player_id: "Cathy"
-      slot_clues:
-        - positive_clues: [ ]
-          negative_clues: [ ]
-        - positive_clues: [ "BLUE" ]
-          negative_clues: [ ]
-        - positive_clues: [ ]
-          negative_clues: [ ]
-        - positive_clues: [ ]
-          negative_clues: [ ]
-        - positive_clues: [ ]
-          negative_clues: [ ]
 player_pov:
   player_id: "Alice"
-  teammates:
+  players:
+    - player_id: "Alice"
+      hand:
+        - card: "x"
+        - card: "x"
+        - card: "x"
+        - card: "x"
+        - card: "x"
     - player_id: "Bob"
       hand:
         - card: "b4"
         - card: "r4"
         - card: "r2"
+          positive_clues: [2]
         - card: "p2"
+          positive_clues: [2]
         - card: "r1"
     - player_id: "Cathy"
       hand:
         - card: "p5"
         - card: "b3"
+          positive_clues: ["BLUE"]
         - card: "y4"
         - card: "b1"
         - card: "r3"

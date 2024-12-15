@@ -34,7 +34,7 @@ object CriticalSave : SaveClue("Critical Save") {
     override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
         val actions = mutableSetOf<ClueAction>()
 
-        playerPOV.forEachVisibleTeammate { teammate ->
+        playerPOV.forEachTeammate { teammate ->
             if (hasChop(teammate.hand, playerPOV)) {
                 val chop = getChop(teammate.hand, playerPOV)
                 if (
@@ -42,7 +42,7 @@ object CriticalSave : SaveClue("Critical Save") {
                 ) {
                     actions.addAll(
                         getAllCluesFocusing(
-                            slotIndex = chop.index,
+                            slot = chop,
                             teammate = teammate,
                             playerPOV = playerPOV,
                         )
@@ -54,22 +54,26 @@ object CriticalSave : SaveClue("Critical Save") {
     }
 
     override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
-        return playerPOV.getOwnSlotPossibleIdentities(focusIndex)
+        return playerPOV.getOwnHand().getSlot(focusIndex)
+            .getPossibleIdentities()
             .any { playerPOV.globallyAvailableInfo.isCritical(it) }
-
     }
 
     override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Knowledge {
         val receiverPOV = playerPOV.getTeammate(action.clueAction.clueReceiver).getPOV(playerPOV)
-        val possibleFocusIdentities = receiverPOV
-            .getOwnSlotPossibleIdentities(focusIndex).filter {
-            playerPOV.globallyAvailableInfo.isCritical(it)
+        val focus = receiverPOV
+            .getOwnHand()
+            .getSlot(focusIndex)
+        val possibleFocusIdentities = focus
+            .getPossibleIdentities()
+            .filter {
+                playerPOV.globallyAvailableInfo.isCritical(it)
         }
         return KnowledgeFactory.createKnowledge(
             playerId = playerPOV.getOwnPlayerId(),
             slotIndex = focusIndex,
             possibleIdentities = possibleFocusIdentities.toSet(),
-            empathy = receiverPOV.getOwnSlotEmpathy(focusIndex)
+            empathy = focus.getUpdatedEmpathy(action.clueAction.value)
         )
     }
 }

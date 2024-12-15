@@ -1,7 +1,7 @@
 package eelst.ilike.engine.player.knowledge
 
-import eelst.ilike.engine.hand.slot.VisibleHand
 import eelst.ilike.game.PlayerId
+/*
 
 class PlayerPersonalKnowledgeImpl(
     private val personalHandKnowledge: Map<PlayerId, PersonalHandKnowledge>,
@@ -35,3 +35,5 @@ class PlayerPersonalKnowledgeImpl(
         TODO()
     }
 }
+
+ */

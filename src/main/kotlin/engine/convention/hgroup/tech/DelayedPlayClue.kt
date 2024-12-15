@@ -3,6 +3,7 @@ package eelst.ilike.engine.convention.hgroup.tech
 import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.factory.KnowledgeFactory
+import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.knowledge.Knowledge
@@ -19,8 +20,7 @@ data object DelayedPlayClue
     }
 
     override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
-        val teammatePOV = teammate.getPOV(playerPOV)
-        val teammateKnowsOwnSlot = teammatePOV.isSlotKnown(slot.index)
+        val teammateKnowsOwnSlot = teammate.getHandFromPlayerPOV().getSlot(slot.index) is KnownSlot
         return !teammateKnowsOwnSlot && slot.matches { _, card ->
                     playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) > 0 &&
                     connectingCardsAreKnown(card, playerPOV)
@@ -30,14 +30,14 @@ data object DelayedPlayClue
     override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
         val actions = mutableListOf<ClueAction>()
 
-        playerPOV.forEachVisibleTeammate { teammate ->
+        playerPOV.forEachTeammate { teammate ->
             teammate
                 .getSlots()
                 .forEach { slot ->
                     if (teammateSlotMatchesCondition(teammate, slot, playerPOV)) {
                         actions.addAll(
                             getAllCluesFocusing(
-                                slotIndex = slot.index,
+                                slot = slot,
                                 teammate = teammate,
                                 playerPOV = playerPOV,
                             )
@@ -53,7 +53,8 @@ data object DelayedPlayClue
     }
 
     override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
-        return playerPOV.getOwnSlotPossibleIdentities(focusIndex)
+        val slot = playerPOV.getOwnHand().getSlot(focusIndex)
+        return slot.getPossibleIdentities()
             .any {
                 playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) > 0 &&
                         connectingCardsAreKnown(it, playerPOV)
@@ -72,7 +73,8 @@ data object DelayedPlayClue
 
     override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Knowledge {
         val receiverPOV = playerPOV.getTeammate(action.clueAction.clueReceiver).getPOV(playerPOV)
-        val possibleIdentities = receiverPOV.getOwnSlotPossibleIdentities(focusIndex)
+        val slot = receiverPOV.getOwnHand().getSlot(focusIndex)
+        val possibleIdentities = slot.getPossibleIdentities()
             .filter {
                 playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) > 0
             }
@@ -80,7 +82,7 @@ data object DelayedPlayClue
             playerId = playerPOV.getOwnPlayerId(),
             slotIndex = focusIndex,
             possibleIdentities = possibleIdentities.toSet(),
-            empathy = receiverPOV.getOwnSlotEmpathy(focusIndex),
+            empathy = TODO()
         )
     }
 }

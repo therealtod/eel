@@ -15,20 +15,15 @@ interface PlayerPOV {
 
     fun getOwnPlayerId(): PlayerId
     fun getOwnKnownCards(): List<HanabiCard>
-    fun canSee(teammatePlayerId: PlayerId, slotIndex: Int): Boolean
-    fun isSlotKnown(slotIndex: Int): Boolean
     fun getPersonalKnowledge(): PlayerPersonalKnowledge
-    fun getOwnKnownPlayableSlots(): Set<Slot>
     fun teamKnowsAllCards(cards: Set<HanabiCard>): Boolean
-    fun forEachVisibleTeammate(action: (teammate: VisibleTeammate) -> Unit)
-    fun getHand(playerId: PlayerId): Hand
-    fun getTeammate(teammatePlayerId: PlayerId): Teammate
     fun getTeammates(): Set<Teammate>
-    fun getVisibleTeammates(): Set<VisibleTeammate>
+    fun forEachTeammate(action: (teammate: Teammate) -> Unit)
+    fun getOwnHand(): Hand
+    fun getTeammate(teammatePlayerId: PlayerId): Teammate
     fun getSeatsGapFrom(teammate: Teammate): Int
     fun getLegalActions(conventionSet: ConventionSet): Collection<ConventionalAction>
-    fun asTeammateOf(teammatePlayerId: PlayerId): Teammate
-    fun getOwnSlotPossibleIdentities(slotIndex: Int): Set<HanabiCard>
-    fun getOwnSlotEmpathy(slotIndex: Int): Set<HanabiCard>
     fun getVisibleCards(): List<HanabiCard>
+    fun getPlayerPOV(playerId: PlayerId): PlayerPOV
+    fun getAsPlayer(): Teammate
 }

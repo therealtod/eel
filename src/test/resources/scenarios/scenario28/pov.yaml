@@ -13,19 +13,17 @@ globally_available_info:
   efficiency: 1.00
   pace: 15
   clue_tokens: 5
-  players:
-    - player_id: "Alice"
-      slot_clues:
-        - positive_clues: [ ]
-        - positive_clues: [ "YELLOW", "2" ]
-        - positive_clues: [ ]
-        - positive_clues: [ ]
-        - positive_clues: [ ]
-    - player_id: "Bob"
-    - player_id: "Cathy"
 player_pov:
   player_id: "Alice"
-  teammates:
+  players:
+    - player_id: "Alice"
+      hand:
+        - card: "x"
+        - card: "y2"
+          positive_clues: ["YELLOW", 2]
+        - card: "x"
+        - card: "x"
+        - card: "x"
     - player_id: "Bob"
       hand:
         - card: "r3"

@@ -22,25 +22,14 @@ class PlayerPOVImpl(
     private val personalKnowledge: PlayerPersonalKnowledge,
     private val teammates: Map<PlayerId, Teammate>,
 ) : PlayerPOV {
-    private val visibleTeammates = teammates.values.filterIsInstance<VisibleTeammate>()
     private val globallyAvailablePlayerInfo = globallyAvailableInfo.getPlayerInfo(playerId)
     private val myself = Myself(
-        globallyAvailableInfo.getPlayerInfo(playerId),
-        hand
+        globallyAvailablePlayerInfo = globallyAvailableInfo.getPlayerInfo(playerId),
+        hand,
     )
 
-    override fun canSee(teammatePlayerId: PlayerId, slotIndex: Int): Boolean {
-        val teammate = getTeammate(teammatePlayerId)
-        val slot = teammate.hand.getSlot(slotIndex)
-        return slot is VisibleSlot
-    }
-
-    override fun getHand(playerId: PlayerId): Hand {
-        return if (playerId == myself.playerId) {
-            myself.hand
-        } else {
-            getTeammate(playerId).hand
-        }
+    override fun getOwnHand(): Hand {
+        return myself.hand
     }
 
     override fun getOwnPlayerId(): PlayerId {
@@ -48,29 +37,7 @@ class PlayerPOVImpl(
     }
 
     override fun getOwnKnownCards(): List<HanabiCard> {
-        val ownHandKnowledge = personalKnowledge.getOwnHandKnowledge(playerId = myself.playerId)
-        return myself.hand.map {
-            ownHandKnowledge.getKnowledge(it.index)
-        }
-            .filter { it.isSlotKnown() }
-            .map { it.getPossibleSlotIdentities().first() }
-    }
-
-    override fun isSlotKnown(slotIndex: Int): Boolean {
-        return personalKnowledge
-            .getOwnHandKnowledge(myself.playerId).getKnowledge(slotIndex)
-            .isSlotKnown()
-    }
-
-    override fun getOwnKnownPlayableSlots(): Set<Slot> {
-        val knownSlots = getOwnKnownSlots()
-        return knownSlots.filter { globallyAvailableInfo.isImmediatelyPlayable(it.knownIdentity) }.toSet()
-    }
-
-    override fun getOwnSlotPossibleIdentities(slotIndex: Int): Set<HanabiCard> {
-        return personalKnowledge
-            .getOwnHandKnowledge(myself.playerId).getKnowledge(slotIndex)
-            .getPossibleSlotIdentities()
+        return myself.hand.getSlots().filterIsInstance<KnownSlot>().map { it.knownIdentity }
     }
 
     override fun teamKnowsAllCards(cards: Set<HanabiCard>): Boolean {
@@ -83,16 +50,12 @@ class PlayerPOVImpl(
             }
     }
 
-    override fun forEachVisibleTeammate(action: (teammate: VisibleTeammate) -> Unit) {
-        return visibleTeammates.forEach(action)
+    override fun forEachTeammate(action: (teammate: Teammate) -> Unit) {
+        return teammates.values.forEach(action)
     }
 
     override fun getTeammates(): Set<Teammate> {
         return teammates.values.toSet()
-    }
-
-    override fun getVisibleTeammates(): Set<VisibleTeammate> {
-        return visibleTeammates.toSet()
     }
 
     override fun getTeammate(teammatePlayerId: PlayerId): Teammate {
@@ -112,16 +75,8 @@ class PlayerPOVImpl(
         return getCandidateActions(conventionSet.getTechs()).toSet()
     }
 
-    override fun asTeammateOf(teammatePlayerId: PlayerId): Teammate {
-        return PlayerFactory.createPOVProjectionAsTeammate(teammateId = teammatePlayerId, playerPOV = this)
-    }
-
     override fun getPersonalKnowledge(): PlayerPersonalKnowledge {
         return personalKnowledge
-    }
-
-    override fun getOwnSlotEmpathy(slotIndex: Int): Set<HanabiCard> {
-        TODO("Not yet implemented")
     }
 
     override fun getVisibleCards(): List<HanabiCard> {
@@ -138,6 +93,18 @@ class PlayerPOVImpl(
             .map { it.knownIdentity }
 
         return cardsOnPlayingStacks + cardsInTrash + visibleTeammatesCards + ownFullEmpathyCards
+    }
+
+    override fun getPlayerPOV(playerId: PlayerId): PlayerPOV {
+        return if (playerId == myself.playerId) {
+            this
+        } else {
+            getTeammate(playerId).getPOV(this)
+        }
+    }
+
+    override fun getAsPlayer(): Teammate {
+        return myself
     }
 
     private fun getCandidateActions(

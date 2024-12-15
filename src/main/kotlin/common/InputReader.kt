@@ -1,105 +1,60 @@
-package eelst.ilike.utils
-
+package eelst.ilike.common
 
 import com.fasterxml.jackson.module.kotlin.readValue
-import eelst.ilike.common.model.metadata.MetadataProviderImpl
+import eelst.ilike.common.model.metadata.LocalMirrorMetadataProvider
+import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.factory.PlayerFactory
-import eelst.ilike.engine.hand.slot.VisibleHand
-import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.PlayerPOV
-import eelst.ilike.engine.player.knowledge.PersonalHandKnowledgeImpl
-import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledgeImpl
-import eelst.ilike.game.*
+import eelst.ilike.game.GloballyAvailableInfo
+import eelst.ilike.game.PlayerId
+import eelst.ilike.game.entity.SimpleHand
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
+import eelst.ilike.utils.Configuration
+import eelst.ilike.utils.InputParser
+import eelst.ilike.utils.Utils
+import eelst.ilike.utils.model.dto.PlayerDTO
 import eelst.ilike.utils.model.dto.PlayerPOVDTO
 import eelst.ilike.utils.model.dto.ScenarioDTO
-import eelst.ilike.utils.model.dto.PlayerDTO
 
-/*
 object InputReader {
     private val mapper = Utils.yamlObjectMapper
-    private val metadataProvider = MetadataProviderImpl
+    private val metadataProvider = LocalMirrorMetadataProvider
 
     fun getPlayerFromResourceFile(fileName: String): PlayerPOV {
         val fileText = Utils.getResourceFileContentAsString(fileName)
         val dto: ScenarioDTO = mapper.readValue(fileText)
-        val globallyAvailableInfo = InputParser.parseGlobalInfo(dto, metadataProvider)
         val activePlayerId = dto.playerPOV.playerId
-        val activePlayerGloballyAvailableInfo = globallyAvailableInfo.getPlayerInfo(activePlayerId)
+        val globallyAvailableInfo = InputParser.parseGlobalInfo(dto, metadataProvider)
+        val playerDTOS = dto.playerPOV.players
         val visibleCardsMap = computeVisibleCardsMap(
             playerPOV = dto.playerPOV,
             globallyAvailableInfo = globallyAvailableInfo,
         )
-        val teammatesPersonalSlotKnowledge = dto
-            .playerPOV
-            .players
+
+
+        val playersSlots = playerDTOS
             .associateBy { it.playerId }
-            .mapValues {
-                InputParser.parseTeammateSlotKnownledge(
-                    globallyAvailablePlayerInfo = globallyAvailableInfo.getPlayerInfo(it.key),
-                    teammateDTO = it.value,
-                    suits = globallyAvailableInfo.suits,
-                    visibleCards = visibleCardsMap[it.key]!!,
-                )
-            }
-        val visibleHands = dto.playerPOV.players
-            .associateBy { it.playerId }
-            .mapValues {
-                val slotsInfo = it.value.hand.mapIndexed { index, slot ->
-                    globallyAvailableInfo.getPlayerInfo(it.key).hand
-                        .elementAtOrNull(index)
-                        ?: GloballyAvailableSlotInfo(
-                            index = index + 1,
-                            positiveClues = emptyList(),
-                            negativeClues = emptyList(),
-                        )
-                }
-                val slots = slotsInfo.map { slotInfo ->
-                    VisibleSlot(
-                        globallyAvailableSlotInfo = slotInfo,
-                        visibleCard = InputParser
-                            .parseCard(it.value.hand[slotInfo.index - 1].card, globallyAvailableInfo.suits),
+            .mapValues { teammate ->
+                teammate.value.hand.mapIndexed { index, slotDTO ->
+                    InputParser.parseSlot(
+                        activePlayerId = activePlayerId,
+                        slotOwnerId = teammate.key,
+                        slotIndex = index + 1,
+                        slotDTO = slotDTO,
+                        suits = globallyAvailableInfo.suits,
+                        visibleCards = visibleCardsMap[teammate.key]!!
                     )
                 }
-                VisibleHand(
-                    ownerId = it.key,
-                    slots = slots.toSet(),
-                )
             }
-        val activePlayerSlotsKnowledge = (0..<globallyAvailableInfo.defaultHandsSize).map {
-            dto.playerPOV.hand.getOrNull(it) ?: "x"
-        }
-        val activePlayerPersonalSlotKnowledge = InputParser.parsePlayerSlotKnowledge(
-            globallyAvailablePlayerInfo = activePlayerGloballyAvailableInfo,
-            knowledge = activePlayerSlotsKnowledge,
-            suits = globallyAvailableInfo.suits,
-            visibleCards = visibleCardsMap[activePlayerId]!!
-        )
 
-        val activePlayerPersonalHandKnowledge = PersonalHandKnowledgeImpl(
-            ownerPlayerId = activePlayerId,
-            handSize = globallyAvailableInfo.defaultHandsSize,
-            activePlayerPersonalSlotKnowledge,
-        )
-        val personalHandKnowledge = teammatesPersonalSlotKnowledge.mapValues {
-            PersonalHandKnowledgeImpl(
-                ownerPlayerId = it.key,
-                handSize = globallyAvailableInfo.defaultHandsSize,
-                slotKnowledge = it.value
-            )
-        } + Pair(activePlayerId, activePlayerPersonalHandKnowledge)
-
-        val personalKnowledge = PlayerPersonalKnowledgeImpl(
-            personalHandKnowledge = personalHandKnowledge,
-            visibleHands = visibleHands
-        )
+        val playersHands = playersSlots.mapValues { SimpleHand(it.key, it.value.toSet()) }
 
         return PlayerFactory.createPlayerPOV(
             playerId = activePlayerId,
             globallyAvailableInfo = globallyAvailableInfo,
-            personalKnowledge = personalKnowledge,
-
+            personalKnowledge = KnowledgeFactory.createEmptyPersonalKnowledge(),
+            playersHands = playersHands
         )
     }
 
@@ -109,13 +64,10 @@ object InputReader {
     ): Map<PlayerId, List<HanabiCard>> {
         val cardsInTrash = globallyAvailableInfo.trashPile.cards
         val cardsInStacks = globallyAvailableInfo.playingStacks.flatMap { it.value.cards }
-        val activePlayerKnownCards = playerPOV.hand.filter {
-            InputParser.parseCards(it, globallyAvailableInfo.suits).size == 1
-        }.map { InputParser.parseCard(it, globallyAvailableInfo.suits) }
         return globallyAvailableInfo.players.mapValues { player ->
             computeCardsVisibleByPlayer(
                 playerId = player.key,
-                publiclyVisibleCards = cardsInStacks + cardsInTrash + activePlayerKnownCards,
+                publiclyVisibleCards = cardsInStacks + cardsInTrash,
                 teammates = playerPOV.players.associateBy { it.playerId },
                 suits = globallyAvailableInfo.suits,
             )
@@ -131,13 +83,12 @@ object InputReader {
         val cardInTeammatesHands = teammates
             .filterKeys { it != playerId }
             .flatMap { teammate ->
-                teammate.value.hand.map {
+                teammate.value.hand
+                    .filter { it.card != Configuration.UNKNOWN_CARD_SYMBOL }
+                    .map {
                     InputParser.parseCard(it.card, suits)
                 }
             }
         return publiclyVisibleCards + cardInTeammatesHands
     }
 }
-
-
- */

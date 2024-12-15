@@ -20,4 +20,8 @@ open class KnownSlot(
     override fun matches(condition: (slotIndex: Int, card: HanabiCard) -> Boolean): Boolean {
         return condition.invoke(index, knownIdentity)
     }
+
+    override fun isTouchedBy(clueValue: ClueValue): Boolean {
+        return knownIdentity.isTouchedBy(clueValue)
+    }
 }

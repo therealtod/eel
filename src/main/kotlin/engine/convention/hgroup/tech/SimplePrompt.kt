@@ -31,12 +31,12 @@ object SimplePrompt : Prompt("Simple Prompt") {
 
     override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
         val actions = mutableListOf<ClueAction>()
-        playerPOV.forEachVisibleTeammate { teammate ->
+        playerPOV.forEachTeammate { teammate ->
             teammate.getSlots().forEach { slot ->
                 if (teammateSlotMatchesCondition(teammate, slot, playerPOV,))
                     actions.addAll(
                         getAllCluesFocusing(
-                            slotIndex = slot.index,
+                            slot = slot,
                             teammate = teammate,
                             playerPOV = playerPOV,
                         )

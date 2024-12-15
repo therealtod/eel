@@ -10,8 +10,8 @@ import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 
 abstract class BaseSlot(
-    globallyAvailableInfo: GloballyAvailableSlotInfo,
-    private val knowledge: PersonalSlotKnowledge,
+    private val globallyAvailableInfo: GloballyAvailableSlotInfo,
+    val knowledge: PersonalSlotKnowledge,
 ): Slot {
     override val index = globallyAvailableInfo.index
     override val positiveClues = globallyAvailableInfo.positiveClues
@@ -23,5 +23,13 @@ abstract class BaseSlot(
 
     override fun getPossibleIdentities(): Set<HanabiCard> {
         return knowledge.getPossibleSlotIdentities()
+    }
+
+    override fun getGloballyAvailableInfo(): GloballyAvailableSlotInfo {
+        return globallyAvailableInfo
+    }
+
+    override fun getUpdatedEmpathy(clueValue: ClueValue): Set<HanabiCard> {
+        return knowledge.getEmpathy().filter { it.isTouchedBy(clueValue) }.toSet()
     }
 }

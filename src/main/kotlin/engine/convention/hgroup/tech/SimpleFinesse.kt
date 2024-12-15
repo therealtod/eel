@@ -11,7 +11,7 @@ object SimpleFinesse : Finesse("Simple Finesse") {
     override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
         return slot.matches { _, card ->
             playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) == 1 &&
-                    playerPOV.getVisibleTeammates().any { otherTeammate ->
+                    playerPOV.getTeammates().any { otherTeammate ->
                         otherTeammate.playsBefore(teammate, playerPOV) &&
                                 hasCardOnFinessePosition(
                                     card = card.suite.cardBefore(card),
@@ -24,12 +24,12 @@ object SimpleFinesse : Finesse("Simple Finesse") {
 
     override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
         val actions = mutableListOf<ClueAction>()
-        playerPOV.forEachVisibleTeammate { teammate ->
+        playerPOV.forEachTeammate { teammate ->
             teammate.getSlots().forEach { slot ->
                 if (teammateSlotMatchesCondition(teammate, slot, playerPOV,)) {
                     actions.addAll(
                         getAllCluesFocusing(
-                            slotIndex = slot.index,
+                            slot = slot,
                             teammate = teammate,
                             playerPOV = playerPOV,
                         )

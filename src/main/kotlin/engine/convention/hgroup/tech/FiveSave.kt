@@ -26,7 +26,7 @@ object FiveSave : SaveClue("5-Save") {
 
     override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
         val actions = mutableListOf<ClueAction>()
-        playerPOV.forEachVisibleTeammate { teammate ->
+        playerPOV.forEachTeammate { teammate ->
             val chop = getChop(teammate.hand, playerPOV)
             if (teammateSlotMatchesCondition(teammate, chop, playerPOV,)) {
                 actions.add(

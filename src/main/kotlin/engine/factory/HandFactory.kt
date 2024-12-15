@@ -1,6 +1,5 @@
 package eelst.ilike.engine.factory
 
-import eelst.ilike.engine.hand.slot.VisibleHand
 import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.GloballyAvailableSlotInfo
@@ -9,6 +8,7 @@ import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.SimpleHand
 
 object HandFactory {
+    /*
     fun createPlayerHand(
         playerId: PlayerId,
         handSize: Int,
@@ -27,6 +27,8 @@ object HandFactory {
         }
     }
 
+     */
+/*
     fun createOwnHand(
         playerId: PlayerId,
         handSize: Int,
@@ -44,4 +46,16 @@ object HandFactory {
             slots = slots.toSet(),
         )
     }
+
+ */
+
+    fun createHand(
+        playerId: PlayerId,
+        personalKnowledge: PlayerPersonalKnowledge,
+        hand: Hand
+    ): Hand {
+        TODO()
+    }
+
+
 }

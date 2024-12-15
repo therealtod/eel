@@ -3,7 +3,6 @@ package eelst.ilike.engine.convention.hgroup.tech
 import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
-import eelst.ilike.engine.player.VisibleTeammate
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.variant.Variant
@@ -17,10 +16,12 @@ sealed class Finesse(name: String) : IndirectPlayClue(name) {
         return otherTech !is SaveClue && otherTech !is DirectPlayClue && otherTech !is Prompt
     }
 
-    fun hasCardOnFinessePosition(card: HanabiCard, teammate: VisibleTeammate, playerPOV: PlayerPOV): Boolean {
+    fun hasCardOnFinessePosition(card: HanabiCard, teammate: Teammate, playerPOV: PlayerPOV): Boolean {
         if (hasFinessePosition(teammate, playerPOV)) {
             val finessePosition = getFinessePosition(teammate, playerPOV)
-            return teammate.holdsCardInSlot(card, finessePosition.index)
+            return finessePosition.matches { _, identity ->
+                identity == card
+            }
         } else return false
     }
 

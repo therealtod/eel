@@ -1,6 +1,7 @@
 package eelst.ilike.utils
 
 import eelst.ilike.common.model.metadata.MetadataProvider
+import eelst.ilike.engine.factory.SlotFactory
 import eelst.ilike.engine.hand.slot.FullEmpathySlot
 import eelst.ilike.engine.hand.slot.PersonalSlotKnowledgeImpl
 import eelst.ilike.engine.hand.slot.UnknownIdentitySlot
@@ -66,37 +67,6 @@ object InputParser {
         )
     }
 
-    fun parsePlayerSlotKnowledge(
-        globallyAvailablePlayerInfo: GloballyAvailablePlayerInfo,
-        playerPOVDTO: PlayerPOVDTO,
-        knowledge: List<String>,
-        suits: Set<Suite>,
-        visibleCards: List<HanabiCard>,
-    ): Map<Int, PersonalSlotKnowledge> {
-        val slots = knowledge.mapIndexed { index, dto ->
-            index to PersonalSlotKnowledgeImpl(
-                ownerId = globallyAvailablePlayerInfo.playerId,
-                slotIndex = index + 1,
-                impliedIdentities = parseCards(dto, suits),
-                empathy = GameUtils.getCardEmpathy(
-                    visibleCards = visibleCards,
-                    positiveClues = playerPOVDTO.getPlayerDTO(globallyAvailablePlayerInfo.playerId)
-                        .hand
-                        .elementAt(index)
-                        .positiveClues
-                        .map { parseClue(it) },
-                    negativeClues = playerPOVDTO.getPlayerDTO(globallyAvailablePlayerInfo.playerId)
-                        .hand
-                        .elementAt(index)
-                        .negativeClues
-                        .map { parseClue(it) },
-                    suits = suits,
-                )
-            )
-        }
-        return slots.associate { it.first + 1 to it.second }
-    }
-
     private fun parseClue(clueAbbreviation: String): ClueValue {
         return Color.entries.find { it.name == clueAbbreviation }
             ?: Rank.entries
@@ -148,26 +118,15 @@ object InputParser {
                 negativeClues = globallyAvailableSlotInfo.negativeClues
             )
         )
+        val visibleIdentity = if(slotDTO.card == Configuration.UNKNOWN_CARD_SYMBOL) null
+        else parseCard(slotDTO.card, suits)
 
-        return if(slotDTO.card != Configuration.UNKNOWN_CARD_SYMBOL) {
-            if(activePlayerId == slotOwnerId) {
-                FullEmpathySlot(
-                    globallyAvailableInfo = globallyAvailableSlotInfo,
-                    knowledge = knowledge,
-                    identity = parseCard(slotDTO.card, suits)
-                )
-            } else {
-                VisibleSlot(
-                    globallyAvailableInfo = globallyAvailableSlotInfo,
-                    knowledge = knowledge,
-                    visibleCard = parseCard(slotDTO.card, suits)
-                )
-            }
-        } else {
-            UnknownIdentitySlot(
-                globallyAvailableInfo = globallyAvailableSlotInfo,
-                knowledge = knowledge,
-            )
-        }
+        return SlotFactory.createSlot(
+            activePlayerId = activePlayerId,
+            slotOwnerId = slotOwnerId,
+            globallyAvailableSlotInfo = globallyAvailableSlotInfo,
+            knowledge = knowledge,
+            visibleIdentity = visibleIdentity,
+        )
     }
 }

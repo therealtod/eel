@@ -1,5 +1,6 @@
 package eelst.ilike.game
 
+import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.PlayingStack
 import eelst.ilike.game.entity.Rank
@@ -27,7 +28,7 @@ abstract class BaseGloballyAvailableInfo(
 
     override val players = playersIds.zip(globallyAvailablePlayerInfo).associate { it.first to it.second }
 
-    override val defaultHandsSize = Utils.getHandSize(playersIds.size)
+    override val defaultHandsSize = GameUtils.getHandSize(playersIds.size)
 
     override fun getCardsOnStacks(): List<HanabiCard> {
         return dynamicGloballyAvailableInfo.playingStacks.values.flatten()
@@ -71,16 +72,12 @@ abstract class BaseGloballyAvailableInfo(
             ?: throw IllegalArgumentException("No player with id: $playerId in this game")
     }
 
-    override fun getCluableRanks(): Set<Rank> {
-        return variant.getCluableRanks()
-    }
-
-    override fun getCluableColors(): Set<Color> {
-        return variant.getCluableColors()
-    }
-
     override fun getPlayerInfo(playerIndex: Int): GloballyAvailablePlayerInfo {
         return players.values.find { it.playerIndex == playerIndex }
             ?: throw IllegalArgumentException("Could not find any player with player index $playerIndex")
+    }
+
+    override fun getAvailableClueValues(): Set<ClueValue> {
+        return variant.getCluableRanks() +  variant.getCluableColors()
     }
 }

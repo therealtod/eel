@@ -3,7 +3,7 @@ package eelst.ilike.common.model.metadata
 import com.fasterxml.jackson.module.kotlin.readValue
 import eelst.ilike.utils.Utils
 
-data object MetadataProviderImpl : MetadataProvider {
+data object LocalMirrorMetadataProvider : MetadataProvider {
     private val variantsMetadata: List<VariantMetadata> by lazy {
         Utils.jsonObjectMapper.readValue(
             Utils.getResourceFileContentAsString(

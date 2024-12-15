@@ -35,4 +35,13 @@ object GameUtils {
     fun getSeatsGap(playerIndex1: Int, playerIndex2: Int, numberOfPlayers: Int): Int {
         return (numberOfPlayers - playerIndex1 + playerIndex2).mod(numberOfPlayers)
     }
+
+    fun getHandSize(numberOfPlayers: Int): Int {
+        return when (numberOfPlayers) {
+            6 -> 3
+            4, 5 -> 4
+            2, 3 -> 5
+            else -> throw IllegalStateException("Invalid number of players: $numberOfPlayers")
+        }
+    }
 }

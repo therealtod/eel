@@ -21,7 +21,13 @@ globally_available_info:
     - player_id: "Emily"
 player_pov:
   player_id: "Alice"
-  teammates:
+  players:
+    - player_id: "Alice"
+      hand:
+        - card: "x"
+        - card: "x"
+        - card: "x"
+        - card: "x"
     - player_id: "Bob"
       hand:
         - card: "r2"

@@ -8,10 +8,4 @@ import eelst.ilike.game.PlayerId
 data class PlayerPOVDTO(
     val playerId: PlayerId,
     val players: List<PlayerDTO>
-) {
-    fun getPlayerDTO(playerId: PlayerId): PlayerDTO {
-        return players.find { it.playerId == playerId } ?: throw IllegalArgumentException(
-            "Can't find a player with ID: $playerId"
-        )
-    }
-}
+)
