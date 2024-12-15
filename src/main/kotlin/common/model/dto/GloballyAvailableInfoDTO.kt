@@ -13,6 +13,5 @@ data class GloballyAvailableInfoDTO(
     val efficiency: Float,
     val pace: Int,
     val variant: String = "No Variant",
-    val players: List<PlayerGloballyAvailableInfoDTO>,
     val clueTokens: Int,
 )

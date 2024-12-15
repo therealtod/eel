@@ -26,4 +26,8 @@ class SlotKnowledgeAdapter(drawActionData: GameDrawActionData)
     override fun getUpdatedWith(knowledge: Knowledge): Knowledge {
         TODO()
     }
+
+    override fun getEmpathy(): Set<HanabiCard> {
+        TODO("Not yet implemented")
+    }
 }

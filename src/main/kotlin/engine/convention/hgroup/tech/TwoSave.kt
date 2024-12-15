@@ -4,9 +4,9 @@ import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.factory.GameActionFactory
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
-import eelst.ilike.engine.player.VisibleTeammate
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.Rank
+import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.variant.Variant
@@ -16,31 +16,34 @@ object TwoSave : SaveClue("2-Save") {
         return true
     }
 
-    override fun teammateSlotMatchesCondition(teammate: VisibleTeammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
+    override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
         val chop = getChop(teammate.hand, playerPOV)
-        if (chop.index != slotIndex) {
+        if (chop.index != slot.index) {
             return false
         }
-        val card = teammate.getCardInSlot(slotIndex)
         val otherPlayers = playerPOV
             .getTeammates()
             .filter { it.playerId != teammate.playerId } +
                 playerPOV.asTeammateOf(teammate.playerId)
 
-        val isCardRankTwo = card.rank == Rank.TWO
-        val isTwoSaveLegal = canBeTwoSaved(
-            card = card,
-            otherPlayers = otherPlayers,
-            playerPOV = playerPOV,
-        )
-        return isCardRankTwo && isTwoSaveLegal
+        return slot.matches{ slotIndex, card ->
+            slotIndex == chop.index && run {
+                val isCardRankTwo = card.rank == Rank.TWO
+                val isTwoSaveLegal = canBeTwoSaved(
+                    card = card,
+                    otherPlayers = otherPlayers,
+                    playerPOV = playerPOV,
+                )
+                isCardRankTwo && isTwoSaveLegal
+            }
+        }
     }
 
     override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
         val actions = mutableListOf<ClueAction>()
         playerPOV.forEachVisibleTeammate { teammate ->
             val chop = getChop(teammate.hand, playerPOV)
-            if (teammateSlotMatchesCondition(teammate, slotIndex = chop.index, playerPOV)) {
+            if (teammateSlotMatchesCondition(teammate, slot = chop, playerPOV)) {
                 actions.add(
                     GameActionFactory.createClueAction(
                         clueGiver = playerPOV.getOwnPlayerId(),

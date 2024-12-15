@@ -15,6 +15,7 @@ interface PlayerPOV {
 
     fun getOwnPlayerId(): PlayerId
     fun getOwnKnownCards(): List<HanabiCard>
+    fun canSee(teammatePlayerId: PlayerId, slotIndex: Int): Boolean
     fun isSlotKnown(slotIndex: Int): Boolean
     fun getPersonalKnowledge(): PlayerPersonalKnowledge
     fun getOwnKnownPlayableSlots(): Set<Slot>

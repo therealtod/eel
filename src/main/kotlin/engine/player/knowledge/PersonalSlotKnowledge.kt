@@ -7,5 +7,6 @@ interface PersonalSlotKnowledge: Knowledge {
     fun getOwnerId(): PlayerId
     fun getSlotIndex(): Int
     fun getPossibleSlotIdentities(): Set<HanabiCard>
+    fun getEmpathy(): Set<HanabiCard>
     fun isSlotKnown(): Boolean
 }

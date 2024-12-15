@@ -9,15 +9,13 @@ import eelst.ilike.game.entity.Player
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.card.HanabiCard
 
-abstract class Teammate(
+open class Teammate(
     globallyAvailablePlayerInfo: GloballyAvailablePlayerInfo,
+    personalKnowledge: PlayerPersonalKnowledge,
     override val hand: Hand,
 ) : Player {
     final override val playerId = globallyAvailablePlayerInfo.playerId
     override val playerIndex = globallyAvailablePlayerInfo.playerIndex
-
-    abstract fun isPOVProjection(): Boolean
-    abstract fun asVisible(): VisibleTeammate
 
     override fun getSlots(): Set<Slot> {
         return hand.getSlots()
@@ -28,9 +26,15 @@ abstract class Teammate(
     }
 
     fun getPOV(playerPOV: PlayerPOV): PlayerPOV {
+        val playersHands = playerPOV.getTeammates()
+            .associateBy { it.playerId }
+            .mapValues { it.value.hand } +
+                Pair(playerPOV.getOwnPlayerId(), playerPOV.getHand(playerPOV.getOwnPlayerId()))
         return PlayerFactory.createPlayerPOV(
-            teammateId = playerId,
-            originalPlayerPOV = playerPOV,
+            playerId = playerId,
+            globallyAvailableInfo = playerPOV.globallyAvailableInfo,
+            personalKnowledge = playerPOV.getPersonalKnowledge().accessibleTo(playerId),
+            playersHands = playersHands
         )
     }
 }

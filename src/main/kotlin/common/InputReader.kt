@@ -14,8 +14,9 @@ import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.utils.model.dto.PlayerPOVDTO
 import eelst.ilike.utils.model.dto.ScenarioDTO
-import eelst.ilike.utils.model.dto.TeammateDTO
+import eelst.ilike.utils.model.dto.PlayerDTO
 
+/*
 object InputReader {
     private val mapper = Utils.yamlObjectMapper
     private val metadataProvider = MetadataProviderImpl
@@ -24,7 +25,7 @@ object InputReader {
         val fileText = Utils.getResourceFileContentAsString(fileName)
         val dto: ScenarioDTO = mapper.readValue(fileText)
         val globallyAvailableInfo = InputParser.parseGlobalInfo(dto, metadataProvider)
-        val activePlayerId = dto.globallyAvailableInfo.players.first().playerId
+        val activePlayerId = dto.playerPOV.playerId
         val activePlayerGloballyAvailableInfo = globallyAvailableInfo.getPlayerInfo(activePlayerId)
         val visibleCardsMap = computeVisibleCardsMap(
             playerPOV = dto.playerPOV,
@@ -32,7 +33,7 @@ object InputReader {
         )
         val teammatesPersonalSlotKnowledge = dto
             .playerPOV
-            .teammates
+            .players
             .associateBy { it.playerId }
             .mapValues {
                 InputParser.parseTeammateSlotKnownledge(
@@ -42,7 +43,7 @@ object InputReader {
                     visibleCards = visibleCardsMap[it.key]!!,
                 )
             }
-        val visibleHands = dto.playerPOV.teammates
+        val visibleHands = dto.playerPOV.players
             .associateBy { it.playerId }
             .mapValues {
                 val slotsInfo = it.value.hand.mapIndexed { index, slot ->
@@ -115,7 +116,7 @@ object InputReader {
             computeCardsVisibleByPlayer(
                 playerId = player.key,
                 publiclyVisibleCards = cardsInStacks + cardsInTrash + activePlayerKnownCards,
-                teammates = playerPOV.teammates.associateBy { it.playerId },
+                teammates = playerPOV.players.associateBy { it.playerId },
                 suits = globallyAvailableInfo.suits,
             )
         }
@@ -124,7 +125,7 @@ object InputReader {
     private fun computeCardsVisibleByPlayer(
         playerId: PlayerId,
         publiclyVisibleCards: List<HanabiCard>,
-        teammates: Map<PlayerId, TeammateDTO>,
+        teammates: Map<PlayerId, PlayerDTO>,
         suits: Set<Suite>,
     ): List<HanabiCard> {
         val cardInTeammatesHands = teammates
@@ -137,3 +138,6 @@ object InputReader {
         return publiclyVisibleCards + cardInTeammatesHands
     }
 }
+
+
+ */

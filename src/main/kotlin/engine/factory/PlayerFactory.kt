@@ -6,12 +6,27 @@ import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.GloballyAvailablePlayerInfo
 import eelst.ilike.game.PlayerId
+import eelst.ilike.game.entity.Hand
 
 object PlayerFactory {
+    fun createPlayer(
+        globallyAvailableInfo: GloballyAvailablePlayerInfo,
+        personalKnowledge: PlayerPersonalKnowledge,
+        hand: Hand,
+    ): Teammate {
+        return Teammate(
+            globallyAvailablePlayerInfo = globallyAvailableInfo,
+            personalKnowledge = personalKnowledge,
+            hand = hand,
+        )
+    }
+
+    /*
     fun createTeammate(
         playerId: PlayerId,
         globallyAvailableInfo: GloballyAvailableInfo,
         playerPersonalKnowledge: PlayerPersonalKnowledge,
+        hand: Hand,
     ): Teammate {
         return if (playerPersonalKnowledge.canSee(playerId)) {
             createVisibleTeammate(
@@ -28,6 +43,8 @@ object PlayerFactory {
             )
         }
     }
+
+     */
 
     fun createVisibleTeammate(
         teammateId: PlayerId,
@@ -46,46 +63,23 @@ object PlayerFactory {
         playerId: PlayerId,
         globallyAvailableInfo: GloballyAvailableInfo,
         personalKnowledge: PlayerPersonalKnowledge,
+        playersHands: Map<PlayerId, Hand>
     ): PlayerPOV {
-        val teammates = globallyAvailableInfo.players.filterKeys { it != playerId }
-            .map {
-                createTeammate(
-                    playerId = it.key,
-                    globallyAvailableInfo = globallyAvailableInfo,
-                    playerPersonalKnowledge = personalKnowledge
-                )
-            }
+        val players = playersHands.mapValues {
+            createPlayer(
+                globallyAvailableInfo = globallyAvailableInfo.getPlayerInfo(it.key),
+                personalKnowledge = personalKnowledge.accessibleTo(it.key),
+                hand = it.value
+            )
+        }
 
-        val hand = HandFactory.createPlayerHand(
-            playerId = playerId,
-            handSize = globallyAvailableInfo.defaultHandsSize,
-            personalKnowledge = personalKnowledge,
-            globallyAvailableSlotInfo = globallyAvailableInfo.players[playerId]!!.hand
-        )
 
         return PlayerPOVImpl(
             playerId = playerId,
             globallyAvailableInfo = globallyAvailableInfo,
             personalKnowledge = personalKnowledge,
-            teammates = teammates.toSet(),
-            hand = hand
-        )
-    }
-
-    fun createPlayerPOV(
-        teammateId: PlayerId,
-        originalPlayerPOV: PlayerPOV
-    ): PlayerPOV {
-        val teammates = originalPlayerPOV
-            .getTeammates() +
-                createPOVProjectionAsTeammate(teammateId = teammateId, playerPOV = originalPlayerPOV)
-
-        return PlayerPOVImpl(
-            playerId = teammateId,
-            globallyAvailableInfo = originalPlayerPOV.globallyAvailableInfo,
-            personalKnowledge = originalPlayerPOV.getPersonalKnowledge().accessibleTo(teammateId),
-            teammates = teammates.toSet(),
-            hand = originalPlayerPOV.getTeammate(teammateId).hand
+            teammates = players.minus(playerId),
+            hand = playersHands[playerId]!!
         )
     }
 
@@ -93,27 +87,21 @@ object PlayerFactory {
         teammateId: PlayerId,
         playerPOV: PlayerPOV,
     ): POVProjectionAsTeammate {
-        val globallyAvailableInfo = playerPOV.globallyAvailableInfo
-        val playerInfo = globallyAvailableInfo.getPlayerInfo(playerPOV.getOwnPlayerId())
-        return POVProjectionAsTeammate(
-            globallyAvailableInfo = globallyAvailableInfo,
-            globallyAvailablePlayerInfo = playerInfo,
-            personalKnowledge = playerPOV.getPersonalKnowledge().accessibleTo(teammateId),
-            hand = playerPOV.getHand(playerPOV.getOwnPlayerId())
-        )
+        TODO()
     }
 
     fun createPOVProjectionAsTeammate(
         playerId: PlayerId,
+        teammatePlayerId: PlayerId,
         globallyAvailableInfo: GloballyAvailableInfo,
         personalKnowledge: PlayerPersonalKnowledge,
+        hand: Hand,
     ): POVProjectionAsTeammate {
-        val playerInfo = globallyAvailableInfo.getPlayerInfo(playerId)
         return POVProjectionAsTeammate(
-            globallyAvailableInfo = globallyAvailableInfo,
-            globallyAvailablePlayerInfo = playerInfo,
-            personalKnowledge = personalKnowledge,
-            hand = TODO()
+            globallyAvailablePlayerInfo = globallyAvailableInfo.getPlayerInfo(playerId),
+            personalKnowledge = personalKnowledge.accessibleTo(teammatePlayerId),
+            hand = hand,
         )
     }
+
 }

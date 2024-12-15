@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming
 import eelst.ilike.game.PlayerId
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy::class)
-data class TeammateDTO(
+data class PlayerDTO(
     val playerId: PlayerId,
-    val hand: List<TeammateSlotDTO>,
+    val hand: List<SlotDTO>,
 )

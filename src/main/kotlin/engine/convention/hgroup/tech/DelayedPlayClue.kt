@@ -4,9 +4,9 @@ import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.player.PlayerPOV
-import eelst.ilike.engine.player.VisibleTeammate
+import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.knowledge.Knowledge
-import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
+import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.variant.Variant
@@ -18,13 +18,13 @@ data object DelayedPlayClue
         return true
     }
 
-    override fun teammateSlotMatchesCondition(teammate: VisibleTeammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
-        val card = teammate.getCardInSlot(slotIndex)
+    override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
         val teammatePOV = teammate.getPOV(playerPOV)
-        val teammateKnowsOwnSlot = teammatePOV.isSlotKnown(slotIndex)
-        return !teammateKnowsOwnSlot&&
-                playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) > 0 &&
-                connectingCardsAreKnown(card, playerPOV)
+        val teammateKnowsOwnSlot = teammatePOV.isSlotKnown(slot.index)
+        return !teammateKnowsOwnSlot && slot.matches { _, card ->
+                    playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) > 0 &&
+                    connectingCardsAreKnown(card, playerPOV)
+        }
     }
 
     override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
@@ -34,7 +34,7 @@ data object DelayedPlayClue
             teammate
                 .getSlots()
                 .forEach { slot ->
-                    if (teammateSlotMatchesCondition(teammate, slot.index, playerPOV)) {
+                    if (teammateSlotMatchesCondition(teammate, slot, playerPOV)) {
                         actions.addAll(
                             getAllCluesFocusing(
                                 slotIndex = slot.index,

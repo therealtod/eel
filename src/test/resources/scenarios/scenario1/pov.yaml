@@ -13,20 +13,17 @@ globally_available_info:
   efficiency: 1.00
   pace: 15
   clue_tokens: 5
-  players:
-    - player_id: "Alice"
-      slot_clues:
-        - positive_clues: [ ]
-        - positive_clues: [ "BLUE" ]
-        - positive_clues: [ ]
-        - positive_clues: [ "GREEN" ]
-    - player_id: "Bob"
-    - player_id: "Cathy"
-    - player_id: "Donald"
 player_pov:
   player_id: "Alice"
-  hand: [ "x", "b3b4", "x", "g1" ]
-  teammates:
+  players:
+    - player_id: "Alice"
+      hand:
+          - thinks: "x"
+          - thinks: "b3b4"
+            positive_clues: [ "BLUE" ]
+          - thinks: "x"
+          - thinks: "g1"
+            positive_clues: [ "GREEN" ]
     - player_id: "Bob"
       hand:
         - card: "g5"

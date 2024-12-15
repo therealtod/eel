@@ -11,22 +11,14 @@ class VisibleTeammate(
     private val visibleHand: VisibleHand
 ): Teammate(
     globallyAvailablePlayerInfo = globallyAvailablePlayerInfo,
+    personalKnowledge = personalKnowledge,
     hand = visibleHand,
 ) {
-
-    override fun asVisible(): VisibleTeammate {
-        return this
-    }
-
     fun getCardInSlot(slotIndex: Int): HanabiCard {
         return visibleHand.getCardInSlot(slotIndex)
     }
 
     fun holdsCardInSlot(card: HanabiCard, slotIndex: Int): Boolean {
         return getCardInSlot(slotIndex) == card
-    }
-
-    override fun isPOVProjection(): Boolean {
-        return false
     }
 }

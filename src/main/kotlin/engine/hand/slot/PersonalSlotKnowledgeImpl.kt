@@ -27,6 +27,10 @@ class PersonalSlotKnowledgeImpl(
         return getPossibleSlotIdentities().size == 1
     }
 
+    override fun getEmpathy(): Set<HanabiCard> {
+        return empathy
+    }
+
     override fun getUpdatedWith(knowledge: Knowledge): Knowledge {
         TODO("Not yet implemented")
     }

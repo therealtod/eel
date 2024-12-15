@@ -33,9 +33,7 @@ sealed class Prompt(name: String) : IndirectPlayClue(name) {
     ): Boolean {
         if (sequence.isEmpty()) return true
         val nextInSequence = sequence.first()
-        val promptableTeammates = playerPOV.getTeammates()
-            .filter { !it.isPOVProjection() }
-            .map { it.asVisible() }
+        val promptableTeammates = playerPOV.getVisibleTeammates()
 
         return if (
             promptableTeammates.any { teammate ->

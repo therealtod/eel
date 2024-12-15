@@ -4,9 +4,9 @@ import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.tech.ClueTech
 import eelst.ilike.engine.factory.GameActionFactory
 import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.VisibleTeammate
 import eelst.ilike.engine.player.knowledge.Knowledge
-import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Slot
@@ -102,10 +102,10 @@ abstract class HGroupClue(override val name: String) : HGroupTech(), ClueTech {
             return false
         }
         if (clueReceiver != playerPOV.getOwnPlayerId()) {
-            val teammate = playerPOV.getTeammate(clueReceiver).asVisible()
+            val teammate = playerPOV.getTeammate(clueReceiver)
             return teammateSlotMatchesCondition(
                 teammate = teammate,
-                slotIndex = focusIndex,
+                slot = teammate.hand.getSlot(focusIndex),
                 playerPOV = playerPOV
             )
         } else {

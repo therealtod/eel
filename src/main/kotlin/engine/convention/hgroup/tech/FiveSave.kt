@@ -3,9 +3,10 @@ package eelst.ilike.engine.convention.hgroup.tech
 import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.player.PlayerPOV
-import eelst.ilike.engine.player.VisibleTeammate
+import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.Rank
+import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.RankClueAction
 import eelst.ilike.game.entity.card.HanabiCard
@@ -16,20 +17,18 @@ object FiveSave : SaveClue("5-Save") {
         return true
     }
 
-    override fun teammateSlotMatchesCondition(teammate: VisibleTeammate, slotIndex: Int, playerPOV: PlayerPOV): Boolean {
+    override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
         val chop = getChop(teammate.hand, playerPOV)
-        if (chop.index != slotIndex) {
-            return false
+        return slot.matches{ slotIndex, card ->
+            slotIndex == chop.index && card.rank == Rank.FIVE
         }
-        val card = teammate.getCardInSlot(slotIndex)
-        return card.rank == Rank.FIVE
     }
 
     override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
         val actions = mutableListOf<ClueAction>()
         playerPOV.forEachVisibleTeammate { teammate ->
             val chop = getChop(teammate.hand, playerPOV)
-            if (teammateSlotMatchesCondition(teammate, chop.index, playerPOV,)) {
+            if (teammateSlotMatchesCondition(teammate, chop, playerPOV,)) {
                 actions.add(
                     RankClueAction(
                         clueGiver = playerPOV.getOwnPlayerId(),

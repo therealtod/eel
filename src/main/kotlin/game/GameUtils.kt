@@ -9,9 +9,9 @@ object GameUtils {
         visibleCards: List<HanabiCard>,
         positiveClues: List<ClueValue>,
         negativeClues: List<ClueValue>,
-        suites: Set<Suite>
+        suits: Set<Suite>
     ): Set<HanabiCard> {
-        val allPossibleCards = suites.flatMap { suite ->
+        val allPossibleCards = suits.flatMap { suite ->
             suite.getAllUniqueCards()
         }
         return allPossibleCards

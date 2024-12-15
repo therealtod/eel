@@ -20,14 +20,20 @@ class PlayerPOVImpl(
     hand: Hand,
     override val globallyAvailableInfo: GloballyAvailableInfo,
     private val personalKnowledge: PlayerPersonalKnowledge,
-    private val teammates: Set<Teammate>,
+    private val teammates: Map<PlayerId, Teammate>,
 ) : PlayerPOV {
-    private val visibleTeammates = teammates.filterIsInstance<VisibleTeammate>().toSet()
+    private val visibleTeammates = teammates.values.filterIsInstance<VisibleTeammate>()
     private val globallyAvailablePlayerInfo = globallyAvailableInfo.getPlayerInfo(playerId)
     private val myself = Myself(
         globallyAvailableInfo.getPlayerInfo(playerId),
         hand
     )
+
+    override fun canSee(teammatePlayerId: PlayerId, slotIndex: Int): Boolean {
+        val teammate = getTeammate(teammatePlayerId)
+        val slot = teammate.hand.getSlot(slotIndex)
+        return slot is VisibleSlot
+    }
 
     override fun getHand(playerId: PlayerId): Hand {
         return if (playerId == myself.playerId) {
@@ -70,7 +76,7 @@ class PlayerPOVImpl(
     override fun teamKnowsAllCards(cards: Set<HanabiCard>): Boolean {
         return cards
             .all { card ->
-                teammates.any { teammate ->
+                teammates.values.any { teammate ->
                     teammate.getPOV(this).getOwnKnownCards().contains(card)
                 } ||
                         getOwnKnownCards().contains(card)
@@ -82,15 +88,15 @@ class PlayerPOVImpl(
     }
 
     override fun getTeammates(): Set<Teammate> {
-        return teammates
+        return teammates.values.toSet()
     }
 
     override fun getVisibleTeammates(): Set<VisibleTeammate> {
-        return visibleTeammates
+        return visibleTeammates.toSet()
     }
 
     override fun getTeammate(teammatePlayerId: PlayerId): Teammate {
-        return teammates.find { it.playerId == teammatePlayerId }
+        return teammates[teammatePlayerId]
             ?: throw IllegalArgumentException("I can't see any teammate with id $teammatePlayerId")
     }
 
@@ -121,7 +127,7 @@ class PlayerPOVImpl(
     override fun getVisibleCards(): List<HanabiCard> {
         val cardsOnPlayingStacks = globallyAvailableInfo.getCardsOnStacks()
         val cardsInTrash = globallyAvailableInfo.trashPile.cards
-        val teammatesSlots = teammates.flatMap {
+        val teammatesSlots = teammates.values.flatMap {
             it.hand.getSlots()
         }
         val visibleTeammatesCards = teammatesSlots

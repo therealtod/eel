@@ -7,6 +7,11 @@ import eelst.ilike.game.PlayerId
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy::class)
 data class PlayerPOVDTO(
     val playerId: PlayerId,
-    val hand: List<String> = emptyList(),
-    val teammates: List<TeammateDTO>
-)
+    val players: List<PlayerDTO>
+) {
+    fun getPlayerDTO(playerId: PlayerId): PlayerDTO {
+        return players.find { it.playerId == playerId } ?: throw IllegalArgumentException(
+            "Can't find a player with ID: $playerId"
+        )
+    }
+}

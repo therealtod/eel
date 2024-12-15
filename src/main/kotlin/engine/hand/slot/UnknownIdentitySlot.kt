@@ -4,12 +4,18 @@ import eelst.ilike.engine.player.knowledge.PersonalSlotKnowledge
 import eelst.ilike.game.GloballyAvailableSlotInfo
 import eelst.ilike.game.entity.card.HanabiCard
 
-class VisibleSlot(
+class UnknownIdentitySlot(
     globallyAvailableInfo: GloballyAvailableSlotInfo,
     knowledge: PersonalSlotKnowledge,
-    visibleCard: HanabiCard,
-): KnownSlot(
+): BaseSlot(
     globallyAvailableInfo = globallyAvailableInfo,
     knowledge = knowledge,
-    knownIdentity = visibleCard,
-)
+) {
+    override fun containsCard(card: HanabiCard): Boolean {
+        return false
+    }
+
+    override fun matches(condition: (slotIndex: Int, card: HanabiCard) -> Boolean): Boolean {
+        return false
+    }
+}

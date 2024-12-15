@@ -16,7 +16,7 @@ internal class CriticalSaveTest {
     fun `Should return 2 actions which save the only critical card on chop visible on the board`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(1)
 
-        val actual = CriticalSave.getGameActions(playerPOV,)
+        val actual = CriticalSave.getGameActions(playerPOV)
 
         val expected = setOf(
             RankClueAction(
@@ -30,7 +30,7 @@ internal class CriticalSaveTest {
                 color = Color.PURPLE,
             ),
         )
-        Assertions.assertEquals(actual, expected)
+        Assertions.assertEquals(expected, actual)
     }
 
     @Test
