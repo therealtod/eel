@@ -2,8 +2,8 @@ package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.factory.GameActionFactory
-import eelst.ilike.engine.player.PlayerPOV
-import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.ActivePlayer
+import eelst.ilike.engine.player.EngineHandlerPlayer
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.Slot
@@ -16,15 +16,15 @@ object TwoSave : SaveClue("2-Save") {
         return true
     }
 
-    override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
-        val chop = getChop(teammate.hand, playerPOV)
+    override fun teammateSlotMatchesCondition(engineHandlerPlayer: EngineHandlerPlayer, slot: Slot, activePlayer: ActivePlayer): Boolean {
+        val chop = getChop(engineHandlerPlayer.hand, activePlayer)
         if (chop.index != slot.index) {
             return false
         }
-        val otherPlayers = playerPOV
+        val otherPlayers = activePlayer
             .getTeammates()
-            .filter { it.playerId != teammate.playerId } +
-                playerPOV.getAsPlayer()
+            .filter { it.playerId != engineHandlerPlayer.playerId } +
+                activePlayer.getAsPlayer()
 
         return slot.matches{ slotIndex, card ->
             slotIndex == chop.index && run {
@@ -32,21 +32,21 @@ object TwoSave : SaveClue("2-Save") {
                 val isTwoSaveLegal = canBeTwoSaved(
                     card = card,
                     otherPlayers = otherPlayers,
-                    playerPOV = playerPOV,
+                    activePlayer = activePlayer,
                 )
                 isCardRankTwo && isTwoSaveLegal
             }
         }
     }
 
-    override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
+    override fun getGameActions(activePlayer: ActivePlayer): Set<ClueAction> {
         val actions = mutableListOf<ClueAction>()
-        playerPOV.forEachTeammate { teammate ->
-            val chop = getChop(teammate.hand, playerPOV)
-            if (teammateSlotMatchesCondition(teammate, slot = chop, playerPOV)) {
+        activePlayer.forEachTeammate { teammate ->
+            val chop = getChop(teammate.hand, activePlayer)
+            if (teammateSlotMatchesCondition(teammate, slot = chop, activePlayer)) {
                 actions.add(
                     GameActionFactory.createClueAction(
-                        clueGiver = playerPOV.getOwnPlayerId(),
+                        clueGiver = activePlayer.getOwnPlayerId(),
                         clueReceiver = teammate.playerId,
                         clueValue = Rank.TWO
                     )
@@ -56,41 +56,41 @@ object TwoSave : SaveClue("2-Save") {
         return actions.toSet()
     }
 
-    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
-        val saveableTwos = getSaveableTwos(playerPOV)
-        return playerPOV.getOwnHand().getSlot(focusIndex).getPossibleIdentities()
+    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, activePlayer: ActivePlayer): Boolean {
+        val saveableTwos = getSaveableTwos(activePlayer)
+        return activePlayer.getOwnHand().getSlot(focusIndex).getPossibleIdentities()
             .intersect(saveableTwos).isNotEmpty()
     }
 
-    private fun getSaveableTwos(playerPOV: PlayerPOV): Set<HanabiCard> {
-        return playerPOV
+    private fun getSaveableTwos(activePlayer: ActivePlayer): Set<HanabiCard> {
+        return activePlayer
             .globallyAvailableInfo
             .suits
             .flatMap { it.getAllUniqueCards() }
             .filter {
                 it.rank == Rank.TWO &&
-                        playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) > 0 &&
+                        activePlayer.globallyAvailableInfo.getGlobalAwayValue(it) > 0 &&
                         canBeTwoSaved(
                             card = it,
-                            otherPlayers = playerPOV.getTeammates(),
-                            playerPOV = playerPOV,
+                            otherPlayers = activePlayer.getTeammates(),
+                            activePlayer = activePlayer,
                         )
             }.toSet()
     }
 
     private fun canBeTwoSaved(
         card: HanabiCard,
-        otherPlayers: Collection<Teammate>,
-        playerPOV: PlayerPOV,
+        otherPlayers: Collection<EngineHandlerPlayer>,
+        activePlayer: ActivePlayer,
     ): Boolean {
         return otherPlayers.none { teammate ->
-            val chop = getChop(teammate.hand, playerPOV)
+            val chop = getChop(teammate.hand, activePlayer)
             teammate.hand.countCopiesOf(card) > 0 &&
                     !chop.containsCard(card)
         }
     }
 
-    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PlayerPersonalKnowledge {
+    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, activePlayer: ActivePlayer): PlayerPersonalKnowledge {
         /*
         val possibleFocusIdentities = focusedSlot.getPossibleIdentities()
             .intersect(getSaveableTwos(playerPOV))

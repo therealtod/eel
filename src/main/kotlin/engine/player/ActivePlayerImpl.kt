@@ -3,7 +3,6 @@ package eelst.ilike.engine.player
 import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.tech.ConventionTech
-import eelst.ilike.engine.factory.PlayerFactory
 import eelst.ilike.engine.hand.slot.FullEmpathySlot
 import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
@@ -12,16 +11,18 @@ import eelst.ilike.game.GameUtils
 import eelst.ilike.game.GloballyAvailableInfo
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Hand
-import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.card.HanabiCard
 
-class PlayerPOVImpl(
+class ActivePlayerImpl(
     playerId: PlayerId,
     hand: Hand,
     override val globallyAvailableInfo: GloballyAvailableInfo,
     private val personalKnowledge: PlayerPersonalKnowledge,
-    private val teammates: Map<PlayerId, Teammate>,
-) : PlayerPOV {
+    private val teammates: Map<PlayerId, EngineHandlerPlayer>,
+) : ActivePlayer, EngineHandlerPlayer(
+    globallyAvailablePlayerInfo = globallyAvailableInfo.getPlayerInfo(playerId),
+    hand = hand
+) {
     private val globallyAvailablePlayerInfo = globallyAvailableInfo.getPlayerInfo(playerId)
     private val myself = Myself(
         globallyAvailablePlayerInfo = globallyAvailableInfo.getPlayerInfo(playerId),
@@ -50,23 +51,23 @@ class PlayerPOVImpl(
             }
     }
 
-    override fun forEachTeammate(action: (teammate: Teammate) -> Unit) {
+    override fun forEachTeammate(action: (engineHandlerPlayer: EngineHandlerPlayer) -> Unit) {
         return teammates.values.forEach(action)
     }
 
-    override fun getTeammates(): Set<Teammate> {
+    override fun getTeammates(): Set<EngineHandlerPlayer> {
         return teammates.values.toSet()
     }
 
-    override fun getTeammate(teammatePlayerId: PlayerId): Teammate {
+    override fun getTeammate(teammatePlayerId: PlayerId): EngineHandlerPlayer {
         return teammates[teammatePlayerId]
             ?: throw IllegalArgumentException("I can't see any teammate with id $teammatePlayerId")
     }
 
-    override fun getSeatsGapFrom(teammate: Teammate): Int {
+    override fun getSeatsGapFrom(engineHandlerPlayer: EngineHandlerPlayer): Int {
         return GameUtils.getSeatsGap(
             playerIndex1 = globallyAvailablePlayerInfo.playerIndex,
-            playerIndex2 = teammate.playerIndex,
+            playerIndex2 = engineHandlerPlayer.playerIndex,
             globallyAvailableInfo.numberOfPlayers,
         )
     }
@@ -95,7 +96,7 @@ class PlayerPOVImpl(
         return cardsOnPlayingStacks + cardsInTrash + visibleTeammatesCards + ownFullEmpathyCards
     }
 
-    override fun getPlayerPOV(playerId: PlayerId): PlayerPOV {
+    override fun getPlayerPOV(playerId: PlayerId): ActivePlayer {
         return if (playerId == myself.playerId) {
             this
         } else {
@@ -103,7 +104,7 @@ class PlayerPOVImpl(
         }
     }
 
-    override fun getAsPlayer(): Teammate {
+    override fun getAsPlayer(): EngineHandlerPlayer {
         return myself
     }
 
@@ -120,10 +121,6 @@ class PlayerPOVImpl(
                         )
                     }
             }
-    }
-
-    private fun getOwnKnownSlots(): Collection<KnownSlot> {
-        return myself.hand.getSlots().filterIsInstance<KnownSlot>()
     }
 
     private fun prune(actions: Collection<ConventionalAction>): Set<ConventionalAction> {

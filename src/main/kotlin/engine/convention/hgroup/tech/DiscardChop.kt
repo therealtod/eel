@@ -4,8 +4,8 @@ import eelst.ilike.engine.action.ObservedAction
 import eelst.ilike.engine.action.ObservedDiscard
 import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.convention.tech.DiscardTech
-import eelst.ilike.engine.player.PlayerPOV
-import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.ActivePlayer
+import eelst.ilike.engine.player.EngineHandlerPlayer
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.DiscardAction
@@ -19,16 +19,16 @@ object DiscardChop : HGroupTech(), DiscardTech {
         return true
     }
 
-    override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
-        return getChop(teammate.hand, playerPOV).index == slot.index
+    override fun teammateSlotMatchesCondition(engineHandlerPlayer: EngineHandlerPlayer, slot: Slot, activePlayer: ActivePlayer): Boolean {
+        return getChop(engineHandlerPlayer.hand, activePlayer).index == slot.index
     }
 
-    override fun getGameActions(playerPOV: PlayerPOV): Set<DiscardAction> {
-        return if (playerPOV.globallyAvailableInfo.clueTokens < 8) {
+    override fun getGameActions(activePlayer: ActivePlayer): Set<DiscardAction> {
+        return if (activePlayer.globallyAvailableInfo.clueTokens < 8) {
             return setOf(
                 DiscardAction(
-                    playerId = playerPOV.getOwnPlayerId(),
-                    slotIndex = getChop(playerPOV.getOwnHand(), playerPOV).index
+                    playerId = activePlayer.getOwnPlayerId(),
+                    slotIndex = getChop(activePlayer.getOwnHand(), activePlayer).index
                 )
             )
         } else emptySet()
@@ -38,11 +38,11 @@ object DiscardChop : HGroupTech(), DiscardTech {
         TODO()
     }
 
-    override fun matchesDiscard(action: ObservedDiscard, playerPOV: PlayerPOV): Boolean {
+    override fun matchesDiscard(action: ObservedDiscard, activePlayer: ActivePlayer): Boolean {
         TODO("Not yet implemented")
     }
 
-    override fun getGeneratedKnowledge(action: ObservedAction, playerPOV: PlayerPOV): PlayerPersonalKnowledge {
+    override fun getGeneratedKnowledge(action: ObservedAction, activePlayer: ActivePlayer): PlayerPersonalKnowledge {
         TODO("Not yet implemented")
     }
 }

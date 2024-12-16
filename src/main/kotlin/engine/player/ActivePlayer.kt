@@ -1,74 +1,29 @@
 package eelst.ilike.engine.player
 
-/*
-class ActivePlayer(
-    playerId: PlayerId,
-    playerIndex: Int,
-    globallyAvailableInfo: GloballyAvailableInfoImpl,
-    personalKnowledge: PersonalKnowledge,
-) : ConventionsUsingPlayer(
-    playerId = playerId,
-    playerIndex = playerIndex,
-    globallyAvailableInfo = globallyAvailableInfo,
-    personalKnowledge = personalKnowledge,
-) {
-    val playerPOV: PlayerPOV = PlayerFactory.createPlayerPOV(
-        playerId = playerId,
-        playerIndex = playerIndex,
-        globallyAvailableInfo = globallyAvailableInfo,
-        ownHand = ownHand,
-        personalKnowledge = personalKnowledge,
-    )
+import eelst.ilike.engine.convention.ConventionSet
+import eelst.ilike.engine.convention.ConventionalAction
+import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
+import eelst.ilike.game.GloballyAvailableInfo
+import eelst.ilike.game.PlayerId
+import eelst.ilike.game.entity.Hand
+import eelst.ilike.game.entity.Player
+import eelst.ilike.game.entity.card.HanabiCard
 
-    val teammates: Set<Teammate> = globallyAvailableInfo.players.filter { it.key != playerId }.map {
-        PlayerFactory.createVisibleTeammate(
-            teammateId = it.key,
-            globallyAvailableInfo = globallyAvailableInfo,
-            personalKnowledge = personalKnowledge,
-            seatsGap = GameUtils.getSeatsGap(
-                playerIndex1 = playerIndex,
-                playerIndex2 = it.value.playerIndex,
-                numberOfPlayers = globallyAvailableInfo.numberOfPlayers
-            )
 
-        )
-    }.toSet()
+interface ActivePlayer: Player {
+    val globallyAvailableInfo: GloballyAvailableInfo
 
-    fun getLegalActions(conventionSet: BaseConventionSet): Set<ConventionalAction> {
-        return getCandidateActions(conventionSet.getTechs()).toSet()
-    }
-
-    override fun hasCardInSlot(card: HanabiCard, slotIndex: Int): Boolean {
-        return getOwnSlot(slotIndex).contains(card)
-    }
-
-    private fun getCandidateActions(
-        techs: Collection<ConventionTech>
-    ): Collection<ConventionalAction> {
-        return techs
-            .flatMap { tech ->
-                tech.getGameActions(playerPOV,)
-                    .map {
-                        ConventionalAction(
-                            action = it,
-                            tech = tech,
-                        )
-                    }
-            }
-    }
-
-    private fun prune(actions: Collection<ConventionalAction>): Set<ConventionalAction> {
-        val overlappingGroups = actions.groupBy { it.action }
-        return overlappingGroups.map { group ->
-            group.value.fold(listOf(group.value.first())) { curr, next ->
-                if (curr.any { it.tech.overrides(next.tech) })
-                    curr
-                else
-                    curr + next
-            }
-        }.flatten()
-            .toSet()
-    }
+    fun getOwnPlayerId(): PlayerId
+    fun getOwnKnownCards(): List<HanabiCard>
+    fun getPersonalKnowledge(): PlayerPersonalKnowledge
+    fun teamKnowsAllCards(cards: Set<HanabiCard>): Boolean
+    fun getTeammates(): Set<EngineHandlerPlayer>
+    fun forEachTeammate(action: (engineHandlerPlayer: EngineHandlerPlayer) -> Unit)
+    fun getOwnHand(): Hand
+    fun getTeammate(teammatePlayerId: PlayerId): EngineHandlerPlayer
+    fun getSeatsGapFrom(engineHandlerPlayer: EngineHandlerPlayer): Int
+    fun getLegalActions(conventionSet: ConventionSet): Collection<ConventionalAction>
+    fun getVisibleCards(): List<HanabiCard>
+    fun getPlayerPOV(playerId: PlayerId): ActivePlayer
+    fun getAsPlayer(): EngineHandlerPlayer
 }
-
- */

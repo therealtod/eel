@@ -4,8 +4,8 @@ import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.hand.slot.KnownSlot
-import eelst.ilike.engine.player.PlayerPOV
-import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.ActivePlayer
+import eelst.ilike.engine.player.EngineHandlerPlayer
 import eelst.ilike.engine.player.knowledge.Knowledge
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
@@ -19,27 +19,27 @@ data object DelayedPlayClue
         return true
     }
 
-    override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
-        val teammateKnowsOwnSlot = teammate.getHandFromPlayerPOV().getSlot(slot.index) is KnownSlot
+    override fun teammateSlotMatchesCondition(engineHandlerPlayer: EngineHandlerPlayer, slot: Slot, activePlayer: ActivePlayer): Boolean {
+        val teammateKnowsOwnSlot = engineHandlerPlayer.getHandFromPlayerPOV().getSlot(slot.index) is KnownSlot
         return !teammateKnowsOwnSlot && slot.matches { _, card ->
-                    playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) > 0 &&
-                    connectingCardsAreKnown(card, playerPOV)
+                    activePlayer.globallyAvailableInfo.getGlobalAwayValue(card) > 0 &&
+                    connectingCardsAreKnown(card, activePlayer)
         }
     }
 
-    override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
+    override fun getGameActions(activePlayer: ActivePlayer): Set<ClueAction> {
         val actions = mutableListOf<ClueAction>()
 
-        playerPOV.forEachTeammate { teammate ->
+        activePlayer.forEachTeammate { teammate ->
             teammate
                 .getSlots()
                 .forEach { slot ->
-                    if (teammateSlotMatchesCondition(teammate, slot, playerPOV)) {
+                    if (teammateSlotMatchesCondition(teammate, slot, activePlayer)) {
                         actions.addAll(
                             getAllCluesFocusing(
                                 slot = slot,
-                                teammate = teammate,
-                                playerPOV = playerPOV,
+                                engineHandlerPlayer = teammate,
+                                activePlayer = activePlayer,
                             )
                         )
                     }
@@ -52,34 +52,34 @@ data object DelayedPlayClue
         return otherTech !is SaveClue && otherTech !is DirectPlayClue
     }
 
-    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
-        val slot = playerPOV.getOwnHand().getSlot(focusIndex)
+    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, activePlayer: ActivePlayer): Boolean {
+        val slot = activePlayer.getOwnHand().getSlot(focusIndex)
         return slot.getPossibleIdentities()
             .any {
-                playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) > 0 &&
-                        connectingCardsAreKnown(it, playerPOV)
+                activePlayer.globallyAvailableInfo.getGlobalAwayValue(it) > 0 &&
+                        connectingCardsAreKnown(it, activePlayer)
             }
     }
 
-    private fun connectingCardsAreKnown(card: HanabiCard, playerPOV: PlayerPOV): Boolean {
-        val stack = playerPOV.globallyAvailableInfo.getStackForCard(card)
+    private fun connectingCardsAreKnown(card: HanabiCard, activePlayer: ActivePlayer): Boolean {
+        val stack = activePlayer.globallyAvailableInfo.getStackForCard(card)
         val missingCards = if (stack.isEmpty()) {
             card.getPrerequisiteCards().toSet()
         } else {
             stack.suite.getCardsBetween(stack.currentCard(), card)
         }
-        return playerPOV.teamKnowsAllCards(missingCards)
+        return activePlayer.teamKnowsAllCards(missingCards)
     }
 
-    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Knowledge {
-        val receiverPOV = playerPOV.getTeammate(action.clueAction.clueReceiver).getPOV(playerPOV)
+    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, activePlayer: ActivePlayer): Knowledge {
+        val receiverPOV = activePlayer.getTeammate(action.clueAction.clueReceiver).getPOV(activePlayer)
         val slot = receiverPOV.getOwnHand().getSlot(focusIndex)
         val possibleIdentities = slot.getPossibleIdentities()
             .filter {
-                playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) > 0
+                activePlayer.globallyAvailableInfo.getGlobalAwayValue(it) > 0
             }
         return KnowledgeFactory.createKnowledge(
-            playerId = playerPOV.getOwnPlayerId(),
+            playerId = activePlayer.getOwnPlayerId(),
             slotIndex = focusIndex,
             possibleIdentities = possibleIdentities.toSet(),
             empathy = TODO()

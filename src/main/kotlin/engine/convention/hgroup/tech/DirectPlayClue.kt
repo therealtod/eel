@@ -3,8 +3,8 @@ package eelst.ilike.engine.convention.hgroup.tech
 import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.hand.slot.KnownSlot
-import eelst.ilike.engine.player.PlayerPOV
-import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.ActivePlayer
+import eelst.ilike.engine.player.EngineHandlerPlayer
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
@@ -16,24 +16,24 @@ object DirectPlayClue : PlayClue("Direct Play Clue") {
         return true
     }
 
-    override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
-        val slotFromTeammatePOV = teammate.getHandFromPlayerPOV().getSlot(slot.index)
+    override fun teammateSlotMatchesCondition(engineHandlerPlayer: EngineHandlerPlayer, slot: Slot, activePlayer: ActivePlayer): Boolean {
+        val slotFromTeammatePOV = engineHandlerPlayer.getHandFromPlayerPOV().getSlot(slot.index)
         val teammateKnowsOwnSlot = slotFromTeammatePOV is KnownSlot
         return !teammateKnowsOwnSlot && slot.matches{ _, card ->
-            playerPOV.globallyAvailableInfo.getGlobalAwayValue(card) == 0
+            activePlayer.globallyAvailableInfo.getGlobalAwayValue(card) == 0
         }
     }
 
-    override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
+    override fun getGameActions(activePlayer: ActivePlayer): Set<ClueAction> {
         val actions = mutableListOf<ClueAction>()
-        playerPOV.forEachTeammate { teammate ->
+        activePlayer.forEachTeammate { teammate ->
             teammate.getSlots().forEach { slot ->
-                if (teammateSlotMatchesCondition(teammate, slot, playerPOV,)) {
+                if (teammateSlotMatchesCondition(teammate, slot, activePlayer,)) {
                     actions.addAll(
                         getAllCluesFocusing(
                             slot = slot,
-                            teammate = teammate,
-                            playerPOV = playerPOV,
+                            engineHandlerPlayer = teammate,
+                            activePlayer = activePlayer,
                         )
                     )
                 }
@@ -46,15 +46,15 @@ object DirectPlayClue : PlayClue("Direct Play Clue") {
         return otherTech !is SaveClue && otherTech is PlayClue
     }
 
-    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
-        val slot = playerPOV.getOwnHand().getSlot(focusIndex)
+    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, activePlayer: ActivePlayer): Boolean {
+        val slot = activePlayer.getOwnHand().getSlot(focusIndex)
         return slot.getPossibleIdentities()
             .any {
-                playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) == 0
+                activePlayer.globallyAvailableInfo.getGlobalAwayValue(it) == 0
             }
     }
 
-    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PlayerPersonalKnowledge {
+    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, activePlayer: ActivePlayer): PlayerPersonalKnowledge {
         /*
         val focusedSlot = playerPOV.getSlot(focusIndex)
         val possibleIdentities = playerPOV.getPossibleSlotIdentities(focusedSlot)

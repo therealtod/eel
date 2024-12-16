@@ -1,8 +1,7 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.convention.tech.ConventionTech
-import eelst.ilike.engine.player.PlayerPOV
-import eelst.ilike.game.PlayerId
+import eelst.ilike.engine.player.ActivePlayer
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.card.HanabiCard
@@ -43,27 +42,27 @@ abstract class HGroupTech : ConventionTech {
 
      */
 
-    fun isGloballyKnownPlayable(card: HanabiCard, playerPOV: PlayerPOV): Boolean {
+    fun isGloballyKnownPlayable(card: HanabiCard, activePlayer: ActivePlayer): Boolean {
         val prerequisiteCards = card.getPrerequisiteCards()
-        val playedCardsForSuite = playerPOV.globallyAvailableInfo.getStackForCard(card).cards
-        val teammatesKnownCards = playerPOV.getTeammates().flatMap { it.getPOV(playerPOV).getOwnKnownCards() }
-        val ownKnownCards = playerPOV.getOwnKnownCards()
+        val playedCardsForSuite = activePlayer.globallyAvailableInfo.getStackForCard(card).cards
+        val teammatesKnownCards = activePlayer.getTeammates().flatMap { it.getPOV(activePlayer).getOwnKnownCards() }
+        val ownKnownCards = activePlayer.getOwnKnownCards()
         return (playedCardsForSuite + teammatesKnownCards + ownKnownCards).containsAll(prerequisiteCards)
     }
 
-    fun hasChop(hand: Hand, playerPOV: PlayerPOV): Boolean {
-        return hand.any { !isSlotTouched(it.index, hand, playerPOV) }
+    fun hasChop(hand: Hand, activePlayer: ActivePlayer): Boolean {
+        return hand.any { !isSlotTouched(it.index, hand, activePlayer) }
     }
 
-    fun getChop(hand: Hand, playerPOV: PlayerPOV): Slot {
-        return hand.last { !isSlotTouched(it.index, hand, playerPOV) }
+    fun getChop(hand: Hand, activePlayer: ActivePlayer): Slot {
+        return hand.last { !isSlotTouched(it.index, hand, activePlayer) }
     }
 
     override fun overrides(otherTech: ConventionTech): Boolean {
         return false
     }
 
-    protected fun isSlotTouched(slotIndex: Int, hand: Hand, playerPOV: PlayerPOV): Boolean {
+    protected fun isSlotTouched(slotIndex: Int, hand: Hand, activePlayer: ActivePlayer): Boolean {
         return hand.getSlot(slotIndex).isTouched()
     }
 }

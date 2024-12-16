@@ -1,6 +1,6 @@
 package eelst.ilike.hanablive.bot.state
 
-import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.ActivePlayer
 import eelst.ilike.game.PlayerId
 import eelst.ilike.hanablive.bot.HanabLiveBot
 import eelst.ilike.hanablive.model.TableId
@@ -8,7 +8,7 @@ import eelst.ilike.hanablive.model.dto.command.GameInitData
 import eelst.ilike.hanablive.model.dto.command.Table
 import eelst.ilike.hanablive.model.dto.instruction.GameActionListData
 
-class GameStartedState(val playerPOV: PlayerPOV, bot: HanabLiveBot) : HanabLiveBotState(bot) {
+class GameStartedState(val activePlayer: ActivePlayer, bot: HanabLiveBot) : HanabLiveBotState(bot) {
     override suspend fun setTables(tables: Collection<Table>) {
         TODO("Not yet implemented")
     }

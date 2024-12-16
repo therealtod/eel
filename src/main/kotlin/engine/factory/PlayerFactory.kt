@@ -12,8 +12,8 @@ object PlayerFactory {
         globallyAvailableInfo: GloballyAvailablePlayerInfo,
         personalKnowledge: PlayerPersonalKnowledge,
         hand: Hand,
-    ): Teammate {
-        return Teammate(
+    ): EngineHandlerPlayer {
+        return EngineHandlerPlayer(
             globallyAvailablePlayerInfo = globallyAvailableInfo,
             hand = hand,
         )
@@ -24,7 +24,7 @@ object PlayerFactory {
         globallyAvailableInfo: GloballyAvailableInfo,
         personalKnowledge: PlayerPersonalKnowledge,
         playersHands: Map<PlayerId, Hand>
-    ): PlayerPOV {
+    ): ActivePlayer {
         val players = playersHands.mapValues {
             createPlayer(
                 globallyAvailableInfo = globallyAvailableInfo.getPlayerInfo(it.key),
@@ -34,7 +34,7 @@ object PlayerFactory {
         }
 
 
-        return PlayerPOVImpl(
+        return ActivePlayerImpl(
             playerId = playerId,
             globallyAvailableInfo = globallyAvailableInfo,
             personalKnowledge = personalKnowledge,

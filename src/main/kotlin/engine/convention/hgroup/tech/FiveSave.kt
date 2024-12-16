@@ -2,8 +2,8 @@ package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.factory.KnowledgeFactory
-import eelst.ilike.engine.player.PlayerPOV
-import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.ActivePlayer
+import eelst.ilike.engine.player.EngineHandlerPlayer
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.Slot
@@ -17,21 +17,21 @@ object FiveSave : SaveClue("5-Save") {
         return true
     }
 
-    override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
-        val chop = getChop(teammate.hand, playerPOV)
+    override fun teammateSlotMatchesCondition(engineHandlerPlayer: EngineHandlerPlayer, slot: Slot, activePlayer: ActivePlayer): Boolean {
+        val chop = getChop(engineHandlerPlayer.hand, activePlayer)
         return slot.matches{ slotIndex, card ->
             slotIndex == chop.index && card.rank == Rank.FIVE
         }
     }
 
-    override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
+    override fun getGameActions(activePlayer: ActivePlayer): Set<ClueAction> {
         val actions = mutableListOf<ClueAction>()
-        playerPOV.forEachTeammate { teammate ->
-            val chop = getChop(teammate.hand, playerPOV)
-            if (teammateSlotMatchesCondition(teammate, chop, playerPOV,)) {
+        activePlayer.forEachTeammate { teammate ->
+            val chop = getChop(teammate.hand, activePlayer)
+            if (teammateSlotMatchesCondition(teammate, chop, activePlayer,)) {
                 actions.add(
                     RankClueAction(
-                        clueGiver = playerPOV.getOwnPlayerId(),
+                        clueGiver = activePlayer.getOwnPlayerId(),
                         clueReceiver = teammate.playerId,
                         rank = Rank.FIVE,
                     ),
@@ -41,11 +41,11 @@ object FiveSave : SaveClue("5-Save") {
         return actions.toSet()
     }
 
-    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
+    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, activePlayer: ActivePlayer): Boolean {
         return true
     }
 
-    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PlayerPersonalKnowledge {
+    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, activePlayer: ActivePlayer): PlayerPersonalKnowledge {
         return KnowledgeFactory.createEmptyPersonalKnowledge()
     }
 }
