@@ -7,4 +7,6 @@ data class GloballyAvailableSlotInfo(
     val index: Int,
     val positiveClues: List<ClueValue>,
     val negativeClues: List<ClueValue>,
-)
+) {
+    constructor(index: Int): this(index, emptyList(), emptyList())
+}

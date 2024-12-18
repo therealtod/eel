@@ -2,11 +2,12 @@ package eelst.ilike.game.entity.suite
 
 import eelst.ilike.game.entity.Color
 
-
-object Green : ClassicSuite(
+object Green : BaseClassicSuite(
     id = "green",
     name = "green",
-    abbreviations = listOf("g"),
+    abbreviations = listOf("g", "G", "green"),
 ) {
-    override val suiteColors = setOf(Color.GREEN)
+    override fun getAssociatedColors(): Collection<Color> {
+        return listOf(Color.GREEN)
+    }
 }

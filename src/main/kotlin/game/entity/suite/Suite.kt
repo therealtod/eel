@@ -1,6 +1,6 @@
 package eelst.ilike.game.entity.suite
 
-import eelst.ilike.common.model.metadata.SuiteMetadata
+import eelst.ilike.common.model.metadata.EelSuiteMetadata
 import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
@@ -33,6 +33,12 @@ abstract class Suite(
         }
     }
 
+    fun getAllCards(): List<HanabiCard> {
+        return getAllUniqueCards().flatMap { card ->
+            copiesOf(card.rank).downTo(0).map { card }
+        }
+    }
+
     fun copiesOf(rank: Rank): Int {
         return when (rank) {
             Rank.ONE -> 3
@@ -40,6 +46,8 @@ abstract class Suite(
             else -> 2
         }
     }
+
+    abstract fun getAssociatedColors(): Collection<Color>
 
     open fun clueTouches(card: HanabiCard, clueValue: ClueValue): Boolean {
         return when (clueValue) {
@@ -108,7 +116,7 @@ abstract class Suite(
     }
 
     companion object {
-        fun fromMetadata(metadata: SuiteMetadata): Suite {
+        fun fromMetadata(metadata: EelSuiteMetadata): Suite {
             TODO()
         }
     }

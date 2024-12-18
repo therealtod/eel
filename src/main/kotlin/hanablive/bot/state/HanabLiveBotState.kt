@@ -7,20 +7,40 @@ import eelst.ilike.hanablive.model.dto.command.GameInitData
 import eelst.ilike.hanablive.model.dto.command.Table
 import eelst.ilike.hanablive.model.dto.instruction.GameActionListData
 
-abstract class HanabLiveBotState(protected val bot: HanabLiveBot) {
-    abstract suspend fun setTables(tables: Collection<Table>)
+abstract class HanabLiveBotState(
+    protected val bot: HanabLiveBot,
+    protected val commonState: CommonState,
+) {
+    fun setTables(tables: Collection<Table>) {
+        commonState.tables.clear()
+        commonState.tables.putAll(tables.associateBy { it.id })
+    }
 
-    abstract suspend fun putTable(table: Table)
+    fun putTable(table: Table) {
+        commonState.tables[table.id] = table
+    }
 
-    abstract suspend fun joinPlayer(playerId: PlayerId)
+    open suspend fun joinPlayer(playerId: PlayerId) {
+        throw IllegalAccessException("Cannot join a player in the current state $this")
+    }
 
-    abstract suspend fun joinPlayer(playerId: PlayerId, tablePassword: String)
+    open suspend fun joinPlayer(playerId: PlayerId, tablePassword: String) {
+        throw IllegalAccessException("Cannot join a player in the current state $this")
+    }
 
-    abstract suspend fun joinTable(tableId: TableId)
+    open suspend fun joinTable(tableId: TableId) {
+        throw IllegalAccessException("Cannot join a table in the current state $this")
+    }
 
-    abstract suspend fun joinTable(tableId: TableId, password: String)
+    open suspend fun joinTable(tableId: TableId, password: String) {
+        throw IllegalAccessException("Cannot join a table in the current state $this")
+    }
 
-    abstract suspend fun onGameInitDataReceived(gameInitData: GameInitData)
+    open suspend fun onGameInitDataReceived(gameInitData: GameInitData) {
+        throw IllegalStateException("This instruction (GameInitData) should not have been received in the current state $this")
+    }
 
-    abstract suspend fun onGameActionListReceived(gameActionListData: GameActionListData)
+    open suspend fun onGameActionListReceived(gameActionListData: GameActionListData) {
+        throw IllegalStateException("This instruction (GameActionList) should not have been received in the current state $this")
+    }
 }

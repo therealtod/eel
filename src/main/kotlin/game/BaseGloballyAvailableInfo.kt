@@ -1,38 +1,59 @@
 package eelst.ilike.game
 
-import eelst.ilike.game.entity.ClueValue
-import eelst.ilike.game.entity.Color
-import eelst.ilike.game.entity.PlayingStack
-import eelst.ilike.game.entity.Rank
+import eelst.ilike.game.entity.*
 import eelst.ilike.game.entity.card.HanabiCard
+import eelst.ilike.game.entity.suite.Suite
+import eelst.ilike.game.entity.suite.SuiteId
+import eelst.ilike.game.variant.Variant
 import eelst.ilike.utils.Utils
 
 abstract class BaseGloballyAvailableInfo(
-    playersIds: Set<PlayerId>,
-    globallyAvailablePlayerInfo: Set<GloballyAvailablePlayerInfo>,
-    private val dynamicGloballyAvailableInfo: DynamicGloballyAvailableInfo,
+    final override val variant: Variant,
+    final override val playingStacks: Map<SuiteId, PlayingStack>,
+    final override val trashPile: TrashPile,
+    final override val strikes: Int,
+    final override val clueTokens: Int,
+    final override val players: Map<PlayerId, GloballyAvailablePlayerInfo>,
 ) : GloballyAvailableInfo {
-    override val playingStacks = dynamicGloballyAvailableInfo.playingStacks
+    constructor(
+        variant: Variant,
+        globallyAvailablePlayerInfo: Map<PlayerId, GloballyAvailablePlayerInfo>,
+        dynamicGloballyAvailableInfo: DynamicGloballyAvailableInfo,
+        ): this(
+        variant = variant,
+        playingStacks = dynamicGloballyAvailableInfo.playingStacks,
+        trashPile = dynamicGloballyAvailableInfo.trashPile,
+        strikes = dynamicGloballyAvailableInfo.strikes,
+        clueTokens = dynamicGloballyAvailableInfo.clueTokens,
+        players = globallyAvailablePlayerInfo
+    )
 
-    override val trashPile = dynamicGloballyAvailableInfo.trashPile
+    private val dynamicGloballyAvailableInfo = DynamicGloballyAvailableInfo(
+        playingStacks = playingStacks,
+        trashPile = trashPile,
+        strikes = strikes,
+        clueTokens = clueTokens,
+    )
 
-    override val strikes = dynamicGloballyAvailableInfo.strikes
+    final override val numberOfPlayers = players.size
 
-    override val clueTokens = dynamicGloballyAvailableInfo.clueTokens
+    final override val suits = variant.suits
 
-    override val score = getCardsOnStacks().size
+    private val cardsInDeck = suits.flatMap { it.getAllCards() }.size
+    private val maxScore = suits.size * 5
 
-    override val pace = dynamicGloballyAvailableInfo.pace
+    override val pace = score + cardsInDeck + numberOfPlayers -maxScore
 
-    override val efficiency = dynamicGloballyAvailableInfo.efficiency
-
-    override val players = playersIds.zip(globallyAvailablePlayerInfo).associate { it.first to it.second }
-
-    override val defaultHandsSize = GameUtils.getHandSize(playersIds.size)
+    override val defaultHandsSize = GameUtils.getHandSize(numberOfPlayers)
+    override val efficiency: Float
+        get() = 1.0F
 
     override fun getCardsOnStacks(): List<HanabiCard> {
-        return dynamicGloballyAvailableInfo.playingStacks.values.flatten()
+        return dynamicGloballyAvailableInfo.getCardsOnStacks()
     }
+
+    final override val score: Int
+        get() = getCardsOnStacks().size
 
     override fun getStackForCard(card: HanabiCard): PlayingStack {
         val suiteId = card.suite.id

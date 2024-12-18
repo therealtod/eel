@@ -4,10 +4,11 @@ import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
-import eelst.ilike.hanablive.model.dto.metadata.SuiteMetadata
-import eelst.ilike.hanablive.model.dto.metadata.VariantMetadata
+import eelst.ilike.hanablive.model.dto.metadata.HanabLiveSuiteMetadata
+import eelst.ilike.hanablive.model.dto.metadata.HanabLiveVariantMetadata
 
-class SuiteAdapter(private val suiteMetadata: SuiteMetadata, private val variantMetadata: VariantMetadata) : Suite(
+class SuiteAdapter(
+    private val suiteMetadata: HanabLiveSuiteMetadata, private val variantMetadata: HanabLiveVariantMetadata) : Suite(
     id = suiteMetadata.id,
     name = suiteMetadata.name,
     abbreviations = listOf(suiteMetadata.abbreviation),
@@ -25,6 +26,10 @@ class SuiteAdapter(private val suiteMetadata: SuiteMetadata, private val variant
 
     override fun getPlayingOrder(card: HanabiCard): Int {
         TODO()
+    }
+
+    override fun getAssociatedColors(): Collection<Color> {
+        TODO("Not yet implemented")
     }
 
 }

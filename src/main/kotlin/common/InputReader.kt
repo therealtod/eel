@@ -50,7 +50,7 @@ object InputReader {
 
         val playersHands = playersSlots.mapValues { SimpleHand(it.key, it.value.toSet()) }
 
-        return PlayerFactory.createPlayerPOV(
+        return PlayerFactory.createActivePlayer(
             playerId = activePlayerId,
             globallyAvailableInfo = globallyAvailableInfo,
             personalKnowledge = KnowledgeFactory.createEmptyPersonalKnowledge(),

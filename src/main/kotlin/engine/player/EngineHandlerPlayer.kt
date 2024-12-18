@@ -32,7 +32,7 @@ open class EngineHandlerPlayer(
             .mapValues { it.value.hand } +
                 Pair(activePlayer.getOwnPlayerId(), activePlayer.getOwnHand()) +
                 Pair(playerId, getHandFromPlayerPOV())
-        return PlayerFactory.createPlayerPOV(
+        return PlayerFactory.createActivePlayer(
             playerId = playerId,
             globallyAvailableInfo = activePlayer.globallyAvailableInfo,
             personalKnowledge = activePlayer.getPersonalKnowledge().accessibleTo(playerId),

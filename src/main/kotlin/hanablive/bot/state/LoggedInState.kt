@@ -9,16 +9,14 @@ import eelst.ilike.hanablive.model.dto.instruction.GameActionListData
 import eelst.ilike.hanablive.model.dto.instruction.PasswordProtectedTableJoin
 import eelst.ilike.hanablive.model.dto.instruction.TableJoin
 
-class LoggedInState(bot: HanabLiveBot, private val tables: MutableMap<Int, Table>) : HanabLiveBotState(bot) {
-    override suspend fun setTables(tables: Collection<Table>) {
-        this.tables.clear()
-        this.tables.putAll(tables.associateBy { it.id })
-    }
-
-    override suspend fun putTable(table: Table) {
-        tables[table.id] = table
-    }
-
+class LoggedInState(
+    bot: HanabLiveBot,
+    commonState: CommonState,
+    private val tables: MutableMap<Int, Table>
+) : HanabLiveBotState(
+    bot = bot,
+    commonState = commonState,
+) {
     override suspend fun joinPlayer(playerId: PlayerId) {
         val table = tables.entries.find { it.value.players.contains(playerId) }
         table?.let {
@@ -35,13 +33,13 @@ class LoggedInState(bot: HanabLiveBot, private val tables: MutableMap<Int, Table
 
     override suspend fun joinTable(tableId: TableId) {
         bot.sendHanabLiveInstruction(TableJoin(tableId))
-        val newState = TableJoinedAsPlayerState(tableId, bot)
+        val newState = TableJoinedAsPlayerState(bot, commonState, tableId)
         bot.state = newState
     }
 
     override suspend fun joinTable(tableId: TableId, password: String) {
         bot.sendHanabLiveInstruction(PasswordProtectedTableJoin(tableId, password))
-        val newState = TableJoinedAsPlayerState(tableId, bot)
+        val newState = TableJoinedAsPlayerState(bot, commonState, tableId)
         bot.state = newState
     }
 

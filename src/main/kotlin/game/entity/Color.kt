@@ -6,7 +6,8 @@ enum class Color : ClueValue {
     YELLOW,
     GREEN,
     BLUE,
-    PURPLE;
+    PURPLE,
+    TEAL;
 
     companion object {
         fun getFromStringFormat(color: String): Color {

@@ -1,0 +1,110 @@
+{
+  "tableID": 37956,
+  "list": [
+    {
+      "type": "draw",
+      "playerIndex": 0,
+      "order": 0,
+      "suitIndex": 4,
+      "rank": 4
+    },
+    {
+      "type": "draw",
+      "playerIndex": 0,
+      "order": 1,
+      "suitIndex": 4,
+      "rank": 2
+    },
+    {
+      "type": "draw",
+      "playerIndex": 0,
+      "order": 2,
+      "suitIndex": 4,
+      "rank": 3
+    },
+    {
+      "type": "draw",
+      "playerIndex": 0,
+      "order": 3,
+      "suitIndex": 3,
+      "rank": 2
+    },
+    {
+      "type": "draw",
+      "playerIndex": 0,
+      "order": 4,
+      "suitIndex": 3,
+      "rank": 5
+    },
+    {
+      "type": "draw",
+      "playerIndex": 1,
+      "order": 5,
+      "suitIndex": 0,
+      "rank": 4
+    },
+    {
+      "type": "draw",
+      "playerIndex": 1,
+      "order": 6,
+      "suitIndex": 4,
+      "rank": 2
+    },
+    {
+      "type": "draw",
+      "playerIndex": 1,
+      "order": 7,
+      "suitIndex": 4,
+      "rank": 4
+    },
+    {
+      "type": "draw",
+      "playerIndex": 1,
+      "order": 8,
+      "suitIndex": 3,
+      "rank": 1
+    },
+    {
+      "type": "draw",
+      "playerIndex": 1,
+      "order": 9,
+      "suitIndex": 0,
+      "rank": 2
+    },
+    {
+      "type": "draw",
+      "playerIndex": 2,
+      "order": 10,
+      "suitIndex": 2,
+      "rank": 5
+    },
+    {
+      "type": "draw",
+      "playerIndex": 2,
+      "order": 11,
+      "suitIndex": 2,
+      "rank": 3
+    },
+    {
+      "type": "draw",
+      "playerIndex": 2,
+      "order": 12,
+      "suitIndex": 3,
+      "rank": 1
+    },
+    {
+      "type": "draw",
+      "playerIndex": 2,
+      "order": 13,
+      "suitIndex": 2,
+      "rank": 2
+    },
+    {
+      "type": "draw",
+      "playerIndex": 2,
+      "order": 14,
+      "suitIndex": 2,
+      "rank": 4
+    }
+  ]
+}

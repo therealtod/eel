@@ -3,12 +3,12 @@ package eelst.ilike.hanablive.model.adapter
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.variant.Variant
-import eelst.ilike.hanablive.model.dto.metadata.SuiteMetadata
-import eelst.ilike.hanablive.model.dto.metadata.VariantMetadata
+import eelst.ilike.hanablive.model.dto.metadata.HanabLiveSuiteMetadata
+import eelst.ilike.hanablive.model.dto.metadata.HanabLiveVariantMetadata
 
 class VariantAdapter(
-    private val variantMetadata: VariantMetadata,
-    suitsMetadata: Collection<SuiteMetadata>,
+    private val variantMetadata: HanabLiveVariantMetadata,
+    suitsMetadata: Collection<HanabLiveSuiteMetadata>,
 ) : Variant(
     id = variantMetadata.id.toString(),
     name = variantMetadata.name,
@@ -23,9 +23,5 @@ class VariantAdapter(
 
     override fun getCluableRanks(): Set<Rank> {
         return variantMetadata.clueRanks.map { Rank.getByNumericalValue(it) }.toSet()
-    }
-
-    override fun getCluableColors(): Set<Color> {
-        TODO()
     }
 }

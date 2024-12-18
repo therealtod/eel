@@ -1,6 +1,6 @@
 package eelst.ilike.game
 
-import eelst.ilike.common.model.metadata.SuiteMetadata
+import eelst.ilike.common.model.metadata.SuitMetadata
 import eelst.ilike.common.model.metadata.VariantMetadata
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
@@ -9,7 +9,7 @@ import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.game.entity.suite.SuiteDirection
 
 object SuiteFactory {
-    fun createSuite(suiteMetadata: SuiteMetadata, variantMetadata: VariantMetadata): Suite {
+    fun createSuite(suiteMetadata: SuitMetadata, variantMetadata: VariantMetadata): Suite {
         return object : Suite(
             id = suiteMetadata.name,
             name = suiteMetadata.name,
@@ -36,6 +36,10 @@ object SuiteFactory {
 
             override fun getPlayingOrder(card: HanabiCard): Int {
                 return card.rank.numericalValue
+            }
+
+            override fun getAssociatedColors(): Collection<Color> {
+                return Color.entries.filter { it.name.equals(name, ignoreCase = true) }
             }
         }
     }

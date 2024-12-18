@@ -9,18 +9,13 @@ import eelst.ilike.hanablive.model.dto.instruction.GameActionListData
 
 class InitialState(
     bot: HanabLiveBot,
+    commonState: CommonState,
     username: String,
     password: String,
-) : HanabLiveBotState(bot) {
-    override suspend fun setTables(tables: Collection<Table>) {
-        val newState = LoggedInState(tables = tables.associateBy { it.id }.toMutableMap(), bot = bot)
-        bot.state = newState
-    }
-
-    override suspend fun putTable(table: Table) {
-        TODO("Not yet implemented")
-    }
-
+) : HanabLiveBotState(
+    bot,
+    commonState = commonState,
+) {
     override suspend fun joinPlayer(playerId: PlayerId) {
         TODO("Not yet implemented")
     }

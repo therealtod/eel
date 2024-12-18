@@ -12,16 +12,7 @@ abstract class Variant(
 ) {
     abstract fun getCluableRanks(): Set<Rank>
 
-    abstract fun getCluableColors(): Set<Color>
-
-    companion object {
-        private val registeredVariants = mapOf(
-            NoVariant.name to NoVariant,
-        )
-
-        fun getVariantByName(variantName: String): Variant {
-            return registeredVariants[variantName]
-                ?: throw IllegalArgumentException("No registered variant with name $variantName")
-        }
+    fun getCluableColors(): Set<Color> {
+        return suits.flatMap { it.getAssociatedColors() }.toSet()
     }
 }

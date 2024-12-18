@@ -2,8 +2,8 @@ package eelst.ilike.hanablive.client
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import eelst.ilike.hanablive.HanabLiveConstants
-import eelst.ilike.hanablive.model.dto.metadata.SuiteMetadata
-import eelst.ilike.hanablive.model.dto.metadata.VariantMetadata
+import eelst.ilike.hanablive.model.dto.metadata.HanabLiveSuiteMetadata
+import eelst.ilike.hanablive.model.dto.metadata.HanabLiveVariantMetadata
 import eelst.ilike.utils.Utils
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -27,7 +27,7 @@ object MetadataClient {
         }
     }
 
-    suspend fun getVariantsMetadata(): List<VariantMetadata> {
+    suspend fun getVariantsMetadata(): List<HanabLiveVariantMetadata> {
         val response = httpClient.get {
             url {
                 path(HanabLiveConstants.VARIANTS_METADATA_PATH)
@@ -37,7 +37,7 @@ object MetadataClient {
         return Utils.jsonObjectMapper.readValue(bodyAsString)
     }
 
-    suspend fun getSuitsMetadata(): List<SuiteMetadata> {
+    suspend fun getSuitsMetadata(): List<HanabLiveSuiteMetadata> {
         val response = httpClient.get {
             url {
                 path(HanabLiveConstants.SUITE_METADATA_PATH)

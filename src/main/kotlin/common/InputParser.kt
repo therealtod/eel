@@ -12,6 +12,7 @@ import eelst.ilike.game.entity.*
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.game.entity.suite.SuiteId
+import eelst.ilike.game.factory.VariantFactory
 import eelst.ilike.game.variant.Variant
 import eelst.ilike.utils.model.dto.ScenarioDTO
 import eelst.ilike.utils.model.dto.PlayerPOVDTO
@@ -20,14 +21,16 @@ import eelst.ilike.utils.model.dto.SlotDTO
 object InputParser {
     fun parseGlobalInfo(dto: ScenarioDTO, metadataProvider: MetadataProvider): GloballyAvailableInfo {
         val variantMetadata = metadataProvider.getVariantMetadata(dto.globallyAvailableInfo.variant)
-        val suites = dto.globallyAvailableInfo
+        val suitsMetadata = dto.globallyAvailableInfo
             .suits
             .map { metadataProvider.getSuiteMetadata(it) }
+        val suits = suitsMetadata
             .map { SuiteFactory.createSuite(it, variantMetadata) }
             .toSet()
-        val playingStacks = parsePlayingStacks(suites, dto.globallyAvailableInfo.playingStacks)
-        val trashPile = parseTrashPile(dto.globallyAvailableInfo.trashPile, suites)
-        val variant = Variant.getVariantByName(dto.globallyAvailableInfo.variant)
+        val playingStacks = parsePlayingStacks(suits, dto.globallyAvailableInfo.playingStacks)
+        val trashPile = parseTrashPile(dto.globallyAvailableInfo.trashPile, suits)
+        val variant = VariantFactory
+            .createVariant(variantMetadata, suits)
         val globallyAvailablePlayerInfo =  dto.playerPOV.players
             .mapIndexed { index, player ->
                 GloballyAvailablePlayerInfo(
@@ -35,7 +38,6 @@ object InputParser {
                     playerIndex = index,
             ) }
         return GloballyAvailableInfoImpl(
-            suits = suites,
             variant = variant,
             players = globallyAvailablePlayerInfo.associateBy { it.playerId },
             dynamicGloballyAvailableInfo = DynamicGloballyAvailableInfo(
@@ -43,8 +45,6 @@ object InputParser {
                 trashPile = trashPile,
                 strikes = dto.globallyAvailableInfo.strikes,
                 clueTokens = dto.globallyAvailableInfo.clueTokens,
-                pace = dto.globallyAvailableInfo.pace,
-                efficiency = dto.globallyAvailableInfo.efficiency,
             )
         )
     }

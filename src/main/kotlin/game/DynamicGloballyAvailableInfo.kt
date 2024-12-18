@@ -2,6 +2,7 @@ package eelst.ilike.game
 
 import eelst.ilike.game.entity.PlayingStack
 import eelst.ilike.game.entity.TrashPile
+import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.SuiteId
 
 data class DynamicGloballyAvailableInfo(
@@ -9,6 +10,11 @@ data class DynamicGloballyAvailableInfo(
     val trashPile: TrashPile,
     val strikes: Int,
     val clueTokens: Int,
-    val pace: Int,
-    val efficiency: Float,
-)
+) {
+    fun getCardsOnStacks(): List<HanabiCard> {
+        return playingStacks.flatMap { it.value.cards }
+    }
+
+    val score: Int
+        get() = getCardsOnStacks().size
+}

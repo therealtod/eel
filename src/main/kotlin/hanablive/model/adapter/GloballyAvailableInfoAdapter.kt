@@ -2,41 +2,28 @@ package eelst.ilike.hanablive.model.adapter
 
 import eelst.ilike.game.BaseGloballyAvailableInfo
 import eelst.ilike.game.DynamicGloballyAvailableInfo
+import eelst.ilike.game.GloballyAvailablePlayerInfo
 import eelst.ilike.game.PlayerId
+import eelst.ilike.game.entity.PlayingStack
 import eelst.ilike.game.entity.TrashPile
-import eelst.ilike.hanablive.model.dto.metadata.SuiteMetadata
-import eelst.ilike.hanablive.model.dto.metadata.VariantMetadata
+import eelst.ilike.game.entity.card.HanabiCard
+import eelst.ilike.game.entity.suite.Suite
+import eelst.ilike.game.variant.Variant
+import eelst.ilike.hanablive.model.dto.command.GameInitData
+import eelst.ilike.hanablive.model.dto.metadata.HanabLiveSuiteMetadata
+import eelst.ilike.hanablive.model.dto.metadata.HanabLiveVariantMetadata
 
 class GloballyAvailableInfoAdapter(
-    playerIds: Set<PlayerId>,
-    variantMetadata: VariantMetadata,
-    suitsMetadata: Collection<SuiteMetadata>,
+    gameInitData: GameInitData,
+    variant: Variant,
 ) : BaseGloballyAvailableInfo(
-    playersIds = playerIds,
-    globallyAvailablePlayerInfo = TODO(),
-    dynamicGloballyAvailableInfo = DynamicGloballyAvailableInfo(
-        playingStacks = TODO(),
-        trashPile = TrashPile(),
-        strikes = 0,
-        clueTokens = 8,
-        pace = TODO(),
-        efficiency = TODO(),
-    )
-) {
-    override val efficiency = TODO()
-
-    override val defaultHandsSize = TODO()
-
-    override val numberOfPlayers = TODO()
-
-    override val pace = TODO()
-
-    override val players = TODO()
-
-    override val variant = VariantAdapter(
-        variantMetadata = variantMetadata,
-        suitsMetadata = suitsMetadata,
-    )
-
-    override val suits = variant.suits
-}
+    variant = variant,
+    playingStacks = variant.suits.associate { it.id to PlayingStack(emptyList(), it) },
+    trashPile = TrashPile(emptyList()),
+    strikes = 0,
+    clueTokens = 8,
+    players = gameInitData.playerNames.mapIndexed { index, p -> GloballyAvailablePlayerInfo(
+        playerId = p,
+        playerIndex = index
+    ) }.associateBy { it.playerId }
+)

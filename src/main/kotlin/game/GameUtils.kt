@@ -6,7 +6,7 @@ import eelst.ilike.game.entity.suite.Suite
 
 object GameUtils {
     fun getCardEmpathy(
-        visibleCards: List<HanabiCard>,
+        visibleCards: Collection<HanabiCard>,
         positiveClues: List<ClueValue>,
         negativeClues: List<ClueValue>,
         suits: Set<Suite>

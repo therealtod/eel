@@ -4,6 +4,7 @@ import eelst.ilike.bot.Bot
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.hanablive.HanabLiveWebSocketSession
+import eelst.ilike.hanablive.bot.state.CommonState
 import eelst.ilike.hanablive.bot.state.HanabLiveBotState
 import eelst.ilike.hanablive.bot.state.InitialState
 import eelst.ilike.hanablive.handler.HanabLiveInstructionHandler
@@ -15,13 +16,14 @@ import eelst.ilike.hanablive.model.dto.instruction.GetGameInfo1
 import eelst.ilike.hanablive.model.dto.instruction.HanabLiveInstruction
 
 class HanabLiveBot(
-    private val username: String,
-    private val password: String,
+    username: String,
+    password: String,
 ) : Bot {
     var state: HanabLiveBotState = InitialState(
         this,
         username = username,
         password = password,
+        commonState = CommonState()
     )
     private val webSocketSession = HanabLiveWebSocketSession(
         username = username,

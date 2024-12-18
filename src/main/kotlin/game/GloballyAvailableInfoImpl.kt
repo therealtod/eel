@@ -5,15 +5,13 @@ import eelst.ilike.game.variant.Variant
 import eelst.ilike.utils.Utils
 
 class GloballyAvailableInfoImpl(
-    override val suits: Set<Suite>,
-    override val variant: Variant,
-    override val players: Map<PlayerId, GloballyAvailablePlayerInfo>,
+    players: Map<PlayerId, GloballyAvailablePlayerInfo>,
+    variant: Variant,
     dynamicGloballyAvailableInfo: DynamicGloballyAvailableInfo,
 ) : BaseGloballyAvailableInfo(
-    playersIds = players.keys,
-    globallyAvailablePlayerInfo = players.values.toSet(),
+    variant = variant,
+    globallyAvailablePlayerInfo = players,
     dynamicGloballyAvailableInfo = dynamicGloballyAvailableInfo,
 ) {
     override val defaultHandsSize = GameUtils.getHandSize(players.size)
-    override val numberOfPlayers = players.size
 }

@@ -4,7 +4,7 @@ import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.card.HanabiCard
 
-sealed class ClassicSuite(
+sealed class BaseClassicSuite(
     id: SuiteId,
     name: String,
     abbreviations: List<String>,
@@ -21,14 +21,13 @@ sealed class ClassicSuite(
         Rank.FOUR to setOf(Rank.FOUR),
         Rank.FIVE to setOf(Rank.FIVE),
     )
-    abstract val suiteColors: Set<Color>
 
     override fun cluedRankTouches(thisSuiteRank: Rank, cluedRank: Rank): Boolean {
         return thisSuiteRank == cluedRank
     }
 
     override fun cluedColorTouches(thisSuiteRank: Rank, cluedColor: Color): Boolean {
-        return suiteColors.contains(cluedColor)
+        return getAssociatedColors().contains(cluedColor)
     }
 
     override fun getPlayingOrder(card: HanabiCard): Int {

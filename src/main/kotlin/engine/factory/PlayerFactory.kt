@@ -19,7 +19,7 @@ object PlayerFactory {
         )
     }
 
-    fun createPlayerPOV(
+    fun createActivePlayer(
         playerId: PlayerId,
         globallyAvailableInfo: GloballyAvailableInfo,
         personalKnowledge: PlayerPersonalKnowledge,
