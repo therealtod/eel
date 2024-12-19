@@ -39,6 +39,8 @@ abstract class BaseGame(
 
     private val cardsInDeck = suits.flatMap { it.getAllCards() }.size
     private val maxScore = suits.size * 5
+    protected val availableColors = suits.flatMap { it.getAssociatedColors() }
+    protected val availableRanks = setOf(Rank.ONE, Rank.TWO, Rank.THREE, Rank.FOUR, Rank.FIVE)
 
     override val pace = score + cardsInDeck + numberOfPlayers -maxScore
 
