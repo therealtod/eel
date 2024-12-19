@@ -1,4 +1,4 @@
-package eelst.ilike.utils.model.dto
+package common.model.dto
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies
 import com.fasterxml.jackson.databind.annotation.JsonNaming

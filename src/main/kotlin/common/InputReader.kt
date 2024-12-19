@@ -13,8 +13,8 @@ import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.utils.Configuration
 import eelst.ilike.utils.InputParser
 import eelst.ilike.utils.Utils
-import eelst.ilike.utils.model.dto.PlayerDTO
-import eelst.ilike.utils.model.dto.PlayerPOVDTO
+import common.model.dto.PlayerDTO
+import common.model.dto.PlayerPOVDTO
 import eelst.ilike.utils.model.dto.ScenarioDTO
 
 object InputReader {

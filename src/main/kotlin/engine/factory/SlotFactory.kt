@@ -9,10 +9,6 @@ import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.card.HanabiCard
-import eelst.ilike.game.entity.suite.Suite
-import eelst.ilike.utils.Configuration
-import eelst.ilike.utils.InputParser.parseCard
-import eelst.ilike.utils.model.dto.SlotDTO
 
 object SlotFactory {
     fun createSlot(

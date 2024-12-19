@@ -10,7 +10,7 @@ import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.game.entity.suite.SuiteId
 import eelst.ilike.game.factory.VariantFactory
 import eelst.ilike.utils.model.dto.ScenarioDTO
-import eelst.ilike.utils.model.dto.SlotDTO
+import common.model.dto.SlotDTO
 
 object InputParser {
     fun parseGlobalInfo(dto: ScenarioDTO, metadataProvider: MetadataProvider): Game {
