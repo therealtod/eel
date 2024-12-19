@@ -1,8 +1,8 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.convention.tech.ConventionTech
-import eelst.ilike.engine.player.ActivePlayer
-import eelst.ilike.engine.player.EngineHandlerPlayer
+import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.Teammate
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.variant.Variant
@@ -16,20 +16,20 @@ sealed class Finesse(name: String) : IndirectPlayClue(name) {
         return otherTech !is SaveClue && otherTech !is DirectPlayClue && otherTech !is Prompt
     }
 
-    fun hasCardOnFinessePosition(card: HanabiCard, engineHandlerPlayer: EngineHandlerPlayer, activePlayer: ActivePlayer): Boolean {
-        if (hasFinessePosition(engineHandlerPlayer, activePlayer)) {
-            val finessePosition = getFinessePosition(engineHandlerPlayer, activePlayer)
+    fun hasCardOnFinessePosition(card: HanabiCard, teammate: Teammate, playerPOV: PlayerPOV): Boolean {
+        if (hasFinessePosition(teammate, playerPOV)) {
+            val finessePosition = getFinessePosition(teammate, playerPOV)
             return finessePosition.matches { _, identity ->
                 identity == card
             }
         } else return false
     }
 
-    private fun hasFinessePosition(engineHandlerPlayer: EngineHandlerPlayer, activePlayer: ActivePlayer): Boolean {
-        return engineHandlerPlayer.hand.any { !isSlotTouched(it.index, engineHandlerPlayer.hand, activePlayer)}
+    private fun hasFinessePosition(teammate: Teammate, playerPOV: PlayerPOV): Boolean {
+        return teammate.hand.any { !isSlotTouched(it.index, teammate.hand, playerPOV)}
     }
 
-    private fun getFinessePosition(engineHandlerPlayer: EngineHandlerPlayer, activePlayer: ActivePlayer): Slot {
-        return engineHandlerPlayer.hand.first { !isSlotTouched(it.index, engineHandlerPlayer.hand, activePlayer) }
+    private fun getFinessePosition(teammate: Teammate, playerPOV: PlayerPOV): Slot {
+        return teammate.hand.first { !isSlotTouched(it.index, teammate.hand, playerPOV) }
     }
 }

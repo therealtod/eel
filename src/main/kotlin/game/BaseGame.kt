@@ -2,19 +2,17 @@ package eelst.ilike.game
 
 import eelst.ilike.game.entity.*
 import eelst.ilike.game.entity.card.HanabiCard
-import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.game.entity.suite.SuiteId
 import eelst.ilike.game.variant.Variant
-import eelst.ilike.utils.Utils
 
-abstract class BaseGloballyAvailableInfo(
+abstract class BaseGame(
     final override val variant: Variant,
     final override val playingStacks: Map<SuiteId, PlayingStack>,
     final override val trashPile: TrashPile,
     final override val strikes: Int,
     final override val clueTokens: Int,
     final override val players: Map<PlayerId, GloballyAvailablePlayerInfo>,
-) : GloballyAvailableInfo {
+) : Game {
     constructor(
         variant: Variant,
         globallyAvailablePlayerInfo: Map<PlayerId, GloballyAvailablePlayerInfo>,

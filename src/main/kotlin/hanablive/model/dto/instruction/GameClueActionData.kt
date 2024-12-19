@@ -1,5 +1,11 @@
 package eelst.ilike.hanablive.model.dto.instruction
 
+import eelst.ilike.engine.action.ObservedAction
+import eelst.ilike.engine.action.ObservedClue
+import eelst.ilike.game.Game
+import eelst.ilike.game.entity.Color
+import eelst.ilike.game.entity.Rank
+import eelst.ilike.hanablive.HanabLiveConstants
 import eelst.ilike.hanablive.model.dto.command.GameActionType
 
 data class GameClueActionData(

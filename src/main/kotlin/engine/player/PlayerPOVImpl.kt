@@ -1,31 +1,33 @@
 package eelst.ilike.engine.player
 
+import eelst.ilike.engine.action.ObservedAction
 import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.tech.ConventionTech
+import eelst.ilike.engine.factory.PlayerFactory
 import eelst.ilike.engine.hand.slot.FullEmpathySlot
 import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.GameUtils
-import eelst.ilike.game.GloballyAvailableInfo
+import eelst.ilike.game.Game
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.card.HanabiCard
 
-class ActivePlayerImpl(
+class PlayerPOVImpl(
     playerId: PlayerId,
     hand: Hand,
-    override val globallyAvailableInfo: GloballyAvailableInfo,
+    override val game: Game,
     private val personalKnowledge: PlayerPersonalKnowledge,
-    private val teammates: Map<PlayerId, EngineHandlerPlayer>,
-) : ActivePlayer, EngineHandlerPlayer(
-    globallyAvailablePlayerInfo = globallyAvailableInfo.getPlayerInfo(playerId),
+    private val teammates: Map<PlayerId, Teammate>,
+) : PlayerPOV, Teammate(
+    globallyAvailablePlayerInfo = game.getPlayerInfo(playerId),
     hand = hand
 ) {
-    private val globallyAvailablePlayerInfo = globallyAvailableInfo.getPlayerInfo(playerId)
+    private val globallyAvailablePlayerInfo = game.getPlayerInfo(playerId)
     private val myself = Myself(
-        globallyAvailablePlayerInfo = globallyAvailableInfo.getPlayerInfo(playerId),
+        globallyAvailablePlayerInfo = game.getPlayerInfo(playerId),
         hand,
     )
 
@@ -51,24 +53,24 @@ class ActivePlayerImpl(
             }
     }
 
-    override fun forEachTeammate(action: (engineHandlerPlayer: EngineHandlerPlayer) -> Unit) {
+    override fun forEachTeammate(action: (teammate: Teammate) -> Unit) {
         return teammates.values.forEach(action)
     }
 
-    override fun getTeammates(): Set<EngineHandlerPlayer> {
+    override fun getTeammates(): Set<Teammate> {
         return teammates.values.toSet()
     }
 
-    override fun getTeammate(teammatePlayerId: PlayerId): EngineHandlerPlayer {
+    override fun getTeammate(teammatePlayerId: PlayerId): Teammate {
         return teammates[teammatePlayerId]
             ?: throw IllegalArgumentException("I can't see any teammate with id $teammatePlayerId")
     }
 
-    override fun getSeatsGapFrom(engineHandlerPlayer: EngineHandlerPlayer): Int {
+    override fun getSeatsGapFrom(teammate: Teammate): Int {
         return GameUtils.getSeatsGap(
             playerIndex1 = globallyAvailablePlayerInfo.playerIndex,
-            playerIndex2 = engineHandlerPlayer.playerIndex,
-            globallyAvailableInfo.numberOfPlayers,
+            playerIndex2 = teammate.playerIndex,
+            game.numberOfPlayers,
         )
     }
 
@@ -81,8 +83,8 @@ class ActivePlayerImpl(
     }
 
     override fun getVisibleCards(): List<HanabiCard> {
-        val cardsOnPlayingStacks = globallyAvailableInfo.getCardsOnStacks()
-        val cardsInTrash = globallyAvailableInfo.trashPile.cards
+        val cardsOnPlayingStacks = game.getCardsOnStacks()
+        val cardsInTrash = game.trashPile.cards
         val teammatesSlots = teammates.values.flatMap {
             it.hand.getSlots()
         }
@@ -96,7 +98,7 @@ class ActivePlayerImpl(
         return cardsOnPlayingStacks + cardsInTrash + visibleTeammatesCards + ownFullEmpathyCards
     }
 
-    override fun getPlayerPOV(playerId: PlayerId): ActivePlayer {
+    override fun getPlayerPOV(playerId: PlayerId): PlayerPOV {
         return if (playerId == myself.playerId) {
             this
         } else {
@@ -104,8 +106,25 @@ class ActivePlayerImpl(
         }
     }
 
-    override fun getAsPlayer(): EngineHandlerPlayer {
+    override fun getAsPlayer(): Teammate {
         return myself
+    }
+
+    override fun getAfter(
+        action: ObservedAction,
+        game: Game,
+        techs: Collection<ConventionTech>,
+    ): PlayerPOV {
+        val knowledge = techs.map {
+            it.getGeneratedKnowledge(action, this)
+        }
+
+        return PlayerFactory.createPlayerPOV(
+            playerId = playerId,
+            game = game,
+            personalKnowledge = TODO(),
+            playersHands = TODO()
+        )
     }
 
     private fun getCandidateActions(

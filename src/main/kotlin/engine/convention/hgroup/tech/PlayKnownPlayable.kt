@@ -4,8 +4,8 @@ import eelst.ilike.engine.action.ObservedAction
 import eelst.ilike.engine.action.ObservedPlay
 import eelst.ilike.engine.convention.tech.PlayTech
 import eelst.ilike.engine.hand.slot.KnownSlot
-import eelst.ilike.engine.player.ActivePlayer
-import eelst.ilike.engine.player.EngineHandlerPlayer
+import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.PlayAction
@@ -19,32 +19,32 @@ object PlayKnownPlayable : HGroupTech(), PlayTech {
         return true
     }
 
-    override fun teammateSlotMatchesCondition(engineHandlerPlayer: EngineHandlerPlayer, slot: Slot, activePlayer: ActivePlayer): Boolean {
-        val teammateKnowsOwnSlot = engineHandlerPlayer.getHandFromPlayerPOV().getSlot(slot.index) is KnownSlot
+    override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
+        val teammateKnowsOwnSlot = teammate.getHandFromPlayerPOV().getSlot(slot.index) is KnownSlot
         return teammateKnowsOwnSlot &&
-                slot.matches { _, card -> activePlayer.globallyAvailableInfo.isImmediatelyPlayable(card) }
+                slot.matches { _, card -> playerPOV.game.isImmediatelyPlayable(card) }
     }
 
-    override fun getGameActions(activePlayer: ActivePlayer): Set<PlayAction> {
-        return activePlayer
+    override fun getGameActions(playerPOV: PlayerPOV): Set<PlayAction> {
+        return playerPOV
             .getOwnHand()
             .filterIsInstance<KnownSlot>()
             .filter {
-                activePlayer.globallyAvailableInfo.isImmediatelyPlayable(it.knownIdentity)
+                playerPOV.game.isImmediatelyPlayable(it.knownIdentity)
             }
             .map {
                 PlayAction(
-                    playerId = activePlayer.getOwnPlayerId(),
+                    playerId = playerPOV.getOwnPlayerId(),
                     slotIndex = it.index
                 )
             }.toSet()
     }
 
-    override fun matchesPlay(action: ObservedPlay, activePlayer: ActivePlayer): Boolean {
+    override fun matchesPlay(action: ObservedPlay, playerPOV: PlayerPOV): Boolean {
         TODO("Not yet implemented")
     }
 
-    override fun getGeneratedKnowledge(action: ObservedAction, activePlayer: ActivePlayer): PlayerPersonalKnowledge {
+    override fun getGeneratedKnowledge(action: ObservedAction, playerPOV: PlayerPOV): PlayerPersonalKnowledge {
         TODO("Not yet implemented")
     }
 }

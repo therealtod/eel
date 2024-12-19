@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
 
-class ActivePlayerTest {
+class PlayerPOVTest {
     @Test
     fun `Should find all possible actions in the scenario`() {
         val activePlayer = TestUtils.getPlayerPOVFromScenario(1)

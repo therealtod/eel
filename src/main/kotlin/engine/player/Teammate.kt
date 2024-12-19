@@ -10,7 +10,7 @@ import eelst.ilike.game.entity.Player
 import eelst.ilike.game.entity.SimpleHand
 import eelst.ilike.game.entity.Slot
 
-open class EngineHandlerPlayer(
+open class Teammate(
     globallyAvailablePlayerInfo: GloballyAvailablePlayerInfo,
     override val hand: Hand,
 ) : Player {
@@ -21,21 +21,21 @@ open class EngineHandlerPlayer(
         return hand.getSlots()
     }
 
-    fun playsBefore(otherEngineHandlerPlayer: EngineHandlerPlayer, activePlayer: ActivePlayer): Boolean {
-        return activePlayer.getSeatsGapFrom(this) < activePlayer.getSeatsGapFrom(otherEngineHandlerPlayer)
+    fun playsBefore(otherTeammate: Teammate, playerPOV: PlayerPOV): Boolean {
+        return playerPOV.getSeatsGapFrom(this) < playerPOV.getSeatsGapFrom(otherTeammate)
     }
 
-    fun getPOV(activePlayer: ActivePlayer): ActivePlayer {
-        val playersHands = activePlayer.getTeammates()
+    fun getPOV(playerPOV: PlayerPOV): PlayerPOV {
+        val playersHands = playerPOV.getTeammates()
             .associateBy { it.playerId }
             .minus(playerId)
             .mapValues { it.value.hand } +
-                Pair(activePlayer.getOwnPlayerId(), activePlayer.getOwnHand()) +
+                Pair(playerPOV.getOwnPlayerId(), playerPOV.getOwnHand()) +
                 Pair(playerId, getHandFromPlayerPOV())
-        return PlayerFactory.createActivePlayer(
+        return PlayerFactory.createPlayerPOV(
             playerId = playerId,
-            globallyAvailableInfo = activePlayer.globallyAvailableInfo,
-            personalKnowledge = activePlayer.getPersonalKnowledge().accessibleTo(playerId),
+            game = playerPOV.game,
+            personalKnowledge = playerPOV.getPersonalKnowledge().accessibleTo(playerId),
             playersHands = playersHands
         )
     }

@@ -1,37 +1,37 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.action.ObservedClue
-import eelst.ilike.engine.player.ActivePlayer
-import eelst.ilike.engine.player.EngineHandlerPlayer
+import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
 
 object SimpleFinesse : Finesse("Simple Finesse") {
-    override fun teammateSlotMatchesCondition(engineHandlerPlayer: EngineHandlerPlayer, slot: Slot, activePlayer: ActivePlayer): Boolean {
+    override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
         return slot.matches { _, card ->
-            activePlayer.globallyAvailableInfo.getGlobalAwayValue(card) == 1 &&
-                    activePlayer.getTeammates().any { otherTeammate ->
-                        otherTeammate.playsBefore(engineHandlerPlayer, activePlayer) &&
+            playerPOV.game.getGlobalAwayValue(card) == 1 &&
+                    playerPOV.getTeammates().any { otherTeammate ->
+                        otherTeammate.playsBefore(teammate, playerPOV) &&
                                 hasCardOnFinessePosition(
                                     card = card.suite.cardBefore(card),
-                                    engineHandlerPlayer = otherTeammate,
-                                    activePlayer = activePlayer,
+                                    teammate = otherTeammate,
+                                    playerPOV = playerPOV,
                                 )
                     }
         }
     }
 
-    override fun getGameActions(activePlayer: ActivePlayer): Set<ClueAction> {
+    override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
         val actions = mutableListOf<ClueAction>()
-        activePlayer.forEachTeammate { teammate ->
+        playerPOV.forEachTeammate { teammate ->
             teammate.getSlots().forEach { slot ->
-                if (teammateSlotMatchesCondition(teammate, slot, activePlayer,)) {
+                if (teammateSlotMatchesCondition(teammate, slot, playerPOV,)) {
                     actions.addAll(
                         getAllCluesFocusing(
                             slot = slot,
-                            engineHandlerPlayer = teammate,
-                            activePlayer = activePlayer,
+                            teammate = teammate,
+                            playerPOV = playerPOV,
                         )
                     )
                 }
@@ -41,11 +41,11 @@ object SimpleFinesse : Finesse("Simple Finesse") {
         return actions.toSet()
     }
 
-    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, activePlayer: ActivePlayer): Boolean {
+    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
         return false
     }
 
-    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, activePlayer: ActivePlayer): PlayerPersonalKnowledge {
+    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PlayerPersonalKnowledge {
         TODO("Not yet implemented")
     }
 }

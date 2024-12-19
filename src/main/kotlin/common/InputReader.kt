@@ -4,8 +4,8 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import eelst.ilike.common.model.metadata.LocalMirrorMetadataProvider
 import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.factory.PlayerFactory
-import eelst.ilike.engine.player.ActivePlayer
-import eelst.ilike.game.GloballyAvailableInfo
+import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.game.Game
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.SimpleHand
 import eelst.ilike.game.entity.card.HanabiCard
@@ -21,7 +21,7 @@ object InputReader {
     private val mapper = Utils.yamlObjectMapper
     private val metadataProvider = LocalMirrorMetadataProvider
 
-    fun getPlayerFromResourceFile(fileName: String): ActivePlayer {
+    fun getPlayerFromResourceFile(fileName: String): PlayerPOV {
         val fileText = Utils.getResourceFileContentAsString(fileName)
         val dto: ScenarioDTO = mapper.readValue(fileText)
         val activePlayerId = dto.playerPOV.playerId
@@ -29,7 +29,7 @@ object InputReader {
         val playerDTOS = dto.playerPOV.players
         val visibleCardsMap = computeVisibleCardsMap(
             playerPOV = dto.playerPOV,
-            globallyAvailableInfo = globallyAvailableInfo,
+            game = globallyAvailableInfo,
         )
 
 
@@ -50,9 +50,9 @@ object InputReader {
 
         val playersHands = playersSlots.mapValues { SimpleHand(it.key, it.value.toSet()) }
 
-        return PlayerFactory.createActivePlayer(
+        return PlayerFactory.createPlayerPOV(
             playerId = activePlayerId,
-            globallyAvailableInfo = globallyAvailableInfo,
+            game = globallyAvailableInfo,
             personalKnowledge = KnowledgeFactory.createEmptyPersonalKnowledge(),
             playersHands = playersHands
         )
@@ -60,16 +60,16 @@ object InputReader {
 
     private fun computeVisibleCardsMap(
         playerPOV: PlayerPOVDTO,
-        globallyAvailableInfo: GloballyAvailableInfo,
+        game: Game,
     ): Map<PlayerId, List<HanabiCard>> {
-        val cardsInTrash = globallyAvailableInfo.trashPile.cards
-        val cardsInStacks = globallyAvailableInfo.playingStacks.flatMap { it.value.cards }
-        return globallyAvailableInfo.players.mapValues { player ->
+        val cardsInTrash = game.trashPile.cards
+        val cardsInStacks = game.playingStacks.flatMap { it.value.cards }
+        return game.players.mapValues { player ->
             computeCardsVisibleByPlayer(
                 playerId = player.key,
                 publiclyVisibleCards = cardsInStacks + cardsInTrash,
                 teammates = playerPOV.players.associateBy { it.playerId },
-                suits = globallyAvailableInfo.suits,
+                suits = game.suits,
             )
         }
     }

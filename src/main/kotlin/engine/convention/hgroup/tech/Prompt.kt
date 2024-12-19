@@ -2,53 +2,53 @@ package eelst.ilike.engine.convention.hgroup.tech
 
 
 import eelst.ilike.engine.hand.slot.VisibleSlot
-import eelst.ilike.engine.player.ActivePlayer
-import eelst.ilike.engine.player.EngineHandlerPlayer
+import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.Teammate
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.card.HanabiCard
 
 sealed class Prompt(name: String) : IndirectPlayClue(name) {
     fun validatePrompt(
         connectingCards: Set<HanabiCard>,
-        activePlayer: ActivePlayer
+        playerPOV: PlayerPOV
     ): Boolean {
         return isSequencePromptable(
             sequence = connectingCards,
-            activePlayer = activePlayer
+            playerPOV = playerPOV
         )
     }
 
-    private fun isSequencePromptable(sequence: Set<HanabiCard>, activePlayer: ActivePlayer): Boolean {
+    private fun isSequencePromptable(sequence: Set<HanabiCard>, playerPOV: PlayerPOV): Boolean {
         return isSequencePromptableGivenAlreadyPromptedCards(
             sequence = sequence,
             promptedCards = emptySet(),
-            activePlayer = activePlayer,
+            playerPOV = playerPOV,
         )
     }
 
     private fun isSequencePromptableGivenAlreadyPromptedCards(
         sequence: Set<HanabiCard>,
         promptedCards: Set<HanabiCard>,
-        activePlayer: ActivePlayer,
+        playerPOV: PlayerPOV,
     ): Boolean {
         if (sequence.isEmpty()) return true
         val nextInSequence = sequence.first()
-        val promptableTeammates = activePlayer.getTeammates()
+        val promptableTeammates = playerPOV.getTeammates()
 
         return if (
             promptableTeammates.any { teammate ->
                 isPromptedCorrectly(
                     card = nextInSequence,
-                    engineHandlerPlayer = teammate,
+                    teammate = teammate,
                     promptedSlots = teammate.getSlots(),
-                    activePlayer = activePlayer,
+                    playerPOV = playerPOV,
                 )
             }
         ) {
             isSequencePromptableGivenAlreadyPromptedCards(
                 sequence = sequence.minus(nextInSequence),
                 promptedCards = promptedCards + nextInSequence,
-                activePlayer = activePlayer,
+                playerPOV = playerPOV,
             )
         } else {
             false
@@ -57,47 +57,47 @@ sealed class Prompt(name: String) : IndirectPlayClue(name) {
 
     private fun isPromptedCorrectly(
         card: HanabiCard,
-        engineHandlerPlayer: EngineHandlerPlayer,
+        teammate: Teammate,
         promptedSlots: Set<Slot> = emptySet(),
-        activePlayer: ActivePlayer,
+        playerPOV: PlayerPOV,
     ): Boolean {
         val promptedTeammateSlot = promptedSlots.firstOrNull { slot ->
             slot.isTouched() &&
-                    engineHandlerPlayer.getPOV(activePlayer)
+                    teammate.getPOV(playerPOV)
                         .getOwnHand()
                         .getSlot(slot.index)
                         .getPossibleIdentities()
                         .contains(card)
         } ?: return false
         return promptedTeammateSlot.matches { _, identity -> identity == card } ||
-                (activePlayer.globallyAvailableInfo.isImmediatelyPlayable(card)
+                (playerPOV.game.isImmediatelyPlayable(card)
                         && isPromptedCorrectly(
                     card = card,
-                    engineHandlerPlayer = engineHandlerPlayer,
+                    teammate = teammate,
                     promptedSlots = promptedSlots.filter { it.index < promptedTeammateSlot.index }.toSet(),
-                    activePlayer = activePlayer
+                    playerPOV = playerPOV
                 )
                         ) || wrongPromptCanBePatched(
             wrongPromptedSlot = promptedTeammateSlot,
-            wrongPromptedEngineHandlerPlayer = engineHandlerPlayer,
-            activePlayer = activePlayer
+            wrongPromptedTeammate = teammate,
+            playerPOV = playerPOV
         )
     }
 
     private fun wrongPromptCanBePatched(
         wrongPromptedSlot: Slot,
-        wrongPromptedEngineHandlerPlayer: EngineHandlerPlayer,
-        activePlayer: ActivePlayer,
+        wrongPromptedTeammate: Teammate,
+        playerPOV: PlayerPOV,
     ): Boolean {
         if (wrongPromptedSlot !is VisibleSlot) {
             return false
         }
         val wrongPromptedCard = wrongPromptedSlot.knownIdentity
-        if (activePlayer.globallyAvailableInfo.getGlobalAwayValue(wrongPromptedCard) < 0) return false
+        if (playerPOV.game.getGlobalAwayValue(wrongPromptedCard) < 0) return false
         val preRequisites = wrongPromptedCard.getPrerequisiteCards()
         val cardTeammateMap = preRequisites.associateWith {
-            activePlayer.getTeammates().find { teammate ->
-                teammate.getPOV(activePlayer).getOwnKnownCards().contains(it)
+            playerPOV.getTeammates().find { teammate ->
+                teammate.getPOV(playerPOV).getOwnKnownCards().contains(it)
             }
         }
         if (cardTeammateMap.entries.any { it.value == null }) {
@@ -109,11 +109,11 @@ sealed class Prompt(name: String) : IndirectPlayClue(name) {
             if (index > 0) {
                 val playerHoldingNextPrerequisite = cardTeammateMap[card]!!
                 val playerHoldingPrerequisite = cardTeammateMap[sortedKeys.elementAt(index - 1)]!!
-                if (playerHoldingNextPrerequisite.playsBefore(playerHoldingPrerequisite, activePlayer)) {
+                if (playerHoldingNextPrerequisite.playsBefore(playerHoldingPrerequisite, playerPOV)) {
                     return false
                 }
             }
-            if (cardTeammateMap[card]!!.playsBefore(wrongPromptedEngineHandlerPlayer, activePlayer)) {
+            if (cardTeammateMap[card]!!.playsBefore(wrongPromptedTeammate, playerPOV)) {
                 return false
             }
         }

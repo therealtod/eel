@@ -6,7 +6,7 @@ import eelst.ilike.game.entity.Hand
 class Myself(
     globallyAvailablePlayerInfo: GloballyAvailablePlayerInfo,
     override val hand: Hand,
-): EngineHandlerPlayer(
+): Teammate(
     globallyAvailablePlayerInfo = globallyAvailablePlayerInfo,
     hand = hand
 ) {

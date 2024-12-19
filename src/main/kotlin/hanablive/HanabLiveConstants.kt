@@ -9,4 +9,6 @@ object HanabLiveConstants {
     const val LOGIN_PATH = "/login"
     const val WEBSOCKET_PATH = "/ws"
     const val COOKIE_NAME = "set-cookie"
+    const val COLOR_CLUE_TYPE = 2
+    const val RANK_CLUE_TYPE = 3
 }

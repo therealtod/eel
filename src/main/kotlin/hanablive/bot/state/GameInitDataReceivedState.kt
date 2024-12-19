@@ -14,9 +14,7 @@ import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.hanablive.HanabLiveDataParser
 import eelst.ilike.hanablive.bot.HanabLiveBot
-import eelst.ilike.hanablive.model.TableId
 import eelst.ilike.hanablive.model.dto.command.GameInitData
-import eelst.ilike.hanablive.model.dto.command.Table
 import eelst.ilike.hanablive.model.dto.instruction.GameActionListData
 import eelst.ilike.hanablive.model.dto.instruction.GameDrawActionData
 
@@ -26,18 +24,18 @@ class GameInitDataReceivedState(
     private val botPlayerId: PlayerId,
     private val gameInitData: GameInitData,
     private val variantMetadata: VariantMetadata,
-    private val globallyAvailableInfo: GloballyAvailableInfo,
+    private val game: Game,
 ): HanabLiveBotState(bot, commonState) {
     override suspend fun onGameActionListReceived(gameActionListData: GameActionListData) {
-        val botPlayerGloballyAvailableInfo = globallyAvailableInfo.getPlayerInfo(botPlayerId)
+        val botPlayerGloballyAvailableInfo = game.getPlayerInfo(botPlayerId)
         val suitMap = variantMetadata.suits
             .mapIndexed { index, s ->
-                Pair(index, globallyAvailableInfo.suits.find { it.name == s }!!)
+                Pair(index, game.suits.find { it.name == s }!!)
             }.toMap()
         val rankMap = variantMetadata.clueRanks.associateWith { Rank.getByNumericalValue(it) }
         val actions = gameActionListData.list.filterIsInstance<GameDrawActionData>()
-        val playerIndexToIdMap = globallyAvailableInfo.players.values.associate { it.playerIndex to it.playerId }
-        val teammateIndexes = globallyAvailableInfo.players
+        val playerIndexToIdMap = game.players.values.associate { it.playerIndex to it.playerId }
+        val teammateIndexes = game.players
             .minus(botPlayerGloballyAvailableInfo.playerId)
             .map { it.value.playerIndex }
         val drawActionsGroupedByPlayerIndexAndSorted = actions
@@ -59,19 +57,19 @@ class GameInitDataReceivedState(
             teammatesCards = teammatesCards,
             visibleCardsMap = visibleCardsMap,
             playerIndexToIdMap = playerIndexToIdMap,
-            suits = globallyAvailableInfo.suits,
+            suits = game.suits,
         )
         val personalKnowledge = KnowledgeFactory.createEmptyPersonalKnowledge()
-        val botPlayer = PlayerFactory.createActivePlayer(
+        val botPlayer = PlayerFactory.createPlayerPOV(
             playerId = botPlayerGloballyAvailableInfo.playerId,
-            globallyAvailableInfo = globallyAvailableInfo,
+            game = game,
             personalKnowledge = personalKnowledge,
             playersHands = hands,
         )
         val newState = PlayingState(
             bot = bot,
             commonState = commonState,
-            activePlayer = botPlayer,
+            playerPOV = botPlayer,
         )
         bot.state = newState
     }
@@ -108,7 +106,7 @@ class GameInitDataReceivedState(
                 }.toSet()
             )
         }
-        val botSlots = (1..globallyAvailableInfo.defaultHandsSize).map {
+        val botSlots = (1..game.defaultHandsSize).map {
             UnknownIdentitySlot(
                 globallyAvailableInfo = GloballyAvailableSlotInfo(
                     index = it,

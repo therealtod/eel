@@ -2,8 +2,8 @@ package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.factory.KnowledgeFactory
-import eelst.ilike.engine.player.ActivePlayer
-import eelst.ilike.engine.player.EngineHandlerPlayer
+import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.knowledge.Knowledge
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.Slot
@@ -17,34 +17,34 @@ object CriticalSave : SaveClue("Critical Save") {
     }
 
     override fun teammateSlotMatchesCondition(
-        engineHandlerPlayer: EngineHandlerPlayer,
+        teammate: Teammate,
         slot: Slot,
-        activePlayer: ActivePlayer
+        playerPOV: PlayerPOV
     ): Boolean {
-        val chop = getChop(engineHandlerPlayer.hand, activePlayer)
+        val chop = getChop(teammate.hand, playerPOV)
         return slot.matches { index, card ->
             index == chop.index &&
-            appliesTo(card, activePlayer.globallyAvailableInfo.variant) &&
+            appliesTo(card, playerPOV.game.variant) &&
                     card.rank != Rank.FIVE &&
-                    activePlayer.globallyAvailableInfo.isCritical(card) &&
-                    !isGloballyKnownPlayable(card, activePlayer)
+                    playerPOV.game.isCritical(card) &&
+                    !isGloballyKnownPlayable(card, playerPOV)
         }
     }
 
-    override fun getGameActions(activePlayer: ActivePlayer): Set<ClueAction> {
+    override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
         val actions = mutableSetOf<ClueAction>()
 
-        activePlayer.forEachTeammate { teammate ->
-            if (hasChop(teammate.hand, activePlayer)) {
-                val chop = getChop(teammate.hand, activePlayer)
+        playerPOV.forEachTeammate { teammate ->
+            if (hasChop(teammate.hand, playerPOV)) {
+                val chop = getChop(teammate.hand, playerPOV)
                 if (
-                    teammateSlotMatchesCondition(teammate, chop, activePlayer)
+                    teammateSlotMatchesCondition(teammate, chop, playerPOV)
                 ) {
                     actions.addAll(
                         getAllCluesFocusing(
                             slot = chop,
-                            engineHandlerPlayer = teammate,
-                            activePlayer = activePlayer,
+                            teammate = teammate,
+                            playerPOV = playerPOV,
                         )
                     )
                 }
@@ -53,24 +53,24 @@ object CriticalSave : SaveClue("Critical Save") {
         return actions
     }
 
-    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, activePlayer: ActivePlayer): Boolean {
-        return activePlayer.getOwnHand().getSlot(focusIndex)
+    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
+        return playerPOV.getOwnHand().getSlot(focusIndex)
             .getPossibleIdentities()
-            .any { activePlayer.globallyAvailableInfo.isCritical(it) }
+            .any { playerPOV.game.isCritical(it) }
     }
 
-    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, activePlayer: ActivePlayer): Knowledge {
-        val receiverPOV = activePlayer.getTeammate(action.clueAction.clueReceiver).getPOV(activePlayer)
+    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Knowledge {
+        val receiverPOV = playerPOV.getTeammate(action.clueAction.clueReceiver).getPOV(playerPOV)
         val focus = receiverPOV
             .getOwnHand()
             .getSlot(focusIndex)
         val possibleFocusIdentities = focus
             .getPossibleIdentities()
             .filter {
-                activePlayer.globallyAvailableInfo.isCritical(it)
+                playerPOV.game.isCritical(it)
         }
         return KnowledgeFactory.createKnowledge(
-            playerId = activePlayer.getOwnPlayerId(),
+            playerId = playerPOV.getOwnPlayerId(),
             slotIndex = focusIndex,
             possibleIdentities = possibleFocusIdentities.toSet(),
             empathy = focus.getUpdatedEmpathy(action.clueAction.value)

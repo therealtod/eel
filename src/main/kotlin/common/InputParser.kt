@@ -2,24 +2,18 @@ package eelst.ilike.utils
 
 import eelst.ilike.common.model.metadata.MetadataProvider
 import eelst.ilike.engine.factory.SlotFactory
-import eelst.ilike.engine.hand.slot.FullEmpathySlot
 import eelst.ilike.engine.hand.slot.PersonalSlotKnowledgeImpl
-import eelst.ilike.engine.hand.slot.UnknownIdentitySlot
-import eelst.ilike.engine.hand.slot.VisibleSlot
-import eelst.ilike.engine.player.knowledge.PersonalSlotKnowledge
 import eelst.ilike.game.*
 import eelst.ilike.game.entity.*
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.game.entity.suite.SuiteId
 import eelst.ilike.game.factory.VariantFactory
-import eelst.ilike.game.variant.Variant
 import eelst.ilike.utils.model.dto.ScenarioDTO
-import eelst.ilike.utils.model.dto.PlayerPOVDTO
 import eelst.ilike.utils.model.dto.SlotDTO
 
 object InputParser {
-    fun parseGlobalInfo(dto: ScenarioDTO, metadataProvider: MetadataProvider): GloballyAvailableInfo {
+    fun parseGlobalInfo(dto: ScenarioDTO, metadataProvider: MetadataProvider): Game {
         val variantMetadata = metadataProvider.getVariantMetadata(dto.globallyAvailableInfo.variant)
         val suitsMetadata = dto.globallyAvailableInfo
             .suits
@@ -37,7 +31,7 @@ object InputParser {
                     playerId = player.playerId,
                     playerIndex = index,
             ) }
-        return GloballyAvailableInfoImpl(
+        return GameImpl(
             variant = variant,
             players = globallyAvailablePlayerInfo.associateBy { it.playerId },
             dynamicGloballyAvailableInfo = DynamicGloballyAvailableInfo(
