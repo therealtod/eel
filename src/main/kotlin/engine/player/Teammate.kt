@@ -7,7 +7,7 @@ import eelst.ilike.engine.hand.slot.BaseSlot
 import eelst.ilike.game.GloballyAvailablePlayerInfo
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Player
-import eelst.ilike.game.entity.SimpleHand
+import eelst.ilike.game.entity.BaseHand
 import eelst.ilike.game.entity.Slot
 
 open class Teammate(
@@ -51,6 +51,6 @@ open class Teammate(
                 knowledge = it.knowledge,
                 visibleIdentity = null,
             ) }
-        return SimpleHand(ownerId = playerId, slots = slots.toSet())
+        return BaseHand(ownerId = playerId, slots = slots.toSet())
     }
 }

@@ -1,11 +1,8 @@
 package eelst.ilike.engine.factory
 
-import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
-import eelst.ilike.game.GloballyAvailableSlotInfo
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Hand
-import eelst.ilike.game.entity.SimpleHand
 
 object HandFactory {
     /*

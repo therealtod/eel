@@ -7,7 +7,7 @@ import eelst.ilike.engine.factory.PlayerFactory
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.game.Game
 import eelst.ilike.game.PlayerId
-import eelst.ilike.game.entity.SimpleHand
+import eelst.ilike.game.entity.BaseHand
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.utils.Configuration
@@ -48,7 +48,7 @@ object InputReader {
                 }
             }
 
-        val playersHands = playersSlots.mapValues { SimpleHand(it.key, it.value.toSet()) }
+        val playersHands = playersSlots.mapValues { BaseHand(it.key, it.value.toSet()) }
 
         return PlayerFactory.createPlayerPOV(
             playerId = activePlayerId,

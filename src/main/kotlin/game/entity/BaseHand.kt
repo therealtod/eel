@@ -3,7 +3,7 @@ package eelst.ilike.game.entity
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.card.HanabiCard
 
-class SimpleHand(
+open class BaseHand(
     override val ownerId: PlayerId,
     private val slots: Set<Slot>
 ): Hand, Set<Slot> by slots {

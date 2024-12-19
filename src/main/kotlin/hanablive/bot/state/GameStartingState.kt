@@ -28,7 +28,7 @@ class GameStartingState(
             variantMetadata = variantMetadata,
             suitsMetadata = suitsMetadata,
         )
-        botPlayerGloballyAvailableInfo = game.getPlayerInfo(botPlayerIndex)
+        botPlayerGloballyAvailableInfo = game.getPlayer(botPlayerIndex)
         bot.sendHanabLiveInstruction(GetGameInfo2(gameInitData.tableID))
         val newState = GameInitDataReceivedState(
             bot = bot,

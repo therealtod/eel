@@ -27,7 +27,7 @@ object PlayerFactory {
     ): PlayerPOV {
         val players = playersHands.mapValues {
             createPlayer(
-                globallyAvailableInfo = game.getPlayerInfo(it.key),
+                globallyAvailableInfo = game.getPlayer(it.key),
                 personalKnowledge = personalKnowledge.accessibleTo(it.key),
                 hand = it.value
             )

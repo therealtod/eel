@@ -22,12 +22,12 @@ class PlayerPOVImpl(
     private val personalKnowledge: PlayerPersonalKnowledge,
     private val teammates: Map<PlayerId, Teammate>,
 ) : PlayerPOV, Teammate(
-    globallyAvailablePlayerInfo = game.getPlayerInfo(playerId),
+    globallyAvailablePlayerInfo = game.getPlayer(playerId),
     hand = hand
 ) {
-    private val globallyAvailablePlayerInfo = game.getPlayerInfo(playerId)
+    private val globallyAvailablePlayerInfo = game.getPlayer(playerId)
     private val myself = Myself(
-        globallyAvailablePlayerInfo = game.getPlayerInfo(playerId),
+        globallyAvailablePlayerInfo = game.getPlayer(playerId),
         hand,
     )
 

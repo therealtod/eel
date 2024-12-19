@@ -88,12 +88,12 @@ abstract class BaseGame(
         return getGlobalAwayValue(card) == 0
     }
 
-    override fun getPlayerInfo(playerId: PlayerId): GloballyAvailablePlayerInfo {
+    override fun getPlayer(playerId: PlayerId): GloballyAvailablePlayerInfo {
         return players[playerId]
             ?: throw IllegalArgumentException("No player with id: $playerId in this game")
     }
 
-    override fun getPlayerInfo(playerIndex: Int): GloballyAvailablePlayerInfo {
+    override fun getPlayer(playerIndex: Int): GloballyAvailablePlayerInfo {
         return players.values.find { it.playerIndex == playerIndex }
             ?: throw IllegalArgumentException("Could not find any player with player index $playerIndex")
     }

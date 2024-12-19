@@ -31,7 +31,7 @@ interface Game {
      */
     fun getGlobalAwayValue(card: HanabiCard): Int
     fun isImmediatelyPlayable(card: HanabiCard): Boolean
-    fun getPlayerInfo(playerId: PlayerId): GloballyAvailablePlayerInfo
-    fun getPlayerInfo(playerIndex: Int): GloballyAvailablePlayerInfo
+    fun getPlayer(playerId: PlayerId): GloballyAvailablePlayerInfo
+    fun getPlayer(playerIndex: Int): GloballyAvailablePlayerInfo
     fun getAvailableClueValues(): Set<ClueValue>
 }

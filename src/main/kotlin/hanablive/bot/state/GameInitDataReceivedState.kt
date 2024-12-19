@@ -9,7 +9,7 @@ import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.game.*
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.SimpleHand
+import eelst.ilike.game.entity.BaseHand
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.hanablive.HanabLiveDataParser
@@ -27,7 +27,7 @@ class GameInitDataReceivedState(
     private val game: Game,
 ): HanabLiveBotState(bot, commonState) {
     override suspend fun onGameActionListReceived(gameActionListData: GameActionListData) {
-        val botPlayerGloballyAvailableInfo = game.getPlayerInfo(botPlayerId)
+        val botPlayerGloballyAvailableInfo = game.getPlayer(botPlayerId)
         val suitMap = variantMetadata.suits
             .mapIndexed { index, s ->
                 Pair(index, game.suits.find { it.name == s }!!)
@@ -83,7 +83,7 @@ class GameInitDataReceivedState(
     ): Map<PlayerId, Hand> {
         val botPlayerId = playerIndexToIdMap[botPlayerIndex]!!
         val teammatesHands = teammatesCards.mapValues {
-            SimpleHand(
+            BaseHand(
                 ownerId = playerIndexToIdMap[it.key]!!,
                 slots = it.value.mapIndexed { index, card->
                     VisibleSlot(
@@ -125,7 +125,7 @@ class GameInitDataReceivedState(
             )
         }
         return teammatesHands.mapKeys { playerIndexToIdMap[it.key]!! } +
-                Pair(botPlayerId, SimpleHand(botPlayerId, botSlots.toSet()))
+                Pair(botPlayerId, BaseHand(botPlayerId, botSlots.toSet()))
     }
 
     private fun computeVisibleCardsMap(
