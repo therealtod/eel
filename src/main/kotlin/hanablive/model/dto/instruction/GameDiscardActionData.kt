@@ -1,8 +1,8 @@
 package eelst.ilike.hanablive.model.dto.instruction
 
-import eelst.ilike.engine.action.ObservedAction
-import eelst.ilike.engine.action.ObservedDiscard
+
 import eelst.ilike.game.entity.action.DiscardAction
+import eelst.ilike.game.entity.action.GameAction
 import eelst.ilike.hanablive.HanabLiveGame
 import eelst.ilike.hanablive.model.dto.command.GameActionType
 
@@ -14,12 +14,12 @@ data class GameDiscardActionData(
     val rank: Int,
     val failed: Boolean,
 ) : GameActionData(GameActionType.DISCARD) {
-    override fun toObservedAction(game: HanabLiveGame): ObservedAction {
+    override fun toStandardFormatAction(game: HanabLiveGame): GameAction {
         val player = game.getPlayerMetadata(playerIndex)
-        val action = DiscardAction(
+        val discardedSlotIndex = game.getPlayerSlot(player.playerId, order)
+        return DiscardAction(
             playerId = player.playerId,
-            slotIndex = game.getPlayerSlot(player.playerId, order)
+            slotIndex = discardedSlotIndex
         )
-        return ObservedDiscard(action)
     }
 }

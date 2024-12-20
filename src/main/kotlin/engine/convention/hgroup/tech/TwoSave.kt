@@ -1,9 +1,9 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.factory.GameActionFactory
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.knowledge.Knowledge
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.Slot
@@ -56,10 +56,34 @@ object TwoSave : SaveClue("2-Save") {
         return actions.toSet()
     }
 
-    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
+    override fun matchesReceivedClue(
+        clueAction: ClueAction,
+        touchedSlotsIndexes: Set<Int>,
+        focusIndex: Int,
+        playerPOV: PlayerPOV
+    ): Boolean {
         val saveableTwos = getSaveableTwos(playerPOV)
         return playerPOV.getOwnHand().getSlot(focusIndex).getPossibleIdentities()
             .intersect(saveableTwos).isNotEmpty()
+    }
+
+    override fun getGeneratedKnowledge(
+        clueAction: ClueAction,
+        touchedSlotsIndexes: Set<Int>,
+        focusIndex: Int,
+        playerPOV: PlayerPOV
+    ): Knowledge {
+        /*
+val possibleFocusIdentities = focusedSlot.getPossibleIdentities()
+    .intersect(getSaveableTwos(playerPOV))
+return KnowledgeFactory.createKnowledge(
+    playerId = playerPOV.getOwnPlayerId(),
+    slotIndex = focusIndex,
+    possibleIdentities = possibleFocusIdentities.toSet()
+)
+
+ */
+        TODO()
     }
 
     private fun getSaveableTwos(playerPOV: PlayerPOV): Set<HanabiCard> {
@@ -88,19 +112,5 @@ object TwoSave : SaveClue("2-Save") {
             teammate.hand.countCopiesOf(card) > 0 &&
                     !chop.containsCard(card)
         }
-    }
-
-    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PlayerPersonalKnowledge {
-        /*
-        val possibleFocusIdentities = focusedSlot.getPossibleIdentities()
-            .intersect(getSaveableTwos(playerPOV))
-        return KnowledgeFactory.createKnowledge(
-            playerId = playerPOV.getOwnPlayerId(),
-            slotIndex = focusIndex,
-            possibleIdentities = possibleFocusIdentities.toSet()
-        )
-
-         */
-        TODO()
     }
 }

@@ -1,6 +1,5 @@
 package eelst.ilike.hanablive
 
-import eelst.ilike.engine.action.ObservedAction
 import eelst.ilike.game.*
 import eelst.ilike.game.entity.*
 import eelst.ilike.hanablive.model.dto.instruction.GameClueActionData
@@ -51,9 +50,5 @@ class HanabLiveGame(
 
     fun getPlayerSlot(playerId: PlayerId, hanabLiveSlotId: Int): Int {
         TODO()
-    }
-
-    override fun getAfter(observedAction: ObservedAction): Game {
-        TODO("Not yet implemented")
     }
 }

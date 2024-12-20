@@ -1,6 +1,6 @@
 package eelst.ilike.hanablive.model.dto.instruction
 
-import eelst.ilike.engine.action.ObservedAction
+import eelst.ilike.game.entity.action.GameAction
 import eelst.ilike.hanablive.HanabLiveGame
 import eelst.ilike.hanablive.model.dto.command.GameActionType
 
@@ -9,7 +9,7 @@ data class GameStrikeActionData(
     val turn: Int,
     val order: Int,
 ) : GameActionData(GameActionType.STRIKE) {
-    override fun toObservedAction(game: HanabLiveGame): ObservedAction {
+    override fun toStandardFormatAction(game: HanabLiveGame): GameAction {
         TODO("Not yet implemented")
     }
 }

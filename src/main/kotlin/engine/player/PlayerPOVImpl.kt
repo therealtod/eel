@@ -1,6 +1,5 @@
 package eelst.ilike.engine.player
 
-import eelst.ilike.engine.action.ObservedAction
 import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.tech.ConventionTech
@@ -13,6 +12,9 @@ import eelst.ilike.game.GameUtils
 import eelst.ilike.game.GameData
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Hand
+import eelst.ilike.game.entity.action.ClueAction
+import eelst.ilike.game.entity.action.DiscardAction
+import eelst.ilike.game.entity.action.PlayAction
 import eelst.ilike.game.entity.card.HanabiCard
 
 class PlayerPOVImpl(
@@ -110,21 +112,16 @@ class PlayerPOVImpl(
         return myself
     }
 
-    override fun getAfter(
-        action: ObservedAction,
-        gameData: GameData,
-        techs: Collection<ConventionTech>,
-    ): PlayerPOV {
-        val knowledge = techs.map {
-            it.getGeneratedKnowledge(action, this)
-        }
+    override fun getAfter(playAction: PlayAction): PlayerPOV {
+        TODO("Not yet implemented")
+    }
 
-        return PlayerFactory.createPlayerPOV(
-            playerId = playerId,
-            gameData = gameData,
-            personalKnowledge = TODO(),
-            playersHands = TODO()
-        )
+    override fun getAfter(discardAction: DiscardAction): PlayerPOV {
+        TODO("Not yet implemented")
+    }
+
+    override fun getAfter(clueAction: ClueAction, touchedSlotsIndexes: Set<Int>): PlayerPOV {
+        TODO("Not yet implemented")
     }
 
     private fun getCandidateActions(

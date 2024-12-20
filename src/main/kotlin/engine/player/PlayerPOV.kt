@@ -1,6 +1,5 @@
 package eelst.ilike.engine.player
 
-import eelst.ilike.engine.action.ObservedAction
 import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.tech.ConventionTech
@@ -9,6 +8,9 @@ import eelst.ilike.game.GameData
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Player
+import eelst.ilike.game.entity.action.ClueAction
+import eelst.ilike.game.entity.action.DiscardAction
+import eelst.ilike.game.entity.action.PlayAction
 import eelst.ilike.game.entity.card.HanabiCard
 
 interface PlayerPOV: Player {
@@ -27,9 +29,7 @@ interface PlayerPOV: Player {
     fun getVisibleCards(): List<HanabiCard>
     fun getPlayerPOV(playerId: PlayerId): PlayerPOV
     fun getAsPlayer(): Teammate
-    fun getAfter(
-        gameAction: ObservedAction,
-        gameData: GameData,
-        techs: Collection<ConventionTech>,
-    ): PlayerPOV
+    fun getAfter(playAction: PlayAction): PlayerPOV
+    fun getAfter(discardAction: DiscardAction): PlayerPOV
+    fun getAfter(clueAction: ClueAction, touchedSlotsIndexes: Set<Int>): PlayerPOV
 }

@@ -2,7 +2,7 @@ package eelst.ilike.hanablive.model.dto.instruction
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import eelst.ilike.engine.action.ObservedAction
+import eelst.ilike.game.entity.action.GameAction
 import eelst.ilike.hanablive.HanabLiveGame
 import eelst.ilike.hanablive.model.dto.command.GameActionType
 
@@ -21,5 +21,5 @@ import eelst.ilike.hanablive.model.dto.command.GameActionType
 sealed class GameActionData(
     val type: GameActionType
 ) {
-    abstract fun toObservedAction(game: HanabLiveGame): ObservedAction
+    abstract fun toStandardFormatAction(game: HanabLiveGame): GameAction
 }

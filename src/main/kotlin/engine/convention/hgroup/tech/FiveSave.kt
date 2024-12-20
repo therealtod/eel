@@ -1,9 +1,9 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.knowledge.Knowledge
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.Slot
@@ -41,11 +41,21 @@ object FiveSave : SaveClue("5-Save") {
         return actions.toSet()
     }
 
-    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
+    override fun matchesReceivedClue(
+        clueAction: ClueAction,
+        touchedSlotsIndexes: Set<Int>,
+        focusIndex: Int,
+        playerPOV: PlayerPOV
+    ): Boolean {
         return true
     }
 
-    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PlayerPersonalKnowledge {
-        return KnowledgeFactory.createEmptyPersonalKnowledge()
+    override fun getGeneratedKnowledge(
+        clueAction: ClueAction,
+        touchedSlotsIndexes: Set<Int>,
+        focusIndex: Int,
+        playerPOV: PlayerPOV
+    ): Knowledge {
+        TODO("Not yet implemented")
     }
 }

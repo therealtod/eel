@@ -1,10 +1,10 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.knowledge.Knowledge
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
@@ -46,7 +46,12 @@ object DirectPlayClue : PlayClue("Direct Play Clue") {
         return otherTech !is SaveClue && otherTech is PlayClue
     }
 
-    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
+    override fun matchesReceivedClue(
+        clueAction: ClueAction,
+        touchedSlotsIndexes: Set<Int>,
+        focusIndex: Int,
+        playerPOV: PlayerPOV
+    ): Boolean {
         val slot = playerPOV.getOwnHand().getSlot(focusIndex)
         return slot.getPossibleIdentities()
             .any {
@@ -54,20 +59,25 @@ object DirectPlayClue : PlayClue("Direct Play Clue") {
             }
     }
 
-    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PlayerPersonalKnowledge {
+    override fun getGeneratedKnowledge(
+        clueAction: ClueAction,
+        touchedSlotsIndexes: Set<Int>,
+        focusIndex: Int,
+        playerPOV: PlayerPOV
+    ): Knowledge {
         /*
-        val focusedSlot = playerPOV.getSlot(focusIndex)
-        val possibleIdentities = playerPOV.getPossibleSlotIdentities(focusedSlot)
-            .filter {
-                playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) == 0
-            }
-        return KnowledgeFactory.createKnowledge(
-            playerId = playerPOV.getOwnPlayerId(),
-            slotIndex = focusIndex,
-            possibleIdentities = possibleIdentities.toSet()
-        )
+      val focusedSlot = playerPOV.getSlot(focusIndex)
+      val possibleIdentities = playerPOV.getPossibleSlotIdentities(focusedSlot)
+          .filter {
+              playerPOV.globallyAvailableInfo.getGlobalAwayValue(it) == 0
+          }
+      return KnowledgeFactory.createKnowledge(
+          playerId = playerPOV.getOwnPlayerId(),
+          slotIndex = focusIndex,
+          possibleIdentities = possibleIdentities.toSet()
+      )
 
-         */
+       */
         TODO()
     }
 }

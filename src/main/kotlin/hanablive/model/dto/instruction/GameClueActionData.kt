@@ -1,10 +1,9 @@
 package eelst.ilike.hanablive.model.dto.instruction
 
-import eelst.ilike.engine.action.ObservedAction
-import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.ColorClueAction
+import eelst.ilike.game.entity.action.GameAction
 import eelst.ilike.game.entity.action.RankClueAction
 import eelst.ilike.hanablive.HanabLiveGame
 import eelst.ilike.hanablive.model.dto.command.GameActionType
@@ -21,17 +20,17 @@ data class GameClueActionData(
         val value: Int,
     )
 
-    override fun toObservedAction(game: HanabLiveGame): ObservedAction {
+    override fun toStandardFormatAction(game: HanabLiveGame): GameAction {
         val clueValue = game.getClueValue(clue)
         val clueGiver = game.getPlayerMetadata(giver)
         val clueReceiver = game.getPlayerMetadata(target)
 
         val action = when(clueValue) {
             is Color -> ColorClueAction(
-                    clueGiver = clueGiver.playerId,
-                    clueReceiver = clueReceiver.playerId,
-                    color = clueValue,
-                )
+                clueGiver = clueGiver.playerId,
+                clueReceiver = clueReceiver.playerId,
+                color = clueValue,
+            )
             is Rank -> RankClueAction(
                 clueGiver = clueGiver.playerId,
                 clueReceiver = clueReceiver.playerId,
@@ -39,9 +38,6 @@ data class GameClueActionData(
             )
             else -> throw UnsupportedOperationException("Unsupported clue value: $clueValue")
         }
-        return ObservedClue(
-            clueAction = action,
-            slotsTouched = game.getPlayerSlots(clueReceiver.playerId, list)
-        )
+        return action
     }
 }

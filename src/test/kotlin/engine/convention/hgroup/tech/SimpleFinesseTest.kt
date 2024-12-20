@@ -1,7 +1,6 @@
 package engine.convention.hgroup.tech
 
 import TestUtils
-import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.hgroup.tech.SimpleFinesse
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.GameAction
@@ -41,16 +40,13 @@ internal class SimpleFinesseTest {
     @Test
     fun `Should recognise a simple finesse When it is given to a teammate`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(24)
-        val action = ObservedClue(
-            clueAction = RankClueAction(
-                clueGiver = "Donald",
-                clueReceiver = "Cathy",
-                rank = Rank.THREE,
-            ),
-            slotsTouched = setOf(2)
+        val action = RankClueAction(
+            clueGiver = "Donald",
+            clueReceiver = "Cathy",
+            rank = Rank.THREE,
         )
 
-        val actual = SimpleFinesse.matchesClue(action, playerPOV)
+        val actual = SimpleFinesse.matches(action, setOf(2), playerPOV)
 
         Assertions.assertTrue(actual)
     }

@@ -1,17 +1,30 @@
 package eelst.ilike.engine.convention.tech
 
-import eelst.ilike.engine.action.ObservedAction
-import eelst.ilike.engine.action.ObservedDiscard
+import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.knowledge.Knowledge
+import eelst.ilike.game.entity.action.ClueAction
+import eelst.ilike.game.entity.action.GameAction
+import eelst.ilike.game.entity.action.PlayAction
 
 interface DiscardTech : ConventionTech {
-    fun matchesDiscard(action: ObservedDiscard, playerPOV: PlayerPOV): Boolean
+    override fun matches(playAction: PlayAction, playerPOV: PlayerPOV): Boolean {
+        return false
+    }
 
-    override fun matches(action: ObservedAction, playerPOV: PlayerPOV): Boolean {
-        return if (action is ObservedDiscard) {
-            matchesDiscard(action, playerPOV)
-        } else {
-            false
-        }
+    override fun matches(clueAction: ClueAction, touchedSlotsIndexes: Set<Int>, playerPOV: PlayerPOV): Boolean {
+        return false
+    }
+
+    override fun getGeneratedKnowledge(playAction: PlayAction, playerPOV: PlayerPOV): Knowledge {
+        return KnowledgeFactory.createEmptyPersonalKnowledge()
+    }
+
+    override fun getGeneratedKnowledge(
+        clueAction: ClueAction,
+        touchedSlotsIndexes: Set<Int>,
+        playerPOV: PlayerPOV
+    ): Knowledge {
+        return KnowledgeFactory.createEmptyPersonalKnowledge()
     }
 }

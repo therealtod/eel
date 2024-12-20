@@ -1,8 +1,8 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
+import eelst.ilike.engine.player.knowledge.Knowledge
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
@@ -46,11 +46,21 @@ object SimplePrompt : Prompt("Simple Prompt") {
         return actions.toSet()
     }
 
-    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
-        return false
+    override fun matchesReceivedClue(
+        clueAction: ClueAction,
+        touchedSlotsIndexes: Set<Int>,
+        focusIndex: Int,
+        playerPOV: PlayerPOV
+    ): Boolean {
+        TODO("Not yet implemented")
     }
 
-    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): PlayerPersonalKnowledge {
+    override fun getGeneratedKnowledge(
+        clueAction: ClueAction,
+        touchedSlotsIndexes: Set<Int>,
+        focusIndex: Int,
+        playerPOV: PlayerPOV
+    ): Knowledge {
         TODO("Not yet implemented")
     }
 }

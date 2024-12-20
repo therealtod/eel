@@ -1,6 +1,5 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.tech.ClueTech
 import eelst.ilike.engine.factory.GameActionFactory
 import eelst.ilike.engine.player.PlayerPOV
@@ -10,11 +9,72 @@ import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
+import eelst.ilike.game.entity.action.GameAction
 
 abstract class HGroupClue(override val name: String) : HGroupTech(), ClueTech {
-    abstract fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean
+    override fun matches(clueAction: ClueAction, touchedSlotsIndexes: Set<Int>, playerPOV: PlayerPOV): Boolean {
+        val clueReceiverId = clueAction.clueReceiver
+        val clueReceiverPOV = playerPOV.getPlayerPOV(clueReceiverId)
+        val receiverHand = clueReceiverPOV.getOwnHand()
+        val focusIndex = getFocusedSlotIndex(
+            hand = receiverHand,
+            touchedSlotsIndexes = touchedSlotsIndexes,
+            playerPOV = playerPOV,
+        )
+        if (!matchesClueBySlot(focusIndex, receiverHand, playerPOV)) {
+            return false
+        }
+        if (clueReceiverId != playerPOV.getOwnPlayerId()) {
+            val teammate = playerPOV.getTeammate(clueReceiverId)
+            return teammateSlotMatchesCondition(
+                teammate = teammate,
+                slot = teammate.hand.getSlot(focusIndex),
+                playerPOV = playerPOV
+            )
+        } else {
+            return matchesReceivedClue(
+                clueAction = clueAction,
+                touchedSlotsIndexes = touchedSlotsIndexes,
+                focusIndex = focusIndex,
+                playerPOV = playerPOV,
+            )
+        }
+    }
 
-    abstract fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Knowledge
+    abstract fun matchesReceivedClue(
+        clueAction: ClueAction,
+        touchedSlotsIndexes: Set<Int>,
+        focusIndex: Int,
+        playerPOV: PlayerPOV,
+    ):  Boolean
+
+    override fun getGeneratedKnowledge(
+        clueAction: ClueAction,
+        touchedSlotsIndexes: Set<Int>,
+        playerPOV: PlayerPOV
+    ): Knowledge {
+        val clueReceiverId = clueAction.clueReceiver
+        val clueReceiverPOV = playerPOV.getPlayerPOV(clueReceiverId)
+        val receiverHand = clueReceiverPOV.getOwnHand()
+        val focusIndex = getFocusedSlotIndex(
+            hand = receiverHand,
+            touchedSlotsIndexes = touchedSlotsIndexes,
+            playerPOV = playerPOV,
+        )
+        return getGeneratedKnowledge(
+            clueAction = clueAction,
+            touchedSlotsIndexes = touchedSlotsIndexes,
+            focusIndex = focusIndex,
+            playerPOV = playerPOV,
+        )
+    }
+
+    abstract fun getGeneratedKnowledge(
+        clueAction: ClueAction,
+        touchedSlotsIndexes: Set<Int>,
+        focusIndex: Int,
+        playerPOV: PlayerPOV,
+    ): Knowledge
 
     protected fun getFocusedSlot(
         hand: Hand,
@@ -88,46 +148,5 @@ abstract class HGroupClue(override val name: String) : HGroupTech(), ClueTech {
 
     open fun matchesClueBySlot(focusIndex: Int, hand: Hand, playerPOV: PlayerPOV): Boolean {
         return true
-    }
-
-    override fun matchesClue(action: ObservedClue, playerPOV: PlayerPOV): Boolean {
-        val clueReceiverId = action.clueAction.clueReceiver
-        val clueReceiverPOV = playerPOV.getPlayerPOV(clueReceiverId)
-        val receiverHand = clueReceiverPOV.getOwnHand()
-        val touchedSlotIndexes = action.slotsTouched
-        val focusIndex = getFocusedSlotIndex(
-            hand = receiverHand,
-            touchedSlotsIndexes = touchedSlotIndexes,
-            playerPOV = playerPOV,
-        )
-        if (!matchesClueBySlot(focusIndex, receiverHand, playerPOV)) {
-            return false
-        }
-        if (clueReceiverId != playerPOV.getOwnPlayerId()) {
-            val teammate = playerPOV.getTeammate(clueReceiverId)
-            return teammateSlotMatchesCondition(
-                teammate = teammate,
-                slot = teammate.hand.getSlot(focusIndex),
-                playerPOV = playerPOV
-            )
-        } else {
-            return matchesReceivedClue(
-                clue = action,
-                focusIndex = focusIndex,
-                playerPOV = playerPOV,
-            )
-        }
-    }
-
-    override fun getGeneratedKnowledge(action: ObservedClue, playerPOV: PlayerPOV): Knowledge {
-        val receiverId = action.clueAction.clueReceiver
-        val receiverPOV = playerPOV.getTeammate(receiverId).getPOV(playerPOV)
-        val receiverHand = receiverPOV.getOwnHand()
-        val focusIndex = getFocusedSlotIndex(
-            hand = receiverHand,
-            touchedSlotsIndexes = action.slotsTouched,
-            playerPOV = playerPOV,
-            )
-        return getGeneratedKnowledge(action, focusIndex, playerPOV)
     }
 }

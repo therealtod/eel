@@ -1,6 +1,5 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.Teammate
@@ -53,14 +52,24 @@ object CriticalSave : SaveClue("Critical Save") {
         return actions
     }
 
-    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
+    override fun matchesReceivedClue(
+        clueAction: ClueAction,
+        touchedSlotsIndexes: Set<Int>,
+        focusIndex: Int,
+        playerPOV: PlayerPOV
+    ): Boolean {
         return playerPOV.getOwnHand().getSlot(focusIndex)
             .getPossibleIdentities()
             .any { playerPOV.gameData.isCritical(it) }
     }
 
-    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Knowledge {
-        val receiverPOV = playerPOV.getTeammate(action.clueAction.clueReceiver).getPOV(playerPOV)
+    override fun getGeneratedKnowledge(
+        clueAction: ClueAction,
+        touchedSlotsIndexes: Set<Int>,
+        focusIndex: Int,
+        playerPOV: PlayerPOV
+    ): Knowledge {
+        val receiverPOV = playerPOV.getTeammate(clueAction.clueReceiver).getPOV(playerPOV)
         val focus = receiverPOV
             .getOwnHand()
             .getSlot(focusIndex)
@@ -68,12 +77,12 @@ object CriticalSave : SaveClue("Critical Save") {
             .getPossibleIdentities()
             .filter {
                 playerPOV.gameData.isCritical(it)
-        }
+            }
         return KnowledgeFactory.createKnowledge(
             playerId = playerPOV.getOwnPlayerId(),
             slotIndex = focusIndex,
             possibleIdentities = possibleFocusIdentities.toSet(),
-            empathy = focus.getUpdatedEmpathy(action.clueAction.value)
+            empathy = focus.getUpdatedEmpathy(clueAction.value)
         )
     }
 }

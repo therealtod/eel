@@ -1,7 +1,6 @@
 package eelst.ilike.hanablive.model.dto.instruction
 
-import eelst.ilike.engine.action.ObservedAction
-import eelst.ilike.engine.action.ObservedPlay
+import eelst.ilike.game.entity.action.GameAction
 import eelst.ilike.game.entity.action.PlayAction
 import eelst.ilike.hanablive.HanabLiveGame
 import eelst.ilike.hanablive.model.dto.command.GameActionType
@@ -12,12 +11,12 @@ data class GamePlayActionData(
     val suitIndex: Int,
     val rank: Int
 ) : GameActionData(GameActionType.PLAY) {
-    override fun toObservedAction(game: HanabLiveGame): ObservedAction {
+    override fun toStandardFormatAction(game: HanabLiveGame): GameAction {
         val player = game.getPlayerMetadata(playerIndex)
-        val action = PlayAction(
+        val playedSlotIndex = game.getPlayerSlot(player.playerId, order)
+        return PlayAction(
             playerId = player.playerId,
-            slotIndex = game.getPlayerSlot(player.playerId, order)
+            slotIndex = playedSlotIndex,
         )
-        return ObservedPlay(action)
     }
 }

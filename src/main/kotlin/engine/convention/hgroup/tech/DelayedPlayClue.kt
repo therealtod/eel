@@ -1,6 +1,6 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.action.ObservedClue
+
 import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.hand.slot.KnownSlot
@@ -52,7 +52,12 @@ data object DelayedPlayClue
         return otherTech !is SaveClue && otherTech !is DirectPlayClue
     }
 
-    override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
+    override fun matchesReceivedClue(
+        clueAction: ClueAction,
+        touchedSlotsIndexes: Set<Int>,
+        focusIndex: Int,
+        playerPOV: PlayerPOV
+    ): Boolean {
         val slot = playerPOV.getOwnHand().getSlot(focusIndex)
         return slot.getPossibleIdentities()
             .any {
@@ -71,8 +76,13 @@ data object DelayedPlayClue
         return playerPOV.teamKnowsAllCards(missingCards)
     }
 
-    override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Knowledge {
-        val receiverPOV = playerPOV.getTeammate(action.clueAction.clueReceiver).getPOV(playerPOV)
+    override fun getGeneratedKnowledge(
+        clueAction: ClueAction,
+        touchedSlotsIndexes: Set<Int>,
+        focusIndex: Int,
+        playerPOV: PlayerPOV
+    ): Knowledge {
+        val receiverPOV = playerPOV.getTeammate(clueAction.clueReceiver).getPOV(playerPOV)
         val slot = receiverPOV.getOwnHand().getSlot(focusIndex)
         val possibleIdentities = slot.getPossibleIdentities()
             .filter {

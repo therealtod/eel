@@ -1,7 +1,6 @@
 package engine.convention.hgroup.tech
 
 import TestUtils
-import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.convention.hgroup.tech.CriticalSave
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
@@ -110,16 +109,13 @@ internal class CriticalSaveTest {
     fun `Should match a clue which saves a critical card on a teammate hand`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(1)
 
-        val action = ObservedClue(
-            clueAction = RankClueAction(
+        val action = RankClueAction(
                 clueGiver = "Bob",
                 clueReceiver = "Cathy",
                 rank = Rank.FOUR,
-            ),
-            slotsTouched = setOf(4)
-        )
+            )
 
-        val actual = CriticalSave.matches(action, playerPOV)
+        val actual = CriticalSave.matches(action, setOf(4), playerPOV)
 
         Assertions.assertTrue(actual)
     }
@@ -128,16 +124,13 @@ internal class CriticalSaveTest {
     fun `Should not recognize a clue as a CriticalSave if the chop cannot be a critical card`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(1)
 
-        val action = ObservedClue(
-            clueAction = RankClueAction(
-                clueGiver = "Bob",
-                clueReceiver = "Alice",
-                rank = Rank.FOUR,
-            ),
-            slotsTouched = setOf(1, 3)
+        val action = RankClueAction(
+            clueGiver = "Bob",
+            clueReceiver = "Alice",
+            rank = Rank.FOUR,
         )
 
-        val actual = CriticalSave.matches(action, playerPOV)
+        val actual = CriticalSave.matches(action, setOf(1, 3), playerPOV)
 
         Assertions.assertTrue(actual)
     }
@@ -146,16 +139,13 @@ internal class CriticalSaveTest {
     fun `Should recognize a clue as a CriticalSave if the chop can be a critical card`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(21)
 
-        val action = ObservedClue(
-            clueAction = RankClueAction(
-                clueGiver = "Bob",
-                clueReceiver = "Alice",
-                rank = Rank.FOUR,
-            ),
-            slotsTouched = setOf(1, 3)
+        val action = RankClueAction(
+            clueGiver = "Bob",
+            clueReceiver = "Alice",
+            rank = Rank.FOUR,
         )
 
-        val actual = CriticalSave.matches(action, playerPOV)
+        val actual = CriticalSave.matches(action, setOf(1, 3), playerPOV)
 
         Assertions.assertTrue(actual)
     }
@@ -163,16 +153,13 @@ internal class CriticalSaveTest {
     @Test
     fun `Should not recognize a clue as a CriticalSave if the focus is not the chop`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(21)
-        val action = ObservedClue(
-            clueAction = RankClueAction(
-                clueGiver = "Bob",
-                clueReceiver = "Alice",
-                rank = Rank.FOUR,
-            ),
-            slotsTouched = setOf(1)
+        val action = RankClueAction(
+            clueGiver = "Bob",
+            clueReceiver = "Alice",
+            rank = Rank.FOUR,
         )
 
-        val actual = CriticalSave.matches(action, playerPOV)
+        val actual = CriticalSave.matches(action, setOf(1), playerPOV)
 
         Assertions.assertFalse(actual)
     }

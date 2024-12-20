@@ -1,28 +1,26 @@
 package eelst.ilike.engine.convention.tech
 
-import eelst.ilike.engine.action.ObservedAction
-import eelst.ilike.engine.action.ObservedClue
 import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.player.PlayerPOV
 import eelst.ilike.engine.player.knowledge.Knowledge
+import eelst.ilike.game.entity.action.DiscardAction
+import eelst.ilike.game.entity.action.GameAction
+import eelst.ilike.game.entity.action.PlayAction
 
 interface ClueTech : ConventionTech {
-    fun matchesClue(action: ObservedClue, playerPOV: PlayerPOV): Boolean
-    fun getGeneratedKnowledge(action: ObservedClue, playerPOV: PlayerPOV): Knowledge
-
-    override fun matches(action: ObservedAction, playerPOV: PlayerPOV): Boolean {
-        return if (action is ObservedClue) {
-            matchesClue(action, playerPOV)
-        } else {
-            false
-        }
+    override fun matches(playAction: PlayAction, playerPOV: PlayerPOV): Boolean {
+        return false
     }
 
-    override fun getGeneratedKnowledge(action: ObservedAction, playerPOV: PlayerPOV): Knowledge {
-        return if (action is ObservedClue) {
-            getGeneratedKnowledge(action, playerPOV)
-        } else {
-            KnowledgeFactory.createEmptyPersonalKnowledge()
-        }
+    override fun matches(discardAction: DiscardAction, playerPOV: PlayerPOV): Boolean {
+        return false
+    }
+
+    override fun getGeneratedKnowledge(playAction: PlayAction, playerPOV: PlayerPOV): Knowledge {
+        return KnowledgeFactory.createEmptyPersonalKnowledge()
+    }
+
+    override fun getGeneratedKnowledge(discardAction: DiscardAction, playerPOV: PlayerPOV): Knowledge {
+        return KnowledgeFactory.createEmptyPersonalKnowledge()
     }
 }
