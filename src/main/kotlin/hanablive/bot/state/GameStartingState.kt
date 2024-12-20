@@ -14,8 +14,8 @@ class GameStartingState(
     bot = bot,
     commonState = commonState
 ) {
-    private lateinit var botPlayerGloballyAvailableInfo: GloballyAvailablePlayerInfo
-    private lateinit var game: Game
+    private lateinit var botPlayerMetadata: PlayerMetadata
+    private lateinit var gameData: GameData
     
     private val metadataProvider = LocalMirrorMetadataProvider
 
@@ -23,20 +23,20 @@ class GameStartingState(
         val variantMetadata = metadataProvider.getVariantMetadata(gameInitData.options.variantName)
         val suitsMetadata = metadataProvider.getSuitsMetadata(variantMetadata.suits)
         val botPlayerIndex = gameInitData.ourPlayerIndex
-        game = HanabLiveDataParser.parseGloballyAvailableInfo(
+        gameData = HanabLiveDataParser.parseGloballyAvailableInfo(
             gameInitData = gameInitData,
             variantMetadata = variantMetadata,
             suitsMetadata = suitsMetadata,
         )
-        botPlayerGloballyAvailableInfo = game.getPlayer(botPlayerIndex)
+        botPlayerMetadata = gameData.getPlayerMetadata(botPlayerIndex)
         bot.sendHanabLiveInstruction(GetGameInfo2(gameInitData.tableID))
         val newState = GameInitDataReceivedState(
             bot = bot,
             commonState = commonState,
-            botPlayerId = botPlayerGloballyAvailableInfo.playerId,
+            botPlayerId = botPlayerMetadata.playerId,
             gameInitData = gameInitData,
             variantMetadata = variantMetadata,
-            game = game,
+            gameData = gameData,
         )
         bot.state = newState
     }

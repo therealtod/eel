@@ -9,24 +9,24 @@ import eelst.ilike.utils.Utils
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import eelst.ilike.common.model.metadata.LocalMirrorMetadataProvider
-import eelst.ilike.game.Game
+import eelst.ilike.game.GameData
 import eelst.ilike.hanablive.bot.state.CommonState
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
-class GameInitDataReceivedStateTest {
+class GameDataInitDataReceivedStateTest {
     private val mapper = Utils.jsonObjectMapper
 
     private val bot = mockk<HanabLiveBot>(relaxed = true)
     private val metadataProvider = LocalMirrorMetadataProvider
-    private val game = mockk<Game>()
+    private val gameData = mockk<GameData>()
 
     private val state = GameInitDataReceivedState(
         bot = bot,
         botPlayerId = "Alice",
         gameInitData = mapper.readValue(Utils.getResourceFileContentAsString("hanablive/gamestarting/game_init_payload.json")),
         variantMetadata = metadataProvider.getVariantMetadata("6 Suits"),
-        game = game,
+        gameData = gameData,
         commonState = CommonState()
     )
 

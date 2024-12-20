@@ -3,7 +3,6 @@ package eelst.ilike.hanablive.model.dto.instruction
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import eelst.ilike.engine.action.ObservedAction
-import eelst.ilike.game.Game
 import eelst.ilike.hanablive.HanabLiveGame
 import eelst.ilike.hanablive.model.dto.command.GameActionType
 

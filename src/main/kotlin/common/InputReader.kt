@@ -5,7 +5,7 @@ import eelst.ilike.common.model.metadata.LocalMirrorMetadataProvider
 import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.factory.PlayerFactory
 import eelst.ilike.engine.player.PlayerPOV
-import eelst.ilike.game.Game
+import eelst.ilike.game.GameData
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.BaseHand
 import eelst.ilike.game.entity.card.HanabiCard
@@ -29,7 +29,7 @@ object InputReader {
         val playerDTOS = dto.playerPOV.players
         val visibleCardsMap = computeVisibleCardsMap(
             playerPOV = dto.playerPOV,
-            game = globallyAvailableInfo,
+            gameData = globallyAvailableInfo,
         )
 
 
@@ -52,7 +52,7 @@ object InputReader {
 
         return PlayerFactory.createPlayerPOV(
             playerId = activePlayerId,
-            game = globallyAvailableInfo,
+            gameData = globallyAvailableInfo,
             personalKnowledge = KnowledgeFactory.createEmptyPersonalKnowledge(),
             playersHands = playersHands
         )
@@ -60,16 +60,16 @@ object InputReader {
 
     private fun computeVisibleCardsMap(
         playerPOV: PlayerPOVDTO,
-        game: Game,
+        gameData: GameData,
     ): Map<PlayerId, List<HanabiCard>> {
-        val cardsInTrash = game.trashPile.cards
-        val cardsInStacks = game.playingStacks.flatMap { it.value.cards }
-        return game.players.mapValues { player ->
+        val cardsInTrash = gameData.trashPile.cards
+        val cardsInStacks = gameData.playingStacks.flatMap { it.value.cards }
+        return gameData.players.mapValues { player ->
             computeCardsVisibleByPlayer(
                 playerId = player.key,
                 publiclyVisibleCards = cardsInStacks + cardsInTrash,
                 teammates = playerPOV.players.associateBy { it.playerId },
-                suits = game.suits,
+                suits = gameData.suits,
             )
         }
     }

@@ -2,13 +2,13 @@ package eelst.ilike.game
 
 import eelst.ilike.game.variant.Variant
 
-class GameImpl(
-    players: Map<PlayerId, GloballyAvailablePlayerInfo>,
+class GameDataImpl(
+    players: Map<PlayerId, PlayerMetadata>,
     variant: Variant,
     dynamicGloballyAvailableInfo: DynamicGloballyAvailableInfo,
-) : BaseGame(
+) : BaseGameData(
     variant = variant,
-    globallyAvailablePlayerInfo = players,
+    playerMetadata = players,
     dynamicGloballyAvailableInfo = dynamicGloballyAvailableInfo,
 ) {
     override val defaultHandsSize = GameUtils.getHandSize(players.size)

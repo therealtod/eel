@@ -5,17 +5,17 @@ import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.SuiteId
 import eelst.ilike.game.variant.Variant
 
-abstract class BaseGame(
+abstract class BaseGameData(
     final override val variant: Variant,
     final override val playingStacks: Map<SuiteId, PlayingStack>,
     final override val trashPile: TrashPile,
     final override val strikes: Int,
     final override val clueTokens: Int,
-    final override val players: Map<PlayerId, GloballyAvailablePlayerInfo>,
-) : Game {
+    final override val players: Map<PlayerId, PlayerMetadata>,
+) : GameData {
     constructor(
         variant: Variant,
-        globallyAvailablePlayerInfo: Map<PlayerId, GloballyAvailablePlayerInfo>,
+        playerMetadata: Map<PlayerId, PlayerMetadata>,
         dynamicGloballyAvailableInfo: DynamicGloballyAvailableInfo,
         ): this(
         variant = variant,
@@ -23,7 +23,7 @@ abstract class BaseGame(
         trashPile = dynamicGloballyAvailableInfo.trashPile,
         strikes = dynamicGloballyAvailableInfo.strikes,
         clueTokens = dynamicGloballyAvailableInfo.clueTokens,
-        players = globallyAvailablePlayerInfo
+        players = playerMetadata
     )
 
     private val dynamicGloballyAvailableInfo = DynamicGloballyAvailableInfo(
@@ -88,17 +88,17 @@ abstract class BaseGame(
         return getGlobalAwayValue(card) == 0
     }
 
-    override fun getPlayer(playerId: PlayerId): GloballyAvailablePlayerInfo {
+    override fun getPlayerMetadata(playerId: PlayerId): PlayerMetadata {
         return players[playerId]
             ?: throw IllegalArgumentException("No player with id: $playerId in this game")
     }
 
-    override fun getPlayer(playerIndex: Int): GloballyAvailablePlayerInfo {
+    override fun getPlayerMetadata(playerIndex: Int): PlayerMetadata {
         return players.values.find { it.playerIndex == playerIndex }
             ?: throw IllegalArgumentException("Could not find any player with player index $playerIndex")
     }
 
     override fun getAvailableClueValues(): Set<ClueValue> {
-        return variant.getCluableRanks() +  variant.getCluableColors()
+        return variant.getCluableRanks() + variant.getCluableColors()
     }
 }

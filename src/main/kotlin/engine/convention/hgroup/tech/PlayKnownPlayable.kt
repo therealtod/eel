@@ -22,7 +22,7 @@ object PlayKnownPlayable : HGroupTech(), PlayTech {
     override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
         val teammateKnowsOwnSlot = teammate.getHandFromPlayerPOV().getSlot(slot.index) is KnownSlot
         return teammateKnowsOwnSlot &&
-                slot.matches { _, card -> playerPOV.game.isImmediatelyPlayable(card) }
+                slot.matches { _, card -> playerPOV.gameData.isImmediatelyPlayable(card) }
     }
 
     override fun getGameActions(playerPOV: PlayerPOV): Set<PlayAction> {
@@ -30,7 +30,7 @@ object PlayKnownPlayable : HGroupTech(), PlayTech {
             .getOwnHand()
             .filterIsInstance<KnownSlot>()
             .filter {
-                playerPOV.game.isImmediatelyPlayable(it.knownIdentity)
+                playerPOV.gameData.isImmediatelyPlayable(it.knownIdentity)
             }
             .map {
                 PlayAction(

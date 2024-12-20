@@ -24,7 +24,7 @@ object DiscardChop : HGroupTech(), DiscardTech {
     }
 
     override fun getGameActions(playerPOV: PlayerPOV): Set<DiscardAction> {
-        return if (playerPOV.game.clueTokens < 8) {
+        return if (playerPOV.gameData.clueTokens < 8) {
             return setOf(
                 DiscardAction(
                     playerId = playerPOV.getOwnPlayerId(),

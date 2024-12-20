@@ -2,32 +2,32 @@ package eelst.ilike.engine.factory
 
 import eelst.ilike.engine.player.*
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
-import eelst.ilike.game.Game
-import eelst.ilike.game.GloballyAvailablePlayerInfo
+import eelst.ilike.game.GameData
+import eelst.ilike.game.PlayerMetadata
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Hand
 
 object PlayerFactory {
     fun createPlayer(
-        globallyAvailableInfo: GloballyAvailablePlayerInfo,
+        metadata: PlayerMetadata,
         personalKnowledge: PlayerPersonalKnowledge,
         hand: Hand,
     ): Teammate {
         return Teammate(
-            globallyAvailablePlayerInfo = globallyAvailableInfo,
+            playerMetadata = metadata,
             hand = hand,
         )
     }
 
     fun createPlayerPOV(
         playerId: PlayerId,
-        game: Game,
+        gameData: GameData,
         personalKnowledge: PlayerPersonalKnowledge,
         playersHands: Map<PlayerId, Hand>
     ): PlayerPOV {
         val players = playersHands.mapValues {
             createPlayer(
-                globallyAvailableInfo = game.getPlayer(it.key),
+                metadata = gameData.getPlayerMetadata(it.key),
                 personalKnowledge = personalKnowledge.accessibleTo(it.key),
                 hand = it.value
             )
@@ -36,7 +36,7 @@ object PlayerFactory {
 
         return PlayerPOVImpl(
             playerId = playerId,
-            game = game,
+            gameData = gameData,
             personalKnowledge = personalKnowledge,
             teammates = players.minus(playerId),
             hand = playersHands[playerId]!!

@@ -6,6 +6,8 @@ import eelst.ilike.engine.factory.PlayerFactory
 import eelst.ilike.engine.hand.slot.PersonalSlotKnowledgeImpl
 import eelst.ilike.engine.hand.slot.UnknownIdentitySlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
+import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
+import eelst.ilike.engine.player.knowledge.PlayersHandKnowledge
 import eelst.ilike.game.*
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Rank
@@ -13,6 +15,7 @@ import eelst.ilike.game.entity.BaseHand
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.hanablive.HanabLiveDataParser
+import eelst.ilike.hanablive.HanabLiveGame
 import eelst.ilike.hanablive.bot.HanabLiveBot
 import eelst.ilike.hanablive.model.dto.command.GameInitData
 import eelst.ilike.hanablive.model.dto.instruction.GameActionListData
@@ -24,52 +27,68 @@ class GameInitDataReceivedState(
     private val botPlayerId: PlayerId,
     private val gameInitData: GameInitData,
     private val variantMetadata: VariantMetadata,
-    private val game: Game,
+    private val gameData: GameData,
 ): HanabLiveBotState(bot, commonState) {
     override suspend fun onGameActionListReceived(gameActionListData: GameActionListData) {
-        val botPlayerGloballyAvailableInfo = game.getPlayer(botPlayerId)
+        val botPlayerGloballyAvailableInfo = gameData.getPlayerMetadata(botPlayerId)
         val suitMap = variantMetadata.suits
             .mapIndexed { index, s ->
-                Pair(index, game.suits.find { it.name == s }!!)
+                Pair(index, gameData.suits.find { it.name == s }!!)
             }.toMap()
         val rankMap = variantMetadata.clueRanks.associateWith { Rank.getByNumericalValue(it) }
         val actions = gameActionListData.list.filterIsInstance<GameDrawActionData>()
-        val playerIndexToIdMap = game.players.values.associate { it.playerIndex to it.playerId }
-        val teammateIndexes = game.players
+        val playerIndexToIdMap = gameData.players.values.associate { it.playerIndex to it.playerId }
+        val teammateIndexes = gameData.players
             .minus(botPlayerGloballyAvailableInfo.playerId)
             .map { it.value.playerIndex }
         val drawActionsGroupedByPlayerIndexAndSorted = actions
             .groupBy { it.playerIndex }
             .mapValues { it.value.sortedBy {action -> action.order } }
-        val teammatesCards =  teammateIndexes
+        val teammatesDraws = teammateIndexes
             .associateWith { teammateIndex->
-                drawActionsGroupedByPlayerIndexAndSorted[teammateIndex]!!.map {
-                    HanabLiveDataParser.parseCard(
-                        draw = it,
-                        rankMap = rankMap,
-                        suitMap = suitMap,
-                    )
-                }
+                drawActionsGroupedByPlayerIndexAndSorted[teammateIndex]!!
             }
+        val teammatesCards = teammatesDraws.mapValues {
+            it.value.map { draw->
+                HanabLiveDataParser.parseCard(
+                    draw = draw,
+                    rankMap = rankMap,
+                    suitMap = suitMap,
+                )
+            }
+        }
         val visibleCardsMap = computeVisibleCardsMap(botPlayerGloballyAvailableInfo, teammatesCards)
         val hands = getHands(
             botPlayerIndex = botPlayerGloballyAvailableInfo.playerIndex,
             teammatesCards = teammatesCards,
             visibleCardsMap = visibleCardsMap,
             playerIndexToIdMap = playerIndexToIdMap,
-            suits = game.suits,
+            suits = gameData.suits,
         )
         val personalKnowledge = KnowledgeFactory.createEmptyPersonalKnowledge()
+        val teammates = gameData.players.mapValues {
+            PlayerFactory.createPlayer(
+                metadata = it.value,
+                personalKnowledge = PlayersHandKnowledge(
+                    knowledge = TODO()
+                ),
+                hand = hands[it.key]!!
+            )
+        }
         val botPlayer = PlayerFactory.createPlayerPOV(
             playerId = botPlayerGloballyAvailableInfo.playerId,
-            game = game,
+            gameData = gameData,
             personalKnowledge = personalKnowledge,
             playersHands = hands,
+        )
+        val game = HanabLiveGame(
+            gameData = gameData,
+            players = teammates + Pair(botPlayerId, botPlayer)
         )
         val newState = PlayingState(
             bot = bot,
             commonState = commonState,
-            playerPOV = botPlayer,
+            game = game,
         )
         bot.state = newState
     }
@@ -82,33 +101,36 @@ class GameInitDataReceivedState(
         suits: Set<Suite>,
     ): Map<PlayerId, Hand> {
         val botPlayerId = playerIndexToIdMap[botPlayerIndex]!!
-        val teammatesHands = teammatesCards.mapValues {
+        val teammatesSlots = teammatesCards.mapValues {
+            it.value.mapIndexed { index, card ->
+                VisibleSlot(
+                    globallyAvailableInfo = SlotMetadata(
+                        index = index + 1,
+                    ),
+                    knowledge = PersonalSlotKnowledgeImpl(
+                        ownerId = playerIndexToIdMap[it.key]!!,
+                        slotIndex = index + 1,
+                        impliedIdentities = emptySet(),
+                        empathy = GameUtils.getCardEmpathy(
+                            visibleCards = visibleCardsMap[it.key]!!,
+                            positiveClues = emptyList(),
+                            negativeClues = emptyList(),
+                            suits = suits,
+                        ),
+                    ),
+                    visibleCard = card,
+                )
+            }
+        }
+        val teammatesHands = teammatesSlots.mapValues {
             BaseHand(
                 ownerId = playerIndexToIdMap[it.key]!!,
-                slots = it.value.mapIndexed { index, card->
-                    VisibleSlot(
-                        globallyAvailableInfo = GloballyAvailableSlotInfo(
-                            index = index + 1,
-                        ),
-                        knowledge = PersonalSlotKnowledgeImpl(
-                            ownerId = playerIndexToIdMap[it.key]!!,
-                            slotIndex = index + 1,
-                            impliedIdentities = emptySet(),
-                            empathy = GameUtils.getCardEmpathy(
-                                visibleCards = visibleCardsMap[it.key]!!,
-                                positiveClues = emptyList(),
-                                negativeClues = emptyList(),
-                                suits = suits,
-                            ),
-                        ),
-                        visibleCard = card,
-                    )
-                }.toSet()
+                slots = it.value.toSet()
             )
         }
-        val botSlots = (1..game.defaultHandsSize).map {
+        val botSlots = (1..gameData.defaultHandsSize).map {
             UnknownIdentitySlot(
-                globallyAvailableInfo = GloballyAvailableSlotInfo(
+                globallyAvailableInfo = SlotMetadata(
                     index = it,
                 ),
                 knowledge = PersonalSlotKnowledgeImpl(
@@ -129,7 +151,7 @@ class GameInitDataReceivedState(
     }
 
     private fun computeVisibleCardsMap(
-        botPlayerGloballyAvailableInfo: GloballyAvailablePlayerInfo,
+        botPlayerGloballyAvailableInfo: PlayerMetadata,
         teammatesCards: Map<Int, List<HanabiCard>>
     ): Map<Int, Collection<HanabiCard>> {
         return teammatesCards.mapValues { item ->

@@ -20,7 +20,7 @@ object DirectPlayClue : PlayClue("Direct Play Clue") {
         val slotFromTeammatePOV = teammate.getHandFromPlayerPOV().getSlot(slot.index)
         val teammateKnowsOwnSlot = slotFromTeammatePOV is KnownSlot
         return !teammateKnowsOwnSlot && slot.matches{ _, card ->
-            playerPOV.game.getGlobalAwayValue(card) == 0
+            playerPOV.gameData.getGlobalAwayValue(card) == 0
         }
     }
 
@@ -50,7 +50,7 @@ object DirectPlayClue : PlayClue("Direct Play Clue") {
         val slot = playerPOV.getOwnHand().getSlot(focusIndex)
         return slot.getPossibleIdentities()
             .any {
-                playerPOV.game.getGlobalAwayValue(it) == 0
+                playerPOV.gameData.getGlobalAwayValue(it) == 0
             }
     }
 

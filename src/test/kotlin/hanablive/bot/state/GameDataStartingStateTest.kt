@@ -14,7 +14,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
-class GameStartingStateTest {
+class GameDataStartingStateTest {
     private val mapper = Utils.jsonObjectMapper
 
     private val bot = mockk<HanabLiveBot>(relaxed = true)

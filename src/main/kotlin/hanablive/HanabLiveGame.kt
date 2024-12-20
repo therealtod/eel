@@ -1,33 +1,19 @@
 package eelst.ilike.hanablive
 
-import eelst.ilike.game.BaseGame
-import eelst.ilike.game.GloballyAvailablePlayerInfo
-import eelst.ilike.game.PlayerId
+import eelst.ilike.engine.action.ObservedAction
+import eelst.ilike.game.*
 import eelst.ilike.game.entity.*
-import eelst.ilike.game.entity.suite.SuiteId
-import eelst.ilike.game.variant.Variant
 import eelst.ilike.hanablive.model.dto.instruction.GameClueActionData
 
 class HanabLiveGame(
-    variant: Variant,
-    playingStacks: Map<SuiteId, PlayingStack>,
-    trashPile: TrashPile,
-    strikes: Int,
-    clueTokens: Int,
-    players: Map<PlayerId, GloballyAvailablePlayerInfo>,
-): BaseGame(
-    variant = variant,
-    playingStacks = playingStacks,
-    trashPile = trashPile,
-    strikes = strikes,
-    clueTokens = clueTokens,
-    players = players
-) {
-    private val idToColorMap = availableColors.size.downTo(1)
-        .associateWith { availableColors.elementAt(it - 1) }
+    private val gameData: GameData,
+    private val players: Map<PlayerId, Player>
+): Game {
+    private val idToColorMap = gameData.variant.getCluableColors().size.downTo(1)
+        .associateWith { gameData.variant.getCluableColors().elementAt(it - 1) }
 
-    private val idToRankMap = availableRanks.size.downTo(1)
-        .associateWith { availableRanks.elementAt(it - 1) }
+    private val idToRankMap = gameData.variant.getCluableRanks().size.downTo(1)
+        .associateWith { gameData.variant.getCluableRanks().elementAt(it - 1) }
 
     fun getClueValue(clue: GameClueActionData.Clue): ClueValue {
         return when (clue.type) {
@@ -37,11 +23,37 @@ class HanabLiveGame(
         }
     }
 
+    override fun getGameData(): GameData {
+        return gameData
+    }
+
+    override fun getPlayers(): Map<PlayerId, Player> {
+        return players
+    }
+
+    override fun getPlayer(playerId: PlayerId): Player {
+        return players[playerId] ?: throw NoSuchElementException(
+            "No player with id $playerId in this game"
+        )
+    }
+
+    override fun getPlayerMetadata(playerId: PlayerId): PlayerMetadata {
+        return gameData.getPlayerMetadata(playerId)
+    }
+
+    override fun getPlayerMetadata(playerIndex: Int): PlayerMetadata {
+        return gameData.getPlayerMetadata(playerIndex)
+    }
+
     fun getPlayerSlots(playerId: PlayerId, hanabLiveSlotIds: Collection<Int>): Set<Int> {
         TODO()
     }
 
     fun getPlayerSlot(playerId: PlayerId, hanabLiveSlotId: Int): Int {
         TODO()
+    }
+
+    override fun getAfter(observedAction: ObservedAction): Game {
+        TODO("Not yet implemented")
     }
 }

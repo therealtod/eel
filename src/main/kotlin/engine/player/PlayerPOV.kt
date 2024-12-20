@@ -5,14 +5,14 @@ import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
-import eelst.ilike.game.Game
+import eelst.ilike.game.GameData
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Player
 import eelst.ilike.game.entity.card.HanabiCard
 
 interface PlayerPOV: Player {
-    val game: Game
+    val gameData: GameData
 
     fun getOwnPlayerId(): PlayerId
     fun getOwnKnownCards(): List<HanabiCard>
@@ -29,7 +29,7 @@ interface PlayerPOV: Player {
     fun getAsPlayer(): Teammate
     fun getAfter(
         gameAction: ObservedAction,
-        game: Game,
+        gameData: GameData,
         techs: Collection<ConventionTech>,
     ): PlayerPOV
 }

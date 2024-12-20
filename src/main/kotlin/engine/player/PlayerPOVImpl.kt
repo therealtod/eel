@@ -10,7 +10,7 @@ import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.GameUtils
-import eelst.ilike.game.Game
+import eelst.ilike.game.GameData
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.card.HanabiCard
@@ -18,16 +18,16 @@ import eelst.ilike.game.entity.card.HanabiCard
 class PlayerPOVImpl(
     playerId: PlayerId,
     hand: Hand,
-    override val game: Game,
+    override val gameData: GameData,
     private val personalKnowledge: PlayerPersonalKnowledge,
     private val teammates: Map<PlayerId, Teammate>,
 ) : PlayerPOV, Teammate(
-    globallyAvailablePlayerInfo = game.getPlayer(playerId),
+    playerMetadata = gameData.getPlayerMetadata(playerId),
     hand = hand
 ) {
-    private val globallyAvailablePlayerInfo = game.getPlayer(playerId)
+    private val globallyAvailablePlayerInfo = gameData.getPlayerMetadata(playerId)
     private val myself = Myself(
-        globallyAvailablePlayerInfo = game.getPlayer(playerId),
+        playerMetadata = gameData.getPlayerMetadata(playerId),
         hand,
     )
 
@@ -70,7 +70,7 @@ class PlayerPOVImpl(
         return GameUtils.getSeatsGap(
             playerIndex1 = globallyAvailablePlayerInfo.playerIndex,
             playerIndex2 = teammate.playerIndex,
-            game.numberOfPlayers,
+            gameData.numberOfPlayers,
         )
     }
 
@@ -83,8 +83,8 @@ class PlayerPOVImpl(
     }
 
     override fun getVisibleCards(): List<HanabiCard> {
-        val cardsOnPlayingStacks = game.getCardsOnStacks()
-        val cardsInTrash = game.trashPile.cards
+        val cardsOnPlayingStacks = gameData.getCardsOnStacks()
+        val cardsInTrash = gameData.trashPile.cards
         val teammatesSlots = teammates.values.flatMap {
             it.hand.getSlots()
         }
@@ -112,7 +112,7 @@ class PlayerPOVImpl(
 
     override fun getAfter(
         action: ObservedAction,
-        game: Game,
+        gameData: GameData,
         techs: Collection<ConventionTech>,
     ): PlayerPOV {
         val knowledge = techs.map {
@@ -121,7 +121,7 @@ class PlayerPOVImpl(
 
         return PlayerFactory.createPlayerPOV(
             playerId = playerId,
-            game = game,
+            gameData = gameData,
             personalKnowledge = TODO(),
             playersHands = TODO()
         )

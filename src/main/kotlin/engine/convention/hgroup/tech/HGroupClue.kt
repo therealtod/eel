@@ -63,7 +63,7 @@ abstract class HGroupClue(override val name: String) : HGroupTech(), ClueTech {
         teammate: Teammate,
         playerPOV: PlayerPOV,
     ): Set<ClueAction> {
-        val possibleClues = playerPOV.game.getAvailableClueValues()
+        val possibleClues = playerPOV.gameData.getAvailableClueValues()
         val cluesTouchingSlot = possibleClues
             .filter { clueValue ->
                 slot.isTouchedBy(clueValue)

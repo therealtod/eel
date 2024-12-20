@@ -23,8 +23,8 @@ data class GameClueActionData(
 
     override fun toObservedAction(game: HanabLiveGame): ObservedAction {
         val clueValue = game.getClueValue(clue)
-        val clueGiver = game.getPlayer(giver)
-        val clueReceiver = game.getPlayer(target)
+        val clueGiver = game.getPlayerMetadata(giver)
+        val clueReceiver = game.getPlayerMetadata(target)
 
         val action = when(clueValue) {
             is Color -> ColorClueAction(

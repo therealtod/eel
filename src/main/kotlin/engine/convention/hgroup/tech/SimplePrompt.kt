@@ -16,8 +16,8 @@ object SimplePrompt : Prompt("Simple Prompt") {
 
     override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
         return slot.matches{ _, card->
-            playerPOV.game.getGlobalAwayValue(card) == 1 && run {
-                val stack = playerPOV.game.getStackForCard(card)
+            playerPOV.gameData.getGlobalAwayValue(card) == 1 && run {
+                val stack = playerPOV.gameData.getStackForCard(card)
                 val connectingCards = if (stack.isEmpty()) {
                     card.getPrerequisiteCards()
                 } else {

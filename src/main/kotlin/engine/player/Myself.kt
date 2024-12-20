@@ -1,16 +1,16 @@
 package eelst.ilike.engine.player
 
-import eelst.ilike.game.GloballyAvailablePlayerInfo
+import eelst.ilike.game.PlayerMetadata
 import eelst.ilike.game.entity.Hand
 
 class Myself(
-    globallyAvailablePlayerInfo: GloballyAvailablePlayerInfo,
+    playerMetadata: PlayerMetadata,
     override val hand: Hand,
 ): Teammate(
-    globallyAvailablePlayerInfo = globallyAvailablePlayerInfo,
+    playerMetadata = playerMetadata,
     hand = hand
 ) {
-    override val playerIndex = globallyAvailablePlayerInfo.playerIndex
+    override val playerIndex = playerMetadata.playerIndex
 
     override fun getSlots() = hand.getSlots()
 }

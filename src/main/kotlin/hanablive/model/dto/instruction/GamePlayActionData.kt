@@ -13,7 +13,7 @@ data class GamePlayActionData(
     val rank: Int
 ) : GameActionData(GameActionType.PLAY) {
     override fun toObservedAction(game: HanabLiveGame): ObservedAction {
-        val player = game.getPlayer(playerIndex)
+        val player = game.getPlayerMetadata(playerIndex)
         val action = PlayAction(
             playerId = player.playerId,
             slotIndex = game.getPlayerSlot(player.playerId, order)

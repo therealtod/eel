@@ -13,7 +13,7 @@ import eelst.ilike.utils.model.dto.ScenarioDTO
 import common.model.dto.SlotDTO
 
 object InputParser {
-    fun parseGlobalInfo(dto: ScenarioDTO, metadataProvider: MetadataProvider): Game {
+    fun parseGlobalInfo(dto: ScenarioDTO, metadataProvider: MetadataProvider): GameData {
         val variantMetadata = metadataProvider.getVariantMetadata(dto.globallyAvailableInfo.variant)
         val suitsMetadata = dto.globallyAvailableInfo
             .suits
@@ -25,15 +25,15 @@ object InputParser {
         val trashPile = parseTrashPile(dto.globallyAvailableInfo.trashPile, suits)
         val variant = VariantFactory
             .createVariant(variantMetadata, suits)
-        val globallyAvailablePlayerInfo =  dto.playerPOV.players
+        val playerMetadata =  dto.playerPOV.players
             .mapIndexed { index, player ->
-                GloballyAvailablePlayerInfo(
+                PlayerMetadata(
                     playerId = player.playerId,
                     playerIndex = index,
             ) }
-        return GameImpl(
+        return GameDataImpl(
             variant = variant,
-            players = globallyAvailablePlayerInfo.associateBy { it.playerId },
+            players = playerMetadata.associateBy { it.playerId },
             dynamicGloballyAvailableInfo = DynamicGloballyAvailableInfo(
                 playingStacks = playingStacks,
                 trashPile = trashPile,
@@ -96,7 +96,7 @@ object InputParser {
         suits: Set<Suite>,
         visibleCards: List<HanabiCard>,
     ): Slot {
-        val globallyAvailableSlotInfo = GloballyAvailableSlotInfo(
+        val slotMetadata = SlotMetadata(
             index = slotIndex,
             positiveClues = slotDTO.positiveClues.map { parseClue(it) },
             negativeClues = slotDTO.negativeClues.map { parseClue(it) }
@@ -108,8 +108,8 @@ object InputParser {
             empathy = GameUtils.getCardEmpathy(
                 visibleCards = visibleCards,
                 suits = suits,
-                positiveClues = globallyAvailableSlotInfo.positiveClues,
-                negativeClues = globallyAvailableSlotInfo.negativeClues
+                positiveClues = slotMetadata.positiveClues,
+                negativeClues = slotMetadata.negativeClues
             )
         )
         val visibleIdentity = if(slotDTO.card == Configuration.UNKNOWN_CARD_SYMBOL) null
@@ -118,7 +118,7 @@ object InputParser {
         return SlotFactory.createSlot(
             activePlayerId = activePlayerId,
             slotOwnerId = slotOwnerId,
-            globallyAvailableSlotInfo = globallyAvailableSlotInfo,
+            slotMetadata = slotMetadata,
             knowledge = knowledge,
             visibleIdentity = visibleIdentity,
         )

@@ -70,7 +70,7 @@ sealed class Prompt(name: String) : IndirectPlayClue(name) {
                         .contains(card)
         } ?: return false
         return promptedTeammateSlot.matches { _, identity -> identity == card } ||
-                (playerPOV.game.isImmediatelyPlayable(card)
+                (playerPOV.gameData.isImmediatelyPlayable(card)
                         && isPromptedCorrectly(
                     card = card,
                     teammate = teammate,
@@ -93,7 +93,7 @@ sealed class Prompt(name: String) : IndirectPlayClue(name) {
             return false
         }
         val wrongPromptedCard = wrongPromptedSlot.knownIdentity
-        if (playerPOV.game.getGlobalAwayValue(wrongPromptedCard) < 0) return false
+        if (playerPOV.gameData.getGlobalAwayValue(wrongPromptedCard) < 0) return false
         val preRequisites = wrongPromptedCard.getPrerequisiteCards()
         val cardTeammateMap = preRequisites.associateWith {
             playerPOV.getTeammates().find { teammate ->

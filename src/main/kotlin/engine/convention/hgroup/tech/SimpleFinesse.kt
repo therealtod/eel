@@ -10,7 +10,7 @@ import eelst.ilike.game.entity.action.ClueAction
 object SimpleFinesse : Finesse("Simple Finesse") {
     override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
         return slot.matches { _, card ->
-            playerPOV.game.getGlobalAwayValue(card) == 1 &&
+            playerPOV.gameData.getGlobalAwayValue(card) == 1 &&
                     playerPOV.getTeammates().any { otherTeammate ->
                         otherTeammate.playsBefore(teammate, playerPOV) &&
                                 hasCardOnFinessePosition(

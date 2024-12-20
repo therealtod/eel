@@ -2,13 +2,13 @@ package eelst.ilike.hanablive
 
 import eelst.ilike.common.model.metadata.SuitMetadata
 import eelst.ilike.common.model.metadata.VariantMetadata
-import eelst.ilike.game.Game
+import eelst.ilike.game.GameData
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.game.factory.SuitFactory
 import eelst.ilike.game.factory.VariantFactory
-import eelst.ilike.hanablive.model.adapter.GameAdapter
+import eelst.ilike.hanablive.model.adapter.GameDataAdapter
 import eelst.ilike.hanablive.model.dto.command.GameInitData
 import eelst.ilike.hanablive.model.dto.instruction.GameDrawActionData
 
@@ -17,10 +17,10 @@ object HanabLiveDataParser {
         gameInitData: GameInitData,
         variantMetadata: VariantMetadata,
         suitsMetadata: Map<String, SuitMetadata>,
-    ): Game {
+    ): GameData {
         val suits = suitsMetadata.map { SuitFactory.createSuit(it.value) }
         val variant = VariantFactory.createVariant(variantMetadata, suits.toSet())
-        return GameAdapter(
+        return GameDataAdapter(
             gameInitData = gameInitData,
             variant = variant,
         )

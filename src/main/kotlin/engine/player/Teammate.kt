@@ -4,18 +4,18 @@ package eelst.ilike.engine.player
 import eelst.ilike.engine.factory.PlayerFactory
 import eelst.ilike.engine.factory.SlotFactory
 import eelst.ilike.engine.hand.slot.BaseSlot
-import eelst.ilike.game.GloballyAvailablePlayerInfo
+import eelst.ilike.game.PlayerMetadata
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Player
 import eelst.ilike.game.entity.BaseHand
 import eelst.ilike.game.entity.Slot
 
 open class Teammate(
-    globallyAvailablePlayerInfo: GloballyAvailablePlayerInfo,
+    playerMetadata: PlayerMetadata,
     override val hand: Hand,
 ) : Player {
-    final override val playerId = globallyAvailablePlayerInfo.playerId
-    override val playerIndex = globallyAvailablePlayerInfo.playerIndex
+    final override val playerId = playerMetadata.playerId
+    override val playerIndex = playerMetadata.playerIndex
 
     override fun getSlots(): Set<Slot> {
         return hand.getSlots()
@@ -34,7 +34,7 @@ open class Teammate(
                 Pair(playerId, getHandFromPlayerPOV())
         return PlayerFactory.createPlayerPOV(
             playerId = playerId,
-            game = playerPOV.game,
+            gameData = playerPOV.gameData,
             personalKnowledge = playerPOV.getPersonalKnowledge().accessibleTo(playerId),
             playersHands = playersHands
         )
@@ -47,7 +47,7 @@ open class Teammate(
             .map { SlotFactory.createSlot(
                 activePlayerId = playerId,
                 slotOwnerId = playerId,
-                globallyAvailableSlotInfo = it.getGloballyAvailableInfo(),
+                slotMetadata = it.getGloballyAvailableInfo(),
                 knowledge = it.knowledge,
                 visibleIdentity = null,
             ) }

@@ -22,7 +22,7 @@ data object DelayedPlayClue
     override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
         val teammateKnowsOwnSlot = teammate.getHandFromPlayerPOV().getSlot(slot.index) is KnownSlot
         return !teammateKnowsOwnSlot && slot.matches { _, card ->
-                    playerPOV.game.getGlobalAwayValue(card) > 0 &&
+                    playerPOV.gameData.getGlobalAwayValue(card) > 0 &&
                     connectingCardsAreKnown(card, playerPOV)
         }
     }
@@ -56,13 +56,13 @@ data object DelayedPlayClue
         val slot = playerPOV.getOwnHand().getSlot(focusIndex)
         return slot.getPossibleIdentities()
             .any {
-                playerPOV.game.getGlobalAwayValue(it) > 0 &&
+                playerPOV.gameData.getGlobalAwayValue(it) > 0 &&
                         connectingCardsAreKnown(it, playerPOV)
             }
     }
 
     private fun connectingCardsAreKnown(card: HanabiCard, playerPOV: PlayerPOV): Boolean {
-        val stack = playerPOV.game.getStackForCard(card)
+        val stack = playerPOV.gameData.getStackForCard(card)
         val missingCards = if (stack.isEmpty()) {
             card.getPrerequisiteCards().toSet()
         } else {
@@ -76,7 +76,7 @@ data object DelayedPlayClue
         val slot = receiverPOV.getOwnHand().getSlot(focusIndex)
         val possibleIdentities = slot.getPossibleIdentities()
             .filter {
-                playerPOV.game.getGlobalAwayValue(it) > 0
+                playerPOV.gameData.getGlobalAwayValue(it) > 0
             }
         return KnowledgeFactory.createKnowledge(
             playerId = playerPOV.getOwnPlayerId(),

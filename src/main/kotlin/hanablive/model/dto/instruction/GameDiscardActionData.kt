@@ -15,7 +15,7 @@ data class GameDiscardActionData(
     val failed: Boolean,
 ) : GameActionData(GameActionType.DISCARD) {
     override fun toObservedAction(game: HanabLiveGame): ObservedAction {
-        val player = game.getPlayer(playerIndex)
+        val player = game.getPlayerMetadata(playerIndex)
         val action = DiscardAction(
             playerId = player.playerId,
             slotIndex = game.getPlayerSlot(player.playerId, order)

@@ -64,12 +64,12 @@ object TwoSave : SaveClue("2-Save") {
 
     private fun getSaveableTwos(playerPOV: PlayerPOV): Set<HanabiCard> {
         return playerPOV
-            .game
+            .gameData
             .suits
             .flatMap { it.getAllUniqueCards() }
             .filter {
                 it.rank == Rank.TWO &&
-                        playerPOV.game.getGlobalAwayValue(it) > 0 &&
+                        playerPOV.gameData.getGlobalAwayValue(it) > 0 &&
                         canBeTwoSaved(
                             card = it,
                             otherPlayers = playerPOV.getTeammates(),

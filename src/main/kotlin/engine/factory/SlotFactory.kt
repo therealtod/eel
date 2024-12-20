@@ -3,7 +3,7 @@ package eelst.ilike.engine.factory
 import eelst.ilike.engine.hand.slot.FullEmpathySlot
 import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.player.knowledge.PersonalSlotKnowledge
-import eelst.ilike.game.GloballyAvailableSlotInfo
+import eelst.ilike.game.SlotMetadata
 import eelst.ilike.engine.hand.slot.UnknownIdentitySlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.game.PlayerId
@@ -14,20 +14,20 @@ object SlotFactory {
     fun createSlot(
         activePlayerId: PlayerId,
         slotOwnerId: PlayerId,
-        globallyAvailableSlotInfo: GloballyAvailableSlotInfo,
+        slotMetadata: SlotMetadata,
         knowledge: PersonalSlotKnowledge,
         visibleIdentity: HanabiCard?,
     ): Slot {
         return if (visibleIdentity != null) {
             if (activePlayerId == slotOwnerId) {
                 FullEmpathySlot(
-                    globallyAvailableInfo = globallyAvailableSlotInfo,
+                    globallyAvailableInfo = slotMetadata,
                     knowledge = knowledge,
                     identity = visibleIdentity
                 )
             } else {
                 VisibleSlot(
-                    globallyAvailableInfo = globallyAvailableSlotInfo,
+                    globallyAvailableInfo = slotMetadata,
                     knowledge = knowledge,
                     visibleCard = visibleIdentity
                 )
@@ -35,13 +35,13 @@ object SlotFactory {
         } else {
             if (knowledge.isSlotKnown()) {
                 KnownSlot(
-                    globallyAvailableInfo = globallyAvailableSlotInfo,
+                    globallyAvailableInfo = slotMetadata,
                     knowledge = knowledge,
                     knownIdentity = knowledge.getPossibleSlotIdentities().first()
                 )
             } else {
                 UnknownIdentitySlot(
-                    globallyAvailableInfo = globallyAvailableSlotInfo,
+                    globallyAvailableInfo = slotMetadata,
                     knowledge = knowledge,
                 )
             }

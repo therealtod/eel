@@ -24,9 +24,9 @@ object CriticalSave : SaveClue("Critical Save") {
         val chop = getChop(teammate.hand, playerPOV)
         return slot.matches { index, card ->
             index == chop.index &&
-            appliesTo(card, playerPOV.game.variant) &&
+            appliesTo(card, playerPOV.gameData.variant) &&
                     card.rank != Rank.FIVE &&
-                    playerPOV.game.isCritical(card) &&
+                    playerPOV.gameData.isCritical(card) &&
                     !isGloballyKnownPlayable(card, playerPOV)
         }
     }
@@ -56,7 +56,7 @@ object CriticalSave : SaveClue("Critical Save") {
     override fun matchesReceivedClue(clue: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Boolean {
         return playerPOV.getOwnHand().getSlot(focusIndex)
             .getPossibleIdentities()
-            .any { playerPOV.game.isCritical(it) }
+            .any { playerPOV.gameData.isCritical(it) }
     }
 
     override fun getGeneratedKnowledge(action: ObservedClue, focusIndex: Int, playerPOV: PlayerPOV): Knowledge {
@@ -67,7 +67,7 @@ object CriticalSave : SaveClue("Critical Save") {
         val possibleFocusIdentities = focus
             .getPossibleIdentities()
             .filter {
-                playerPOV.game.isCritical(it)
+                playerPOV.gameData.isCritical(it)
         }
         return KnowledgeFactory.createKnowledge(
             playerId = playerPOV.getOwnPlayerId(),

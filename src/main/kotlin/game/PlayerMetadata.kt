@@ -1,7 +1,7 @@
 package eelst.ilike.game
 
 
-data class GloballyAvailablePlayerInfo(
+data class PlayerMetadata(
     val playerId: PlayerId,
     val playerIndex: Int,
 )
