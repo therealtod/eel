@@ -83,7 +83,8 @@ class GameInitDataReceivedState(
         )
         val game = HanabLiveGame(
             gameData = gameData,
-            players = teammates + Pair(botPlayerId, botPlayer)
+            playerPOV = botPlayer,
+            conventionSet = commonState.conventionSet,
         )
         val newState = PlayingState(
             bot = bot,

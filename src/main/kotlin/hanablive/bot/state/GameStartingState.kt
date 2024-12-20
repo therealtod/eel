@@ -21,12 +21,10 @@ class GameStartingState(
 
     override suspend fun onGameInitDataReceived(gameInitData: GameInitData) {
         val variantMetadata = metadataProvider.getVariantMetadata(gameInitData.options.variantName)
-        val suitsMetadata = metadataProvider.getSuitsMetadata(variantMetadata.suits)
         val botPlayerIndex = gameInitData.ourPlayerIndex
         gameData = HanabLiveDataParser.parseGloballyAvailableInfo(
             gameInitData = gameInitData,
             variantMetadata = variantMetadata,
-            suitsMetadata = suitsMetadata,
         )
         botPlayerMetadata = gameData.getPlayerMetadata(botPlayerIndex)
         bot.sendHanabLiveInstruction(GetGameInfo2(gameInitData.tableID))

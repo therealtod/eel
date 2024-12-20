@@ -2,7 +2,6 @@ package eelst.ilike.engine.player
 
 import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
-import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.GameData
 import eelst.ilike.game.PlayerId
@@ -21,6 +20,7 @@ interface PlayerPOV: Player {
     fun getPersonalKnowledge(): PlayerPersonalKnowledge
     fun teamKnowsAllCards(cards: Set<HanabiCard>): Boolean
     fun getTeammates(): Set<Teammate>
+    fun getPlayers(): Map<PlayerId, Player>
     fun forEachTeammate(action: (teammate: Teammate) -> Unit)
     fun getOwnHand(): Hand
     fun getTeammate(teammatePlayerId: PlayerId): Teammate
@@ -29,7 +29,7 @@ interface PlayerPOV: Player {
     fun getVisibleCards(): List<HanabiCard>
     fun getPlayerPOV(playerId: PlayerId): PlayerPOV
     fun getAsPlayer(): Teammate
-    fun getAfter(playAction: PlayAction): PlayerPOV
-    fun getAfter(discardAction: DiscardAction): PlayerPOV
-    fun getAfter(clueAction: ClueAction, touchedSlotsIndexes: Set<Int>): PlayerPOV
+    fun getAfter(playAction: PlayAction, conventionSet: ConventionSet): PlayerPOV
+    fun getAfter(discardAction: DiscardAction, conventionSet: ConventionSet): PlayerPOV
+    fun getAfter(clueAction: ClueAction, touchedSlotsIndexes: Set<Int>, conventionSet: ConventionSet): PlayerPOV
 }

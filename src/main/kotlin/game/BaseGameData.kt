@@ -16,17 +16,17 @@ abstract class BaseGameData(
     constructor(
         variant: Variant,
         playerMetadata: Map<PlayerId, PlayerMetadata>,
-        dynamicGloballyAvailableInfo: DynamicGloballyAvailableInfo,
+        dynamicGameData: DynamicGameData,
         ): this(
         variant = variant,
-        playingStacks = dynamicGloballyAvailableInfo.playingStacks,
-        trashPile = dynamicGloballyAvailableInfo.trashPile,
-        strikes = dynamicGloballyAvailableInfo.strikes,
-        clueTokens = dynamicGloballyAvailableInfo.clueTokens,
+        playingStacks = dynamicGameData.playingStacks,
+        trashPile = dynamicGameData.trashPile,
+        strikes = dynamicGameData.strikes,
+        clueTokens = dynamicGameData.clueTokens,
         players = playerMetadata
     )
 
-    private val dynamicGloballyAvailableInfo = DynamicGloballyAvailableInfo(
+    protected val dynamicGameData = DynamicGameData(
         playingStacks = playingStacks,
         trashPile = trashPile,
         strikes = strikes,
@@ -49,7 +49,7 @@ abstract class BaseGameData(
         get() = 1.0F
 
     override fun getCardsOnStacks(): List<HanabiCard> {
-        return dynamicGloballyAvailableInfo.getCardsOnStacks()
+        return dynamicGameData.getCardsOnStacks()
     }
 
     final override val score: Int
@@ -100,5 +100,52 @@ abstract class BaseGameData(
 
     override fun getAvailableClueValues(): Set<ClueValue> {
         return variant.getCluableRanks() + variant.getCluableColors()
+    }
+
+    override fun getAfterPlaying(card: HanabiCard): GameData {
+        return if (isImmediatelyPlayable(card)) {
+            getAfterSuccessfulPlay(card)
+        } else {
+            getAfterStrike(card)
+        }
+    }
+
+    private fun getAfterSuccessfulPlay(card: HanabiCard): GameData {
+        val newDynamicGloballyAvailableInfo = if (card.rank == card.suite.maxRank)
+            dynamicGameData.withAddedClueToken()
+        else
+            dynamicGameData
+        return GameDataImpl(
+            players = players,
+            variant = variant,
+            dynamicGameData = newDynamicGloballyAvailableInfo.withNewCardOnStacks(card),
+        )
+    }
+
+    private fun getAfterStrike(card: HanabiCard): GameData {
+        return GameDataImpl(
+            players = players,
+            variant = variant,
+            dynamicGameData = dynamicGameData.withNewStrike(card),
+        )
+    }
+
+    override fun getAfterDiscard(card: HanabiCard): GameData {
+        return GameDataImpl(
+            players = players,
+            variant = variant,
+            dynamicGameData = dynamicGameData.withNewDiscard(card),
+        )
+    }
+
+    override fun getAfterClue(): GameData {
+        require(dynamicGameData.clueTokens > 0) {
+            "Can't give a clue without at least one clue token available"
+        }
+        return GameDataImpl(
+            players = players,
+            variant = variant,
+            dynamicGameData = dynamicGameData.withUsedClueToken(),
+        )
     }
 }

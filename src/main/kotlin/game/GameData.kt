@@ -1,6 +1,9 @@
 package eelst.ilike.game
 
 import eelst.ilike.game.entity.*
+import eelst.ilike.game.entity.action.ClueAction
+import eelst.ilike.game.entity.action.DiscardAction
+import eelst.ilike.game.entity.action.PlayAction
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.game.entity.suite.SuiteId
@@ -34,4 +37,9 @@ interface GameData {
     fun getPlayerMetadata(playerId: PlayerId): PlayerMetadata
     fun getPlayerMetadata(playerIndex: Int): PlayerMetadata
     fun getAvailableClueValues(): Set<ClueValue>
+    fun getAfterPlaying(card: HanabiCard): GameData
+    // fun getAfterSuccessfulPlay(card: HanabiCard): GameData
+    // fun getAfterStrike(card: HanabiCard): GameData
+    fun getAfterDiscard(card: HanabiCard): GameData
+    fun getAfterClue(): GameData
 }

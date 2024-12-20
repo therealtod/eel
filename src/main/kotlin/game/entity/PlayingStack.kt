@@ -24,4 +24,14 @@ data class PlayingStack(
         }
         return suite.cardAfter(card)
     }
+
+    fun playCard(card: HanabiCard): PlayingStack {
+        require(card.suite.id == suite.id) {
+            "Wrong stack for card $card"
+        }
+        return PlayingStack(
+            cards = cards + card,
+            suite = suite
+        )
+    }
 }

@@ -3,7 +3,8 @@ package eelst.ilike.engine.player
 import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.tech.ConventionTech
-import eelst.ilike.engine.factory.PlayerFactory
+import eelst.ilike.engine.convention.tech.DiscardTech
+import eelst.ilike.engine.convention.tech.PlayTech
 import eelst.ilike.engine.hand.slot.FullEmpathySlot
 import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
@@ -12,6 +13,7 @@ import eelst.ilike.game.GameUtils
 import eelst.ilike.game.GameData
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Hand
+import eelst.ilike.game.entity.Player
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.DiscardAction
 import eelst.ilike.game.entity.action.PlayAction
@@ -63,6 +65,10 @@ class PlayerPOVImpl(
         return teammates.values.toSet()
     }
 
+    override fun getPlayers(): Map<PlayerId, Player> {
+        return teammates + Pair(playerId, myself)
+    }
+
     override fun getTeammate(teammatePlayerId: PlayerId): Teammate {
         return teammates[teammatePlayerId]
             ?: throw IllegalArgumentException("I can't see any teammate with id $teammatePlayerId")
@@ -112,15 +118,21 @@ class PlayerPOVImpl(
         return myself
     }
 
-    override fun getAfter(playAction: PlayAction): PlayerPOV {
+    override fun getAfter(playAction: PlayAction, conventionSet: ConventionSet): PlayerPOV {
+        val discardTechs = conventionSet.getTechs().filterIsInstance<PlayTech>()
+        val newKnowledge = discardTechs.map { it.getGeneratedKnowledge(playAction, this) }
+        TODO()
+    }
+
+    override fun getAfter(discardAction: DiscardAction, conventionSet: ConventionSet): PlayerPOV {
         TODO("Not yet implemented")
     }
 
-    override fun getAfter(discardAction: DiscardAction): PlayerPOV {
-        TODO("Not yet implemented")
-    }
-
-    override fun getAfter(clueAction: ClueAction, touchedSlotsIndexes: Set<Int>): PlayerPOV {
+    override fun getAfter(
+        clueAction: ClueAction,
+        touchedSlotsIndexes: Set<Int>,
+        conventionSet: ConventionSet
+    ): PlayerPOV {
         TODO("Not yet implemented")
     }
 

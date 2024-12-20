@@ -16,10 +16,8 @@ object HanabLiveDataParser {
     fun parseGloballyAvailableInfo(
         gameInitData: GameInitData,
         variantMetadata: VariantMetadata,
-        suitsMetadata: Map<String, SuitMetadata>,
     ): GameData {
-        val suits = suitsMetadata.map { SuitFactory.createSuit(it.value) }
-        val variant = VariantFactory.createVariant(variantMetadata, suits.toSet())
+        val variant = VariantFactory.createVariant(variantMetadata)
         return GameDataAdapter(
             gameInitData = gameInitData,
             variant = variant,

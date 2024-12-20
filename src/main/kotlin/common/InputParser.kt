@@ -15,16 +15,10 @@ import common.model.dto.SlotDTO
 object InputParser {
     fun parseGlobalInfo(dto: ScenarioDTO, metadataProvider: MetadataProvider): GameData {
         val variantMetadata = metadataProvider.getVariantMetadata(dto.globallyAvailableInfo.variant)
-        val suitsMetadata = dto.globallyAvailableInfo
-            .suits
-            .map { metadataProvider.getSuiteMetadata(it) }
-        val suits = suitsMetadata
-            .map { SuiteFactory.createSuite(it, variantMetadata) }
-            .toSet()
-        val playingStacks = parsePlayingStacks(suits, dto.globallyAvailableInfo.playingStacks)
-        val trashPile = parseTrashPile(dto.globallyAvailableInfo.trashPile, suits)
         val variant = VariantFactory
-            .createVariant(variantMetadata, suits)
+            .createVariant(variantMetadata)
+        val playingStacks = parsePlayingStacks(variant.suits, dto.globallyAvailableInfo.playingStacks)
+        val trashPile = parseTrashPile(dto.globallyAvailableInfo.trashPile, variant.suits)
         val playerMetadata =  dto.playerPOV.players
             .mapIndexed { index, player ->
                 PlayerMetadata(
@@ -34,7 +28,7 @@ object InputParser {
         return GameDataImpl(
             variant = variant,
             players = playerMetadata.associateBy { it.playerId },
-            dynamicGloballyAvailableInfo = DynamicGloballyAvailableInfo(
+            dynamicGameData = DynamicGameData(
                 playingStacks = playingStacks,
                 trashPile = trashPile,
                 strikes = dto.globallyAvailableInfo.strikes,

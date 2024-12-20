@@ -18,7 +18,13 @@ object SuitFactory {
         return ClassicSuit(
             id = metadata.id,
             name = metadata.name,
-            abbreviations = listOf(metadata.abbreviation, metadata.name, metadata.displayName),
+            abbreviations = listOf(
+                metadata.abbreviation,
+                metadata.name,
+                metadata.id,
+                metadata.abbreviation.lowercase(),
+                metadata.id.lowercase(),
+            ),
             definingColor = Color.getFromStringFormat(suitColors.first())
         )
     }

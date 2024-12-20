@@ -8,4 +8,8 @@ data class TrashPile(
     fun copiesOf(card: HanabiCard): Int {
         return cards.filter { it == card }.size
     }
+
+    fun withAddedCard(card: HanabiCard): TrashPile{
+        return TrashPile(cards + card)
+    }
 }
