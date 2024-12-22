@@ -126,8 +126,7 @@ class GameInitDataReceivedState(
         }
         val teammatesHands = teammatesSlots.mapValues {
             BaseHand(
-                ownerId = playerIndexToIdMap[it.key]!!,
-                slots = it.value.toSet()
+                slots = it.value
             )
         }
         val botSlots = (1..gameData.defaultHandsSize).map {
@@ -149,7 +148,7 @@ class GameInitDataReceivedState(
             )
         }
         return teammatesHands.mapKeys { playerIndexToIdMap[it.key]!! } +
-                Pair(botPlayerId, BaseHand(botPlayerId, botSlots.toSet()))
+                Pair(botPlayerId, BaseHand(botSlots))
     }
 
     private fun computeVisibleCardsMap(

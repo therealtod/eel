@@ -4,10 +4,8 @@ import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.Game
-import eelst.ilike.game.GameData
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Hand
-import eelst.ilike.game.entity.Player
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.*
 import eelst.ilike.game.entity.card.HanabiCard
@@ -31,4 +29,8 @@ interface GameFromPlayerPOV: Game {
     fun getAfter(playAction: PlayAction, playedCard: HanabiCard, isStrike: Boolean, conventionSet: ConventionSet): GameFromPlayerPOV
     fun getAfter(discardAction: DiscardAction, discardedCard: HanabiCard, conventionSet: ConventionSet): GameFromPlayerPOV
     fun getAfter(clueAction: ClueAction, touchedSlotsIndexes: Set<Int>, conventionSet: ConventionSet): GameFromPlayerPOV
+    fun getAfterHypotheticalDraw(drawAction: DrawAction): GameFromPlayerPOV
+    fun getAfterHypotheticalPlay(playAction: PlayAction, conventionSet: ConventionSet): GameFromPlayerPOV
+    fun getAfterHypotheticalDiscard(discardAction: DiscardAction, conventionSet: ConventionSet): GameFromPlayerPOV
+    fun getAfterHypotheticalClue(clueAction: ClueAction, conventionSet: ConventionSet): GameFromPlayerPOV
 }

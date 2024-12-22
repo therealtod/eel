@@ -84,6 +84,7 @@ class PlayingStateTest {
             conventionSet = conventionSet
         )
         private val pov = mockk<HanabLivePlayerPOVAdapter>(relaxed = true)
+
         @JvmStatic
         @BeforeAll
         fun setUp() {

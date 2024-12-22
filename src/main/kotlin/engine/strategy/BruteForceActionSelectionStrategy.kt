@@ -11,7 +11,7 @@ import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.DiscardAction
 import eelst.ilike.game.entity.action.PlayAction
 
-class ActionSelectionStrategyImpl(
+class BruteForceActionSelectionStrategy(
     private val evaluator: GameStateEvaluator,
 ): ActionSelectionStrategy {
     override fun selectAction(playerPOV: GameFromPlayerPOV, conventionSet: ConventionSet): ConventionalAction {
@@ -68,39 +68,32 @@ class ActionSelectionStrategyImpl(
     }
 
     private fun getUpdatedPOV(
-        convetionalAction: ConventionalAction,
+        conventionalAction: ConventionalAction,
         conventionSet: ConventionSet,
         playerPOV: GameFromPlayerPOV
     ): GameFromPlayerPOV {
-        val gameAction = convetionalAction.action
-        val newSlot = UnknownIdentitySlot(
-            slotMetadata = TODO(),
-            knowledge = TODO(),
-        )
-        when(gameAction) {
+        return when(val gameAction = conventionalAction.action) {
             is PlayAction -> {
-                playerPOV.getAfter(
+                playerPOV.getAfterHypotheticalPlay(
                     playAction = gameAction,
-                    playedCard = TODO(),
-                    isStrike = TODO(),
                     conventionSet = conventionSet,
                 )
             }
             is DiscardAction -> {
-                playerPOV.getAfter(
+                playerPOV.getAfterHypotheticalDiscard(
                     discardAction = gameAction,
-                    discardedCard = TODO(),
                     conventionSet = conventionSet,
                 )
             }
             is ClueAction -> {
-                playerPOV.getAfter(
+                playerPOV.getAfterHypotheticalClue(
                     clueAction = gameAction,
-                    touchedSlotsIndexes = TODO(),
                     conventionSet = conventionSet,
                 )
             }
-            else -> throw IllegalStateException("No conventional action should be connected to a action of type: ${gameAction::class.simpleName}")
+            else -> throw IllegalStateException(
+                "No conventional action should be connected to a action of type: ${gameAction::class.simpleName}"
+            )
         }
     }
 

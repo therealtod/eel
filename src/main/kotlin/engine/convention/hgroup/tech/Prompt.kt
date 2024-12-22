@@ -58,7 +58,7 @@ sealed class Prompt(name: String) : IndirectPlayClue(name) {
     private fun isPromptedCorrectly(
         card: HanabiCard,
         teammate: Teammate,
-        promptedSlots: Set<Slot> = emptySet(),
+        promptedSlots: List<Slot> = emptyList(),
         playerPOV: GameFromPlayerPOV,
     ): Boolean {
         val promptedTeammateSlot = promptedSlots.firstOrNull { slot ->
@@ -74,7 +74,7 @@ sealed class Prompt(name: String) : IndirectPlayClue(name) {
                         && isPromptedCorrectly(
                     card = card,
                     teammate = teammate,
-                    promptedSlots = promptedSlots.filter { it.index < promptedTeammateSlot.index }.toSet(),
+                    promptedSlots = promptedSlots.filter { it.index < promptedTeammateSlot.index },
                     playerPOV = playerPOV
                 )
                         ) || wrongPromptCanBePatched(

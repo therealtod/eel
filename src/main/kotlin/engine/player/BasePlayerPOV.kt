@@ -140,7 +140,9 @@ open class BasePlayerPOV(
     }
 
     override fun getAfter(drawAction: DrawAction, newSlot: Slot): GameFromPlayerPOV {
-        TODO("Not yet implemented")
+        val hand = getPlayer(drawAction.playerId).hand
+        val newHand = hand.withNewSlot(newSlot)
+        TODO()
     }
 
     override fun getAfter(
@@ -181,6 +183,25 @@ open class BasePlayerPOV(
                         )
                     }
             }
+    }
+
+    override fun getAfterHypotheticalDraw(drawAction: DrawAction): GameFromPlayerPOV {
+        TODO("Not yet implemented")
+    }
+
+    override fun getAfterHypotheticalPlay(playAction: PlayAction, conventionSet: ConventionSet): GameFromPlayerPOV {
+        TODO("Not yet implemented")
+    }
+
+    override fun getAfterHypotheticalDiscard(
+        discardAction: DiscardAction,
+        conventionSet: ConventionSet
+    ): GameFromPlayerPOV {
+        TODO("Not yet implemented")
+    }
+
+    override fun getAfterHypotheticalClue(clueAction: ClueAction, conventionSet: ConventionSet): GameFromPlayerPOV {
+        TODO("Not yet implemented")
     }
 
     private fun prune(actions: Collection<ConventionalAction>): Set<ConventionalAction> {

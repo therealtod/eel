@@ -1,13 +1,11 @@
 package eelst.ilike.game.entity
 
-import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.card.HanabiCard
 
 open class BaseHand(
-    override val ownerId: PlayerId,
-    private val slots: Set<Slot>
-): Hand, Set<Slot> by slots {
-    override fun getSlots(): Set<Slot> {
+    private val slots: List<Slot>
+): Hand, List<Slot> by slots {
+    override fun getSlots(): List<Slot> {
         return slots
     }
 
@@ -24,5 +22,9 @@ open class BaseHand(
 
     override fun countCopiesOf(card: HanabiCard): Int {
         return slots.count { it.containsCard(card) }
+    }
+
+    override fun withNewSlot(slot: Slot): Hand {
+        return BaseHand(listOf(slot) + slots)
     }
 }

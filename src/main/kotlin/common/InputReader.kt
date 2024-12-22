@@ -48,7 +48,7 @@ object InputReader {
                 }
             }
 
-        val playersHands = playersSlots.mapValues { BaseHand(it.key, it.value.toSet()) }
+        val playersHands = playersSlots.mapValues { BaseHand(it.value) }
 
         return PlayerFactory.createPlayerPOV(
             playerId = activePlayerId,

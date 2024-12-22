@@ -17,7 +17,7 @@ open class Teammate(
     final override val playerId = playerMetadata.playerId
     override val playerIndex = playerMetadata.playerIndex
 
-    override fun getSlots(): Set<Slot> {
+    override fun getSlots(): List<Slot> {
         return hand.getSlots()
     }
 
@@ -51,6 +51,6 @@ open class Teammate(
                 knowledge = it.knowledge,
                 visibleIdentity = null,
             ) }
-        return BaseHand(ownerId = playerId, slots = slots.toSet())
+        return BaseHand(slots = slots)
     }
 }

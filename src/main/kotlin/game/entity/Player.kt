@@ -7,5 +7,5 @@ interface Player {
     val playerIndex: Int
     val hand: Hand
 
-    fun getSlots(): Set<Slot>
+    fun getSlots(): List<Slot>
 }
