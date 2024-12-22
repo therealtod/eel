@@ -9,10 +9,7 @@ import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Player
 import eelst.ilike.game.entity.Slot
-import eelst.ilike.game.entity.action.ClueAction
-import eelst.ilike.game.entity.action.DiscardAction
-import eelst.ilike.game.entity.action.DrawAction
-import eelst.ilike.game.entity.action.PlayAction
+import eelst.ilike.game.entity.action.*
 import eelst.ilike.game.entity.card.HanabiCard
 
 interface GameFromPlayerPOV: Game {
@@ -26,6 +23,7 @@ interface GameFromPlayerPOV: Game {
     fun getTeammate(teammatePlayerId: PlayerId): Teammate
     fun getSeatsGapFrom(teammate: Teammate): Int
     fun getLegalActions(conventionSet: ConventionSet): Collection<ConventionalAction>
+    fun chooseAction(conventionSet: ConventionSet): GameAction
     fun getVisibleCards(): List<HanabiCard>
     fun getPlayerPOV(playerId: PlayerId): GameFromPlayerPOV
     fun getAsPlayer(): Teammate

@@ -19,7 +19,10 @@ class GameDataStartingStateTest {
 
     private val bot = mockk<HanabLiveBot>(relaxed = true)
 
-    private val state = GameStartingState(bot, CommonState())
+    private val state = GameStartingState(
+        bot = bot,
+        commonState = CommonState(),
+        )
 
     @Test
     fun `Should send the correct instruction back via the bot and change the state to GameInitDataReceived`() {

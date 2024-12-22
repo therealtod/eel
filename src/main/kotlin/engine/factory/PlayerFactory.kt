@@ -1,5 +1,7 @@
 package eelst.ilike.engine.factory
 
+import eelst.ilike.engine.convention.hgroup.strategy.HGroupGameStateEvaluator
+import eelst.ilike.engine.strategy.ActionSelectionStrategyImpl
 import eelst.ilike.engine.player.*
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.GameData
@@ -39,7 +41,8 @@ object PlayerFactory {
             gameData = gameData,
             personalKnowledge = personalKnowledge,
             teammates = players.minus(playerId),
-            hand = playersHands[playerId]!!
+            hand = playersHands[playerId]!!,
+            actionSelectionStrategy = ActionSelectionStrategyImpl(evaluator = HGroupGameStateEvaluator())
         )
     }
 }

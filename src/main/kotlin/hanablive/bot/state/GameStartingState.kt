@@ -4,6 +4,7 @@ import eelst.ilike.common.model.metadata.LocalMirrorMetadataProvider
 import eelst.ilike.game.*
 import eelst.ilike.hanablive.HanabLiveDataParser
 import eelst.ilike.hanablive.bot.HanabLiveBot
+import eelst.ilike.hanablive.model.TableId
 import eelst.ilike.hanablive.model.dto.command.GameInitData
 import eelst.ilike.hanablive.model.dto.instruction.GetGameInfo2
 
@@ -31,6 +32,7 @@ class GameStartingState(
         val newState = GameInitDataReceivedState(
             bot = bot,
             commonState = commonState,
+            tableId = gameInitData.tableID,
             botPlayerId = botPlayerMetadata.playerId,
             gameInitData = gameInitData,
             variantMetadata = variantMetadata,

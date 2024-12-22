@@ -13,5 +13,5 @@ object HanabLiveConstants {
     const val COOKIE_NAME = "set-cookie"
     const val COLOR_CLUE_TYPE = 2
     const val RANK_CLUE_TYPE = 3
-    val PLAYER_ACTIONS = listOf(GameActionType.PLAY, GameActionType.DISCARD, GameActionType.CLUE)
+    val PLAYER_ACTIONS = listOf(GameActionType.DRAW, GameActionType.PLAY, GameActionType.DISCARD, GameActionType.CLUE)
 }

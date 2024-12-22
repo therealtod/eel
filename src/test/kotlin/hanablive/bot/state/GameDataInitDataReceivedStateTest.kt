@@ -24,6 +24,7 @@ class GameDataInitDataReceivedStateTest {
     private val state = GameInitDataReceivedState(
         bot = bot,
         botPlayerId = "Alice",
+        tableId = 1234,
         gameInitData = mapper.readValue(Utils.getResourceFileContentAsString("hanablive/gamestarting/game_init_payload.json")),
         variantMetadata = metadataProvider.getVariantMetadata("6 Suits"),
         gameData = gameData,

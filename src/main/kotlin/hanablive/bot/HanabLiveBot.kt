@@ -9,6 +9,7 @@ import eelst.ilike.hanablive.bot.state.HanabLiveBotState
 import eelst.ilike.hanablive.bot.state.InitialState
 import eelst.ilike.hanablive.handler.HanabLiveInstructionHandler
 import eelst.ilike.hanablive.handler.WelcomeHandler
+import eelst.ilike.hanablive.model.TableId
 import eelst.ilike.hanablive.model.dto.HanabLiveInstructionType
 import eelst.ilike.hanablive.model.dto.command.GameInitData
 import eelst.ilike.hanablive.model.dto.command.Table
@@ -67,11 +68,11 @@ class HanabLiveBot(
         state.joinPlayer(playerId, tablePassword)
     }
 
-    override suspend fun joinTable(tableId: Int) {
+    override suspend fun joinTable(tableId: TableId) {
         state.joinTable(tableId)
     }
 
-    override suspend fun joinTable(tableId: Int, password: String) {
+    override suspend fun joinTable(tableId: TableId, password: String) {
         state.joinTable(tableId, password)
     }
 

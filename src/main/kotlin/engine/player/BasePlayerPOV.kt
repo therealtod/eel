@@ -1,9 +1,9 @@
 package eelst.ilike.engine.player
 
+import eelst.ilike.engine.strategy.ActionSelectionStrategy
 import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.tech.ConventionTech
-import eelst.ilike.engine.convention.tech.PlayTech
 import eelst.ilike.engine.hand.slot.FullEmpathySlot
 import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
@@ -12,10 +12,7 @@ import eelst.ilike.game.*
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Player
 import eelst.ilike.game.entity.Slot
-import eelst.ilike.game.entity.action.ClueAction
-import eelst.ilike.game.entity.action.DiscardAction
-import eelst.ilike.game.entity.action.DrawAction
-import eelst.ilike.game.entity.action.PlayAction
+import eelst.ilike.game.entity.action.*
 import eelst.ilike.game.entity.card.HanabiCard
 
 open class BasePlayerPOV(
@@ -24,6 +21,7 @@ open class BasePlayerPOV(
     private val gameData: GameData,
     private val personalKnowledge: PlayerPersonalKnowledge,
     private val teammates: Map<PlayerId, Teammate>,
+    private val actionSelectionStrategy: ActionSelectionStrategy,
 ) : GameFromPlayerPOV, Teammate(
     playerMetadata = gameData.getPlayerMetadata(playerId),
     hand = hand
@@ -95,6 +93,13 @@ open class BasePlayerPOV(
 
     override fun getLegalActions(conventionSet: ConventionSet): Collection<ConventionalAction> {
         return getCandidateActions(conventionSet.getTechs()).toSet()
+    }
+
+    override fun chooseAction(conventionSet: ConventionSet): GameAction {
+        return actionSelectionStrategy.selectAction(
+            playerPOV = this,
+            conventionSet = conventionSet,
+        ).action
     }
 
     override fun getPersonalKnowledge(): PlayerPersonalKnowledge {

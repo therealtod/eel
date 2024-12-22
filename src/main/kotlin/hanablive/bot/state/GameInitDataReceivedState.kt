@@ -16,6 +16,7 @@ import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.hanablive.HanabLiveDataParser
 import eelst.ilike.hanablive.model.adapter.HanabLivePlayerPOVAdapter
 import eelst.ilike.hanablive.bot.HanabLiveBot
+import eelst.ilike.hanablive.model.TableId
 import eelst.ilike.hanablive.model.dto.command.GameInitData
 import eelst.ilike.hanablive.model.dto.instruction.GameActionListData
 import eelst.ilike.hanablive.model.dto.instruction.GameDrawActionData
@@ -23,6 +24,7 @@ import eelst.ilike.hanablive.model.dto.instruction.GameDrawActionData
 class GameInitDataReceivedState(
     bot: HanabLiveBot,
     commonState: CommonState,
+    private val tableId: TableId,
     private val botPlayerId: PlayerId,
     private val gameInitData: GameInitData,
     private val variantMetadata: VariantMetadata,
@@ -87,7 +89,8 @@ class GameInitDataReceivedState(
         val newState = PlayingState(
             bot = bot,
             commonState = commonState,
-            game = game,
+            tableId = tableId,
+            gamePOV = game,
         )
         bot.state = newState
     }
