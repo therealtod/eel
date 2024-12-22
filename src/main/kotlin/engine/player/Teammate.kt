@@ -21,11 +21,11 @@ open class Teammate(
         return hand.getSlots()
     }
 
-    fun playsBefore(otherTeammate: Teammate, playerPOV: PlayerPOV): Boolean {
+    fun playsBefore(otherTeammate: Teammate, playerPOV: GameFromPlayerPOV): Boolean {
         return playerPOV.getSeatsGapFrom(this) < playerPOV.getSeatsGapFrom(otherTeammate)
     }
 
-    fun getPOV(playerPOV: PlayerPOV): PlayerPOV {
+    fun getPOV(playerPOV: GameFromPlayerPOV): GameFromPlayerPOV {
         val playersHands = playerPOV.getTeammates()
             .associateBy { it.playerId }
             .minus(playerId)
@@ -34,7 +34,7 @@ open class Teammate(
                 Pair(playerId, getHandFromPlayerPOV())
         return PlayerFactory.createPlayerPOV(
             playerId = playerId,
-            gameData = playerPOV.gameData,
+            gameData = playerPOV.getGameData(),
             personalKnowledge = playerPOV.getPersonalKnowledge().accessibleTo(playerId),
             playersHands = playersHands
         )

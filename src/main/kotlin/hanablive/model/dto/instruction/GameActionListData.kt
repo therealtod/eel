@@ -4,6 +4,6 @@ import eelst.ilike.hanablive.model.TableId
 
 data class GameActionListData(
     val tableID: TableId,
-    val list: List<GameActionData>
+    val list: List<HanabLiveGameActionData>
 )
 

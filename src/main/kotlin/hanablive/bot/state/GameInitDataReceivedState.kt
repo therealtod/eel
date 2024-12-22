@@ -6,7 +6,6 @@ import eelst.ilike.engine.factory.PlayerFactory
 import eelst.ilike.engine.hand.slot.PersonalSlotKnowledgeImpl
 import eelst.ilike.engine.hand.slot.UnknownIdentitySlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
-import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.engine.player.knowledge.PlayersHandKnowledge
 import eelst.ilike.game.*
 import eelst.ilike.game.entity.Hand
@@ -15,7 +14,7 @@ import eelst.ilike.game.entity.BaseHand
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.hanablive.HanabLiveDataParser
-import eelst.ilike.hanablive.HanabLiveGame
+import eelst.ilike.hanablive.HanabLiveGamePlayerPOV
 import eelst.ilike.hanablive.bot.HanabLiveBot
 import eelst.ilike.hanablive.model.dto.command.GameInitData
 import eelst.ilike.hanablive.model.dto.instruction.GameActionListData
@@ -81,10 +80,9 @@ class GameInitDataReceivedState(
             personalKnowledge = personalKnowledge,
             playersHands = hands,
         )
-        val game = HanabLiveGame(
-            gameData = gameData,
+        val game = HanabLiveGamePlayerPOV(
             playerPOV = botPlayer,
-            conventionSet = commonState.conventionSet,
+            playerHandsSlotOrders = TODO(),
         )
         val newState = PlayingState(
             bot = bot,
@@ -105,7 +103,7 @@ class GameInitDataReceivedState(
         val teammatesSlots = teammatesCards.mapValues {
             it.value.mapIndexed { index, card ->
                 VisibleSlot(
-                    globallyAvailableInfo = SlotMetadata(
+                    slotMetadata = SlotMetadata(
                         index = index + 1,
                     ),
                     knowledge = PersonalSlotKnowledgeImpl(
@@ -131,7 +129,7 @@ class GameInitDataReceivedState(
         }
         val botSlots = (1..gameData.defaultHandsSize).map {
             UnknownIdentitySlot(
-                globallyAvailableInfo = SlotMetadata(
+                slotMetadata = SlotMetadata(
                     index = it,
                 ),
                 knowledge = PersonalSlotKnowledgeImpl(

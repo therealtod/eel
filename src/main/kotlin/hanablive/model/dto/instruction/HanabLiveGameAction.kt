@@ -2,7 +2,7 @@ package eelst.ilike.hanablive.model.dto.instruction
 
 
 
-data class GameAction(
+data class HanabLiveGameAction(
     val tableID: String,
-    val action: GameActionData
+    val action: HanabLiveGameActionData
 )

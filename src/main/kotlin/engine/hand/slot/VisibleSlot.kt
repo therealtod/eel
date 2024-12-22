@@ -5,11 +5,11 @@ import eelst.ilike.game.SlotMetadata
 import eelst.ilike.game.entity.card.HanabiCard
 
 class VisibleSlot(
-    globallyAvailableInfo: SlotMetadata,
+    slotMetadata: SlotMetadata,
     knowledge: PersonalSlotKnowledge,
     visibleCard: HanabiCard,
 ): KnownSlot(
-    globallyAvailableInfo = globallyAvailableInfo,
+    globallyAvailableInfo = slotMetadata,
     knowledge = knowledge,
     knownIdentity = visibleCard,
 )

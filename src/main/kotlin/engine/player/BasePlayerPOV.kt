@@ -3,29 +3,28 @@ package eelst.ilike.engine.player
 import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.tech.ConventionTech
-import eelst.ilike.engine.convention.tech.DiscardTech
 import eelst.ilike.engine.convention.tech.PlayTech
 import eelst.ilike.engine.hand.slot.FullEmpathySlot
 import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
-import eelst.ilike.game.GameUtils
-import eelst.ilike.game.GameData
-import eelst.ilike.game.PlayerId
+import eelst.ilike.game.*
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Player
+import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.DiscardAction
+import eelst.ilike.game.entity.action.DrawAction
 import eelst.ilike.game.entity.action.PlayAction
 import eelst.ilike.game.entity.card.HanabiCard
 
-class PlayerPOVImpl(
+open class BasePlayerPOV(
     playerId: PlayerId,
     hand: Hand,
-    override val gameData: GameData,
+    private val gameData: GameData,
     private val personalKnowledge: PlayerPersonalKnowledge,
     private val teammates: Map<PlayerId, Teammate>,
-) : PlayerPOV, Teammate(
+) : GameFromPlayerPOV, Teammate(
     playerMetadata = gameData.getPlayerMetadata(playerId),
     hand = hand
 ) {
@@ -69,6 +68,18 @@ class PlayerPOVImpl(
         return teammates + Pair(playerId, myself)
     }
 
+    override fun getPlayer(playerId: PlayerId): Player {
+        TODO("Not yet implemented")
+    }
+
+    override fun getPlayerMetadata(playerId: PlayerId): PlayerMetadata {
+        TODO("Not yet implemented")
+    }
+
+    override fun getPlayerMetadata(playerIndex: Int): PlayerMetadata {
+        TODO("Not yet implemented")
+    }
+
     override fun getTeammate(teammatePlayerId: PlayerId): Teammate {
         return teammates[teammatePlayerId]
             ?: throw IllegalArgumentException("I can't see any teammate with id $teammatePlayerId")
@@ -106,7 +117,7 @@ class PlayerPOVImpl(
         return cardsOnPlayingStacks + cardsInTrash + visibleTeammatesCards + ownFullEmpathyCards
     }
 
-    override fun getPlayerPOV(playerId: PlayerId): PlayerPOV {
+    override fun getPlayerPOV(playerId: PlayerId): GameFromPlayerPOV {
         return if (playerId == myself.playerId) {
             this
         } else {
@@ -118,13 +129,29 @@ class PlayerPOVImpl(
         return myself
     }
 
-    override fun getAfter(playAction: PlayAction, conventionSet: ConventionSet): PlayerPOV {
-        val discardTechs = conventionSet.getTechs().filterIsInstance<PlayTech>()
-        val newKnowledge = discardTechs.map { it.getGeneratedKnowledge(playAction, this) }
-        TODO()
+
+    override fun getGameData(): GameData {
+        return gameData
     }
 
-    override fun getAfter(discardAction: DiscardAction, conventionSet: ConventionSet): PlayerPOV {
+    override fun getAfter(drawAction: DrawAction, newSlot: Slot): GameFromPlayerPOV {
+        TODO("Not yet implemented")
+    }
+
+    override fun getAfter(
+        playAction: PlayAction,
+        playedCard: HanabiCard,
+        isStrike: Boolean,
+        conventionSet: ConventionSet
+    ): GameFromPlayerPOV {
+        TODO("Not yet implemented")
+    }
+
+    override fun getAfter(
+        discardAction: DiscardAction,
+        discardedCard: HanabiCard,
+        conventionSet: ConventionSet
+    ): GameFromPlayerPOV {
         TODO("Not yet implemented")
     }
 
@@ -132,7 +159,7 @@ class PlayerPOVImpl(
         clueAction: ClueAction,
         touchedSlotsIndexes: Set<Int>,
         conventionSet: ConventionSet
-    ): PlayerPOV {
+    ): GameFromPlayerPOV {
         TODO("Not yet implemented")
     }
 

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import eelst.ilike.common.model.metadata.LocalMirrorMetadataProvider
 import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.factory.PlayerFactory
-import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.game.GameData
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.BaseHand
@@ -21,7 +21,7 @@ object InputReader {
     private val mapper = Utils.yamlObjectMapper
     private val metadataProvider = LocalMirrorMetadataProvider
 
-    fun getPlayerFromResourceFile(fileName: String): PlayerPOV {
+    fun getPlayerFromResourceFile(fileName: String): GameFromPlayerPOV {
         val fileText = Utils.getResourceFileContentAsString(fileName)
         val dto: ScenarioDTO = mapper.readValue(fileText)
         val activePlayerId = dto.playerPOV.playerId

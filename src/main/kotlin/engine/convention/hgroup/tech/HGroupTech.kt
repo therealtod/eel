@@ -1,7 +1,7 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.convention.tech.ConventionTech
-import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.card.HanabiCard
@@ -42,19 +42,19 @@ abstract class HGroupTech : ConventionTech {
 
      */
 
-    fun isGloballyKnownPlayable(card: HanabiCard, playerPOV: PlayerPOV): Boolean {
+    fun isGloballyKnownPlayable(card: HanabiCard, playerPOV: GameFromPlayerPOV): Boolean {
         val prerequisiteCards = card.getPrerequisiteCards()
-        val playedCardsForSuite = playerPOV.gameData.getStackForCard(card).cards
+        val playedCardsForSuite = playerPOV.getGameData().getStackForCard(card).cards
         val teammatesKnownCards = playerPOV.getTeammates().flatMap { it.getPOV(playerPOV).getOwnKnownCards() }
         val ownKnownCards = playerPOV.getOwnKnownCards()
         return (playedCardsForSuite + teammatesKnownCards + ownKnownCards).containsAll(prerequisiteCards)
     }
 
-    fun hasChop(hand: Hand, playerPOV: PlayerPOV): Boolean {
+    fun hasChop(hand: Hand, playerPOV: GameFromPlayerPOV): Boolean {
         return hand.any { !isSlotTouched(it.index, hand, playerPOV) }
     }
 
-    fun getChop(hand: Hand, playerPOV: PlayerPOV): Slot {
+    fun getChop(hand: Hand, playerPOV: GameFromPlayerPOV): Slot {
         return hand.last { !isSlotTouched(it.index, hand, playerPOV) }
     }
 
@@ -62,7 +62,7 @@ abstract class HGroupTech : ConventionTech {
         return false
     }
 
-    protected fun isSlotTouched(slotIndex: Int, hand: Hand, playerPOV: PlayerPOV): Boolean {
+    protected fun isSlotTouched(slotIndex: Int, hand: Hand, playerPOV: GameFromPlayerPOV): Boolean {
         return hand.getSlot(slotIndex).isTouched()
     }
 }

@@ -6,10 +6,10 @@ import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.card.HanabiCard
 
 class UnknownIdentitySlot(
-    globallyAvailableInfo: SlotMetadata,
+    slotMetadata: SlotMetadata,
     knowledge: PersonalSlotKnowledge,
 ): BaseSlot(
-    globallyAvailableInfo = globallyAvailableInfo,
+    globallyAvailableInfo = slotMetadata,
     knowledge = knowledge,
 ) {
     override fun containsCard(card: HanabiCard): Boolean {

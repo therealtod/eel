@@ -1,5 +1,7 @@
 package eelst.ilike.hanablive
 
+import eelst.ilike.hanablive.model.dto.command.GameActionType
+
 object HanabLiveConstants {
     const val HOSTNAME = "hanab.live"
     const val METADATA_PROVIDER_HOSTNAME = "raw.githubusercontent.com"
@@ -11,4 +13,5 @@ object HanabLiveConstants {
     const val COOKIE_NAME = "set-cookie"
     const val COLOR_CLUE_TYPE = 2
     const val RANK_CLUE_TYPE = 3
+    val PLAYER_ACTIONS = listOf(GameActionType.PLAY, GameActionType.DISCARD, GameActionType.CLUE)
 }

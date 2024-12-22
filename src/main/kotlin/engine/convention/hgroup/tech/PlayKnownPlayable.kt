@@ -2,12 +2,10 @@ package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.convention.tech.PlayTech
 import eelst.ilike.engine.hand.slot.KnownSlot
-import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.knowledge.Knowledge
-import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.Slot
-import eelst.ilike.game.entity.action.GameAction
 import eelst.ilike.game.entity.action.PlayAction
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.variant.Variant
@@ -19,18 +17,18 @@ object PlayKnownPlayable : HGroupTech(), PlayTech {
         return true
     }
 
-    override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
+    override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: GameFromPlayerPOV): Boolean {
         val teammateKnowsOwnSlot = teammate.getHandFromPlayerPOV().getSlot(slot.index) is KnownSlot
         return teammateKnowsOwnSlot &&
-                slot.matches { _, card -> playerPOV.gameData.isImmediatelyPlayable(card) }
+                slot.matches { _, card -> playerPOV.getGameData().isImmediatelyPlayable(card) }
     }
 
-    override fun getGameActions(playerPOV: PlayerPOV): Set<PlayAction> {
+    override fun getGameActions(playerPOV: GameFromPlayerPOV): Set<PlayAction> {
         return playerPOV
             .getOwnHand()
             .filterIsInstance<KnownSlot>()
             .filter {
-                playerPOV.gameData.isImmediatelyPlayable(it.knownIdentity)
+                playerPOV.getGameData().isImmediatelyPlayable(it.knownIdentity)
             }
             .map {
                 PlayAction(
@@ -40,11 +38,11 @@ object PlayKnownPlayable : HGroupTech(), PlayTech {
             }.toSet()
     }
 
-    override fun matches(playAction: PlayAction, playerPOV: PlayerPOV): Boolean {
+    override fun matches(playAction: PlayAction, playerPOV: GameFromPlayerPOV): Boolean {
         TODO("Not yet implemented")
     }
 
-    override fun getGeneratedKnowledge(playAction: PlayAction, playerPOV: PlayerPOV): Knowledge {
+    override fun getGeneratedKnowledge(playAction: PlayAction, playerPOV: GameFromPlayerPOV): Knowledge {
         TODO("Not yet implemented")
     }
 }

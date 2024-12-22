@@ -5,7 +5,7 @@ import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.action.ColorClueAction
 import eelst.ilike.game.entity.action.GameAction
 import eelst.ilike.game.entity.action.RankClueAction
-import eelst.ilike.hanablive.HanabLiveGame
+import eelst.ilike.hanablive.HanabLiveGamePlayerPOV
 import eelst.ilike.hanablive.model.dto.command.GameActionType
 
 data class GameClueActionData(
@@ -14,13 +14,13 @@ data class GameClueActionData(
     val list: List<Int>,
     val target: Int,
     val turn: Int,
-) : GameActionData(GameActionType.CLUE) {
+) : HanabLiveGameActionData(GameActionType.CLUE) {
     data class Clue(
         val type: Int,
         val value: Int,
     )
 
-    override fun toStandardFormatAction(game: HanabLiveGame): GameAction {
+    override fun toStandardFormatAction(game: HanabLiveGamePlayerPOV): GameAction {
         val clueValue = game.getClueValue(clue)
         val clueGiver = game.getPlayerMetadata(giver)
         val clueReceiver = game.getPlayerMetadata(target)

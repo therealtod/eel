@@ -1,16 +1,15 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
-import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.knowledge.Knowledge
-import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
 
 object SimpleFinesse : Finesse("Simple Finesse") {
-    override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
+    override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: GameFromPlayerPOV): Boolean {
         return slot.matches { _, card ->
-            playerPOV.gameData.getGlobalAwayValue(card) == 1 &&
+            playerPOV.getGameData().getGlobalAwayValue(card) == 1 &&
                     playerPOV.getTeammates().any { otherTeammate ->
                         otherTeammate.playsBefore(teammate, playerPOV) &&
                                 hasCardOnFinessePosition(
@@ -22,7 +21,7 @@ object SimpleFinesse : Finesse("Simple Finesse") {
         }
     }
 
-    override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
+    override fun getGameActions(playerPOV: GameFromPlayerPOV): Set<ClueAction> {
         val actions = mutableListOf<ClueAction>()
         playerPOV.forEachTeammate { teammate ->
             teammate.getSlots().forEach { slot ->
@@ -45,7 +44,7 @@ object SimpleFinesse : Finesse("Simple Finesse") {
         clueAction: ClueAction,
         touchedSlotsIndexes: Set<Int>,
         focusIndex: Int,
-        playerPOV: PlayerPOV
+        playerPOV: GameFromPlayerPOV
     ): Boolean {
         TODO("Not yet implemented")
     }
@@ -54,7 +53,7 @@ object SimpleFinesse : Finesse("Simple Finesse") {
         clueAction: ClueAction,
         touchedSlotsIndexes: Set<Int>,
         focusIndex: Int,
-        playerPOV: PlayerPOV
+        playerPOV: GameFromPlayerPOV
     ): Knowledge {
         TODO("Not yet implemented")
     }

@@ -27,7 +27,7 @@ object SlotFactory {
                 )
             } else {
                 VisibleSlot(
-                    globallyAvailableInfo = slotMetadata,
+                    slotMetadata = slotMetadata,
                     knowledge = knowledge,
                     visibleCard = visibleIdentity
                 )
@@ -41,7 +41,7 @@ object SlotFactory {
                 )
             } else {
                 UnknownIdentitySlot(
-                    globallyAvailableInfo = slotMetadata,
+                    slotMetadata = slotMetadata,
                     knowledge = knowledge,
                 )
             }

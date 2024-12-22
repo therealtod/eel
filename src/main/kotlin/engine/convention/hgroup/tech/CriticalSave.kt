@@ -1,7 +1,7 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.factory.KnowledgeFactory
-import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.knowledge.Knowledge
 import eelst.ilike.game.entity.Rank
@@ -18,19 +18,19 @@ object CriticalSave : SaveClue("Critical Save") {
     override fun teammateSlotMatchesCondition(
         teammate: Teammate,
         slot: Slot,
-        playerPOV: PlayerPOV
+        playerPOV: GameFromPlayerPOV
     ): Boolean {
         val chop = getChop(teammate.hand, playerPOV)
         return slot.matches { index, card ->
             index == chop.index &&
-            appliesTo(card, playerPOV.gameData.variant) &&
+            appliesTo(card, playerPOV.getGameData().variant) &&
                     card.rank != Rank.FIVE &&
-                    playerPOV.gameData.isCritical(card) &&
+                    playerPOV.getGameData().isCritical(card) &&
                     !isGloballyKnownPlayable(card, playerPOV)
         }
     }
 
-    override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
+    override fun getGameActions(playerPOV: GameFromPlayerPOV): Set<ClueAction> {
         val actions = mutableSetOf<ClueAction>()
 
         playerPOV.forEachTeammate { teammate ->
@@ -56,18 +56,18 @@ object CriticalSave : SaveClue("Critical Save") {
         clueAction: ClueAction,
         touchedSlotsIndexes: Set<Int>,
         focusIndex: Int,
-        playerPOV: PlayerPOV
+        playerPOV: GameFromPlayerPOV
     ): Boolean {
         return playerPOV.getOwnHand().getSlot(focusIndex)
             .getPossibleIdentities()
-            .any { playerPOV.gameData.isCritical(it) }
+            .any { playerPOV.getGameData().isCritical(it) }
     }
 
     override fun getGeneratedKnowledge(
         clueAction: ClueAction,
         touchedSlotsIndexes: Set<Int>,
         focusIndex: Int,
-        playerPOV: PlayerPOV
+        playerPOV: GameFromPlayerPOV
     ): Knowledge {
         val receiverPOV = playerPOV.getTeammate(clueAction.clueReceiver).getPOV(playerPOV)
         val focus = receiverPOV
@@ -76,7 +76,7 @@ object CriticalSave : SaveClue("Critical Save") {
         val possibleFocusIdentities = focus
             .getPossibleIdentities()
             .filter {
-                playerPOV.gameData.isCritical(it)
+                playerPOV.getGameData().isCritical(it)
             }
         return KnowledgeFactory.createKnowledge(
             playerId = playerPOV.getOwnPlayerId(),

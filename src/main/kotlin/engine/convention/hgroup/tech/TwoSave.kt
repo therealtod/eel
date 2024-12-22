@@ -1,10 +1,9 @@
 package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.factory.GameActionFactory
-import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.knowledge.Knowledge
-import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
@@ -16,7 +15,7 @@ object TwoSave : SaveClue("2-Save") {
         return true
     }
 
-    override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
+    override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: GameFromPlayerPOV): Boolean {
         val chop = getChop(teammate.hand, playerPOV)
         if (chop.index != slot.index) {
             return false
@@ -39,7 +38,7 @@ object TwoSave : SaveClue("2-Save") {
         }
     }
 
-    override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
+    override fun getGameActions(playerPOV: GameFromPlayerPOV): Set<ClueAction> {
         val actions = mutableListOf<ClueAction>()
         playerPOV.forEachTeammate { teammate ->
             val chop = getChop(teammate.hand, playerPOV)
@@ -60,7 +59,7 @@ object TwoSave : SaveClue("2-Save") {
         clueAction: ClueAction,
         touchedSlotsIndexes: Set<Int>,
         focusIndex: Int,
-        playerPOV: PlayerPOV
+        playerPOV: GameFromPlayerPOV
     ): Boolean {
         val saveableTwos = getSaveableTwos(playerPOV)
         return playerPOV.getOwnHand().getSlot(focusIndex).getPossibleIdentities()
@@ -71,7 +70,7 @@ object TwoSave : SaveClue("2-Save") {
         clueAction: ClueAction,
         touchedSlotsIndexes: Set<Int>,
         focusIndex: Int,
-        playerPOV: PlayerPOV
+        playerPOV: GameFromPlayerPOV
     ): Knowledge {
         /*
 val possibleFocusIdentities = focusedSlot.getPossibleIdentities()
@@ -86,14 +85,14 @@ return KnowledgeFactory.createKnowledge(
         TODO()
     }
 
-    private fun getSaveableTwos(playerPOV: PlayerPOV): Set<HanabiCard> {
+    private fun getSaveableTwos(playerPOV: GameFromPlayerPOV): Set<HanabiCard> {
         return playerPOV
-            .gameData
+            .getGameData()
             .suits
             .flatMap { it.getAllUniqueCards() }
             .filter {
                 it.rank == Rank.TWO &&
-                        playerPOV.gameData.getGlobalAwayValue(it) > 0 &&
+                        playerPOV.getGameData().getGlobalAwayValue(it) > 0 &&
                         canBeTwoSaved(
                             card = it,
                             otherPlayers = playerPOV.getTeammates(),
@@ -105,7 +104,7 @@ return KnowledgeFactory.createKnowledge(
     private fun canBeTwoSaved(
         card: HanabiCard,
         otherPlayers: Collection<Teammate>,
-        playerPOV: PlayerPOV,
+        playerPOV: GameFromPlayerPOV,
     ): Boolean {
         return otherPlayers.none { teammate ->
             val chop = getChop(teammate.hand, playerPOV)

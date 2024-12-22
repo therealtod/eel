@@ -2,7 +2,7 @@ package eelst.ilike.hanablive.model.dto
 
 import eelst.ilike.hanablive.HanabLiveActionType
 
-data class RankClueAction(
+data class ColorClueActionData(
     override val target: Int,
     val value: Int,
-) : Action(HanabLiveActionType.RANK_CLUE, target)
+) : Action(HanabLiveActionType.COLOR_CLUE, target)

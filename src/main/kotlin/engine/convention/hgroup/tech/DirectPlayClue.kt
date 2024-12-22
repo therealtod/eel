@@ -2,10 +2,9 @@ package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.hand.slot.KnownSlot
-import eelst.ilike.engine.player.PlayerPOV
+import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.engine.player.Teammate
 import eelst.ilike.engine.player.knowledge.Knowledge
-import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
@@ -16,15 +15,15 @@ object DirectPlayClue : PlayClue("Direct Play Clue") {
         return true
     }
 
-    override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: PlayerPOV): Boolean {
+    override fun teammateSlotMatchesCondition(teammate: Teammate, slot: Slot, playerPOV: GameFromPlayerPOV): Boolean {
         val slotFromTeammatePOV = teammate.getHandFromPlayerPOV().getSlot(slot.index)
         val teammateKnowsOwnSlot = slotFromTeammatePOV is KnownSlot
         return !teammateKnowsOwnSlot && slot.matches{ _, card ->
-            playerPOV.gameData.getGlobalAwayValue(card) == 0
+            playerPOV.getGameData().getGlobalAwayValue(card) == 0
         }
     }
 
-    override fun getGameActions(playerPOV: PlayerPOV): Set<ClueAction> {
+    override fun getGameActions(playerPOV: GameFromPlayerPOV): Set<ClueAction> {
         val actions = mutableListOf<ClueAction>()
         playerPOV.forEachTeammate { teammate ->
             teammate.getSlots().forEach { slot ->
@@ -50,12 +49,12 @@ object DirectPlayClue : PlayClue("Direct Play Clue") {
         clueAction: ClueAction,
         touchedSlotsIndexes: Set<Int>,
         focusIndex: Int,
-        playerPOV: PlayerPOV
+        playerPOV: GameFromPlayerPOV
     ): Boolean {
         val slot = playerPOV.getOwnHand().getSlot(focusIndex)
         return slot.getPossibleIdentities()
             .any {
-                playerPOV.gameData.getGlobalAwayValue(it) == 0
+                playerPOV.getGameData().getGlobalAwayValue(it) == 0
             }
     }
 
@@ -63,7 +62,7 @@ object DirectPlayClue : PlayClue("Direct Play Clue") {
         clueAction: ClueAction,
         touchedSlotsIndexes: Set<Int>,
         focusIndex: Int,
-        playerPOV: PlayerPOV
+        playerPOV: GameFromPlayerPOV
     ): Knowledge {
         /*
       val focusedSlot = playerPOV.getSlot(focusIndex)

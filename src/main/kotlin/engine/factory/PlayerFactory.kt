@@ -24,7 +24,7 @@ object PlayerFactory {
         gameData: GameData,
         personalKnowledge: PlayerPersonalKnowledge,
         playersHands: Map<PlayerId, Hand>
-    ): PlayerPOV {
+    ): GameFromPlayerPOV {
         val players = playersHands.mapValues {
             createPlayer(
                 metadata = gameData.getPlayerMetadata(it.key),
@@ -34,7 +34,7 @@ object PlayerFactory {
         }
 
 
-        return PlayerPOVImpl(
+        return BasePlayerPOV(
             playerId = playerId,
             gameData = gameData,
             personalKnowledge = personalKnowledge,
