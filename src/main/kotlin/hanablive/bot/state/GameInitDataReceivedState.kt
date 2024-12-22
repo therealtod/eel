@@ -14,7 +14,7 @@ import eelst.ilike.game.entity.BaseHand
 import eelst.ilike.game.entity.card.HanabiCard
 import eelst.ilike.game.entity.suite.Suite
 import eelst.ilike.hanablive.HanabLiveDataParser
-import eelst.ilike.hanablive.HanabLiveGamePlayerPOV
+import eelst.ilike.hanablive.model.adapter.HanabLivePlayerPOVAdapter
 import eelst.ilike.hanablive.bot.HanabLiveBot
 import eelst.ilike.hanablive.model.dto.command.GameInitData
 import eelst.ilike.hanablive.model.dto.instruction.GameActionListData
@@ -80,7 +80,7 @@ class GameInitDataReceivedState(
             personalKnowledge = personalKnowledge,
             playersHands = hands,
         )
-        val game = HanabLiveGamePlayerPOV(
+        val game = HanabLivePlayerPOVAdapter(
             playerPOV = botPlayer,
             playerHandsSlotOrders = TODO(),
         )

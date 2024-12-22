@@ -1,7 +1,7 @@
 package eelst.ilike.hanablive.bot.state
 
 import eelst.ilike.hanablive.HanabLiveConstants
-import eelst.ilike.hanablive.HanabLiveGamePlayerPOV
+import eelst.ilike.hanablive.model.adapter.HanabLivePlayerPOVAdapter
 import eelst.ilike.hanablive.bot.HanabLiveBot
 import eelst.ilike.hanablive.model.dto.command.GameActionType
 import eelst.ilike.hanablive.model.dto.instruction.*
@@ -9,7 +9,7 @@ import eelst.ilike.hanablive.model.dto.instruction.*
 class PlayingState(
     bot: HanabLiveBot,
     commonState: CommonState,
-    private var game: HanabLiveGamePlayerPOV,
+    private var game: HanabLivePlayerPOVAdapter,
 ): HanabLiveBotState(
     bot =  bot,
     commonState = commonState,
@@ -22,12 +22,12 @@ class PlayingState(
             it.action.type == GameActionType.TURN
         }
         if (turnActionReceived) {
-            updatePOV(hanabLiveActions)
+            handleAction(hanabLiveActions)
             hanabLiveActions.clear()
         }
     }
 
-    private fun updatePOV(hanabLiveGameActions: List<HanabLiveGameAction>) {
+    private fun handleAction(hanabLiveGameActions: List<HanabLiveGameAction>) {
         require(hanabLiveGameActions.count { HanabLiveConstants.PLAYER_ACTIONS.contains(it.action.type) } != 1) {
             "Only one player action should be included in this bundle: $hanabLiveGameActions"
         }
@@ -41,21 +41,29 @@ class PlayingState(
             GameActionType.CLUE -> getPOVAfterClue(playerActionData as GameClueActionData)
             else -> game
         }
+        val turnActionData = hanabLiveActions.filterIsInstance<GameTurnActionData>().first()
+        if (turnActionData.currentPlayerIndex == TODO()) {
+            takeTurn()
+        }
     }
 
-    private fun getPOVAfterDraw(drawActionData: GameDrawActionData): HanabLiveGamePlayerPOV {
+    private fun getPOVAfterDraw(drawActionData: GameDrawActionData): HanabLivePlayerPOVAdapter {
         return game.getUpdatedWithDrawAction(drawActionData)
     }
 
-    private fun getPOVAfterPlay(playActionData: GamePlayActionData, isStrike: Boolean): HanabLiveGamePlayerPOV {
+    private fun getPOVAfterPlay(playActionData: GamePlayActionData, isStrike: Boolean): HanabLivePlayerPOVAdapter {
         return game.getUpdatedWithPlayAction(playActionData, isStrike, commonState.conventionSet)
     }
 
-    private fun getPOVAfterDiscard(discardActionData: GameDiscardActionData): HanabLiveGamePlayerPOV {
+    private fun getPOVAfterDiscard(discardActionData: GameDiscardActionData): HanabLivePlayerPOVAdapter {
         return game.getUpdatedWithDiscardAction(discardActionData, commonState.conventionSet)
     }
 
-    private fun getPOVAfterClue(gameClueActionData: GameClueActionData): HanabLiveGamePlayerPOV {
+    private fun getPOVAfterClue(gameClueActionData: GameClueActionData): HanabLivePlayerPOVAdapter {
         return game.getUpdatedWithClueAction(gameClueActionData, commonState.conventionSet)
+    }
+
+    private fun takeTurn() {
+        TODO()
     }
 }

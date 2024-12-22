@@ -1,16 +1,15 @@
-package eelst.ilike.hanablive
+package eelst.ilike.hanablive.model.adapter
 
 import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.game.*
 import eelst.ilike.game.entity.*
-import eelst.ilike.game.entity.action.DiscardAction
-import eelst.ilike.game.entity.action.DrawAction
-import eelst.ilike.game.entity.action.PlayAction
-import eelst.ilike.hanablive.model.dto.command.GameActionType
+import eelst.ilike.game.entity.action.*
+import eelst.ilike.hanablive.HanabLiveConstants
+import eelst.ilike.hanablive.HanabLiveDataParser
 import eelst.ilike.hanablive.model.dto.instruction.*
 
-class HanabLiveGamePlayerPOV(
+class HanabLivePlayerPOVAdapter(
     private val playerPOV: GameFromPlayerPOV,
     private val playerHandsSlotOrders: Map<Int, Map<Int, Int>>,
 ): GameFromPlayerPOV by playerPOV {
@@ -53,7 +52,7 @@ class HanabLiveGamePlayerPOV(
         TODO()
     }
 
-    fun getUpdatedWithDrawAction(drawActionData: GameDrawActionData): HanabLiveGamePlayerPOV {
+    fun getUpdatedWithDrawAction(drawActionData: GameDrawActionData): HanabLivePlayerPOVAdapter {
         val playerId = playerIndexToIdMap[drawActionData.playerIndex]!!
         val newSlot = HanabLiveDataParser.parseSlot(
             activePlayerId = playerPOV.getOwnPlayerId(),
@@ -79,7 +78,7 @@ class HanabLiveGamePlayerPOV(
             )
         )
         val updatedPlayerPOV = playerPOV.getAfter(drawAction, newSlot)
-        return HanabLiveGamePlayerPOV(
+        return HanabLivePlayerPOVAdapter(
             playerPOV = updatedPlayerPOV,
             playerHandsSlotOrders = TODO()
         )
@@ -89,7 +88,7 @@ class HanabLiveGamePlayerPOV(
         gamePlayActionData: GamePlayActionData,
         isStrike: Boolean,
         conventionSet: ConventionSet,
-    ): HanabLiveGamePlayerPOV {
+    ): HanabLivePlayerPOVAdapter {
         val playedCard = HanabLiveDataParser.parseCard(
             suitIndex = gamePlayActionData.suitIndex,
             rankIndex = gamePlayActionData.rank,
@@ -106,7 +105,7 @@ class HanabLiveGamePlayerPOV(
             isStrike = isStrike,
             conventionSet = conventionSet,
         )
-        return HanabLiveGamePlayerPOV(
+        return HanabLivePlayerPOVAdapter(
             playerPOV = newPOV,
             playerHandsSlotOrders = TODO()
         )
@@ -115,7 +114,7 @@ class HanabLiveGamePlayerPOV(
     fun getUpdatedWithDiscardAction(
         discardActionData: GameDiscardActionData,
         conventionSet: ConventionSet,
-    ): HanabLiveGamePlayerPOV {
+    ): HanabLivePlayerPOVAdapter {
         val discardedCard = HanabLiveDataParser.parseCard(
             suitIndex = discardActionData.suitIndex,
             rankIndex = discardActionData.rank,
@@ -131,7 +130,7 @@ class HanabLiveGamePlayerPOV(
             discardedCard = discardedCard,
             conventionSet = conventionSet,
         )
-        return HanabLiveGamePlayerPOV(
+        return HanabLivePlayerPOVAdapter(
             playerPOV = newPOV,
             playerHandsSlotOrders = TODO()
         )
@@ -140,8 +139,37 @@ class HanabLiveGamePlayerPOV(
     fun getUpdatedWithClueAction(
         clueActionData: GameClueActionData,
         conventionSet: ConventionSet,
-    ): HanabLiveGamePlayerPOV {
-        TODO()
+    ): HanabLivePlayerPOVAdapter {
+        val clueGiver = playerIndexToIdMap[clueActionData.giver]!!
+        val clueReceiver = playerIndexToIdMap[clueActionData.target]!!
+        val clueAction = when(clueActionData.clue.type) {
+            HanabLiveConstants.COLOR_CLUE_TYPE -> ColorClueAction(
+                clueGiver = clueGiver,
+                clueReceiver = clueReceiver,
+                color = indexToColorMap[clueActionData.clue.value]!!
+            )
+            HanabLiveConstants.RANK_CLUE_TYPE -> RankClueAction(
+                clueGiver = clueGiver,
+                clueReceiver = clueReceiver,
+                rank = indexToRankMap[clueActionData.clue.value]!!
+            )
+            else -> throw UnsupportedOperationException("Unsupported Hanab live clue type: ${clueActionData.clue.type}")
+        }
+        val touchedSlotIndexes = clueActionData.list.map {
+            getPlayerSlotIndexByOrder(
+                playerIndex = clueActionData.target,
+                order = it
+            )
+        }
+        val updatedPOV = playerPOV.getAfter(
+            clueAction = clueAction,
+            touchedSlotsIndexes = touchedSlotIndexes.toSet(),
+            conventionSet = conventionSet,
+        )
+        return HanabLivePlayerPOVAdapter(
+            playerPOV = updatedPOV,
+            playerHandsSlotOrders = playerHandsSlotOrders,
+        )
     }
 
     private fun getPlayerSlotIndexByOrder(playerIndex: Int, order: Int): Int {

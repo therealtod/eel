@@ -1,7 +1,7 @@
 package eelst.ilike.hanablive.model.dto.instruction
 
 import eelst.ilike.game.entity.action.GameAction
-import eelst.ilike.hanablive.HanabLiveGamePlayerPOV
+import eelst.ilike.hanablive.model.adapter.HanabLivePlayerPOVAdapter
 import eelst.ilike.hanablive.model.dto.command.GameActionType
 
 data class GameStatusActionData(
@@ -9,7 +9,7 @@ data class GameStatusActionData(
     val score: Int,
     val maxScore: Int,
 ) : HanabLiveGameActionData(GameActionType.STATUS) {
-    override fun toStandardFormatAction(game: HanabLiveGamePlayerPOV): GameAction {
+    override fun toStandardFormatAction(game: HanabLivePlayerPOVAdapter): GameAction {
         TODO("Not yet implemented")
     }
 }
