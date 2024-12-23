@@ -7,7 +7,7 @@ import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.hand.slot.FullEmpathySlot
 import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
-import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
+import eelst.ilike.engine.player.knowledge.PlayerKnowledge
 import eelst.ilike.game.*
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Player
@@ -19,7 +19,7 @@ open class BasePlayerPOV(
     playerId: PlayerId,
     hand: Hand,
     private val gameData: GameData,
-    private val personalKnowledge: PlayerPersonalKnowledge,
+    private val personalKnowledge: PlayerKnowledge,
     private val teammates: Map<PlayerId, Teammate>,
     private val actionSelectionStrategy: ActionSelectionStrategy,
 ) : GameFromPlayerPOV, Teammate(
@@ -102,7 +102,7 @@ open class BasePlayerPOV(
         ).action
     }
 
-    override fun getPersonalKnowledge(): PlayerPersonalKnowledge {
+    override fun getPersonalKnowledge(): PlayerKnowledge {
         return personalKnowledge
     }
 
@@ -142,7 +142,7 @@ open class BasePlayerPOV(
     override fun getAfter(drawAction: DrawAction, newSlot: Slot): GameFromPlayerPOV {
         val hand = getPlayer(drawAction.playerId).hand
         val newHand = hand.withNewSlot(newSlot)
-        TODO()
+        return TODO()
     }
 
     override fun getAfter(

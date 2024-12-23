@@ -3,7 +3,7 @@ package eelst.ilike.engine.convention.hgroup.tech
 import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.engine.player.Teammate
-import eelst.ilike.engine.player.knowledge.Knowledge
+import eelst.ilike.engine.player.knowledge.PlayerKnowledge
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
@@ -68,7 +68,7 @@ object CriticalSave : SaveClue("Critical Save") {
         touchedSlotsIndexes: Set<Int>,
         focusIndex: Int,
         playerPOV: GameFromPlayerPOV
-    ): Knowledge {
+    ): PlayerKnowledge {
         val receiverPOV = playerPOV.getTeammate(clueAction.clueReceiver).getPOV(playerPOV)
         val focus = receiverPOV
             .getOwnHand()
@@ -78,11 +78,6 @@ object CriticalSave : SaveClue("Critical Save") {
             .filter {
                 playerPOV.getGameData().isCritical(it)
             }
-        return KnowledgeFactory.createKnowledge(
-            playerId = playerPOV.getOwnPlayerId(),
-            slotIndex = focusIndex,
-            possibleIdentities = possibleFocusIdentities.toSet(),
-            empathy = focus.getUpdatedEmpathy(clueAction.value)
-        )
+        return TODO()
     }
 }

@@ -6,7 +6,7 @@ import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.engine.player.Teammate
-import eelst.ilike.engine.player.knowledge.Knowledge
+import eelst.ilike.engine.player.knowledge.PlayerKnowledge
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
@@ -81,18 +81,13 @@ data object DelayedPlayClue
         touchedSlotsIndexes: Set<Int>,
         focusIndex: Int,
         playerPOV: GameFromPlayerPOV
-    ): Knowledge {
+    ): PlayerKnowledge {
         val receiverPOV = playerPOV.getTeammate(clueAction.clueReceiver).getPOV(playerPOV)
         val slot = receiverPOV.getOwnHand().getSlot(focusIndex)
         val possibleIdentities = slot.getPossibleIdentities()
             .filter {
                 playerPOV.getGameData().getGlobalAwayValue(it) > 0
             }
-        return KnowledgeFactory.createKnowledge(
-            playerId = playerPOV.getOwnPlayerId(),
-            slotIndex = focusIndex,
-            possibleIdentities = possibleIdentities.toSet(),
-            empathy = TODO()
-        )
+        return TODO()
     }
 }

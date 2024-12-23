@@ -4,7 +4,7 @@ import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.engine.player.Teammate
-import eelst.ilike.engine.player.knowledge.Knowledge
+import eelst.ilike.engine.player.knowledge.PlayerKnowledge
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
@@ -63,7 +63,7 @@ object DirectPlayClue : PlayClue("Direct Play Clue") {
         touchedSlotsIndexes: Set<Int>,
         focusIndex: Int,
         playerPOV: GameFromPlayerPOV
-    ): Knowledge {
+    ): PlayerKnowledge {
         /*
       val focusedSlot = playerPOV.getSlot(focusIndex)
       val possibleIdentities = playerPOV.getPossibleSlotIdentities(focusedSlot)

@@ -2,7 +2,7 @@ package eelst.ilike.engine.player
 
 import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
-import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
+import eelst.ilike.engine.player.knowledge.PlayerKnowledge
 import eelst.ilike.game.Game
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Hand
@@ -13,7 +13,7 @@ import eelst.ilike.game.entity.card.HanabiCard
 interface GameFromPlayerPOV: Game {
     fun getOwnPlayerId(): PlayerId
     fun getOwnKnownCards(): List<HanabiCard>
-    fun getPersonalKnowledge(): PlayerPersonalKnowledge
+    fun getPersonalKnowledge(): PlayerKnowledge
     fun teamKnowsAllCards(cards: Set<HanabiCard>): Boolean
     fun getTeammates(): Set<Teammate>
     fun forEachTeammate(action: (teammate: Teammate) -> Unit)

@@ -2,7 +2,6 @@ package eelst.ilike.utils
 
 import eelst.ilike.common.model.metadata.MetadataProvider
 import eelst.ilike.engine.factory.SlotFactory
-import eelst.ilike.engine.hand.slot.PersonalSlotKnowledgeImpl
 import eelst.ilike.game.*
 import eelst.ilike.game.entity.*
 import eelst.ilike.game.entity.card.HanabiCard
@@ -95,6 +94,7 @@ object InputParser {
             positiveClues = slotDTO.positiveClues.map { parseClue(it) },
             negativeClues = slotDTO.negativeClues.map { parseClue(it) }
         )
+        /*
         val knowledge = PersonalSlotKnowledgeImpl(
             ownerId = slotOwnerId,
             slotIndex = slotIndex,
@@ -106,6 +106,9 @@ object InputParser {
                 negativeClues = slotMetadata.negativeClues
             )
         )
+
+         */
+        val knowledge = TODO()
         val visibleIdentity = if(slotDTO.card == Configuration.UNKNOWN_CARD_SYMBOL) null
         else parseCard(slotDTO.card, suits)
 

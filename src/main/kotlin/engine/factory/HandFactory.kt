@@ -1,6 +1,6 @@
 package eelst.ilike.engine.factory
 
-import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
+import eelst.ilike.engine.player.knowledge.PlayerKnowledge
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.Hand
 
@@ -48,7 +48,7 @@ object HandFactory {
 
     fun createHand(
         playerId: PlayerId,
-        personalKnowledge: PlayerPersonalKnowledge,
+        personalKnowledge: PlayerKnowledge,
         hand: Hand
     ): Hand {
         TODO()

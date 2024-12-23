@@ -1,6 +1,6 @@
 package eelst.ilike.engine.hand.slot
 
-import eelst.ilike.engine.player.knowledge.PersonalSlotKnowledge
+import eelst.ilike.engine.player.knowledge.PlayerKnowledge
 import eelst.ilike.game.SlotMetadata
 import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.Slot
@@ -8,7 +8,7 @@ import eelst.ilike.game.entity.card.HanabiCard
 
 abstract class BaseSlot(
     private val globallyAvailableInfo: SlotMetadata,
-    val knowledge: PersonalSlotKnowledge,
+    val knowledge: PlayerKnowledge,
 ): Slot {
     override val index = globallyAvailableInfo.index
     override val positiveClues = globallyAvailableInfo.positiveClues
@@ -19,7 +19,8 @@ abstract class BaseSlot(
     }
 
     override fun getPossibleIdentities(): Set<HanabiCard> {
-        return knowledge.getPossibleSlotIdentities()
+        //return knowledge.getPossibleSlotIdentities()
+        TODO()
     }
 
     override fun getGloballyAvailableInfo(): SlotMetadata {
@@ -27,6 +28,7 @@ abstract class BaseSlot(
     }
 
     override fun getUpdatedEmpathy(clueValue: ClueValue): Set<HanabiCard> {
-        return knowledge.getEmpathy().filter { it.isTouchedBy(clueValue) }.toSet()
+        // return knowledge.getEmpathy().filter { it.isTouchedBy(clueValue) }.toSet()
+        TODO()
     }
 }

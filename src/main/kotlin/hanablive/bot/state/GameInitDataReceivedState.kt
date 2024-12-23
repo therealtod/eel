@@ -3,10 +3,9 @@ package eelst.ilike.hanablive.bot.state
 import eelst.ilike.common.model.metadata.VariantMetadata
 import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.factory.PlayerFactory
-import eelst.ilike.engine.hand.slot.PersonalSlotKnowledgeImpl
 import eelst.ilike.engine.hand.slot.UnknownIdentitySlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
-import eelst.ilike.engine.player.knowledge.PlayersHandKnowledge
+import eelst.ilike.engine.player.knowledge.PlayerKnowledge
 import eelst.ilike.game.*
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Rank
@@ -66,13 +65,11 @@ class GameInitDataReceivedState(
             playerIndexToIdMap = playerIndexToIdMap,
             suits = gameData.suits,
         )
-        val personalKnowledge = KnowledgeFactory.createEmptyPersonalKnowledge()
+        val personalKnowledge = KnowledgeFactory.createEmptyPersonalKnowledge(TODO())
         val teammates = gameData.players.mapValues {
             PlayerFactory.createPlayer(
                 metadata = it.value,
-                personalKnowledge = PlayersHandKnowledge(
-                    knowledge = TODO()
-                ),
+                personalKnowledge = TODO(),
                 hand = hands[it.key]!!
             )
         }
@@ -109,6 +106,7 @@ class GameInitDataReceivedState(
                     slotMetadata = SlotMetadata(
                         index = index + 1,
                     ),
+                    /*
                     knowledge = PersonalSlotKnowledgeImpl(
                         ownerId = playerIndexToIdMap[it.key]!!,
                         slotIndex = index + 1,
@@ -120,6 +118,8 @@ class GameInitDataReceivedState(
                             suits = suits,
                         ),
                     ),
+                     */
+                    knowledge = TODO(),
                     visibleCard = card,
                 )
             }
@@ -134,6 +134,7 @@ class GameInitDataReceivedState(
                 slotMetadata = SlotMetadata(
                     index = it,
                 ),
+                /*
                 knowledge = PersonalSlotKnowledgeImpl(
                     ownerId = playerIndexToIdMap[botPlayerIndex]!!,
                     slotIndex = it,
@@ -145,6 +146,8 @@ class GameInitDataReceivedState(
                         suits = suits,
                     ),
                 )
+                 */
+                knowledge = TODO()
             )
         }
         return teammatesHands.mapKeys { playerIndexToIdMap[it.key]!! } +

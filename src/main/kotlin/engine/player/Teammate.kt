@@ -35,7 +35,7 @@ open class Teammate(
         return PlayerFactory.createPlayerPOV(
             playerId = playerId,
             gameData = playerPOV.getGameData(),
-            personalKnowledge = playerPOV.getPersonalKnowledge().accessibleTo(playerId),
+            personalKnowledge = playerPOV.getPersonalKnowledge().getKnowledgeAccessibleTo(playerId),
             playersHands = playersHands
         )
     }

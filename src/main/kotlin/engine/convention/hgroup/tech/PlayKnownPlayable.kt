@@ -4,7 +4,7 @@ import eelst.ilike.engine.convention.tech.PlayTech
 import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.engine.player.Teammate
-import eelst.ilike.engine.player.knowledge.Knowledge
+import eelst.ilike.engine.player.knowledge.PlayerKnowledge
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.PlayAction
 import eelst.ilike.game.entity.card.HanabiCard
@@ -42,7 +42,10 @@ object PlayKnownPlayable : HGroupTech(), PlayTech {
         TODO("Not yet implemented")
     }
 
-    override fun getGeneratedKnowledge(playAction: PlayAction, playerPOV: GameFromPlayerPOV): Knowledge {
+    override fun getGeneratedKnowledge(
+        playAction: PlayAction,
+        playerPOV: GameFromPlayerPOV
+    ): PlayerKnowledge {
         TODO("Not yet implemented")
     }
 }

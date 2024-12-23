@@ -53,7 +53,7 @@ object InputReader {
         return PlayerFactory.createPlayerPOV(
             playerId = activePlayerId,
             gameData = globallyAvailableInfo,
-            personalKnowledge = KnowledgeFactory.createEmptyPersonalKnowledge(),
+            personalKnowledge = TODO(),
             playersHands = playersHands
         )
     }

@@ -4,7 +4,7 @@ import eelst.ilike.engine.convention.tech.ConventionTech
 import eelst.ilike.engine.convention.tech.DiscardTech
 import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.engine.player.Teammate
-import eelst.ilike.engine.player.knowledge.Knowledge
+import eelst.ilike.engine.player.knowledge.PlayerKnowledge
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.DiscardAction
 import eelst.ilike.game.entity.card.HanabiCard
@@ -40,7 +40,10 @@ object DiscardChop : HGroupTech(), DiscardTech {
         TODO("Not yet implemented")
     }
 
-    override fun getGeneratedKnowledge(discardAction: DiscardAction, playerPOV: GameFromPlayerPOV): Knowledge {
+    override fun getGeneratedKnowledge(
+        discardAction: DiscardAction,
+        playerPOV: GameFromPlayerPOV
+    ): PlayerKnowledge {
         TODO("Not yet implemented")
     }
 }

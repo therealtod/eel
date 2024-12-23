@@ -2,7 +2,7 @@ package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.engine.player.Teammate
-import eelst.ilike.engine.player.knowledge.Knowledge
+import eelst.ilike.engine.player.knowledge.PlayerKnowledge
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
@@ -53,7 +53,7 @@ object FiveSave : SaveClue("5-Save") {
         touchedSlotsIndexes: Set<Int>,
         focusIndex: Int,
         playerPOV: GameFromPlayerPOV
-    ): Knowledge {
+    ): PlayerKnowledge {
         TODO("Not yet implemented")
     }
 }

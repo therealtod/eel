@@ -57,6 +57,7 @@ object HanabLiveDataParser {
         suits: Set<Suite>,
     ): Slot {
         val slotMetadata = SlotMetadata(index = 1)
+        /*
         val knowledge = KnowledgeFactory.createSlotKnowledge(
             slotOwnerId = slotOwnerId,
             slotIndex = slotIndex,
@@ -66,15 +67,17 @@ object HanabLiveDataParser {
             negativeClues = emptyList(),
             suits = suits,
         )
+
+         */
         if (activePlayerId == slotOwnerId) {
             return UnknownIdentitySlot(
                 slotMetadata = slotMetadata,
-                knowledge = knowledge
+                knowledge = TODO()
             )
         } else {
             return VisibleSlot(
                 slotMetadata = slotMetadata,
-                knowledge = knowledge,
+                knowledge = TODO(),
                 visibleCard = parseCard(
                     draw = draw,
                     rankMap = indexToRankMap,

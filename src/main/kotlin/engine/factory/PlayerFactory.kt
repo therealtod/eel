@@ -3,7 +3,7 @@ package eelst.ilike.engine.factory
 import eelst.ilike.engine.convention.hgroup.strategy.HGroupGameStateEvaluator
 import eelst.ilike.engine.strategy.BruteForceActionSelectionStrategy
 import eelst.ilike.engine.player.*
-import eelst.ilike.engine.player.knowledge.PlayerPersonalKnowledge
+import eelst.ilike.engine.player.knowledge.PlayerKnowledge
 import eelst.ilike.game.GameData
 import eelst.ilike.game.PlayerMetadata
 import eelst.ilike.game.PlayerId
@@ -12,7 +12,7 @@ import eelst.ilike.game.entity.Hand
 object PlayerFactory {
     fun createPlayer(
         metadata: PlayerMetadata,
-        personalKnowledge: PlayerPersonalKnowledge,
+        personalKnowledge: PlayerKnowledge,
         hand: Hand,
     ): Teammate {
         return Teammate(
@@ -24,13 +24,13 @@ object PlayerFactory {
     fun createPlayerPOV(
         playerId: PlayerId,
         gameData: GameData,
-        personalKnowledge: PlayerPersonalKnowledge,
+        personalKnowledge: PlayerKnowledge,
         playersHands: Map<PlayerId, Hand>
     ): GameFromPlayerPOV {
         val players = playersHands.mapValues {
             createPlayer(
                 metadata = gameData.getPlayerMetadata(it.key),
-                personalKnowledge = personalKnowledge.accessibleTo(it.key),
+                personalKnowledge = personalKnowledge.getKnowledgeAccessibleTo(it.key),
                 hand = it.value
             )
         }
