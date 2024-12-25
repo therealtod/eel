@@ -1,15 +1,19 @@
 package eelst.ilike.utils
 
+import common.model.dto.PlayerDTO
 import eelst.ilike.common.model.metadata.MetadataProvider
-import eelst.ilike.engine.factory.SlotFactory
 import eelst.ilike.game.*
 import eelst.ilike.game.entity.*
 import eelst.ilike.game.entity.card.HanabiCard
-import eelst.ilike.game.entity.suite.Suite
+import eelst.ilike.game.entity.suite.Suit
 import eelst.ilike.game.entity.suite.SuiteId
 import eelst.ilike.game.factory.VariantFactory
 import eelst.ilike.utils.model.dto.ScenarioDTO
 import common.model.dto.SlotDTO
+import eelst.ilike.engine.factory.KnowledgeFactory
+import eelst.ilike.engine.player.knowledge.HandKnowledge
+import eelst.ilike.engine.player.knowledge.HandKnowledgeImpl
+import eelst.ilike.engine.player.knowledge.SlotKnowledge
 
 object InputParser {
     fun parseGlobalInfo(dto: ScenarioDTO, metadataProvider: MetadataProvider): GameData {
@@ -36,7 +40,7 @@ object InputParser {
         )
     }
 
-    fun parseCards(text: String, suits: Set<Suite>): Set<HanabiCard> {
+    fun parseCards(text: String, suits: Set<Suit>): Set<HanabiCard> {
         if (text == "x") return emptySet()
         val cardAbbreviations = text.chunked(2)
         return cardAbbreviations.map {
@@ -44,12 +48,12 @@ object InputParser {
         }.toSet()
     }
 
-    fun parseCard(cardAbbreviation: String, suits: Set<Suite>): HanabiCard {
+    fun parseCard(cardAbbreviation: String, suits: Set<Suit>): HanabiCard {
         val suiteAbbreviation = cardAbbreviation.first()
         val rank = Rank.getByNumericalValue(cardAbbreviation.last().toString().toInt())
         val suite = suits.first { it.abbreviations.contains(suiteAbbreviation.toString()) }
         return HanabiCard(
-            suite = suite,
+            suit = suite,
             rank = rank,
         )
     }
@@ -62,12 +66,12 @@ object InputParser {
 
     }
 
-    fun parsePlayingStacks(suits: Set<Suite>, playingStacksDto: List<List<String>>): Map<SuiteId, PlayingStack> {
+    fun parsePlayingStacks(suits: Set<Suit>, playingStacksDto: List<List<String>>): Map<SuiteId, PlayingStack> {
         return suits
             .zip(playingStacksDto)
             .associate {
                 it.first.id to PlayingStack(
-                    suite = it.first,
+                    suit = it.first,
                     cards = it.second.map { cardAbbreviation -> parseCard(cardAbbreviation, suits) }
                 )
             }
@@ -75,49 +79,42 @@ object InputParser {
 
     fun parseTrashPile(
         trashCards: List<String>,
-        suites: Set<Suite>,
+        suits: Set<Suit>,
     ): TrashPile {
-        return TrashPile(trashCards.map { parseCard(it, suites) })
+        return TrashPile(trashCards.map { parseCard(it, suits) })
     }
 
-
-    fun parseSlot(
-        activePlayerId: PlayerId,
-        slotOwnerId: PlayerId,
-        slotIndex: Int,
-        slotDTO: SlotDTO,
-        suits: Set<Suite>,
-        visibleCards: List<HanabiCard>,
-    ): Slot {
-        val slotMetadata = SlotMetadata(
-            index = slotIndex,
-            positiveClues = slotDTO.positiveClues.map { parseClue(it) },
-            negativeClues = slotDTO.negativeClues.map { parseClue(it) }
-        )
-        /*
-        val knowledge = PersonalSlotKnowledgeImpl(
-            ownerId = slotOwnerId,
-            slotIndex = slotIndex,
-            impliedIdentities = parseCards(slotDTO.thinks, suits),
-            empathy = GameUtils.getCardEmpathy(
-                visibleCards = visibleCards,
-                suits = suits,
-                positiveClues = slotMetadata.positiveClues,
-                negativeClues = slotMetadata.negativeClues
+    fun parseSlotGlobalInfo(playerDTO: PlayerDTO): List <SlotMetadata> {
+        return playerDTO.hand.mapIndexed { index, slotDTO ->
+            SlotMetadata(
+                index = index + 1,
+                positiveClues = slotDTO.positiveClues.map { parseClue(it) },
+                negativeClues = slotDTO.negativeClues.map { parseClue(it) }
             )
-        )
+        }
+    }
 
-         */
-        val knowledge = TODO()
-        val visibleIdentity = if(slotDTO.card == Configuration.UNKNOWN_CARD_SYMBOL) null
-        else parseCard(slotDTO.card, suits)
+    fun parseHandKnowledge(playerDTO: PlayerDTO, suits: Set<Suit>): HandKnowledge {
+        val slotKnowledge = playerDTO.hand.mapIndexed { index, slotDTO ->
+            Pair(index + 1, parseSlotKnowledge(slotDTO, suits))
+        }.toMap()
+        return HandKnowledgeImpl(slotKnowledge.toMutableMap())
+    }
 
-        return SlotFactory.createSlot(
-            activePlayerId = activePlayerId,
-            slotOwnerId = slotOwnerId,
-            slotMetadata = slotMetadata,
-            knowledge = knowledge,
-            visibleIdentity = visibleIdentity,
+    fun parseSlotKnowledge(slotDTO: SlotDTO, suits: Set<Suit>): SlotKnowledge {
+        val card = if (slotDTO.card == Configuration.UNKNOWN_CARD_SYMBOL) {
+            null
+        } else {
+            parseCard(
+                cardAbbreviation = slotDTO.card,
+                suits = suits,
+            )
+        }
+        return KnowledgeFactory.createSlotKnowledge(
+            visibleCard = card,
+            signals = emptyMap(), //TODO: implement
+            impliedIdentities = parseCards(slotDTO.thinks, suits),
+            hasConflictingInformation = false //TODO: implement
         )
     }
 }

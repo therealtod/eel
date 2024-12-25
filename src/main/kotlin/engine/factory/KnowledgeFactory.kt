@@ -1,21 +1,44 @@
 package eelst.ilike.engine.factory
 
+import eelst.ilike.engine.convention.hgroup.signal.Signal
 import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.engine.player.knowledge.*
-import eelst.ilike.game.GameUtils
 import eelst.ilike.game.PlayerId
-import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.card.HanabiCard
-import eelst.ilike.game.entity.suite.Suite
 
 object KnowledgeFactory {
-    fun createEmptyPersonalKnowledge(playerPOV: GameFromPlayerPOV): PlayerKnowledge {
-        return PlayerKnowledgeImpl(
-            playerPOV.getPlayers().mapValues { createEmptyHandKnowledge() }.toMutableMap()
+    fun createEmptyTeamKnowledge(playerPOV: GameFromPlayerPOV): TeamKnowledge {
+        val gameData = playerPOV.getGameData()
+        return TeamKnowledgeFromPlayerPOV(
+            povPlayerId = playerPOV.getOwnPlayerId(),
+            globallyVisibleCards = gameData.getCardsOnStacks() + gameData.trashPile.cards,
+            playersHandsKnowledge = playerPOV.getPlayers().mapValues { HandKnowledgeImpl() }
         )
     }
 
     fun createEmptyHandKnowledge(): HandKnowledge {
         return HandKnowledgeImpl()
+    }
+
+    fun createSlotKnowledge(
+        visibleCard: HanabiCard? = null,
+        signals: Map<Int, Signal> = emptyMap(),
+        impliedIdentities: Set<HanabiCard> = emptySet(),
+        hasConflictingInformation: Boolean = false,
+    ): SlotKnowledge {
+        return if (visibleCard == null) {
+            DefaultSlotKnowledge(
+                signals = signals.toMutableMap(),
+                impliedIdentities = impliedIdentities,
+                hasConflictingInformation = hasConflictingInformation
+            )
+        } else {
+            VisibleSlotKnowledge(
+                visibleCard = visibleCard,
+                signals = signals.toMutableMap(),
+                impliedIdentities = impliedIdentities,
+                hasConflictingInformation = hasConflictingInformation
+            )
+        }
     }
 }

@@ -8,7 +8,7 @@ class ClassicSuit(
     abbreviations: List<String>,
     private val definingColor: Color,
 )
-    : BaseClassicSuite(
+    : BaseClassicSuit(
     id = id,
         name = name,
         abbreviations = abbreviations,

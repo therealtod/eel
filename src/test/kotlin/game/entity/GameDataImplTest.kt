@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test
 class GameDataImplTest {
     @Test
     fun `Should add a playable card to the playing stacks`() {
-        val card = HanabiCard(suite = Blue, rank = Rank.ONE)
+        val card = HanabiCard(suit = Blue, rank = Rank.ONE)
         val updatedGameData = gameData.getAfterPlaying(card)
 
         val expected = listOf(card)
@@ -30,7 +30,7 @@ class GameDataImplTest {
 
     @Test
     fun `Should not add a card to the playing stacks When it's not playable`() {
-        val card = HanabiCard(suite = Blue, rank = Rank.THREE)
+        val card = HanabiCard(suit = Blue, rank = Rank.THREE)
 
         Assertions.assertThrows(Exception::class.java) {
             gameData.getAfterPlaying(card)
@@ -39,7 +39,7 @@ class GameDataImplTest {
 
     @Test
     fun `Should discard the misplayed card after a strike`() {
-        val card = HanabiCard(suite = Blue, rank = Rank.THREE)
+        val card = HanabiCard(suit = Blue, rank = Rank.THREE)
         val updatedGameData = gameData.getAfterPlaying(card)
 
         val expected = trashPileCards + card
@@ -50,7 +50,7 @@ class GameDataImplTest {
 
     @Test
     fun `Should increase the number of strike tokens after a strike`() {
-        val card = HanabiCard(suite = Blue, rank = Rank.THREE)
+        val card = HanabiCard(suit = Blue, rank = Rank.THREE)
         val updatedGameData = gameData.getAfterPlaying(card)
 
         val expected = 1
@@ -61,7 +61,7 @@ class GameDataImplTest {
 
     @Test
     fun `Should increase the number of clue tokens When successfully playing the last card of a suit`() {
-        val card = HanabiCard(suite = Purple, rank = Rank.FIVE)
+        val card = HanabiCard(suit = Purple, rank = Rank.FIVE)
         val updatedGameData = gameData.getAfterPlaying(card)
 
         val expected = 6
@@ -72,7 +72,7 @@ class GameDataImplTest {
 
     @Test
     fun `Should add a card to the discard pile`() {
-        val card = HanabiCard(suite = Red, rank = Rank.FIVE)
+        val card = HanabiCard(suit = Red, rank = Rank.FIVE)
         val updatedGameData = gameData.getAfterDiscard(card)
 
         val expected = trashPileCards + card
@@ -83,7 +83,7 @@ class GameDataImplTest {
 
     @Test
     fun `Should increase the number of clue tokens When a card is discarded And the clue count is lower than 8`() {
-        val card = HanabiCard(suite = Red, rank = Rank.FIVE)
+        val card = HanabiCard(suit = Red, rank = Rank.FIVE)
         val updatedGameData = gameData.getAfterDiscard(card)
 
         val expected = 6
@@ -94,7 +94,7 @@ class GameDataImplTest {
 
     @Test
     fun `Should not increase the number of clue tokens When a card is discarded And the clue count is 8`() {
-        val card = HanabiCard(suite = Red, rank = Rank.FIVE)
+        val card = HanabiCard(suit = Red, rank = Rank.FIVE)
         val updatedGameData = gameDataWith8Clues.getAfterDiscard(card)
 
         val expected = 8
@@ -125,65 +125,65 @@ class GameDataImplTest {
         private val redStack = PlayingStack(
             cards = listOf(
                 HanabiCard(
-                    suite = Red,
+                    suit = Red,
                     rank = Rank.ONE
                 ),
             ),
-            suite = Red
+            suit = Red
         )
         private val yellowStack = PlayingStack(
             cards = listOf(
                 HanabiCard(
-                    suite = Yellow,
+                    suit = Yellow,
                     rank = Rank.ONE
                 ),
                 HanabiCard(
-                    suite = Yellow,
+                    suit = Yellow,
                     rank = Rank.TWO
                 ),
             ),
-            suite = Yellow
+            suit = Yellow
         )
         private val greenStack = PlayingStack(
             cards = emptyList(),
-            suite = Green
+            suit = Green
         )
         private val blueStack = PlayingStack(
             cards = emptyList(),
-            suite = Blue
+            suit = Blue
         )
         private val purpleStack = PlayingStack(
             cards = listOf(
                 HanabiCard(
-                    suite = Purple,
+                    suit = Purple,
                     rank = Rank.ONE
                 ),
                 HanabiCard(
-                    suite = Purple,
+                    suit = Purple,
                     rank = Rank.TWO
                 ),
                 HanabiCard(
-                    suite = Purple,
+                    suit = Purple,
                     rank = Rank.THREE
                 ),
                 HanabiCard(
-                    suite = Purple,
+                    suit = Purple,
                     rank = Rank.FOUR
                 ),
             ),
-            suite = Purple
+            suit = Purple
         )
         private val trashPileCards = listOf(
             HanabiCard(
-                suite = Purple,
+                suit = Purple,
                 rank = Rank.ONE,
             ),
             HanabiCard(
-                suite = Red,
+                suit = Red,
                 rank = Rank.ONE,
             ),
             HanabiCard(
-                suite = Green,
+                suit = Green,
                 rank = Rank.FOUR,
             ),
         )

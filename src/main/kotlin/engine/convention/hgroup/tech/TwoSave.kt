@@ -3,7 +3,7 @@ package eelst.ilike.engine.convention.hgroup.tech
 import eelst.ilike.engine.factory.GameActionFactory
 import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.engine.player.Teammate
-import eelst.ilike.engine.player.knowledge.PlayerKnowledge
+import eelst.ilike.engine.player.knowledge.TeamKnowledge
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
@@ -71,7 +71,7 @@ object TwoSave : SaveClue("2-Save") {
         touchedSlotsIndexes: Set<Int>,
         focusIndex: Int,
         playerPOV: GameFromPlayerPOV
-    ): PlayerKnowledge {
+    ): TeamKnowledge {
         /*
 val possibleFocusIdentities = focusedSlot.getPossibleIdentities()
     .intersect(getSaveableTwos(playerPOV))

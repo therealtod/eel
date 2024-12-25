@@ -17,7 +17,7 @@ data class DynamicGameData(
 
     fun withNewCardOnStacks(card: HanabiCard): DynamicGameData {
         val updatedPlayingStacks = playingStacks.mapValues {
-            if(it.key == card.suite.id) {
+            if(it.key == card.suit.id) {
                 it.value.playCard(card)
             } else {
                 it.value

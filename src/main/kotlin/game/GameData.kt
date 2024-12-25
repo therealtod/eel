@@ -1,17 +1,14 @@
 package eelst.ilike.game
 
 import eelst.ilike.game.entity.*
-import eelst.ilike.game.entity.action.ClueAction
-import eelst.ilike.game.entity.action.DiscardAction
-import eelst.ilike.game.entity.action.PlayAction
 import eelst.ilike.game.entity.card.HanabiCard
-import eelst.ilike.game.entity.suite.Suite
+import eelst.ilike.game.entity.suite.Suit
 import eelst.ilike.game.entity.suite.SuiteId
 import eelst.ilike.game.variant.Variant
 
 interface GameData {
     val playingStacks: Map<SuiteId, PlayingStack>
-    val suits: Set<Suite>
+    val suits: Set<Suit>
     val trashPile: TrashPile
     val strikes: Int
     val efficiency: Float

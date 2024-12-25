@@ -3,10 +3,10 @@ package eelst.ilike.game.factory
 import eelst.ilike.common.model.metadata.SuitMetadata
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.suite.ClassicSuit
-import eelst.ilike.game.entity.suite.Suite
+import eelst.ilike.game.entity.suite.Suit
 
 object SuitFactory {
-    fun createSuit(metadata: SuitMetadata): Suite {
+    fun createSuit(metadata: SuitMetadata): Suit {
         val suitName = metadata.name
         if(!supportedSuits.contains(suitName)) {
             throw UnsupportedOperationException("Unsupported suite: $suitName")

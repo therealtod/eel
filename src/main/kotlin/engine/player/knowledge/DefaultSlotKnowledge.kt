@@ -40,4 +40,8 @@ open class DefaultSlotKnowledge(
     override fun asNotVisible(): SlotKnowledge {
         return this
     }
+
+    override fun getIdentity(): HanabiCard {
+        TODO("Not yet implemented")
+    }
 }

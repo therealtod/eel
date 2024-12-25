@@ -3,14 +3,14 @@ package eelst.ilike.game.entity.card
 import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.suite.Suite
+import eelst.ilike.game.entity.suite.Suit
 
 data class HanabiCard(
-    val suite: Suite,
+    val suit: Suit,
     val rank: Rank,
 ) {
     fun getPrerequisiteCards(): List<HanabiCard> {
-        return suite.getCardsBefore(this)
+        return suit.getCardsBefore(this)
     }
 
     fun isTouchedBy(clueValue: ClueValue): Boolean {
@@ -24,10 +24,10 @@ data class HanabiCard(
     }
 
     fun isTouchedBy(rank: Rank): Boolean {
-        return suite.cluedRankTouches(this.rank, rank)
+        return suit.cluedRankTouches(this.rank, rank)
     }
 
     fun isTouchedBy(color: Color): Boolean {
-        return suite.cluedColorTouches(this.rank, color)
+        return suit.cluedColorTouches(this.rank, color)
     }
 }

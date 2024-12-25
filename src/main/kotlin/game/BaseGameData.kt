@@ -56,7 +56,7 @@ abstract class BaseGameData(
         get() = getCardsOnStacks().size
 
     override fun getStackForCard(card: HanabiCard): PlayingStack {
-        val suiteId = card.suite.id
+        val suiteId = card.suit.id
         return playingStacks[suiteId]
             ?: throw IllegalArgumentException("No stack in this game corresponding to the card $card")
     }
@@ -68,7 +68,7 @@ abstract class BaseGameData(
     override fun isCritical(
         card: HanabiCard,
     ): Boolean {
-        return !isAlreadyPlayed(card) && trashPile.copiesOf(card) == card.suite.copiesOf(card.rank) - 1
+        return !isAlreadyPlayed(card) && trashPile.copiesOf(card) == card.suit.copiesOf(card.rank) - 1
     }
 
     /**
@@ -76,7 +76,7 @@ abstract class BaseGameData(
      */
     override fun getGlobalAwayValue(card: HanabiCard): Int {
         val stack = getStackForCard(card)
-        val suite = card.suite
+        val suite = card.suit
         return if (stack.isEmpty()) {
             suite.getPlayingOrder(card) - 1
         } else {
@@ -111,7 +111,7 @@ abstract class BaseGameData(
     }
 
     private fun getAfterSuccessfulPlay(card: HanabiCard): GameData {
-        val newDynamicGloballyAvailableInfo = if (card.rank == card.suite.maxRank)
+        val newDynamicGloballyAvailableInfo = if (card.rank == card.suit.maxRank)
             dynamicGameData.withAddedClueToken()
         else
             dynamicGameData

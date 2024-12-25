@@ -8,5 +8,6 @@ data class SlotDTO(
     val card: String = "x",
     val positiveClues: List<String> = emptyList(),
     val negativeClues: List<String> = emptyList(),
-    val thinks: String = "x"
+    val thinks: String = "x",
+    val signals: List<String> = emptyList(),
 )

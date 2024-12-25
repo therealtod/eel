@@ -1,13 +1,12 @@
 package eelst.ilike.game.variant
 
 import eelst.ilike.common.model.metadata.VariantMetadata
-import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.suite.Suite
+import eelst.ilike.game.entity.suite.Suit
 
 class ClassicVariant(
     private val variantMetadata: VariantMetadata,
-    suits: Set<Suite>,
+    suits: Set<Suit>,
 ): Variant(
     id = variantMetadata.newID,
     name = variantMetadata.name,

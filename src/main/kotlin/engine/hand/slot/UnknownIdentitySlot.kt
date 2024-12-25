@@ -1,16 +1,15 @@
 package eelst.ilike.engine.hand.slot
 
-import eelst.ilike.engine.player.knowledge.PlayerKnowledge
 import eelst.ilike.game.SlotMetadata
 import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.card.HanabiCard
 
 class UnknownIdentitySlot(
     slotMetadata: SlotMetadata,
-    knowledge: PlayerKnowledge,
+    possibleIdentities: Set<HanabiCard>,
 ): BaseSlot(
     globallyAvailableInfo = slotMetadata,
-    knowledge = knowledge,
+    possibleIdentities = possibleIdentities
 ) {
     override fun containsCard(card: HanabiCard): Boolean {
         return false
@@ -21,7 +20,6 @@ class UnknownIdentitySlot(
     }
 
     override fun isTouchedBy(clueValue: ClueValue): Boolean {
-        // return knowledge.getPossibleSlotIdentities().all { it.isTouchedBy(clueValue) }
-        TODO()
+        return getPossibleIdentities().all { it.isTouchedBy(clueValue) }
     }
 }

@@ -2,14 +2,14 @@ package eelst.ilike.game
 
 import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.card.HanabiCard
-import eelst.ilike.game.entity.suite.Suite
+import eelst.ilike.game.entity.suite.Suit
 
 object GameUtils {
     fun getCardEmpathy(
         visibleCards: Collection<HanabiCard>,
         positiveClues: List<ClueValue>,
         negativeClues: List<ClueValue>,
-        suits: Set<Suite>
+        suits: Set<Suit>
     ): Set<HanabiCard> {
         val allPossibleCards = suits.flatMap { suite ->
             suite.getAllUniqueCards()
@@ -17,16 +17,16 @@ object GameUtils {
         return allPossibleCards
             .filter { card ->
                 // Exclude all the cards whose copies are all visible
-                visibleCards.count { it == card } < card.suite.copiesOf(card.rank)
+                visibleCards.count { it == card } < card.suit.copiesOf(card.rank)
             }
             .filter { card ->
 
                 positiveClues.all { clue ->
                     // Exclude all the cards which cannot be touched by the clues the slot was touched by
-                    card.suite.clueTouches(card, clue)
+                    card.suit.clueTouches(card, clue)
                 } && negativeClues.none { clue ->
                     // Exclude all the cards which can be touched by the clues the slot was not touched by
-                    card.suite.clueTouches(card, clue)
+                    card.suit.clueTouches(card, clue)
                 }
             }
             .toSet()

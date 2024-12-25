@@ -2,11 +2,10 @@ package eelst.ilike.engine.convention.hgroup.tech
 
 
 import eelst.ilike.engine.convention.tech.ConventionTech
-import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.engine.player.Teammate
-import eelst.ilike.engine.player.knowledge.PlayerKnowledge
+import eelst.ilike.engine.player.knowledge.TeamKnowledge
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.card.HanabiCard
@@ -71,7 +70,7 @@ data object DelayedPlayClue
         val missingCards = if (stack.isEmpty()) {
             card.getPrerequisiteCards().toSet()
         } else {
-            stack.suite.getCardsBetween(stack.currentCard(), card)
+            stack.suit.getCardsBetween(stack.currentCard(), card)
         }
         return playerPOV.teamKnowsAllCards(missingCards)
     }
@@ -81,7 +80,7 @@ data object DelayedPlayClue
         touchedSlotsIndexes: Set<Int>,
         focusIndex: Int,
         playerPOV: GameFromPlayerPOV
-    ): PlayerKnowledge {
+    ): TeamKnowledge {
         val receiverPOV = playerPOV.getTeammate(clueAction.clueReceiver).getPOV(playerPOV)
         val slot = receiverPOV.getOwnHand().getSlot(focusIndex)
         val possibleIdentities = slot.getPossibleIdentities()

@@ -2,12 +2,9 @@ package eelst.ilike.engine.player
 
 
 import eelst.ilike.engine.factory.PlayerFactory
-import eelst.ilike.engine.factory.SlotFactory
-import eelst.ilike.engine.hand.slot.BaseSlot
 import eelst.ilike.game.PlayerMetadata
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Player
-import eelst.ilike.game.entity.BaseHand
 import eelst.ilike.game.entity.Slot
 
 open class Teammate(
@@ -35,22 +32,25 @@ open class Teammate(
         return PlayerFactory.createPlayerPOV(
             playerId = playerId,
             gameData = playerPOV.getGameData(),
-            personalKnowledge = playerPOV.getPersonalKnowledge().getKnowledgeAccessibleTo(playerId),
-            playersHands = playersHands
+            personalKnowledge = playerPOV.getPersonalKnowledge().getAsSeenBy(playerId),
+            slotData= TODO()
         )
     }
 
     fun getHandFromPlayerPOV(): Hand {
+        /*
         val slots = hand
             .getSlots()
             .map { it as BaseSlot }
             .map { SlotFactory.createSlot(
-                activePlayerId = playerId,
-                slotOwnerId = playerId,
+                slotMetadata = it.getGloballyAvailableInfo(),
+                knowledge = ,
                 slotMetadata = it.getGloballyAvailableInfo(),
                 knowledge = it.knowledge,
                 visibleIdentity = null,
             ) }
         return BaseHand(slots = slots)
+         */
+        TODO()
     }
 }

@@ -14,15 +14,15 @@ internal class TrashPileTest {
         val trashPile = TrashPile()
 
         val card1 = HanabiCard(
-            suite = Red,
+            suit = Red,
             rank = Rank.ONE
         )
         val card2 = HanabiCard(
-            suite = Green,
+            suit = Green,
             rank = Rank.FIVE
         )
         val card3 = HanabiCard(
-            suite = Red,
+            suit = Red,
             rank = Rank.FOUR
         )
 
@@ -36,19 +36,19 @@ internal class TrashPileTest {
         val trashPile = TrashPile(
             cards = listOf(
                 HanabiCard(
-                    suite = Red,
+                    suit = Red,
                     rank = Rank.ONE
                 ),
                 HanabiCard(
-                    suite = Red,
+                    suit = Red,
                     rank = Rank.ONE
                 ),
                 HanabiCard(
-                    suite = Green,
+                    suit = Green,
                     rank = Rank.FIVE
                 ),
                 HanabiCard(
-                    suite = Red,
+                    suit = Red,
                     rank = Rank.FOUR
                 )
             )
@@ -56,19 +56,19 @@ internal class TrashPileTest {
 
 
         val card1 = HanabiCard(
-            suite = Red,
+            suit = Red,
             rank = Rank.ONE
         )
         val card2 = HanabiCard(
-            suite = Green,
+            suit = Green,
             rank = Rank.FIVE
         )
         val card3 = HanabiCard(
-            suite = Red,
+            suit = Red,
             rank = Rank.FOUR
         )
         val card4 = HanabiCard(
-            suite = Red,
+            suit = Red,
             rank = Rank.TWO
         )
 

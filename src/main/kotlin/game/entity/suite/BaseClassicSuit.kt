@@ -4,11 +4,11 @@ import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.card.HanabiCard
 
-sealed class BaseClassicSuite(
+sealed class BaseClassicSuit(
     id: SuiteId,
     name: String,
     abbreviations: List<String>,
-) : Suite(
+) : Suit(
     id = id,
     name = name,
     abbreviations = abbreviations,

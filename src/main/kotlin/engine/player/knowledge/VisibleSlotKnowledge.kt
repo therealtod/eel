@@ -4,7 +4,7 @@ import eelst.ilike.engine.convention.hgroup.signal.Signal
 import eelst.ilike.game.entity.card.HanabiCard
 
 class VisibleSlotKnowledge(
-    val visibleCard: HanabiCard,
+    private val visibleCard: HanabiCard,
     signals: MutableMap<Int, Signal>,
     impliedIdentities: Set<HanabiCard>,
     hasConflictingInformation: Boolean,
@@ -16,5 +16,9 @@ class VisibleSlotKnowledge(
 {
     override fun isVisible(): Boolean {
         return true
+    }
+
+    override fun getIdentity(): HanabiCard {
+        return visibleCard
     }
 }

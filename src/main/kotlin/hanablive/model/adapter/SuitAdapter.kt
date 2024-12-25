@@ -3,12 +3,12 @@ package eelst.ilike.hanablive.model.adapter
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.card.HanabiCard
-import eelst.ilike.game.entity.suite.Suite
+import eelst.ilike.game.entity.suite.Suit
 import eelst.ilike.hanablive.model.dto.metadata.HanabLiveSuiteMetadata
 import eelst.ilike.hanablive.model.dto.metadata.HanabLiveVariantMetadata
 
-class SuiteAdapter(
-    private val suiteMetadata: HanabLiveSuiteMetadata, private val variantMetadata: HanabLiveVariantMetadata) : Suite(
+class SuitAdapter(
+    private val suiteMetadata: HanabLiveSuiteMetadata, private val variantMetadata: HanabLiveVariantMetadata) : Suit(
     id = suiteMetadata.id,
     name = suiteMetadata.name,
     abbreviations = listOf(suiteMetadata.abbreviation),

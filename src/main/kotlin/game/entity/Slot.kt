@@ -13,5 +13,4 @@ interface Slot {
     fun isTouchedBy(clueValue: ClueValue): Boolean
     fun containsCard(card: HanabiCard): Boolean
     fun matches(condition: (slotIndex: Int, card: HanabiCard) -> Boolean): Boolean
-    fun getUpdatedEmpathy(clueValue: ClueValue): Set<HanabiCard>
 }

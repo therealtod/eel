@@ -1,48 +1,42 @@
 package eelst.ilike.engine.factory
 
-import eelst.ilike.engine.convention.hgroup.strategy.HGroupGameStateEvaluator
-import eelst.ilike.engine.strategy.BruteForceActionSelectionStrategy
 import eelst.ilike.engine.player.*
 import eelst.ilike.engine.player.knowledge.PlayerKnowledge
+import eelst.ilike.engine.player.knowledge.TeamKnowledge
 import eelst.ilike.game.GameData
 import eelst.ilike.game.PlayerMetadata
 import eelst.ilike.game.PlayerId
-import eelst.ilike.game.entity.Hand
+import eelst.ilike.game.SlotMetadata
+import eelst.ilike.game.entity.suite.Suit
 
 object PlayerFactory {
-    fun createPlayer(
+    fun createTeammate(
         metadata: PlayerMetadata,
-        personalKnowledge: PlayerKnowledge,
-        hand: Hand,
+        playerKnowledge: PlayerKnowledge,
+        slotData: List<SlotMetadata>,
+        suits: Set<Suit>,
     ): Teammate {
         return Teammate(
             playerMetadata = metadata,
-            hand = hand,
+            hand = HandFactory.createHand(
+                slotData = slotData,
+                playerKnowledge = playerKnowledge,
+                suits = suits,
+            ),
         )
     }
 
     fun createPlayerPOV(
         playerId: PlayerId,
         gameData: GameData,
-        personalKnowledge: PlayerKnowledge,
-        playersHands: Map<PlayerId, Hand>
+        personalKnowledge: TeamKnowledge,
+        slotData: Map<PlayerId,List <SlotMetadata>>,
     ): GameFromPlayerPOV {
-        val players = playersHands.mapValues {
-            createPlayer(
-                metadata = gameData.getPlayerMetadata(it.key),
-                personalKnowledge = personalKnowledge.getKnowledgeAccessibleTo(it.key),
-                hand = it.value
-            )
-        }
-
-
         return BasePlayerPOV(
             playerId = playerId,
             gameData = gameData,
-            personalKnowledge = personalKnowledge,
-            teammates = players.minus(playerId),
-            hand = playersHands[playerId]!!,
-            actionSelectionStrategy = BruteForceActionSelectionStrategy(evaluator = HGroupGameStateEvaluator())
-        )
+            teamKnowledge = personalKnowledge,
+            slotData = slotData,
+            )
     }
 }

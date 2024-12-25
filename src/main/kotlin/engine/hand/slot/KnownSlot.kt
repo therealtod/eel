@@ -1,17 +1,15 @@
 package eelst.ilike.engine.hand.slot
 
-import eelst.ilike.engine.player.knowledge.PlayerKnowledge
 import eelst.ilike.game.SlotMetadata
 import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.card.HanabiCard
 
 open class KnownSlot(
     globallyAvailableInfo: SlotMetadata,
-    knowledge: PlayerKnowledge,
     val knownIdentity: HanabiCard,
 ): BaseSlot(
     globallyAvailableInfo = globallyAvailableInfo,
-    knowledge = knowledge,
+    possibleIdentities = setOf(knownIdentity),
 ) {
     override fun containsCard(card: HanabiCard): Boolean {
         return card == knownIdentity
@@ -23,5 +21,9 @@ open class KnownSlot(
 
     override fun isTouchedBy(clueValue: ClueValue): Boolean {
         return knownIdentity.isTouchedBy(clueValue)
+    }
+
+    override fun getPossibleIdentities(): Set<HanabiCard> {
+        return setOf(knownIdentity)
     }
 }

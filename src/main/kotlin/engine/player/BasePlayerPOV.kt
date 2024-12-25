@@ -1,13 +1,14 @@
 package eelst.ilike.engine.player
 
-import eelst.ilike.engine.strategy.ActionSelectionStrategy
 import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
 import eelst.ilike.engine.convention.tech.ConventionTech
+import eelst.ilike.engine.factory.HandFactory
+import eelst.ilike.engine.factory.PlayerFactory
 import eelst.ilike.engine.hand.slot.FullEmpathySlot
 import eelst.ilike.engine.hand.slot.KnownSlot
 import eelst.ilike.engine.hand.slot.VisibleSlot
-import eelst.ilike.engine.player.knowledge.PlayerKnowledge
+import eelst.ilike.engine.player.knowledge.TeamKnowledge
 import eelst.ilike.game.*
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Player
@@ -17,20 +18,26 @@ import eelst.ilike.game.entity.card.HanabiCard
 
 open class BasePlayerPOV(
     playerId: PlayerId,
-    hand: Hand,
     private val gameData: GameData,
-    private val personalKnowledge: PlayerKnowledge,
-    private val teammates: Map<PlayerId, Teammate>,
-    private val actionSelectionStrategy: ActionSelectionStrategy,
-) : GameFromPlayerPOV, Teammate(
-    playerMetadata = gameData.getPlayerMetadata(playerId),
-    hand = hand
-) {
+    private val teamKnowledge: TeamKnowledge,
+    private val slotData: Map<PlayerId, List<SlotMetadata>>,
+) : GameFromPlayerPOV {
     private val globallyAvailablePlayerInfo = gameData.getPlayerMetadata(playerId)
     private val myself = Myself(
         playerMetadata = gameData.getPlayerMetadata(playerId),
-        hand,
+        hand = HandFactory.createHand(
+            slotData = getPlayerSlotData(playerId),
+            playerKnowledge = teamKnowledge.getPlayerKnowledge(playerId),
+            suits = gameData.suits,
+        )
     )
+    private val teammates: Map<PlayerId, Teammate> = gameData.players.minus(playerId)
+        .mapValues { PlayerFactory.createTeammate(
+            metadata = it.value,
+            playerKnowledge = teamKnowledge.getPlayerKnowledge(it.key),
+            slotData = getPlayerSlotData(it.key),
+            suits = gameData.suits,
+        ) }
 
     override fun getOwnHand(): Hand {
         return myself.hand
@@ -63,7 +70,7 @@ open class BasePlayerPOV(
     }
 
     override fun getPlayers(): Map<PlayerId, Player> {
-        return teammates + Pair(playerId, myself)
+        return teammates + Pair(myself.playerId, myself)
     }
 
     override fun getPlayer(playerId: PlayerId): Player {
@@ -95,15 +102,8 @@ open class BasePlayerPOV(
         return getCandidateActions(conventionSet.getTechs()).toSet()
     }
 
-    override fun chooseAction(conventionSet: ConventionSet): GameAction {
-        return actionSelectionStrategy.selectAction(
-            playerPOV = this,
-            conventionSet = conventionSet,
-        ).action
-    }
-
-    override fun getPersonalKnowledge(): PlayerKnowledge {
-        return personalKnowledge
+    override fun getPersonalKnowledge(): TeamKnowledge {
+        return teamKnowledge
     }
 
     override fun getVisibleCards(): List<HanabiCard> {
@@ -215,5 +215,11 @@ open class BasePlayerPOV(
             }
         }.flatten()
             .toSet()
+    }
+
+    private fun getPlayerSlotData(playerId: PlayerId): List<SlotMetadata> {
+        return slotData[playerId] ?: throw NoSuchElementException(
+            "No slot data could be found for a player with id $playerId"
+        )
     }
 }

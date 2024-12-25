@@ -1,14 +1,14 @@
 package eelst.ilike.game.entity
 
 import eelst.ilike.game.entity.card.HanabiCard
-import eelst.ilike.game.entity.suite.Suite
+import eelst.ilike.game.entity.suite.Suit
 
 data class PlayingStack(
     val cards: List<HanabiCard> = emptyList(),
-    val suite: Suite,
+    val suit: Suit,
 ) : List<HanabiCard> by cards {
     fun isComplete(): Boolean {
-        return (cards.lastOrNull()?.rank) == suite.maxRank
+        return (cards.lastOrNull()?.rank) == suit.maxRank
     }
 
     fun currentCard(): HanabiCard {
@@ -19,19 +19,19 @@ data class PlayingStack(
     }
 
     fun nextCard(card: HanabiCard): HanabiCard {
-        require(card.suite == suite) {
+        require(card.suit == suit) {
             "The card $card does not belong to this stack"
         }
-        return suite.cardAfter(card)
+        return suit.cardAfter(card)
     }
 
     fun playCard(card: HanabiCard): PlayingStack {
-        require(card.suite.id == suite.id) {
+        require(card.suit.id == suit.id) {
             "Wrong stack for card $card"
         }
         return PlayingStack(
             cards = cards + card,
-            suite = suite
+            suit = suit
         )
     }
 }

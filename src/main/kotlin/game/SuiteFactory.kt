@@ -5,12 +5,12 @@ import eelst.ilike.common.model.metadata.VariantMetadata
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.card.HanabiCard
-import eelst.ilike.game.entity.suite.Suite
+import eelst.ilike.game.entity.suite.Suit
 import eelst.ilike.game.entity.suite.SuiteDirection
 
 object SuiteFactory {
-    fun createSuite(suiteMetadata: SuitMetadata, variantMetadata: VariantMetadata): Suite {
-        return object : Suite(
+    fun createSuite(suiteMetadata: SuitMetadata, variantMetadata: VariantMetadata): Suit {
+        return object : Suit(
             id = suiteMetadata.name,
             name = suiteMetadata.name,
             abbreviations = listOf(

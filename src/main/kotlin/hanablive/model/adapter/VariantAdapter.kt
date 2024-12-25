@@ -1,6 +1,5 @@
 package eelst.ilike.hanablive.model.adapter
 
-import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.variant.Variant
 import eelst.ilike.hanablive.model.dto.metadata.HanabLiveSuiteMetadata
@@ -13,7 +12,7 @@ class VariantAdapter(
     id = variantMetadata.id.toString(),
     name = variantMetadata.name,
     suits = variantMetadata.suits.map { variantSuiteId ->
-        SuiteAdapter(
+        SuitAdapter(
             suiteMetadata = suitsMetadata.find { it.id == variantSuiteId }
                 ?: throw IllegalStateException("Could not find the metadata for the suite $variantSuiteId"),
             variantMetadata = variantMetadata,

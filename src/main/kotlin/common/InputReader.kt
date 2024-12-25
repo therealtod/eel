@@ -2,19 +2,18 @@ package eelst.ilike.common
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import eelst.ilike.common.model.metadata.LocalMirrorMetadataProvider
-import eelst.ilike.engine.factory.KnowledgeFactory
 import eelst.ilike.engine.factory.PlayerFactory
 import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.game.GameData
 import eelst.ilike.game.PlayerId
-import eelst.ilike.game.entity.BaseHand
 import eelst.ilike.game.entity.card.HanabiCard
-import eelst.ilike.game.entity.suite.Suite
+import eelst.ilike.game.entity.suite.Suit
 import eelst.ilike.utils.Configuration
 import eelst.ilike.utils.InputParser
 import eelst.ilike.utils.Utils
 import common.model.dto.PlayerDTO
 import common.model.dto.PlayerPOVDTO
+import eelst.ilike.engine.player.knowledge.TeamKnowledgeFromPlayerPOV
 import eelst.ilike.utils.model.dto.ScenarioDTO
 
 object InputReader {
@@ -27,6 +26,19 @@ object InputReader {
         val activePlayerId = dto.playerPOV.playerId
         val globallyAvailableInfo = InputParser.parseGlobalInfo(dto, metadataProvider)
         val playerDTOS = dto.playerPOV.players
+
+        val handsKnowledge = playerDTOS
+            .associate {
+                it.playerId to InputParser.parseHandKnowledge(playerDTO = it, suits = globallyAvailableInfo.suits)
+            }
+        val teamKnowledge = TeamKnowledgeFromPlayerPOV(
+            povPlayerId = activePlayerId,
+            globallyVisibleCards = globallyAvailableInfo.getCardsOnStacks() + globallyAvailableInfo.trashPile.cards,
+            playersHandsKnowledge = handsKnowledge
+        )
+
+
+        /*
         val visibleCardsMap = computeVisibleCardsMap(
             playerPOV = dto.playerPOV,
             gameData = globallyAvailableInfo,
@@ -49,12 +61,17 @@ object InputReader {
             }
 
         val playersHands = playersSlots.mapValues { BaseHand(it.value) }
+         */
+
+        val slotData = playerDTOS.associate { playerDTO ->
+            playerDTO.playerId to InputParser.parseSlotGlobalInfo(playerDTO)
+        }
 
         return PlayerFactory.createPlayerPOV(
             playerId = activePlayerId,
             gameData = globallyAvailableInfo,
-            personalKnowledge = TODO(),
-            playersHands = playersHands
+            personalKnowledge = teamKnowledge,
+            slotData = slotData,
         )
     }
 
@@ -78,7 +95,7 @@ object InputReader {
         playerId: PlayerId,
         publiclyVisibleCards: List<HanabiCard>,
         teammates: Map<PlayerId, PlayerDTO>,
-        suits: Set<Suite>,
+        suits: Set<Suit>,
     ): List<HanabiCard> {
         val cardInTeammatesHands = teammates
             .filterKeys { it != playerId }

@@ -13,4 +13,5 @@ interface SlotKnowledge {
     fun getSignals(): Map<Int, Signal>
     fun hasConflictingInformation(): Boolean
     fun asNotVisible(): SlotKnowledge
+    fun getIdentity(): HanabiCard
 }

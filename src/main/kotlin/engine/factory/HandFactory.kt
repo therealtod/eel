@@ -1,8 +1,10 @@
 package eelst.ilike.engine.factory
 
 import eelst.ilike.engine.player.knowledge.PlayerKnowledge
-import eelst.ilike.game.PlayerId
+import eelst.ilike.game.SlotMetadata
+import eelst.ilike.game.entity.BaseHand
 import eelst.ilike.game.entity.Hand
+import eelst.ilike.game.entity.suite.Suit
 
 object HandFactory {
     /*
@@ -47,12 +49,18 @@ object HandFactory {
  */
 
     fun createHand(
-        playerId: PlayerId,
-        personalKnowledge: PlayerKnowledge,
-        hand: Hand
+        slotData: List<SlotMetadata>,
+        playerKnowledge: PlayerKnowledge,
+        suits: Set<Suit>,
     ): Hand {
-        TODO()
+        val slots = slotData.map { slotData ->
+            SlotFactory.createSlot(
+                slotData = slotData,
+                slotKnowledge = playerKnowledge.getOwnHandKnowledge().getSlotKnowledge(slotData.index),
+                cardsVisibleBySlotOwner = playerKnowledge.getVisibleCards(),
+                suits = suits,
+            )
+        }
+        return BaseHand(slots)
     }
-
-
 }

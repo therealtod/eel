@@ -2,7 +2,7 @@ package eelst.ilike.engine.convention.hgroup.tech
 
 import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.engine.player.Teammate
-import eelst.ilike.engine.player.knowledge.PlayerKnowledge
+import eelst.ilike.engine.player.knowledge.TeamKnowledge
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.action.ClueAction
 
@@ -13,7 +13,7 @@ object SimpleFinesse : Finesse("Simple Finesse") {
                     playerPOV.getTeammates().any { otherTeammate ->
                         otherTeammate.playsBefore(teammate, playerPOV) &&
                                 hasCardOnFinessePosition(
-                                    card = card.suite.cardBefore(card),
+                                    card = card.suit.cardBefore(card),
                                     teammate = otherTeammate,
                                     playerPOV = playerPOV,
                                 )
@@ -54,7 +54,7 @@ object SimpleFinesse : Finesse("Simple Finesse") {
         touchedSlotsIndexes: Set<Int>,
         focusIndex: Int,
         playerPOV: GameFromPlayerPOV
-    ): PlayerKnowledge {
+    ): TeamKnowledge {
         TODO("Not yet implemented")
     }
 }

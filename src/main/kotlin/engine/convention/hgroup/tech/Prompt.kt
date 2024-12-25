@@ -103,7 +103,7 @@ sealed class Prompt(name: String) : IndirectPlayClue(name) {
         if (cardTeammateMap.entries.any { it.value == null }) {
             return false
         }
-        val suite = wrongPromptedCard.suite
+        val suite = wrongPromptedCard.suit
         val sortedKeys = cardTeammateMap.keys.sortedBy { suite.getPlayingOrder(it) }
         sortedKeys.forEachIndexed { index, card ->
             if (index > 0) {

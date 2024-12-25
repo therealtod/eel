@@ -2,7 +2,7 @@ package eelst.ilike.game.entity.suite
 
 import eelst.ilike.game.entity.Color
 
-object Purple : BaseClassicSuite(
+object Purple : BaseClassicSuit(
     id = "purple",
     name = "purple",
     abbreviations = listOf("p", "P", "purple"),

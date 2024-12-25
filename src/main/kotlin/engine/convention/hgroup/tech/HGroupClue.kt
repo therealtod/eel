@@ -4,7 +4,7 @@ import eelst.ilike.engine.convention.tech.ClueTech
 import eelst.ilike.engine.factory.GameActionFactory
 import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.engine.player.Teammate
-import eelst.ilike.engine.player.knowledge.PlayerKnowledge
+import eelst.ilike.engine.player.knowledge.TeamKnowledge
 import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.Slot
@@ -51,7 +51,7 @@ abstract class HGroupClue(override val name: String) : HGroupTech(), ClueTech {
         clueAction: ClueAction,
         touchedSlotsIndexes: Set<Int>,
         playerPOV: GameFromPlayerPOV
-    ): PlayerKnowledge {
+    ): TeamKnowledge {
         val clueReceiverId = clueAction.clueReceiver
         val clueReceiverPOV = playerPOV.getPlayerPOV(clueReceiverId)
         val receiverHand = clueReceiverPOV.getOwnHand()
@@ -73,7 +73,7 @@ abstract class HGroupClue(override val name: String) : HGroupTech(), ClueTech {
         touchedSlotsIndexes: Set<Int>,
         focusIndex: Int,
         playerPOV: GameFromPlayerPOV,
-    ): PlayerKnowledge
+    ): TeamKnowledge
 
     protected fun getFocusedSlot(
         hand: Hand,

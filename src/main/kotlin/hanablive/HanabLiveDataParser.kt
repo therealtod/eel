@@ -1,16 +1,13 @@
 package eelst.ilike.hanablive
 
 import eelst.ilike.common.model.metadata.VariantMetadata
-import eelst.ilike.engine.factory.KnowledgeFactory
-import eelst.ilike.engine.hand.slot.UnknownIdentitySlot
-import eelst.ilike.engine.hand.slot.VisibleSlot
 import eelst.ilike.game.GameData
 import eelst.ilike.game.PlayerId
 import eelst.ilike.game.SlotMetadata
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.Slot
 import eelst.ilike.game.entity.card.HanabiCard
-import eelst.ilike.game.entity.suite.Suite
+import eelst.ilike.game.entity.suite.Suit
 import eelst.ilike.game.factory.VariantFactory
 import eelst.ilike.hanablive.model.adapter.GameDataAdapter
 import eelst.ilike.hanablive.model.dto.command.GameInitData
@@ -28,9 +25,9 @@ object HanabLiveDataParser {
         )
     }
 
-    fun parseCard(draw: GameDrawActionData, rankMap: Map<Int, Rank>, suitMap: Map<Int, Suite>): HanabiCard {
+    fun parseCard(draw: GameDrawActionData, rankMap: Map<Int, Rank>, suitMap: Map<Int, Suit>): HanabiCard {
         return HanabiCard(
-            suite = suitMap[draw.suitIndex]!!,
+            suit = suitMap[draw.suitIndex]!!,
             rank = rankMap[draw.rank]!!
         )
     }
@@ -38,10 +35,10 @@ object HanabLiveDataParser {
     fun parseCard(
         suitIndex: Int,
         rankIndex: Int, rankMap: Map<Int, Rank>,
-        suitMap: Map<Int, Suite>
+        suitMap: Map<Int, Suit>
     ): HanabiCard {
         return HanabiCard(
-            suite = suitMap[suitIndex]!!,
+            suit = suitMap[suitIndex]!!,
             rank = rankMap[rankIndex]!!
         )
     }
@@ -51,10 +48,10 @@ object HanabLiveDataParser {
         slotOwnerId: PlayerId,
         slotIndex: Int,
         draw: GameDrawActionData,
-        indexToSuitMap: Map<Int, Suite>,
+        indexToSuitMap: Map<Int, Suit>,
         indexToRankMap: Map<Int, Rank>,
         visibleCards: List<HanabiCard>,
-        suits: Set<Suite>,
+        suits: Set<Suit>,
     ): Slot {
         val slotMetadata = SlotMetadata(index = 1)
         /*
@@ -69,6 +66,7 @@ object HanabLiveDataParser {
         )
 
          */
+        /*
         if (activePlayerId == slotOwnerId) {
             return UnknownIdentitySlot(
                 slotMetadata = slotMetadata,
@@ -85,5 +83,8 @@ object HanabLiveDataParser {
                 )
             )
         }
+
+         */
+        TODO()
     }
 }

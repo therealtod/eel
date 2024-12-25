@@ -6,7 +6,7 @@ import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.card.HanabiCard
 
-abstract class Suite(
+abstract class Suit(
     val id: SuiteId,
     val name: String,
     val abbreviations: List<String>,
@@ -27,7 +27,7 @@ abstract class Suite(
     fun getAllUniqueCards(): List<HanabiCard> {
         return ranks.map {
             HanabiCard(
-                suite = this,
+                suit = this,
                 rank = it
             )
         }
@@ -61,7 +61,7 @@ abstract class Suite(
         val nextRank = ranks.firstOrNull { it > card.rank }
             ?: throw IllegalArgumentException("$card is the last card for suite $this")
         return HanabiCard(
-            suite = this,
+            suit = this,
             rank = nextRank
         )
     }
@@ -70,19 +70,19 @@ abstract class Suite(
         val nextRank = ranks.lastOrNull { it < card.rank }
             ?: throw IllegalArgumentException("$card is the first card for suite $this")
         return HanabiCard(
-            suite = this,
+            suit = this,
             rank = nextRank
         )
     }
 
     open fun getCardsBefore(card: HanabiCard): List<HanabiCard> {
         return ranks.filter { it < card.rank }
-            .map { HanabiCard(suite = this, rank = it) }
+            .map { HanabiCard(suit = this, rank = it) }
     }
 
     open fun getCardsBetween(firstCard: HanabiCard, secondCard: HanabiCard): Set<HanabiCard> {
         return ranks.filter { it > firstCard.rank && it < secondCard.rank }
-            .map { HanabiCard(suite = this, rank = it) }
+            .map { HanabiCard(suit = this, rank = it) }
             .toSet()
     }
 
@@ -94,7 +94,7 @@ abstract class Suite(
 
     override fun equals(other: Any?): Boolean {
         if (other == null) return false
-        return if (other is Suite) {
+        return if (other is Suit) {
             name == other.name
                     && maxRank == other.maxRank
                     && suiteDirection == other.suiteDirection
@@ -116,7 +116,7 @@ abstract class Suite(
     }
 
     companion object {
-        fun fromMetadata(metadata: EelSuiteMetadata): Suite {
+        fun fromMetadata(metadata: EelSuiteMetadata): Suit {
             TODO()
         }
     }
