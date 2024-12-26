@@ -10,7 +10,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import eelst.ilike.common.model.metadata.LocalMirrorMetadataProvider
 import eelst.ilike.game.GameData
-import eelst.ilike.hanablive.bot.state.CommonState
+import eelst.ilike.hanablive.bot.state.HanabLiveLobbyState
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
@@ -28,7 +28,7 @@ class GameDataInitDataReceivedStateTest {
         gameInitData = mapper.readValue(Utils.getResourceFileContentAsString("hanablive/gamestarting/game_init_payload.json")),
         variantMetadata = metadataProvider.getVariantMetadata("6 Suits"),
         gameData = gameData,
-        commonState = CommonState()
+        commonState = HanabLiveLobbyState()
     )
 
     @Test

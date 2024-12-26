@@ -2,7 +2,7 @@ package hanablive.bot.state
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import eelst.ilike.hanablive.bot.HanabLiveBot
-import eelst.ilike.hanablive.bot.state.CommonState
+import eelst.ilike.hanablive.bot.state.HanabLiveLobbyState
 import eelst.ilike.hanablive.bot.state.GameInitDataReceivedState
 import eelst.ilike.hanablive.bot.state.GameStartingState
 import eelst.ilike.hanablive.model.dto.command.GameInitData
@@ -21,7 +21,7 @@ class GameDataStartingStateTest {
 
     private val state = GameStartingState(
         bot = bot,
-        commonState = CommonState(),
+        commonState = HanabLiveLobbyState(),
         )
 
     @Test
