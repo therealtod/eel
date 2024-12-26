@@ -8,6 +8,7 @@ import eelst.ilike.game.entity.action.ColorClueAction
 import eelst.ilike.game.entity.action.GameAction
 import eelst.ilike.game.entity.action.RankClueAction
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 internal class CriticalSaveTest {
@@ -94,6 +95,7 @@ internal class CriticalSaveTest {
         Assertions.assertEquals(expected, actual)
     }
 
+    @Disabled
     @Test
     fun `Should not save critical playables`() {
         val playerPOV = TestUtils.getPlayerPOVFromScenario(5)

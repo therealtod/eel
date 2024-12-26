@@ -13,7 +13,7 @@ class HandKnowledgeImpl(
     }
 
     override fun getSlotKnowledge(slotIndex: Int): SlotKnowledge {
-        return slotKnowledge.getOrDefault(slotIndex, DefaultSlotKnowledge())
+        return slotKnowledge.getOrDefault(slotIndex, BaseSlotKnowledge())
     }
 
     override fun asNotVisible(): HandKnowledge {
@@ -23,5 +23,9 @@ class HandKnowledgeImpl(
 
     override fun getVisibleCards(): List<HanabiCard> {
         return slotKnowledge.values.filter { it.isVisible() }.map { it.getIdentity() }
+    }
+
+    override fun getKnownCards(): List<HanabiCard> {
+        TODO()
     }
 }

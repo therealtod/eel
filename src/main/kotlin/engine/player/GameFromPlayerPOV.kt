@@ -13,6 +13,7 @@ import eelst.ilike.game.entity.card.HanabiCard
 interface GameFromPlayerPOV: Game {
     fun getOwnPlayerId(): PlayerId
     fun getOwnKnownCards(): List<HanabiCard>
+    fun getGloballyKnownCards(): List<HanabiCard>
     fun getPersonalKnowledge(): TeamKnowledge
     fun teamKnowsAllCards(cards: Set<HanabiCard>): Boolean
     fun getTeammates(): Set<Teammate>

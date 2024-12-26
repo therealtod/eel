@@ -8,7 +8,7 @@ class VisibleSlotKnowledge(
     signals: MutableMap<Int, Signal>,
     impliedIdentities: Set<HanabiCard>,
     hasConflictingInformation: Boolean,
-): DefaultSlotKnowledge(
+): BaseSlotKnowledge(
     signals = signals,
     impliedIdentities = impliedIdentities,
     hasConflictingInformation = hasConflictingInformation

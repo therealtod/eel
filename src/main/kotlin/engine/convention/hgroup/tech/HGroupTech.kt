@@ -45,9 +45,8 @@ abstract class HGroupTech : ConventionTech {
     fun isGloballyKnownPlayable(card: HanabiCard, playerPOV: GameFromPlayerPOV): Boolean {
         val prerequisiteCards = card.getPrerequisiteCards()
         val playedCardsForSuite = playerPOV.getGameData().getStackForCard(card).cards
-        val teammatesKnownCards = playerPOV.getTeammates().flatMap { it.getPOV(playerPOV).getOwnKnownCards() }
-        val ownKnownCards = playerPOV.getOwnKnownCards()
-        return (playedCardsForSuite + teammatesKnownCards + ownKnownCards).containsAll(prerequisiteCards)
+        val globallyKnownCardsInPlayerHands = playerPOV.getGloballyKnownCards()
+        return (playedCardsForSuite + globallyKnownCardsInPlayerHands).containsAll(prerequisiteCards)
     }
 
     fun hasChop(hand: Hand, playerPOV: GameFromPlayerPOV): Boolean {

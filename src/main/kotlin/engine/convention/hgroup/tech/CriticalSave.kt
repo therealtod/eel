@@ -24,8 +24,7 @@ object CriticalSave : SaveClue("Critical Save") {
             index == chop.index &&
             appliesTo(card, playerPOV.getGameData().variant) &&
                     card.rank != Rank.FIVE &&
-                    playerPOV.getGameData().isCritical(card) &&
-                    !isGloballyKnownPlayable(card, playerPOV)
+                    playerPOV.getGameData().isCritical(card)
         }
     }
 

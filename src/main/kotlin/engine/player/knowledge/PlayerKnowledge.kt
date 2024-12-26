@@ -10,9 +10,9 @@ interface PlayerKnowledge {
     fun getVisibleCards(): List<HanabiCard>
 
     /**
-     * A [Map] associating each slot index to the knowledge associate to it
+     * A [Map] associating each slot index to the knowledge associated to it
      */
     fun getOwnHandKnowledge(): HandKnowledge
 
-    fun getTeammateHandKnowledge(playerId: PlayerId): HandKnowledge
+    fun getOwnKnownCards(): List<HanabiCard>
 }

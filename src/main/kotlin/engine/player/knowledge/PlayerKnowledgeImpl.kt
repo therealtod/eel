@@ -17,8 +17,8 @@ class PlayerKnowledgeImpl(
         return getHandKnowledge(playerId)
     }
 
-    override fun getTeammateHandKnowledge(playerId: PlayerId): HandKnowledge {
-        TODO("Not yet implemented")
+    override fun getOwnKnownCards(): List<HanabiCard> {
+        TODO()
     }
 
     private fun getHandKnowledge(playerId: PlayerId): HandKnowledge {

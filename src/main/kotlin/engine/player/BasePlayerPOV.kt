@@ -51,6 +51,10 @@ open class BasePlayerPOV(
         return myself.hand.getSlots().filterIsInstance<KnownSlot>().map { it.knownIdentity }
     }
 
+    override fun getGloballyKnownCards(): List<HanabiCard> {
+        return gameData.players.flatMap { teamKnowledge.getPlayerKnowledge(it.key).getOwnKnownCards() }
+    }
+
     override fun teamKnowsAllCards(cards: Set<HanabiCard>): Boolean {
         return cards
             .all { card ->

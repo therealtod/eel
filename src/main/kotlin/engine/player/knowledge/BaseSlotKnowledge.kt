@@ -3,7 +3,7 @@ package eelst.ilike.engine.player.knowledge
 import eelst.ilike.engine.convention.hgroup.signal.Signal
 import eelst.ilike.game.entity.card.HanabiCard
 
-open class DefaultSlotKnowledge(
+open class BaseSlotKnowledge(
     private val signals: MutableMap<Int, Signal> = mutableMapOf(),
     private var impliedIdentities: Set<HanabiCard> = emptySet(),
     private var hasConflictingInformation: Boolean = false,
@@ -37,11 +37,11 @@ open class DefaultSlotKnowledge(
         return hasConflictingInformation
     }
 
-    override fun asNotVisible(): SlotKnowledge {
-        return this
-    }
-
     override fun getIdentity(): HanabiCard {
         TODO("Not yet implemented")
+    }
+
+    override fun asNotVisible(): SlotKnowledge {
+        return this
     }
 }

@@ -7,4 +7,5 @@ interface HandKnowledge {
     fun getSlotKnowledge(slotIndex: Int): SlotKnowledge
     fun asNotVisible(): HandKnowledge
     fun getVisibleCards(): List<HanabiCard>
+    fun getKnownCards(): List<HanabiCard>
 }

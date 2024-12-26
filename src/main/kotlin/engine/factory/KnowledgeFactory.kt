@@ -3,7 +3,6 @@ package eelst.ilike.engine.factory
 import eelst.ilike.engine.convention.hgroup.signal.Signal
 import eelst.ilike.engine.player.GameFromPlayerPOV
 import eelst.ilike.engine.player.knowledge.*
-import eelst.ilike.game.PlayerId
 import eelst.ilike.game.entity.card.HanabiCard
 
 object KnowledgeFactory {
@@ -27,7 +26,7 @@ object KnowledgeFactory {
         hasConflictingInformation: Boolean = false,
     ): SlotKnowledge {
         return if (visibleCard == null) {
-            DefaultSlotKnowledge(
+            BaseSlotKnowledge(
                 signals = signals.toMutableMap(),
                 impliedIdentities = impliedIdentities,
                 hasConflictingInformation = hasConflictingInformation
