@@ -1,10 +1,16 @@
-package eelst.ilike.bot.handler.request
+package bot.handler.command
 
 import eelst.ilike.bot.Bot
 
+/**
+ * Chain of responsibility for handling user commands.
+ */
 sealed class BotCommandHandler(private val supportedCommandType: CommandType) {
     abstract val nextHandler: BotCommandHandler
 
+    /**
+     * Handle a user command.
+     */
     open suspend fun handle(
         commandType: CommandType,
         commandArgs: Collection<String>,

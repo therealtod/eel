@@ -1,4 +1,4 @@
-package eelst.ilike.bot.handler.request
+package bot.handler.command
 
 
 enum class CommandType(val aliases: List<String>) {
