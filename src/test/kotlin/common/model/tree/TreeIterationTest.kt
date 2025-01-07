@@ -1,8 +1,8 @@
 package common.model.tree
 
-import eelst.ilike.common.model.tree.TraversalOrder
-import eelst.ilike.common.model.tree.Tree
-import eelst.ilike.common.model.tree.TreeNodeImpl
+import eelst.ilike.common.datastructure.tree.TraversalOrder
+import eelst.ilike.common.datastructure.tree.Tree
+import eelst.ilike.common.datastructure.tree.TreeNodeImpl
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 

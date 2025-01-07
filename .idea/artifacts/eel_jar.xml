@@ -1,0 +1,49 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="eel:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/eel_jar</output-path>
+    <root id="archive" name="eel_jar.jar">
+      <element id="archive" name="eel.main.jar">
+        <element id="module-output" name="eel.main" />
+      </element>
+      <element id="library" level="project" name="Gradle: io.ktor:ktor-sse-jvm:3.0.1" />
+      <element id="library" level="project" name="Gradle: com.fasterxml.jackson.core:jackson-annotations:2.18.2" />
+      <element id="library" level="project" name="Gradle: org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.9.0" />
+      <element id="library" level="project" name="Gradle: io.ktor:ktor-websockets-jvm:3.0.1" />
+      <element id="library" level="project" name="Gradle: com.fasterxml.jackson.core:jackson-databind:2.18.2" />
+      <element id="library" level="project" name="Gradle: com.fasterxml.jackson.core:jackson-core:2.18.2" />
+      <element id="library" level="project" name="Gradle: io.ktor:ktor-io-jvm:3.0.1" />
+      <element id="library" level="project" name="Gradle: org.apache.logging.log4j:log4j-api-kotlin:1.5.0" />
+      <element id="library" level="project" name="Gradle: org.slf4j:slf4j-api:2.0.16" />
+      <element id="library" level="project" name="Gradle: io.ktor:ktor-http-cio-jvm:3.0.1" />
+      <element id="library" level="project" name="Gradle: org.apache.logging.log4j:log4j-api:3.0.0-beta2" />
+      <element id="library" level="project" name="Gradle: io.ktor:ktor-client-cio-jvm:3.0.1" />
+      <element id="library" level="project" name="Gradle: com.fasterxml.jackson.module:jackson-module-kotlin:2.18.2" />
+      <element id="library" level="project" name="Gradle: io.ktor:ktor-network-jvm:3.0.1" />
+      <element id="library" level="project" name="Gradle: com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.18.2" />
+      <element id="library" level="project" name="Gradle: org.jetbrains.kotlin:kotlin-reflect:1.8.10" />
+      <element id="library" level="project" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib:2.0.21" />
+      <element id="library" level="project" name="Gradle: io.ktor:ktor-http-jvm:3.0.1" />
+      <element id="library" level="project" name="Gradle: io.ktor:ktor-serialization-jvm:3.0.1" />
+      <element id="library" level="project" name="Gradle: io.ktor:ktor-utils-jvm:3.0.1" />
+      <element id="library" level="project" name="Gradle: io.ktor:ktor-websocket-serialization-jvm:3.0.1" />
+      <element id="library" level="project" name="Gradle: io.ktor:ktor-client-resources-jvm:3.0.1" />
+      <element id="library" level="project" name="Gradle: org.jetbrains:annotations:23.0.0" />
+      <element id="library" level="project" name="Gradle: org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:1.9.0" />
+      <element id="library" level="project" name="Gradle: io.ktor:ktor-resources-jvm:3.0.1" />
+      <element id="library" level="project" name="Gradle: io.ktor:ktor-network-tls-jvm:3.0.1" />
+      <element id="library" level="project" name="Gradle: org.apache.logging.log4j:log4j-core:3.0.0-beta2" />
+      <element id="library" level="project" name="Gradle: org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:1.7.3" />
+      <element id="library" level="project" name="Gradle: io.ktor:ktor-serialization-jackson-jvm:3.0.1" />
+      <element id="library" level="project" name="Gradle: io.ktor:ktor-client-logging-jvm:3.0.1" />
+      <element id="library" level="project" name="Gradle: io.ktor:ktor-events-jvm:3.0.1" />
+      <element id="library" level="project" name="Gradle: io.ktor:ktor-client-core-jvm:3.0.1" />
+      <element id="library" level="project" name="Gradle: org.yaml:snakeyaml:2.3" />
+      <element id="library" level="project" name="Gradle: org.apache.logging.log4j:log4j-plugins:3.0.0-beta2" />
+      <element id="library" level="project" name="Gradle: org.apache.logging.log4j:log4j-slf4j2-impl:3.0.0-beta2" />
+      <element id="library" level="project" name="Gradle: com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2" />
+      <element id="library" level="project" name="Gradle: io.ktor:ktor-client-content-negotiation-jvm:3.0.1" />
+      <element id="library" level="project" name="Gradle: org.jetbrains.kotlinx:kotlinx-io-bytestring-jvm:0.5.4" />
+      <element id="library" level="project" name="Gradle: org.jetbrains.kotlinx:kotlinx-io-core-jvm:0.5.4" />
+    </root>
+  </artifact>
+</component>

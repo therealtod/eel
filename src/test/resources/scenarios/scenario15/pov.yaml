@@ -60,9 +60,9 @@ player_pov:
       hand:
         - card: "r4"
         - card: "p2"
-          positive_clues: [2]
+          positive_clues: [ 2 ]
         - card: "r2"
-          positive_clues: [2]
+          positive_clues: [ 2 ]
         - card: "b4"
     - player_id: "Donald"
       hand:

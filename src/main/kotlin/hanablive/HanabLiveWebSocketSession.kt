@@ -3,16 +3,20 @@ package eelst.ilike.hanablive
 
 import eelst.ilike.hanablive.client.HanabLiveHttpClient
 import eelst.ilike.hanablive.client.HanabLiveWebSocketClient
+import eelst.ilike.hanablive.exception.LoginFailedException
+import eelst.ilike.hanablive.exception.UnexpectedLoginHttpResponseFormat
 import io.ktor.client.plugins.websocket.*
+import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
+import org.apache.logging.log4j.kotlin.Logging
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
-class HanabLiveWebSocketSession(val username: String, val password: String) : CoroutineScope {
+class HanabLiveWebSocketSession(val username: String, val password: String) : CoroutineScope, Logging {
     private lateinit var webSocketSession: ClientWebSocketSession
 
     suspend fun startSession() {
@@ -24,11 +28,17 @@ class HanabLiveWebSocketSession(val username: String, val password: String) : Co
             username = username,
             password = password,
         )
-
-        val responseHeaders = serverResponse.headers
-        val cookieHeaderValue = responseHeaders[HanabLiveConstants.COOKIE_NAME]
-            ?: throw IllegalStateException()
-        webSocketSession = HanabLiveWebSocketClient.connect(cookieHeaderValue)
+        if (serverResponse.status.isSuccess()) {
+            val responseHeaders = serverResponse.headers
+            val cookieHeaderValue = responseHeaders[HanabLiveConstants.COOKIE_NAME]
+                ?: throw UnexpectedLoginHttpResponseFormat(
+                    "No cookie with name ${HanabLiveConstants.COOKIE_NAME} is contained in the response"
+                )
+            webSocketSession = HanabLiveWebSocketClient.connect(cookieHeaderValue)
+        }
+        else {
+            throw LoginFailedException("The attempt to login has failed")
+        }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

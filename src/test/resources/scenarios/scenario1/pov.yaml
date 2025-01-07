@@ -18,12 +18,12 @@ player_pov:
   players:
     - player_id: "Alice"
       hand:
-          - thinks: "x"
-          - thinks: "b3b4"
-            positive_clues: [ "BLUE" ]
-          - thinks: "x"
-          - thinks: "g1"
-            positive_clues: [ "GREEN" ]
+        - thinks: "x"
+        - thinks: "b3b4"
+          positive_clues: [ "BLUE" ]
+        - thinks: "x"
+        - thinks: "g1"
+          positive_clues: [ "GREEN" ]
     - player_id: "Bob"
       hand:
         - card: "g5"

@@ -1,0 +1,11 @@
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      BUILD_JAR_NAME: eel-0.0.1-SNAPSHOT-standalone.jar
+      OUTPUT_JAR_NAME: eel.jar
+      APP_HOME: /usr/app
+    volumes:
+      - .:/usr/app/

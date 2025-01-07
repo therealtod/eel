@@ -27,7 +27,7 @@ player_pov:
       hand:
         - card: "p1"
         - card: "b3"
-          positive_clues: ["BLUE"]
+          positive_clues: [ "BLUE" ]
         - card: "y4"
         - card: "b1"
         - card: "r3"
@@ -36,7 +36,7 @@ player_pov:
         - card: "b4"
         - card: "r4"
         - card: "r2"
-          positive_clues: [2]
+          positive_clues: [ 2 ]
         - card: "p2"
-          positive_clues: [2]
+          positive_clues: [ 2 ]
         - card: "r1"

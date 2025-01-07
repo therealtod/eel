@@ -41,4 +41,4 @@ player_pov:
         - card: "p1"
         - card: "b4"
         - card: "r3"
-          positive_clues: ["RED"]
+          positive_clues: [ "RED" ]

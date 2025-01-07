@@ -1,10 +1,10 @@
 package game.entity
 
+import eelst.ilike.game.entity.HanabiCard
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.TrashPile
-import eelst.ilike.game.entity.card.HanabiCard
-import eelst.ilike.game.entity.suite.Green
-import eelst.ilike.game.entity.suite.Red
+import game.entity.suit.Green
+import game.entity.suit.Red
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 

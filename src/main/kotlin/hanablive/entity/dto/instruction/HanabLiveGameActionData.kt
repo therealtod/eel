@@ -1,0 +1,23 @@
+package eelst.ilike.hanablive.entity.dto.instruction
+
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import eelst.ilike.hanablive.model.dto.command.GameActionType
+
+@JsonTypeInfo(
+    use = JsonTypeInfo.Id.NAME,
+    include = JsonTypeInfo.As.EXISTING_PROPERTY,
+    property = "type", visible = true
+)
+@JsonSubTypes(
+    JsonSubTypes.Type(value = GamePlayActionData::class, name = "play"),
+    JsonSubTypes.Type(value = GameDrawActionData::class, name = "draw"),
+    JsonSubTypes.Type(value = GameDiscardActionData::class, name = "discard"),
+    JsonSubTypes.Type(value = GameClueActionData::class, name = "clue"),
+    JsonSubTypes.Type(value = GameTurnActionData::class, name = "turn"),
+    JsonSubTypes.Type(value = GameStatusActionData::class, name = "status"),
+)
+sealed class HanabLiveGameActionData(
+    val type: GameActionType
+)
+

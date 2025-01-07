@@ -20,7 +20,7 @@ player_pov:
       hand:
         - card: "x"
         - card: "y2"
-          positive_clues: ["YELLOW", 2]
+          positive_clues: [ "YELLOW", 2 ]
         - card: "x"
         - card: "x"
         - card: "x"

@@ -30,7 +30,7 @@ player_pov:
         - card: "y4"
         - card: "y2"
         - card: "p4"
-          positive_clues: [4]
+          positive_clues: [ 4 ]
     - player_id: "Cathy"
       hand:
         - card: "r2"

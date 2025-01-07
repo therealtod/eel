@@ -1,28 +1,32 @@
 package eelst.ilike.hanablive.bot.state
 
-import eelst.ilike.game.PlayerId
-import eelst.ilike.hanablive.bot.HanabLiveBot
-import eelst.ilike.hanablive.model.TableId
-import eelst.ilike.hanablive.model.dto.command.GameInitData
-import eelst.ilike.hanablive.model.dto.command.Table
-import eelst.ilike.hanablive.model.dto.instruction.HanabLiveGameAction
-import eelst.ilike.hanablive.model.dto.instruction.GameActionListData
+
+import eelst.ilike.game.entity.player.PlayerId
+import eelst.ilike.hanablive.LobbyState
+import eelst.ilike.hanablive.bot.DefaultHanabLiveBot
+import eelst.ilike.hanablive.entity.Table
+import eelst.ilike.hanablive.entity.TableId
+import eelst.ilike.hanablive.entity.dto.instruction.GameActionListData
+import eelst.ilike.hanablive.entity.dto.instruction.GameInitData
+import eelst.ilike.hanablive.entity.dto.instruction.HanabLiveGameAction
+import org.apache.logging.log4j.kotlin.Logging
+import kotlin.math.log
 
 abstract class HanabLiveBotState(
-    protected val bot: HanabLiveBot,
-    protected val commonState: HanabLiveLobbyState,
-) {
+    protected val bot: DefaultHanabLiveBot,
+    protected val lobbyState: LobbyState = LobbyState(),
+): Logging {
     fun setTables(tables: Collection<Table>) {
-        commonState.tables.clear()
-        commonState.tables.putAll(tables.associateBy { it.id })
+        lobbyState.tables.clear()
+        lobbyState.tables.putAll(tables.associateBy { it.id })
     }
 
     fun putTable(table: Table) {
-        commonState.tables[table.id] = table
+        lobbyState.tables[table.id] = table
     }
 
     open suspend fun joinPlayer(playerId: PlayerId) {
-        throw IllegalAccessException("Cannot join a player in the current state $this")
+        logger.warn("Cannot join a player in the current state $this")
     }
 
     open suspend fun joinPlayer(playerId: PlayerId, tablePassword: String) {
@@ -30,22 +34,30 @@ abstract class HanabLiveBotState(
     }
 
     open suspend fun joinTable(tableId: TableId) {
-        throw IllegalAccessException("Cannot join a table in the current state $this")
+        logger.warn("Cannot join a table in the current state $this")
     }
 
     open suspend fun joinTable(tableId: TableId, password: String) {
-        throw IllegalAccessException("Cannot join a table in the current state $this")
+        logger.warn("Cannot join a table in the current state $this")
     }
 
     open suspend fun onGameInitDataReceived(gameInitData: GameInitData) {
-        throw IllegalStateException("This instruction (GameInitData) should not have been received in the current state $this")
+        logger.warn("This instruction (eelst.ilike.hanablive.entity.dto.instruction.GameInitData) should not have been received in the current state $this")
     }
 
     open suspend fun onGameActionListReceived(gameActionListData: GameActionListData) {
-        throw IllegalStateException("This instruction (GameActionList) should not have been received in the current state $this")
+        logger.warn("This instruction (GameActionList) should not have been received in the current state $this")
     }
 
     open suspend fun onGameAction(gameAction: HanabLiveGameAction) {
-        throw IllegalStateException("This instruction (GameAction) should not have been received in the current state $this")
+        logger.warn("This instruction (GameAction) should not have been received in the current state $this")
+    }
+
+    open suspend fun leaveTable() {
+        logger.info("Can't execute a leave table isntruction in the current state $this")
+    }
+
+    protected fun switchToState(newState: HanabLiveBotState) {
+        bot.state = newState
     }
 }

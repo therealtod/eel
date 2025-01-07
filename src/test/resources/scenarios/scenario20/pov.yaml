@@ -26,11 +26,11 @@ player_pov:
       hand:
         - card: "g5"
         - card: "g2"
-          positive_clues: [2]
+          positive_clues: [ 2 ]
         - card: "b2"
-          positive_clues: [2]
+          positive_clues: [ 2 ]
         - card: "r1"
-          positive_clues: [1]
+          positive_clues: [ 1 ]
     - player_id: "Cathy"
       hand:
         - card: "p5"
@@ -42,7 +42,7 @@ player_pov:
         - card: "p3"
         - card: "y5"
         - card: "y3"
-          positive_clues: ["YELLOW"]
+          positive_clues: [ "YELLOW" ]
         - card: "y3"
-          positive_clues: ["YELLOW"]
+          positive_clues: [ "YELLOW" ]
 

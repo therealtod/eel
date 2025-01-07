@@ -20,11 +20,11 @@ player_pov:
       hand:
         - card: "x"
         - card: "x"
-          positive_clues: ["BLUE"]
+          positive_clues: [ "BLUE" ]
           thinks: "b3b4"
         - card: "x"
         - card: "x"
-          positive_clues: ["GREEN"]
+          positive_clues: [ "GREEN" ]
           thinks: "g1"
     - player_id: "Bob"
       hand:

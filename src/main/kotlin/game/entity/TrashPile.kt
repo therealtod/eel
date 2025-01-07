@@ -1,0 +1,13 @@
+package eelst.ilike.game.entity
+
+data class TrashPile(
+    val cards: List<HanabiCard> = emptyList()
+) {
+    fun copiesOf(card: HanabiCard): Int {
+        return cards.filter { it == card }.size
+    }
+
+    fun withAddedCard(card: HanabiCard): TrashPile {
+        return TrashPile(cards + card)
+    }
+}
