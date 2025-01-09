@@ -2,13 +2,14 @@ package eelst.ilike.hanablive.bot.state
 
 import eelst.ilike.game.entity.player.PlayerId
 import eelst.ilike.hanablive.bot.DefaultHanabLiveBot
+import eelst.ilike.hanablive.bot.HanabLiveBot
 import eelst.ilike.hanablive.entity.TableId
 import hanablive.bot.state.TableJoinedAsPlayerState
 import hanablive.entity.dto.instruction.TableJoin
 
 
-class LoggedInState(
-    bot: DefaultHanabLiveBot,
+class SittingInLobbyState(
+    bot: HanabLiveBot,
 ) : HanabLiveBotState(
     bot = bot,
 ) {

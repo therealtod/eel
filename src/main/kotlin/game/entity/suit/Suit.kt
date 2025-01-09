@@ -25,18 +25,11 @@ abstract class Suit(
     private val copiesValuesList = Rank.entries.map { copiesOf(it) }
 
     fun getAllUniqueCards(): List<HanabiCard> {
-        return ranks.map {
-            HanabiCard(
-                suit = this,
-                rank = it
-            )
-        }
+        return uniqueCards
     }
 
     fun getAllCards(): List<HanabiCard> {
-        return getAllUniqueCards().flatMap { card ->
-            copiesOf(card.rank).downTo(0).map { card }
-        }
+        return allCards
     }
 
     fun copiesOf(rank: Rank): Int {
@@ -118,5 +111,15 @@ abstract class Suit(
 
     override fun toString(): String {
         return name
+    }
+
+    private val uniqueCards = ranks.map {
+        HanabiCard(
+            suit = this,
+            rank = it
+        )
+    }
+    private val allCards: List<HanabiCard> = uniqueCards.flatMap { card ->
+        copiesOf(card.rank).downTo(1).map { card }
     }
 }

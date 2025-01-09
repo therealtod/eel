@@ -4,6 +4,7 @@ package eelst.ilike.hanablive.bot.state
 import eelst.ilike.game.entity.player.PlayerId
 import eelst.ilike.hanablive.LobbyState
 import eelst.ilike.hanablive.bot.DefaultHanabLiveBot
+import eelst.ilike.hanablive.bot.HanabLiveBot
 import eelst.ilike.hanablive.entity.Table
 import eelst.ilike.hanablive.entity.TableId
 import eelst.ilike.hanablive.entity.dto.instruction.GameActionListData
@@ -13,7 +14,7 @@ import org.apache.logging.log4j.kotlin.Logging
 import kotlin.math.log
 
 abstract class HanabLiveBotState(
-    protected val bot: DefaultHanabLiveBot,
+    protected val bot: HanabLiveBot,
     protected val lobbyState: LobbyState = LobbyState(),
 ): Logging {
     fun setTables(tables: Collection<Table>) {
@@ -58,6 +59,6 @@ abstract class HanabLiveBotState(
     }
 
     protected fun switchToState(newState: HanabLiveBotState) {
-        bot.state = newState
+        bot.switchToState(newState)
     }
 }

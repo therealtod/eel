@@ -1,6 +1,7 @@
 package eelst.ilike.hanablive.bot
 
 import eelst.ilike.game.entity.player.PlayerId
+import eelst.ilike.hanablive.bot.state.HanabLiveBotState
 import hanablive.entity.dto.instruction.HanabLiveInstruction
 
 interface HanabLiveBot {
@@ -24,4 +25,6 @@ interface HanabLiveBot {
      * Send an instruction to the Hanab live server
      */
     suspend fun sendHanabLiveInstruction(instruction: HanabLiveInstruction)
+
+    fun switchToState(newState: HanabLiveBotState)
 }

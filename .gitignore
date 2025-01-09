@@ -47,3 +47,6 @@ bin/
 ### Configuration file ###
 src/main/resources/eel-credentials.yaml
 src/main/resources/eel-credentials.json
+
+### Logs ###
+logs

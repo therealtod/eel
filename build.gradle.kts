@@ -55,6 +55,7 @@ dependencies {
     implementation("io.ktor:ktor-serialization-jackson:${Versions.KTOR}")
     testImplementation(kotlin("test"))
     testImplementation("io.mockk:mockk:${Versions.MOCKK}")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:${Versions.KOTLINX}")
 }
 
 tasks.test {
@@ -69,4 +70,5 @@ object Versions {
     const val MOCKK = "1.13.13"
     const val KTOR = "3.0.1"
     const val LOG4J = "2.23.1"
+    const val KOTLINX = "1.10.1"
 }

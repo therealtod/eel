@@ -8,7 +8,7 @@ import eelst.ilike.hanablive.bot.dto.Credentials
 import eelst.ilike.hanablive.bot.dto.HanabLiveBotConfiguration
 import eelst.ilike.hanablive.bot.state.HanabLiveBotState
 import eelst.ilike.hanablive.bot.state.InitialState
-import eelst.ilike.hanablive.bot.state.LoggedInState
+import eelst.ilike.hanablive.bot.state.SittingInLobbyState
 import eelst.ilike.hanablive.entity.dto.HanabLiveInstructionType
 import eelst.ilike.hanablive.instruction.handler.HanabLiveInstructionHandler
 import hanablive.entity.dto.instruction.HanabLiveInstruction
@@ -31,6 +31,10 @@ class DefaultHanabLiveBot(
 
     override suspend fun sendHanabLiveInstruction(instruction: HanabLiveInstruction) {
         webSocketSession.sendMessage(instruction.asWebSocketMessage())
+    }
+
+    override fun switchToState(newState: HanabLiveBotState) {
+        state = newState
     }
 
     override suspend fun leaveTable() {
@@ -60,7 +64,7 @@ class DefaultHanabLiveBot(
 
     suspend fun run() {
         webSocketSession.startSession()
-        state = LoggedInState(
+        state = SittingInLobbyState(
             bot = this
         )
         consumeWebsocketMessages(InstructionHandlerChainInitializer.getInitializedChain())

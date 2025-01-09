@@ -1,5 +1,6 @@
 package eelst.ilike.game.entity.player
 
+import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.slot.Slot
 
@@ -13,4 +14,7 @@ interface Player {
 
     fun getSlots(): List<Slot>
     fun getAfterDrawing(slot: Slot): Player
+    fun getAfterPlaying(slotIndex: Int): Player
+    fun getAfterDiscarding(slotIndex: Int): Player
+    fun getAfterReceivingClue(clueValue: ClueValue, touchedSlotsIndexes: Set<Int>): Player
 }

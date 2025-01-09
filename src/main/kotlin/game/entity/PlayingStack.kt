@@ -70,4 +70,6 @@ data class PlayingStack(
             ),
         )
     }
+
+    val maxSize = 5
 }

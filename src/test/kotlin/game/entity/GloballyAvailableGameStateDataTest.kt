@@ -1,7 +1,8 @@
 package game.entity
 
-import eelst.ilike.game.NonPlayerRelatedGameData
+import eelst.ilike.game.GloballyAvailableGameData
 import eelst.ilike.game.entity.*
+import eelst.ilike.game.exception.IllegalGameActionException
 import game.entity.suit.*
 import io.mockk.every
 import io.mockk.mockk
@@ -9,7 +10,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class NonPlayerRelatedGameDataTest {
+class GloballyAvailableGameStateDataTest {
     @Test
     fun `Should add a playable card to the playing stacks`() {
         val card = HanabiCard(suit = Blue, rank = Rank.ONE)
@@ -66,7 +67,18 @@ class NonPlayerRelatedGameDataTest {
     }
 
     @Test
-    fun `Should add a card to the discard pile`() {
+    fun `Should not increase the number of clue tokens When a suit is completed And the clue count is 8`() {
+        val card = HanabiCard(suit = Purple, rank = Rank.FIVE)
+        val updatedGame = dataWith8Clues.getAfterPlaying(card, variant)
+
+        val expected = 8
+        val actual = updatedGame.clueTokens
+
+        Assertions.assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `Should add a discarded card to the discard pile`() {
         val card = HanabiCard(suit = Red, rank = Rank.FIVE)
         val updatedGame = data.getAfterDiscarding(card)
 
@@ -74,6 +86,14 @@ class NonPlayerRelatedGameDataTest {
         val actual = updatedGame.trashPile.cards
 
         Assertions.assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `Should now allow to discard cards When the clue count is maxed`() {
+        val card = HanabiCard(suit = Red, rank = Rank.FIVE)
+        Assertions.assertThrows(IllegalGameActionException::class.java) {
+            dataWith8Clues.getAfterDiscarding(card)
+        }
     }
 
     @Test
@@ -88,19 +108,8 @@ class NonPlayerRelatedGameDataTest {
     }
 
     @Test
-    fun `Should not increase the number of clue tokens When a card is discarded And the clue count is 8`() {
-        val card = HanabiCard(suit = Red, rank = Rank.FIVE)
-        val updatedGame = dataWith8Clues.getAfterDiscarding(card)
-
-        val expected = 8
-        val actual = updatedGame.clueTokens
-
-        Assertions.assertEquals(expected, actual)
-    }
-
-    @Test
     fun `Should decrease the number of clue tokens When a clue is given`() {
-        val updatedGame = data.getAfterPlayerCluing()
+        val updatedGame = data.getAfterClueGiven()
 
         val expected = 4
         val actual = updatedGame.clueTokens
@@ -110,9 +119,85 @@ class NonPlayerRelatedGameDataTest {
 
     @Test
     fun `Should not allow to give a clue When there are no clue tokens left`() {
-        Assertions.assertThrows(IllegalAccessException::class.java) {
-            val updatedGame = dataWith0Clues.getAfterPlayerCluing()
+        Assertions.assertThrows(IllegalGameActionException::class.java) {
+            dataWith0Clues.getAfterClueGiven()
         }
+    }
+
+    @Test
+    fun `Should compute the correct current deck size`() {
+        val hand1 = mockk<Hand>()
+        val hand2 = mockk<Hand>()
+        val hand3 = mockk<Hand>()
+        every { hand1.size } returns 5
+        every { hand2.size } returns 5
+        every { hand3.size } returns 5
+        val hands = listOf(hand1, hand2, hand3)
+
+        val expected = 18
+        val actual = data.getCurrentDeckSize(hands)
+
+        Assertions.assertEquals(expected, actual)
+
+    }
+
+    @Test
+    fun `Should compute the correct score`() {
+        val expected = 7
+        val actual = data.score
+
+        Assertions.assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `Should give a value of 0 as away-value for a card that is immediately playable`() {
+        val card = HanabiCard(
+            suit = Red,
+            rank = Rank.TWO,
+        )
+
+        val expected = 0
+        val actual = data.getAwayValue(card)
+
+        Assertions.assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `Should give a value of 2 as away-value for a card that is that is 2 from playable`() {
+        val card = HanabiCard(
+            suit = Blue,
+            rank = Rank.ONE,
+        )
+
+        val expected = 0
+        val actual = data.getAwayValue(card)
+
+        Assertions.assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `Should give a value of 0 for the first playable card of the suit When the stack is empty`() {
+        val card = HanabiCard(
+            suit = Red,
+            rank = Rank.FOUR,
+        )
+
+        val expected = 2
+        val actual = data.getAwayValue(card)
+
+        Assertions.assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `Should return true When the card is immediately playable`() {
+        val card = HanabiCard(
+            suit = Red,
+            rank = Rank.TWO,
+        )
+
+        val result = data.isImmediatelyPlayable(card)
+
+        Assertions.assertTrue(result)
     }
 
     companion object {
@@ -183,7 +268,18 @@ class NonPlayerRelatedGameDataTest {
             ),
         )
         private val trashPile = TrashPile(trashPileCards)
-        private val data = NonPlayerRelatedGameData(
+
+        private lateinit var data: GloballyAvailableGameData
+        private lateinit var dataWith8Clues: GloballyAvailableGameData
+        private lateinit var dataWith0Clues: GloballyAvailableGameData
+
+        @JvmStatic
+        @BeforeAll
+        fun setUp() {
+            every { variant.suits } returns setOf(Red, Yellow, Green, Blue, Purple)
+
+            data = GloballyAvailableGameData(
+                    variant = variant,
             playingStacks = mapOf(
                 "red" to redStack,
                 "yellow" to yellowStack,
@@ -195,19 +291,12 @@ class NonPlayerRelatedGameDataTest {
             trashPile = trashPile,
             strikes = 0,
             clueTokens = 5,
-        )
-
-        private lateinit var dataWith8Clues: NonPlayerRelatedGameData
-        private lateinit var dataWith0Clues: NonPlayerRelatedGameData
-
-        @JvmStatic
-        @BeforeAll
-        fun setUp() {
-            every { variant.suits } returns setOf(Red, Yellow, Green, Blue, Purple)
+            numberOfPlayers = 3,
+                amountOfCardsPlayed = 7,
+                possibleMaxScore = 25,
+            )
             dataWith8Clues =  data.copy(clueTokens = 8)
-
             dataWith0Clues = data.copy(clueTokens = 0)
-
         }
     }
 }

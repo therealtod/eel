@@ -6,4 +6,5 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy::class)
 data class HanabLiveBotConfiguration (
     val userCommandPrefix: String,
+    val maxDepth: Int,
 )
