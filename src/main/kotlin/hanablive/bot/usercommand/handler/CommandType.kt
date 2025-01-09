@@ -1,4 +1,4 @@
-package eelst.ilike.hanablive.bot.command.handler
+package eelst.ilike.hanablive.bot.usercommand.handler
 
 
 enum class CommandType(val aliases: List<String>) {

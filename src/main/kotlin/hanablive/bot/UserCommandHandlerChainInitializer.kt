@@ -1,8 +1,8 @@
 package eelst.ilike.hanablive.bot
 
-import eelst.ilike.hanablive.bot.command.handler.JoinMyTableHandler
-import eelst.ilike.hanablive.bot.command.handler.NoOpBotCommandHandler
-import eelst.ilike.hanablive.bot.command.handler.UserCommandHandler
+import eelst.ilike.hanablive.bot.usercommand.handler.JoinMyTableHandler
+import eelst.ilike.hanablive.bot.usercommand.handler.NoOpBotCommandHandler
+import eelst.ilike.hanablive.bot.usercommand.handler.UserCommandHandler
 
 object UserCommandHandlerChainInitializer {
     /**

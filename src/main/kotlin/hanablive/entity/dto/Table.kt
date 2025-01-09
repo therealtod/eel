@@ -1,11 +1,10 @@
 package hanablive.entity.dto
 
-import eelst.ilike.hanablive.entity.Table
 import eelst.ilike.hanablive.entity.dto.GameOptions
 
 data class Table(
-    override val id: Int,
-    override val name: String,
+    val id: Int,
+    val name: String,
     val passwordProtected: Boolean,
     val joined: Boolean,
     val numPlayers: Int,
@@ -19,10 +18,10 @@ data class Table(
     val timePerTurn: Int,
     val sharedReplay: Boolean,
     val progress: Int,
-    override val players: List<String>,
+    val players: List<String>,
     val spectators: List<Spectator>,
     val maxPlayers: Int,
-): Table {
+) {
     data class Spectator(
         val name: String,
         val shadowingPlayerIndex: Int,

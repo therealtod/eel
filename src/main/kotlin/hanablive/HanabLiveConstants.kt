@@ -12,4 +12,5 @@ object HanabLiveConstants {
     const val COOKIE_NAME = "set-cookie"
     const val COLOR_CLUE_TYPE = 2
     const val RANK_CLUE_TYPE = 3
+    const val LOBBY_ROOM_NAME = "lobby"
 }

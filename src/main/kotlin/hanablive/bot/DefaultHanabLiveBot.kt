@@ -1,17 +1,25 @@
 package eelst.ilike.hanablive.bot
 
 
+import common.metadata.VariantMetadata
+import eelst.ilike.common.metadata.SuitMetadata
 import eelst.ilike.game.entity.player.PlayerId
+import eelst.ilike.game.entity.suit.SuitId
 import eelst.ilike.hanablive.HanabLiveWebSocketSession
 import eelst.ilike.hanablive.InstructionHandlerChainInitializer
 import eelst.ilike.hanablive.bot.dto.Credentials
 import eelst.ilike.hanablive.bot.dto.HanabLiveBotConfiguration
 import eelst.ilike.hanablive.bot.state.HanabLiveBotState
 import eelst.ilike.hanablive.bot.state.InitialState
+import eelst.ilike.hanablive.bot.state.LoadingGameDataState
 import eelst.ilike.hanablive.bot.state.SittingInLobbyState
+import eelst.ilike.hanablive.entity.TableId
 import eelst.ilike.hanablive.entity.dto.HanabLiveInstructionType
+import eelst.ilike.hanablive.entity.dto.instruction.GameActionListData
 import eelst.ilike.hanablive.instruction.handler.HanabLiveInstructionHandler
+import hanablive.entity.dto.instruction.GetGameInfo1
 import hanablive.entity.dto.instruction.HanabLiveInstruction
+import hanablive.metadata.RemoteMetadataProvider
 
 class DefaultHanabLiveBot(
     val configuration: HanabLiveBotConfiguration,
@@ -29,6 +37,15 @@ class DefaultHanabLiveBot(
         state.joinPlayer(playerId, tablePassword)
     }
 
+    override suspend fun onTableStart(tableId: TableId) {
+        sendHanabLiveInstruction(GetGameInfo1(tableId))
+        val newState = LoadingGameDataState(
+            bot = this,
+            lobbyState = state.lobbyState,
+        )
+        switchToState(newState)
+    }
+
     override suspend fun sendHanabLiveInstruction(instruction: HanabLiveInstruction) {
         webSocketSession.sendMessage(instruction.asWebSocketMessage())
     }
@@ -39,6 +56,18 @@ class DefaultHanabLiveBot(
 
     override suspend fun leaveTable() {
         state.leaveTable()
+    }
+
+    override suspend fun onGameActionListReceived(gameActionListData: GameActionListData) {
+        return state.onGameActionListReceived(gameActionListData)
+    }
+
+    override suspend fun getVariantMetadata(variantName: String): VariantMetadata {
+        return metadataProvider.getVariantMetadata(variantName)
+    }
+
+    override suspend fun getSuitsMetadata(suitIds: Collection<SuitId>): Map<SuitId, SuitMetadata> {
+        return metadataProvider.getSuitsMetadata(suitIds)
     }
 
     private val webSocketSession = HanabLiveWebSocketSession(
@@ -53,7 +82,7 @@ class DefaultHanabLiveBot(
                 "The websocket message contains less that 2 tokens"
             }
             val messageTypeToken = tokens.first()
-            if (HanabLiveInstructionType.entries.none { it.stringValue == messageTypeToken }) {
+            if (HanabLiveInstructionType.entries.none { it.label == messageTypeToken }) {
                 continue
             }
             val payload = tokens.last()
@@ -69,4 +98,6 @@ class DefaultHanabLiveBot(
         )
         consumeWebsocketMessages(InstructionHandlerChainInitializer.getInitializedChain())
     }
+
+    private val metadataProvider = RemoteMetadataProvider
 }

@@ -1,4 +1,4 @@
-package eelst.ilike.hanablive.bot.command.handler
+package eelst.ilike.hanablive.bot.usercommand.handler
 
 import eelst.ilike.hanablive.bot.DefaultHanabLiveBot
 import org.apache.logging.log4j.kotlin.Logging

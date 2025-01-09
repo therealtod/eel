@@ -4,8 +4,8 @@ import eelst.ilike.hanablive.bot.DefaultHanabLiveBot
 import eelst.ilike.hanablive.entity.dto.HanabLiveInstructionType
 import hanablive.entity.dto.ChatMessage
 import com.fasterxml.jackson.module.kotlin.readValue
-import eelst.ilike.hanablive.bot.command.handler.CommandType
-import eelst.ilike.hanablive.bot.command.handler.UserCommandHandler
+import eelst.ilike.hanablive.bot.usercommand.handler.CommandType
+import eelst.ilike.hanablive.bot.usercommand.handler.UserCommandHandler
 
 /**
  * Handles any message sent on the hanab live chat. Being in the lobby, in a room or a private message.

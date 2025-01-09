@@ -1,7 +1,12 @@
 package eelst.ilike.hanablive.bot
 
+import common.metadata.VariantMetadata
+import eelst.ilike.common.metadata.SuitMetadata
 import eelst.ilike.game.entity.player.PlayerId
+import eelst.ilike.game.entity.suit.SuitId
 import eelst.ilike.hanablive.bot.state.HanabLiveBotState
+import eelst.ilike.hanablive.entity.TableId
+import eelst.ilike.hanablive.entity.dto.instruction.GameActionListData
 import hanablive.entity.dto.instruction.HanabLiveInstruction
 
 interface HanabLiveBot {
@@ -22,9 +27,32 @@ interface HanabLiveBot {
     suspend fun leaveTable()
 
     /**
+     * React to the tableStart instruction
+     */
+    suspend fun onTableStart(tableId: TableId)
+
+    /**
      * Send an instruction to the Hanab live server
      */
     suspend fun sendHanabLiveInstruction(instruction: HanabLiveInstruction)
 
+    /**
+     * Transition to the given [newState]
+     */
     fun switchToState(newState: HanabLiveBotState)
+
+    /**
+     * @return the [VariantMetadata] for the given [variantName]
+     */
+    suspend fun getVariantMetadata(variantName: String): VariantMetadata
+
+    /**
+     * @return a [Map] associating each of the given [suitIds] to the corresponding [SuitMetadata]
+     */
+    suspend fun getSuitsMetadata(suitIds: Collection<SuitId>): Map<SuitId, SuitMetadata>
+
+    /**
+     * React to the gameActionList instruction
+     */
+    suspend fun onGameActionListReceived(gameActionListData: GameActionListData)
 }

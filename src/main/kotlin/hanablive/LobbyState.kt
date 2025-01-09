@@ -1,7 +1,7 @@
 package eelst.ilike.hanablive
 
-import eelst.ilike.hanablive.entity.Table
 import eelst.ilike.hanablive.entity.TableId
+import hanablive.entity.dto.Table
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 

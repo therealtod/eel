@@ -1,21 +1,21 @@
 package eelst.ilike.hanablive.bot.state
 
 
+import eelst.ilike.game.GloballyAvailableGameData
 import eelst.ilike.game.entity.player.PlayerId
+import eelst.ilike.hanablive.HanabLiveDataParser
 import eelst.ilike.hanablive.LobbyState
-import eelst.ilike.hanablive.bot.DefaultHanabLiveBot
 import eelst.ilike.hanablive.bot.HanabLiveBot
-import eelst.ilike.hanablive.entity.Table
 import eelst.ilike.hanablive.entity.TableId
 import eelst.ilike.hanablive.entity.dto.instruction.GameActionListData
 import eelst.ilike.hanablive.entity.dto.instruction.GameInitData
 import eelst.ilike.hanablive.entity.dto.instruction.HanabLiveGameAction
+import hanablive.entity.dto.Table
 import org.apache.logging.log4j.kotlin.Logging
-import kotlin.math.log
 
 abstract class HanabLiveBotState(
     protected val bot: HanabLiveBot,
-    protected val lobbyState: LobbyState = LobbyState(),
+    val lobbyState: LobbyState = LobbyState(),
 ): Logging {
     fun setTables(tables: Collection<Table>) {
         lobbyState.tables.clear()
@@ -43,7 +43,8 @@ abstract class HanabLiveBotState(
     }
 
     open suspend fun onGameInitDataReceived(gameInitData: GameInitData) {
-        logger.warn("This instruction (eelst.ilike.hanablive.entity.dto.instruction.GameInitData) should not have been received in the current state $this")
+        logger.warn("This instruction (eelst.ilike.hanablive.entity.dto.instruction.GameInitData)" +
+                " should not have been received in the current state $this")
     }
 
     open suspend fun onGameActionListReceived(gameActionListData: GameActionListData) {
