@@ -1,4 +1,4 @@
-package eelst.ilike.common.metadata
+package eelst.ilike.game.entity.suit
 
 interface SuitMetadata {
     val name: String

@@ -2,6 +2,7 @@ package game.entity
 
 import eelst.ilike.game.GloballyAvailableGameData
 import eelst.ilike.game.entity.*
+import eelst.ilike.game.entity.variant.Variant
 import eelst.ilike.game.exception.IllegalGameActionException
 import game.entity.suit.*
 import io.mockk.every
@@ -276,7 +277,7 @@ class GloballyAvailableGameStateDataTest {
         @JvmStatic
         @BeforeAll
         fun setUp() {
-            every { variant.suits } returns setOf(Red, Yellow, Green, Blue, Purple)
+            every { variant.getSuits() } returns listOf(Red, Yellow, Green, Blue, Purple)
 
             data = GloballyAvailableGameData(
                     variant = variant,

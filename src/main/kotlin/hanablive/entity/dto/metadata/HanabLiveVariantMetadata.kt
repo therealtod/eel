@@ -1,6 +1,6 @@
 package hanablive.entity.dto.metadata
 
-import common.metadata.VariantMetadata
+import eelst.ilike.game.entity.variant.VariantMetadata
 
 data class HanabLiveVariantMetadata(
     override val id: Int,

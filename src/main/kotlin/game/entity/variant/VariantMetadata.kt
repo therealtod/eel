@@ -1,4 +1,4 @@
-package common.metadata
+package eelst.ilike.game.entity.variant
 
 interface VariantMetadata {
     val id: Int

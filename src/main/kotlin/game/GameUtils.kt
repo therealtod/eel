@@ -12,7 +12,7 @@ object GameUtils {
         suits: Set<Suit>
     ): Set<HanabiCard> {
         val allPossibleCards = suits.flatMap { suit ->
-            suit.getAllUniqueCards()
+            suit.getAllUniqueSuitCards()
         }
         return allPossibleCards
             .filter { card ->
@@ -23,10 +23,10 @@ object GameUtils {
 
                 positiveClues.all { clue ->
                     // Exclude all the cards which cannot be touched by the clues the slot was touched by
-                    card.suit.clueTouches(card, clue)
+                    card.suit.rankIsTouchedBy(card.rank, clue)
                 } && negativeClues.none { clue ->
                     // Exclude all the cards which can be touched by the clues the slot was not touched by
-                    card.suit.clueTouches(card, clue)
+                    card.suit.rankIsTouchedBy(card.rank, clue)
                 }
             }
             .toSet()
@@ -41,7 +41,7 @@ object GameUtils {
             6 -> 3
             4, 5 -> 4
             2, 3 -> 5
-            else -> throw IllegalStateException("Invalid number of players: $numberOfPlayers")
+            else -> throw IllegalArgumentException("Invalid number of players: $numberOfPlayers")
         }
     }
 }

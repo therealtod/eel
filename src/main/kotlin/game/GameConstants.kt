@@ -1,5 +1,6 @@
 package eelst.ilike.game
 
 object GameConstants {
-    const val MAX_CLUE_COUNT = 8
+    const val INITIAL_STRIKE_TOKENS_COUNT = 0
+    const val MAX_CLUE_TOKENS_COUNT = 8
 }

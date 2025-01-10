@@ -1,7 +1,8 @@
 package eelst.ilike.game.factory
 
-import eelst.ilike.common.metadata.SuitMetadata
-import eelst.ilike.game.entity.Variant
+import eelst.ilike.game.entity.Color
+import eelst.ilike.game.entity.suit.ClassicSuit
+import eelst.ilike.game.entity.suit.SuitMetadata
 import eelst.ilike.game.entity.suit.Suit
 
 

@@ -1,9 +1,10 @@
 package eelst.ilike.game.factory
 
-import common.metadata.VariantMetadata
-import eelst.ilike.common.metadata.SuitMetadata
-import eelst.ilike.game.entity.Variant
+import eelst.ilike.game.entity.variant.VariantMetadata
+import eelst.ilike.game.entity.suit.SuitMetadata
+import eelst.ilike.game.entity.variant.Variant
 import eelst.ilike.game.entity.suit.SuitId
+import eelst.ilike.game.entity.variant.ClassicVariant
 
 
 /**
@@ -17,8 +18,9 @@ object VariantFactory {
         }
         val suits = suitsMetadata.map { SuitFactory.createSuit(it.value) }
         return ClassicVariant(
-            variantMetadata = metadata,
-            suits = suits.toSet()
+            id = metadata.newID,
+            name = metadata.name,
+            suits = suits
         )
     }
 

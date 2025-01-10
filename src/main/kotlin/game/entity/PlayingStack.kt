@@ -1,6 +1,7 @@
 package eelst.ilike.game.entity
 
 import eelst.ilike.game.entity.suit.Suit
+import eelst.ilike.game.entity.variant.Variant
 
 data class PlayingStack(
     val cards: List<HanabiCard> = emptyList(),
@@ -10,7 +11,7 @@ data class PlayingStack(
      * @return true if the stack is complete.
      */
     fun isComplete(): Boolean {
-        return (cards.lastOrNull()?.rank) == suit.maxRank
+        return (cards.lastOrNull()?.rank) == suit.getLastRank()
     }
 
     /**

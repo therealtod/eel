@@ -12,7 +12,7 @@ import eelst.ilike.hanablive.entity.dto.HanabLiveInstructionType
 data class TableJoin(
     private val tableId: TableId,
     private val password: String = "",
-) : HanabLiveInstruction(HanabLiveInstructionType.TABLE_JOIN.label) {
+) : HanabLiveInstruction(HanabLiveInstructionType.TABLE_JOIN) {
     override fun getWebSocketPayload(): String {
         return mapper.writeValueAsString(mapOf("tableID" to tableId, "password" to password))
     }

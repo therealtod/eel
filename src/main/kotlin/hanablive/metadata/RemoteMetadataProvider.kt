@@ -1,7 +1,7 @@
 package hanablive.metadata
 
-import common.metadata.VariantMetadata
-import eelst.ilike.common.metadata.SuitMetadata
+import eelst.ilike.game.entity.variant.VariantMetadata
+import eelst.ilike.game.entity.suit.SuitMetadata
 import eelst.ilike.game.entity.suit.SuitId
 import eelst.ilike.hanablive.client.MetadataClient
 import kotlinx.coroutines.runBlocking

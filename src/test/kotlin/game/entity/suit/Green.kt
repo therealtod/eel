@@ -1,13 +1,11 @@
 package game.entity.suit
 
 import eelst.ilike.game.entity.Color
+import eelst.ilike.game.entity.suit.ClassicSuit
 
-object Green : BaseClassicSuit(
+object Green : ClassicSuit(
     id = "green",
     name = "green",
     abbreviations = listOf("g", "G", "green"),
-) {
-    override fun getAssociatedColors(): Collection<Color> {
-        return listOf(Color.GREEN)
-    }
-}
+    definingColor = Color.GREEN,
+)

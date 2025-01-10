@@ -8,6 +8,7 @@ import eelst.ilike.game.entity.action.PlayAction
 import eelst.ilike.game.entity.player.Player
 import eelst.ilike.game.entity.player.PlayerId
 import eelst.ilike.game.entity.suit.SuitId
+import eelst.ilike.game.entity.variant.Variant
 
 
 data class GameStateImpl(
@@ -39,7 +40,7 @@ data class GameStateImpl(
 
     override val numberOfPlayers = players.size
 
-    private val availableColors = globallyAvailableGameData.variant.suits.flatMap { it.getAssociatedColors() }
+    private val availableColors = globallyAvailableGameData.variant.getSuits().flatMap { it.getAssociatedColors() }
     private val availableRanks = setOf(Rank.ONE, Rank.TWO, Rank.THREE, Rank.FOUR, Rank.FIVE)
 
     override val defaultHandsSize = GameUtils.getHandSize(numberOfPlayers)

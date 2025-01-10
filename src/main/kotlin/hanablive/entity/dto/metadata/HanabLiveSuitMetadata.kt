@@ -1,6 +1,6 @@
 package eelst.ilike.hanablive.entity.dto.metadata
 
-import eelst.ilike.common.metadata.SuitMetadata
+import eelst.ilike.game.entity.suit.SuitMetadata
 
 data class HanabLiveSuitMetadata(
     override val name: String,

@@ -1,6 +1,5 @@
 package eelst.ilike.hanablive.bot.state
 
-import common.metadata.VariantMetadata
 import eelst.ilike.game.GloballyAvailableGameData
 import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.Color
@@ -14,13 +13,19 @@ class InGameState(
     bot: HanabLiveBot,
     lobbyState: LobbyState,
     private val globallyAvailableGameData: GloballyAvailableGameData,
-    suitMap: Map<Int, Suit>,
-    rankMap: Map<Int, Rank>,
-    clueValueMap: Map<Int, Map<Int, ClueValue>>
 ): HanabLiveBotState(
     bot = bot,
     lobbyState = lobbyState
 ) {
     override suspend fun onGameActionListReceived(gameActionListData: GameActionListData) {
     }
+
+    private val suitMap = globallyAvailableGameData.variant.getSuits()
+        .mapIndexed { index, suit ->
+            Pair(index, suit)
+        }.toMap()
+    private val availableClueValues = globallyAvailableGameData.variant.getClueValues()
+    private val colorClues = availableClueValues.filterIsInstance<Color>()
+    private val colorCluesMap = colorClues.mapIndexed { index, color -> Pair(index, color) }.toMap()
+    private val rankClues = availableClueValues.filterIsInstance<Rank>().associateBy { it.numericalValue }
 }

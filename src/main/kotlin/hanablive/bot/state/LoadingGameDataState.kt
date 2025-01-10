@@ -1,5 +1,6 @@
 package eelst.ilike.hanablive.bot.state
 
+import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.hanablive.HanabLiveDataParser
 import eelst.ilike.hanablive.LobbyState
@@ -25,19 +26,11 @@ class LoadingGameDataState(
             variantMetadata = variantMetadata,
             suitsMetadata = suitsMetadata,
         )
-        val suitMap = variantMetadata.suits
-            .mapIndexed { index, s ->
-                Pair(index, globallyAvailableGameData.variant.suits.find { it.name == s }!!)
-            }.toMap()
-        val rankMap = variantMetadata.clueRanks.associateWith { Rank.getByNumericalValue(it) }
-        val colorMap:
+        val variant = globallyAvailableGameData.variant
         val newState = InGameState(
              bot = bot,
             lobbyState = lobbyState,
             globallyAvailableGameData = globallyAvailableGameData,
-            suitMap = suitMap,
-            rankMap = rankMap,
-            clueValueMap = TODO(),
         )
         switchToState(newState)
         bot.sendHanabLiveInstruction(GetGameInfo2(gameInitData.tableID))

@@ -2,6 +2,7 @@ package eelst.ilike.game
 
 import eelst.ilike.game.entity.*
 import eelst.ilike.game.entity.suit.SuitId
+import eelst.ilike.game.entity.variant.Variant
 import eelst.ilike.game.exception.IllegalGameActionException
 
 data class GloballyAvailableGameData(
@@ -50,7 +51,7 @@ data class GloballyAvailableGameData(
             val newStacks = playingStacks
                 .minus(stack.suit.id)
                 .plus(Pair(updatedStack.suit.id, updatedStack))
-            val newClueTokens = if (clueTokens < GameConstants.MAX_CLUE_COUNT && updatedStack.isComplete())
+            val newClueTokens = if (clueTokens < GameConstants.MAX_CLUE_TOKENS_COUNT && updatedStack.isComplete())
                 clueTokens + 1
             else
                 clueTokens
@@ -74,11 +75,11 @@ data class GloballyAvailableGameData(
      * @throws [IllegalGameActionException] when discarding is not a legal action
      */
     fun getAfterDiscarding(card: HanabiCard): GloballyAvailableGameData {
-        if (clueTokens == GameConstants.MAX_CLUE_COUNT) {
+        if (clueTokens == GameConstants.MAX_CLUE_TOKENS_COUNT) {
             throw IllegalGameActionException("It's not allowed to discard when the team has the maximum amount of clues in the bank")
         }
         val newTrashPile = trashPile.withAddedCard(card)
-        val newClueTokens = if(clueTokens < GameConstants.MAX_CLUE_COUNT)
+        val newClueTokens = if(clueTokens < GameConstants.MAX_CLUE_TOKENS_COUNT)
             clueTokens + 1
         else
             clueTokens
@@ -154,7 +155,7 @@ data class GloballyAvailableGameData(
     /**
      * All the cards contained in deck at the very start of the game
      */
-    private val cardsInInitialDeck = variant.suits.flatMap { it.getAllCards() }
+    private val cardsInInitialDeck = variant.getSuits().flatMap { it.getAllSuitCards() }
 
     /**
      * See https://github.com/Hanabi-Live/hanabi-live/blob/main/docs/features.md#pace
