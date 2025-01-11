@@ -12,7 +12,7 @@ interface Player {
     val playerIndex: Int
     val hand: Hand
 
-    fun getSlots(): List<Slot>
+    fun getMetadata(): PlayerMetadata
     fun getAfterDrawing(slot: Slot): Player
     fun getAfterPlaying(slotIndex: Int): Player
     fun getAfterDiscarding(slotIndex: Int): Player

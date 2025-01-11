@@ -7,7 +7,7 @@ open class BaseSlotKnowledge(
     private val signals: MutableMap<Int, Signal> = mutableMapOf(),
     private var impliedIdentities: Set<HanabiCard> = emptySet(),
     private var hasConflictingInformation: Boolean = false,
-): SlotKnowledge {
+) : SlotKnowledge {
     override fun hasFullEmpathy(): Boolean {
         return false
     }

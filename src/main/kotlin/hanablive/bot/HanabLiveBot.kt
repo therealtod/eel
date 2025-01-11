@@ -1,9 +1,9 @@
 package eelst.ilike.hanablive.bot
 
-import eelst.ilike.game.entity.variant.VariantMetadata
-import eelst.ilike.game.entity.suit.SuitMetadata
 import eelst.ilike.game.entity.player.PlayerId
 import eelst.ilike.game.entity.suit.SuitId
+import eelst.ilike.game.entity.suit.SuitMetadata
+import eelst.ilike.game.entity.variant.VariantMetadata
 import eelst.ilike.hanablive.bot.state.HanabLiveBotState
 import eelst.ilike.hanablive.entity.TableId
 import eelst.ilike.hanablive.entity.dto.instruction.GameActionListData

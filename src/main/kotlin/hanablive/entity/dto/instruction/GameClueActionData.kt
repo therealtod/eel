@@ -1,7 +1,5 @@
 package eelst.ilike.hanablive.entity.dto.instruction
 
-import eelst.ilike.hanablive.model.dto.command.GameActionType
-
 
 data class GameClueActionData(
     val clue: Clue,

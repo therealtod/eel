@@ -16,7 +16,7 @@ import eelst.ilike.game.entity.action.PlayAction
 class BruteForceActionSelectionStrategy(
     private val evaluator: GameStateEvaluator,
     private val maxDepth: Int,
-): ActionSelectionStrategy {
+) : ActionSelectionStrategy {
     override fun selectAction(gameState: GameState, conventionSet: ConventionSet): ConventionalAction {
         val rootNodeData = ActionSelectorSearchNodeData(
             action = null,
@@ -47,7 +47,7 @@ class BruteForceActionSelectionStrategy(
         gameState: GameState,
         depth: Int,
     ) {
-        if(depth <= maxDepth) {
+        if (depth <= maxDepth) {
             possibleActions.forEach {
                 val nextGameState = getUpdatedPOV(it, conventionSet, gameState)
                 val evaluation = evaluator.evaluate(nextGameState)
@@ -75,25 +75,28 @@ class BruteForceActionSelectionStrategy(
         conventionSet: ConventionSet,
         gameState: GameState
     ): GameState {
-        return when(val gameAction = conventionalAction.action) {
+        return when (val gameAction = conventionalAction.action) {
             is PlayAction -> {
                 gameState.getAfter(
                     playAction = gameAction,
                     playedCard = TODO()
                 )
             }
+
             is DiscardAction -> {
                 gameState.getAfter(
                     discardAction = gameAction,
                     discardedCard = TODO()
                 )
             }
+
             is ClueAction -> {
                 gameState.getAfter(
                     clueAction = gameAction,
                     touchedSlotsIndexes = TODO()
                 )
             }
+
             else -> throw IllegalStateException(
                 "No conventional action should be connected to a action of type: ${gameAction::class.simpleName}"
             )

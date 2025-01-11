@@ -18,8 +18,9 @@ data object NoOpMessageHandler : HanabLiveInstructionHandler, Logging {
         instructionPayload: String,
         bot: DefaultHanabLiveBot
     ) {
-        logger.info("Unhandled message of type: $instructionType.\n" +
-                "Payload: $instructionPayload"
+        logger.info(
+            "Unhandled message of type: $instructionType.\n" +
+                    "Payload: $instructionPayload"
         )
     }
 }

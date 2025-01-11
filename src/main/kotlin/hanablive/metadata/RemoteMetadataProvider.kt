@@ -1,14 +1,14 @@
 package hanablive.metadata
 
-import eelst.ilike.game.entity.variant.VariantMetadata
-import eelst.ilike.game.entity.suit.SuitMetadata
 import eelst.ilike.game.entity.suit.SuitId
+import eelst.ilike.game.entity.suit.SuitMetadata
+import eelst.ilike.game.entity.variant.VariantMetadata
 import eelst.ilike.hanablive.client.MetadataClient
 import kotlinx.coroutines.runBlocking
 
-object RemoteMetadataProvider: MetadataProvider {
+object RemoteMetadataProvider : MetadataProvider {
     private val metadataClient = MetadataClient
-    
+
     override suspend fun getSuitMetadata(suitId: String): SuitMetadata {
         val metadata = runBlocking { metadataClient.getSuitsMetadata() }
         return metadata.find { it.name == suitId } ?: throw NoSuchElementException(

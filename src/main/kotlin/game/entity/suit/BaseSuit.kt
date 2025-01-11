@@ -6,7 +6,7 @@ import org.apache.logging.log4j.kotlin.Logging
 
 abstract class BaseSuit(
     override val abbreviations: List<String>,
-): Suit, Logging {
+) : Suit, Logging {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -37,6 +37,10 @@ abstract class BaseSuit(
         } else return copiesAmount
     }
 
+    override fun toString(): String {
+        return name
+    }
+
     /**
      * [Map] associating how many copies of a certain [Rank] this [Suit] has
      */
@@ -47,21 +51,21 @@ abstract class BaseSuit(
      */
     private val allCards: List<HanabiCard> by lazy {
         copiesOfMap.entries.flatMap {
-        it.value.downTo(1).map { _ ->
-            HanabiCard(
-                suit = this,
-                rank = it.key
-            )
+            it.value.downTo(1).map { _ ->
+                HanabiCard(
+                    suit = this,
+                    rank = it.key
+                )
+            }
         }
-    }
     }
 
     private val allUniqueCards by lazy {
         copiesOfMap.keys.map {
-        HanabiCard(
-            suit = this,
-            rank = it,
-        )
-    }.toSet()
+            HanabiCard(
+                suit = this,
+                rank = it,
+            )
+        }.toSet()
     }
 }

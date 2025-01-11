@@ -1,6 +1,10 @@
 package eelst.ilike.game
 
-import eelst.ilike.game.entity.*
+import eelst.ilike.game.entity.HanabiCard
+import eelst.ilike.game.entity.Hand
+import eelst.ilike.game.entity.PlayingStack
+import eelst.ilike.game.entity.TrashPile
+import eelst.ilike.game.entity.player.PlayerMetadata
 import eelst.ilike.game.entity.suit.SuitId
 import eelst.ilike.game.entity.variant.Variant
 import eelst.ilike.game.exception.IllegalGameActionException
@@ -14,6 +18,7 @@ data class GloballyAvailableGameData(
     val numberOfPlayers: Int,
     val amountOfCardsPlayed: Int,
     val possibleMaxScore: Int,
+    val playersMetadata: List<PlayerMetadata>,
 ) {
     /**
      * @return true if a certain card is already on the playing stacks
@@ -79,7 +84,7 @@ data class GloballyAvailableGameData(
             throw IllegalGameActionException("It's not allowed to discard when the team has the maximum amount of clues in the bank")
         }
         val newTrashPile = trashPile.withAddedCard(card)
-        val newClueTokens = if(clueTokens < GameConstants.MAX_CLUE_TOKENS_COUNT)
+        val newClueTokens = if (clueTokens < GameConstants.MAX_CLUE_TOKENS_COUNT)
             clueTokens + 1
         else
             clueTokens
@@ -148,8 +153,8 @@ data class GloballyAvailableGameData(
     /**
      * The maximum score achievable at the beginning of the game
      */
-    val initialMaxScore = playingStacks.values.fold(0) {
-        acc, playingStack -> acc + playingStack.maxSize
+    val initialMaxScore = playingStacks.values.fold(0) { acc, playingStack ->
+        acc + playingStack.maxSize
     }
 
     /**

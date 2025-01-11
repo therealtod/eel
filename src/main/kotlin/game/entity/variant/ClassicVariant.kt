@@ -4,11 +4,11 @@ import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.suit.Suit
 
-class ClassicVariant(
+open class ClassicVariant(
     override val id: String,
     override val name: String,
     private val suits: List<Suit>,
-): Variant {
+) : Variant {
     override fun getSuits(): List<Suit> {
         return suits
     }

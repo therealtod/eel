@@ -7,6 +7,7 @@ class JoinMyTableHandler(nextHandler: UserCommandHandler) : BaseUserCommandHandl
     override fun supports(commandType: CommandType): Boolean {
         return commandType == CommandType.JOIN_ME
     }
+
     override suspend fun doHandle(commandArgs: Collection<String>, requestSender: String, bot: DefaultHanabLiveBot) {
         if (commandArgs.isEmpty()) {
             bot.joinPlayer(requestSender)

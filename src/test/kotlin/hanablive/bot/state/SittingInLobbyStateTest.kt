@@ -1,6 +1,5 @@
 package hanablive.bot.state
 
-import eelst.ilike.hanablive.HanabLiveConstants
 import eelst.ilike.hanablive.LobbyState
 import eelst.ilike.hanablive.bot.HanabLiveBot
 import eelst.ilike.hanablive.bot.state.SittingInLobbyState
@@ -12,7 +11,6 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test

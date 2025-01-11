@@ -7,13 +7,18 @@ import game.exception.UnknownPlayerException
 class PlayerKnowledgeImpl(
     private val playerId: PlayerId,
     private val globallyVisibleCards: List<HanabiCard>,
-    private val handKnowledge: Map<PlayerId, HandKnowledge>,
-): PlayerKnowledge {
+    private val cardsVisibleInPlayerHands: Map<PlayerId, Map<Int, HanabiCard>>,
+    private val inferredHandKnowledge: Map<PlayerId, InferredHandKnowledge>,
+) : PlayerKnowledge {
     override fun getVisibleCards(): List<HanabiCard> {
         TODO()
     }
 
-    override fun getOwnHandKnowledge(): HandKnowledge {
+    override fun getVisiblePlayersCards(): Map<PlayerId, Map<Int, HanabiCard>> {
+        return cardsVisibleInPlayerHands
+    }
+
+    override fun getOwnHandKnowledge(): InferredHandKnowledge {
         return getHandKnowledge(playerId)
     }
 
@@ -25,8 +30,8 @@ class PlayerKnowledgeImpl(
         TODO("Not yet implemented")
     }
 
-    private fun getHandKnowledge(playerId: PlayerId): HandKnowledge {
-        return handKnowledge[playerId] ?: throw UnknownPlayerException(
+    private fun getHandKnowledge(playerId: PlayerId): InferredHandKnowledge {
+        return inferredHandKnowledge[playerId] ?: throw UnknownPlayerException(
             "No player with playerId: $playerId to retrieve the hand knowledge of"
         )
     }

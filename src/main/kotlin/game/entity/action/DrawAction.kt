@@ -6,7 +6,7 @@ import eelst.ilike.game.entity.slot.Slot
 data class DrawAction(
     val playerId: PlayerId,
     val newSlot: Slot,
-): GameAction(
+) : GameAction(
     actionExecutor = playerId,
     actionType = GameActionType.DRAW,
 )

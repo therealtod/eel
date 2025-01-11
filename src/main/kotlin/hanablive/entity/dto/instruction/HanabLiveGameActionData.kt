@@ -2,7 +2,6 @@ package eelst.ilike.hanablive.entity.dto.instruction
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import eelst.ilike.hanablive.model.dto.command.GameActionType
 
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,

@@ -17,7 +17,7 @@ data class GameStateImpl(
 ) : GameState {
     constructor(
         variant: Variant,
-        playingStacks: Map<SuitId,PlayingStack>,
+        playingStacks: Map<SuitId, PlayingStack>,
         trashPile: TrashPile,
         strikes: Int,
         clueTokens: Int,
@@ -33,7 +33,8 @@ data class GameStateImpl(
             clueTokens = clueTokens,
             numberOfPlayers = players.size,
             amountOfCardsPlayed = amountOfCardsPlayed,
-            possibleMaxScore = possibleMaxScore
+            possibleMaxScore = possibleMaxScore,
+            playersMetadata = players.map { it.value.getMetadata() }
         ),
         players = players,
     )
@@ -72,7 +73,7 @@ data class GameStateImpl(
         )
     }
 
-    override fun getAfter(playAction: PlayAction, playedCard: HanabiCard): GameState {
+    override fun getAfter(playAction: PlayAction, playedCard: HanabiCard, isStrike: Boolean): GameState {
         val player = getPlayer(playAction.playerId)
         val updatedPlayer = player.getAfterPlaying(playAction.slotIndex)
         val updatedPlayers = players
@@ -108,5 +109,6 @@ data class GameStateImpl(
             players = updatedPlayers,
         )
     }
+
     val efficiency: Float = TODO()
 }

@@ -8,7 +8,7 @@ data class ChatPM(
     val message: String,
     val recipient: PlayerId,
     val room: String,
-): HanabLiveInstruction(HanabLiveInstructionType.CHAT_PM) {
+) : HanabLiveInstruction(HanabLiveInstructionType.CHAT_PM) {
     override fun getWebSocketPayload(): String {
         return mapper.writeValueAsString(
             mapOf(

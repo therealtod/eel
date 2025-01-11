@@ -1,9 +1,7 @@
 package eelst.ilike.hanablive.bot.state
 
 
-import eelst.ilike.game.GloballyAvailableGameData
 import eelst.ilike.game.entity.player.PlayerId
-import eelst.ilike.hanablive.HanabLiveDataParser
 import eelst.ilike.hanablive.LobbyState
 import eelst.ilike.hanablive.bot.HanabLiveBot
 import eelst.ilike.hanablive.entity.TableId
@@ -16,7 +14,7 @@ import org.apache.logging.log4j.kotlin.Logging
 abstract class HanabLiveBotState(
     protected val bot: HanabLiveBot,
     val lobbyState: LobbyState = LobbyState(),
-): Logging {
+) : Logging {
     fun setTables(tables: Collection<Table>) {
         lobbyState.tables.clear()
         lobbyState.tables.putAll(tables.associateBy { it.id })
@@ -43,8 +41,10 @@ abstract class HanabLiveBotState(
     }
 
     open suspend fun onGameInitDataReceived(gameInitData: GameInitData) {
-        logger.warn("This instruction (eelst.ilike.hanablive.entity.dto.instruction.GameInitData)" +
-                " should not have been received in the current state $this")
+        logger.warn(
+            "This instruction (eelst.ilike.hanablive.entity.dto.instruction.GameInitData)" +
+                    " should not have been received in the current state $this"
+        )
     }
 
     open suspend fun onGameActionListReceived(gameActionListData: GameActionListData) {

@@ -4,12 +4,10 @@ import eelst.ilike.game.entity.player.PlayerId
 import eelst.ilike.hanablive.HanabLiveConstants
 import eelst.ilike.hanablive.LobbyState
 import eelst.ilike.hanablive.bot.BotMessageTemplate
-import eelst.ilike.hanablive.bot.DefaultHanabLiveBot
 import eelst.ilike.hanablive.bot.HanabLiveBot
 import eelst.ilike.hanablive.entity.TableId
 import eelst.ilike.hanablive.entity.dto.instruction.ChatPM
 import hanablive.bot.state.TableJoinedAsPlayerState
-import hanablive.entity.dto.instruction.HanabLiveInstruction
 import hanablive.entity.dto.instruction.TableJoin
 
 
@@ -46,7 +44,7 @@ class SittingInLobbyState(
     override suspend fun joinTable(tableId: TableId) {
         bot.sendHanabLiveInstruction(TableJoin(tableId))
         val newState = TableJoinedAsPlayerState(bot, lobbyState, tableId)
-       switchToState(newState)
+        switchToState(newState)
     }
 
     override suspend fun joinTable(tableId: TableId, password: String) {

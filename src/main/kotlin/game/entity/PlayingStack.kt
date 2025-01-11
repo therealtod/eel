@@ -30,7 +30,7 @@ data class PlayingStack(
      * @throws [IllegalAccessException] when the stack is complete
      */
     fun nextCards(variant: Variant): Collection<HanabiCard> {
-        if(isComplete()) {
+        if (isComplete()) {
             throw IllegalAccessException("There is no next card for a complete stack")
         }
         if (cards.isEmpty()) {
@@ -65,7 +65,7 @@ data class PlayingStack(
      */
     fun getPossibleFirstCards(): Collection<HanabiCard> {
         return listOf(
-                HanabiCard(
+            HanabiCard(
                 suit = suit,
                 rank = Rank.ONE,
             ),

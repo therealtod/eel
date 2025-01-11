@@ -1,10 +1,10 @@
 package eelst.ilike.game.factory
 
-import eelst.ilike.game.entity.variant.VariantMetadata
-import eelst.ilike.game.entity.suit.SuitMetadata
-import eelst.ilike.game.entity.variant.Variant
 import eelst.ilike.game.entity.suit.SuitId
+import eelst.ilike.game.entity.suit.SuitMetadata
 import eelst.ilike.game.entity.variant.ClassicVariant
+import eelst.ilike.game.entity.variant.Variant
+import eelst.ilike.game.entity.variant.VariantMetadata
 
 
 /**

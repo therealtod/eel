@@ -2,9 +2,9 @@ package game.entity
 
 import eelst.ilike.game.GloballyAvailableGameData
 import eelst.ilike.game.entity.*
-import eelst.ilike.game.entity.variant.Variant
 import eelst.ilike.game.exception.IllegalGameActionException
 import game.entity.suit.*
+import game.entity.variant.NoVariant
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
@@ -202,7 +202,7 @@ class GloballyAvailableGameStateDataTest {
     }
 
     companion object {
-        private val variant = mockk<Variant>()
+        private val variant = NoVariant
         private val redStack = PlayingStack(
             cards = listOf(
                 HanabiCard(
@@ -277,26 +277,25 @@ class GloballyAvailableGameStateDataTest {
         @JvmStatic
         @BeforeAll
         fun setUp() {
-            every { variant.getSuits() } returns listOf(Red, Yellow, Green, Blue, Purple)
-
             data = GloballyAvailableGameData(
-                    variant = variant,
-            playingStacks = mapOf(
-                "red" to redStack,
-                "yellow" to yellowStack,
-                "green" to greenStack,
-                "blue" to blueStack,
-                "purple" to purpleStack,
+                variant = variant,
+                playingStacks = mapOf(
+                    "red" to redStack,
+                    "yellow" to yellowStack,
+                    "green" to greenStack,
+                    "blue" to blueStack,
+                    "purple" to purpleStack,
 
-                ),
-            trashPile = trashPile,
-            strikes = 0,
-            clueTokens = 5,
-            numberOfPlayers = 3,
+                    ),
+                trashPile = trashPile,
+                strikes = 0,
+                clueTokens = 5,
+                numberOfPlayers = 3,
                 amountOfCardsPlayed = 7,
                 possibleMaxScore = 25,
+                playersMetadata = mockk()
             )
-            dataWith8Clues =  data.copy(clueTokens = 8)
+            dataWith8Clues = data.copy(clueTokens = 8)
             dataWith0Clues = data.copy(clueTokens = 0)
         }
     }

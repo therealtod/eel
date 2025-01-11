@@ -5,7 +5,7 @@ import eelst.ilike.hanablive.bot.DefaultHanabLiveBot
 /**
  * Handler for user commands directed to the bot
  */
-abstract class BaseUserCommandHandler(private val nextHandler: UserCommandHandler): UserCommandHandler {
+abstract class BaseUserCommandHandler(private val nextHandler: UserCommandHandler) : UserCommandHandler {
 
     override suspend fun handle(
         commandType: CommandType,

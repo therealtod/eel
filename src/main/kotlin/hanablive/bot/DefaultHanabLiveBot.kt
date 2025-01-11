@@ -1,10 +1,10 @@
 package eelst.ilike.hanablive.bot
 
 
-import eelst.ilike.game.entity.variant.VariantMetadata
-import eelst.ilike.game.entity.suit.SuitMetadata
 import eelst.ilike.game.entity.player.PlayerId
 import eelst.ilike.game.entity.suit.SuitId
+import eelst.ilike.game.entity.suit.SuitMetadata
+import eelst.ilike.game.entity.variant.VariantMetadata
 import eelst.ilike.hanablive.HanabLiveWebSocketSession
 import eelst.ilike.hanablive.InstructionHandlerChainInitializer
 import eelst.ilike.hanablive.bot.dto.Credentials
@@ -28,7 +28,7 @@ class DefaultHanabLiveBot(
     var state: HanabLiveBotState = InitialState(
         bot = this
     )
-    
+
     override suspend fun joinPlayer(playerId: PlayerId) {
         state.joinPlayer(playerId)
     }

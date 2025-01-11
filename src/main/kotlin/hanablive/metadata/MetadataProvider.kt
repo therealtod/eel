@@ -1,8 +1,8 @@
 package hanablive.metadata
 
-import eelst.ilike.game.entity.variant.VariantMetadata
-import eelst.ilike.game.entity.suit.SuitMetadata
 import eelst.ilike.game.entity.suit.SuitId
+import eelst.ilike.game.entity.suit.SuitMetadata
+import eelst.ilike.game.entity.variant.VariantMetadata
 
 /**
  * Retriever of metadata for various game entities

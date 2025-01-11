@@ -35,8 +35,7 @@ class HanabLiveWebSocketSession(val username: String, val password: String) : Co
                     "No cookie with name ${HanabLiveConstants.COOKIE_NAME} is contained in the response"
                 )
             webSocketSession = HanabLiveWebSocketClient.connect(cookieHeaderValue)
-        }
-        else {
+        } else {
             throw LoginFailedException("The attempt to login has failed")
         }
     }

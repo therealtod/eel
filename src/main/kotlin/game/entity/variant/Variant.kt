@@ -4,8 +4,7 @@ import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.suit.Suit
 
 
-interface Variant
-{
+interface Variant {
     val id: String
     val name: String
 

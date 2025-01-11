@@ -1,7 +1,7 @@
 package eelst.ilike.hanablive.client
 
 import eelst.ilike.hanablive.HanabLiveConstants
-import io.ktor.client.HttpClient
+import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
@@ -10,7 +10,7 @@ import io.ktor.http.*
 import kotlinx.coroutines.runBlocking
 import org.apache.logging.log4j.kotlin.Logging
 
-object HanabLiveHttpClient: Logging {
+object HanabLiveHttpClient : Logging {
     private val httpClient = HttpClient(CIO) {
         defaultRequest {
             url {

@@ -1,18 +1,18 @@
-package eelst.ilike.hanablive.model.dto.command
+package eelst.ilike.hanablive.entity.dto.instruction
 
 import com.fasterxml.jackson.annotation.JsonValue
 
-enum class GameActionType(val value: String) {
-    CLUE("clue"),
-    DISCARD("discard"),
-    DRAW("draw"),
-    PLAY("play"),
-    STATUS("status"),
-    STRIKE("strike"),
-    TURN("turn");
+enum class GameActionType(private val jsonAlias: String, val isTurnDefiningAction: Boolean) {
+    CLUE("clue", true),
+    DISCARD("discard", true),
+    DRAW("draw", false),
+    PLAY("play", true),
+    STATUS("status", false),
+    STRIKE("strike", false),
+    TURN("turn", false);
 
     @JsonValue
     fun getJsonValue(): String {
-        return value
+        return jsonAlias
     }
 }

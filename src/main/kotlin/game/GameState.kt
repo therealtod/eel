@@ -1,13 +1,13 @@
 package eelst.ilike.game
 
-import eelst.ilike.game.entity.*
+import eelst.ilike.game.entity.ClueValue
+import eelst.ilike.game.entity.HanabiCard
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.DiscardAction
 import eelst.ilike.game.entity.action.DrawAction
 import eelst.ilike.game.entity.action.PlayAction
 import eelst.ilike.game.entity.player.Player
 import eelst.ilike.game.entity.player.PlayerId
-import eelst.ilike.game.entity.suit.Suit
 
 
 interface GameState {
@@ -37,9 +37,11 @@ interface GameState {
     fun getAfter(drawAction: DrawAction): GameState
 
     /**
+     * @param isStrike is merely a validator telling if the played card caused a strike
+     *
      * @return the new [GameState] after a [Player] plays the given [playedCard]
      */
-    fun getAfter(playAction: PlayAction, playedCard: HanabiCard): GameState
+    fun getAfter(playAction: PlayAction, playedCard: HanabiCard, isStrike: Boolean = false): GameState
 
     /**
      * @return the new [GameState] after a [Player] discards the given [discardedCard]

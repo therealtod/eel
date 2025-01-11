@@ -1,12 +1,10 @@
 package eelst.ilike.engine.knowledge
 
-import eelst.ilike.game.entity.HanabiCard
 
-
-class HandKnowledgeImpl(
+class InferredHandKnowledgeImpl(
     private val slotKnowledge: Map<Int, SlotKnowledge> = emptyMap()
-): HandKnowledge {
-    override fun integrateWith(otherKnowledge: HandKnowledge): HandKnowledge {
+) : InferredHandKnowledge {
+    override fun integrateWith(otherKnowledge: InferredHandKnowledge): InferredHandKnowledge {
         slotKnowledge.keys.forEach {
             slotKnowledge[it]!!.integrateWith(otherKnowledge.getSlotKnowledge(it))
         }

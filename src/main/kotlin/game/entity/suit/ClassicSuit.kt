@@ -10,7 +10,7 @@ open class ClassicSuit(
     override val name: String,
     override val abbreviations: List<String>,
     private val definingColor: Color,
-) : BaseSuit (
+) : BaseSuit(
     abbreviations = abbreviations,
 ) {
     override fun getAssociatedColors(): List<Color> {

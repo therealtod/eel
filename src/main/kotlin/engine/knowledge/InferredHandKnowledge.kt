@@ -1,17 +1,15 @@
 package eelst.ilike.engine.knowledge
 
-import eelst.ilike.game.entity.HanabiCard
-
 /**
- * Represent the aggregated knowledge that the owner a Hand has about it
+ * Represent the aggregated knowledge that the owner of a Hand has about it
  */
-interface HandKnowledge {
+interface InferredHandKnowledge {
     /**
      * Merge the information contained in this object with new knowledge
      *
      * In order for this to work properly [otherKnowledge] should refer to the hand of the same player
      */
-    fun integrateWith(otherKnowledge: HandKnowledge): HandKnowledge
+    fun integrateWith(otherKnowledge: InferredHandKnowledge): InferredHandKnowledge
 
     /**
      * Get the [SlotKnowledge] that the hand owner has about the slot with the given [slotIndex]

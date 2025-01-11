@@ -16,4 +16,4 @@ data class HanabLiveSuitMetadata(
     override val allClueRanks: Boolean = false,
     override val noClueColors: Boolean = false,
     override val noClueRanks: Boolean = false,
-): SuitMetadata
+) : SuitMetadata

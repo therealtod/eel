@@ -30,4 +30,4 @@ data class HanabLiveVariantMetadata(
     override val sudoku: Boolean = false,
     override val stackSize: Int = 5,
     override val clueRanks: List<Int> = listOf(1, 2, 3, 4, 5),
-): VariantMetadata
+) : VariantMetadata

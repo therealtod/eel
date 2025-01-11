@@ -2,8 +2,8 @@ package eelst.ilike.game.factory
 
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.suit.ClassicSuit
-import eelst.ilike.game.entity.suit.SuitMetadata
 import eelst.ilike.game.entity.suit.Suit
+import eelst.ilike.game.entity.suit.SuitMetadata
 
 
 /**
@@ -12,7 +12,7 @@ import eelst.ilike.game.entity.suit.Suit
 object SuitFactory {
     fun createSuit(metadata: SuitMetadata): Suit {
         val suitName = metadata.name
-        if(!supportedSuits.contains(suitName)) {
+        if (!supportedSuits.contains(suitName)) {
             throw UnsupportedOperationException("Unsupported suite: $suitName")
         }
         val suitColors = metadata.clueColors

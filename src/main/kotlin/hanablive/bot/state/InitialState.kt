@@ -2,7 +2,6 @@ package eelst.ilike.hanablive.bot.state
 
 
 import eelst.ilike.hanablive.LobbyState
-import eelst.ilike.hanablive.bot.DefaultHanabLiveBot
 import eelst.ilike.hanablive.bot.HanabLiveBot
 
 /**
