@@ -15,6 +15,7 @@ enum class HanabLiveInstructionType(val label: String) {
     HYPO_END("hypoEnd"),
     INIT("init"),
     LEFT("left"),
+    LOADED("loaded"),
     REPLAY_INDICATOR("replayIndicator"),
     REPLAY_SEGMENT("replaySegment"),
     TABLE("table"),

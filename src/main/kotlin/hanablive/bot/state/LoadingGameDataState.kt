@@ -11,58 +11,46 @@ import eelst.ilike.game.entity.variant.VariantMetadata
 import eelst.ilike.game.factory.VariantFactory
 import eelst.ilike.hanablive.LobbyState
 import eelst.ilike.hanablive.bot.HanabLiveBot
+import eelst.ilike.hanablive.entity.HanabLiveGame
+import eelst.ilike.hanablive.entity.dto.instruction.GameActionListData
 import eelst.ilike.hanablive.entity.dto.instruction.GameInitData
 import eelst.ilike.hanablive.entity.dto.instruction.GetGameInfo2
+import eelst.ilike.hanablive.entity.dto.instruction.Loaded
 
 class LoadingGameDataState(
     bot: HanabLiveBot,
     lobbyState: LobbyState,
-
     ) : HanabLiveBotState(
     bot,
     lobbyState,
 ) {
+        private lateinit var gameInitData: GameInitData
+
     override suspend fun onGameInitDataReceived(gameInitData: GameInitData) {
+        this.gameInitData = gameInitData
+        bot.sendHanabLiveInstruction(GetGameInfo2(gameInitData.tableID))
+    }
+
+    override suspend fun onGameActionListReceived(gameActionListData: GameActionListData) {
+        require(this::gameInitData.isInitialized){
+            "The gameActionListData instruction has been received before gameInitData"
+        }
         val variantName = gameInitData.options.variantName
         val variantMetadata = bot.getVariantMetadata(variantName)
         val suitIds = variantMetadata.suits
         val suitsMetadata = bot.getSuitsMetadata(suitIds)
-        val globallyAvailableGameData = parseGloballyAvailableInfo(
+        val game = HanabLiveGame(
             gameInitData = gameInitData,
+            gameActionListData = gameActionListData,
             variantMetadata = variantMetadata,
             suitsMetadata = suitsMetadata,
         )
         val newState = InGameState(
             bot = bot,
             lobbyState = lobbyState,
-            globallyAvailableGameData = globallyAvailableGameData,
+            game = game,
         )
         switchToState(newState)
-        bot.sendHanabLiveInstruction(GetGameInfo2(gameInitData.tableID))
-    }
-
-    private fun parseGloballyAvailableInfo(
-        gameInitData: GameInitData,
-        variantMetadata: VariantMetadata,
-        suitsMetadata: Map<SuitId, SuitMetadata>
-    ): GloballyAvailableGameData {
-        val variant = VariantFactory.createVariant(variantMetadata, suitsMetadata)
-        val suits = variant.getSuits()
-        return GloballyAvailableGameData(
-            variant = variant,
-            playingStacks = suits.associate { it.id to PlayingStack(emptyList(), it) },
-            trashPile = TrashPile(),
-            strikes = GameConstants.INITIAL_STRIKE_TOKENS_COUNT,
-            clueTokens = GameConstants.MAX_CLUE_TOKENS_COUNT,
-            numberOfPlayers = gameInitData.playerNames.size,
-            amountOfCardsPlayed = 0,
-            possibleMaxScore = variantMetadata.stackSize * suits.size,
-            playersMetadata = gameInitData.playerNames.mapIndexed { index, name ->
-                PlayerMetadata(
-                    playerId = name,
-                    playerIndex = index
-                )
-            }
-        )
+        bot.sendHanabLiveInstruction(Loaded(tableId = gameActionListData.tableID))
     }
 }

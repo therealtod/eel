@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm") version "2.0.20"
+    // id("org.beryx.jlink") version "3.1.1"
     application
 }
 

@@ -12,7 +12,7 @@ import eelst.ilike.game.entity.TrashPile
 import eelst.ilike.game.entity.player.PlayerMetadata
 import eelst.ilike.hanablive.HanabLiveDataParser
 import eelst.ilike.hanablive.entity.dto.instruction.*
-import eelst.ilike.hanablive.entity.parsed.CategorizedGameActionData
+import eelst.ilike.hanablive.entity.parsed.ParsedGameActionList
 import game.entity.suit.*
 import game.entity.variant.NoVariant
 import org.junit.jupiter.api.Assertions
@@ -34,7 +34,7 @@ class HanabLiveDataParserTest {
     fun `Should correctly categorize a hanab live provided list of game actions`() {
         val payload = TestUtils.loadHanabLivePayload("game_action_list_incomplete_game.json")
         val gameActionListData: GameActionListData = Utils.jsonObjectMapper.readValue(payload)
-        val actual = parser.categorizeGameActionList(gameActionListData.list)
+        val actual = parser.parseGameActionList(gameActionListData.list)
 
         val expectedInitialDrawActions = listOf(
             GameDrawActionData(
@@ -173,7 +173,7 @@ class HanabLiveDataParserTest {
                 )
             )
         )
-        val expected = CategorizedGameActionData(
+        val expected = ParsedGameActionList(
             initialDrawActions = expectedInitialDrawActions,
             actionsByTurn = expectedActionsByTurn,
         )
@@ -319,11 +319,11 @@ class HanabLiveDataParserTest {
                 )
             )
         )
-        val categorizedGameActionData = CategorizedGameActionData(
+        val parsedGameActionList = ParsedGameActionList(
             initialDrawActions = initialDrawActions,
             actionsByTurn = actionsByTurn,
         )
-        val teamKnowledge = parser.parseInitialTeamKnowledge(categorizedGameActionData)
+        val teamKnowledge = parser.parseInitialTeamKnowledge(parsedGameActionList)
         val expectedAliceSlots = mapOf(
             0 to HanabiCard(
                 suit = Yellow,

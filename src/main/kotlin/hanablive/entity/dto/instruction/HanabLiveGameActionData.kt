@@ -2,6 +2,8 @@ package eelst.ilike.hanablive.entity.dto.instruction
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import eelst.ilike.game.entity.action.GameAction
+import eelst.ilike.hanablive.HanabLiveDataParser
 
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,
@@ -19,4 +21,3 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 sealed class HanabLiveGameActionData(
     val type: GameActionType
 )
-

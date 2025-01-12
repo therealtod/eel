@@ -8,10 +8,13 @@ import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.HanabiCard
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.SimpleHand
+import eelst.ilike.game.entity.action.DrawAction
+import eelst.ilike.game.entity.action.GameAction
+import eelst.ilike.game.entity.action.PlayAction
 import eelst.ilike.game.entity.player.Player
 import eelst.ilike.game.entity.player.PlayerId
 import eelst.ilike.hanablive.entity.dto.instruction.*
-import eelst.ilike.hanablive.entity.parsed.CategorizedGameActionData
+import eelst.ilike.hanablive.entity.parsed.ParsedGameActionList
 import eelst.ilike.hanablive.entity.slot.HanabLiveSlot
 import eelst.ilike.hanablive.entity.dto.instruction.GameActionType
 
@@ -21,7 +24,7 @@ import eelst.ilike.hanablive.entity.dto.instruction.GameActionType
 class HanabLiveDataParser(
     private val globallyAvailableGameData: GloballyAvailableGameData,
 ) {
-    fun categorizeGameActionList(actions: List<HanabLiveGameActionData>): CategorizedGameActionData {
+    fun parseGameActionList(actions: List<HanabLiveGameActionData>): ParsedGameActionList {
         val initialDrawActions = mutableListOf<GameDrawActionData>()
         val actionsByTurn = mutableListOf<MutableList<HanabLiveGameActionData>>(mutableListOf())
         actions.forEach { action->
@@ -34,7 +37,7 @@ class HanabLiveDataParser(
                 }
             }
         }
-        return CategorizedGameActionData(
+        return ParsedGameActionList(
             initialDrawActions = initialDrawActions,
             actionsByTurn = actionsByTurn,
         )
@@ -61,8 +64,8 @@ class HanabLiveDataParser(
         )
     }
 
-    fun parseInitialTeamKnowledge(categorizedGameActionData: CategorizedGameActionData): TeamKnowledge {
-        val drawActionsGroupedByPlayer = categorizedGameActionData.initialDrawActionsGroupedByPlayerIndex
+    fun parseInitialTeamKnowledge(parsedGameActionList: ParsedGameActionList): TeamKnowledge {
+        val drawActionsGroupedByPlayer = parsedGameActionList.initialDrawActionsGroupedByPlayerIndex
         val visibleCards = drawActionsGroupedByPlayer.mapValues { entry ->
             entry.value.mapIndexed { index, gameDrawActionData ->
                 Pair(index, gameDrawActionData)
@@ -89,8 +92,8 @@ class HanabLiveDataParser(
      * This method is an overkill but is just there in case the initial draws don't follow the traditional progressive
      * order
      */
-    fun parsePlayers(categorizedGameActionData: CategorizedGameActionData): Map<PlayerId, Player> {
-        val drawActionsGroupedByPlayer = getInitialDrawActionsGroupedByPlayer(categorizedGameActionData.initialDrawActions)
+    fun parsePlayers(parsedGameActionList: ParsedGameActionList): Map<PlayerId, Player> {
+        val drawActionsGroupedByPlayer = getInitialDrawActionsGroupedByPlayer(parsedGameActionList.initialDrawActions)
         val playersSlots = drawActionsGroupedByPlayer
             .mapValues { drawActions ->
                 drawActions.value.map {

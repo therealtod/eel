@@ -7,9 +7,9 @@ import eelst.ilike.game.entity.action.PlayAction
 
 interface Game {
     /**
-     * Set the given [gameState] as the starting state of the [Game]
+     * @return the [GloballyAvailableGameData] associated to the latest game state
      */
-    fun setInitialGameState(gameState: GameState): Game
+    fun getGloballyAvailableGameData(): GloballyAvailableGameData
 
     /**
      * @return this [Game] after a player has played [playedCard]

@@ -4,6 +4,9 @@ import eelst.ilike.game.entity.player.PlayerId
 import eelst.ilike.hanablive.entity.dto.HanabLiveInstructionType
 import hanablive.entity.dto.instruction.HanabLiveInstruction
 
+/**
+ * Instruction to be sent whenever we need to send a private message to another hanab.live user
+ */
 data class ChatPM(
     val message: String,
     val recipient: PlayerId,

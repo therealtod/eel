@@ -6,29 +6,24 @@ import eelst.ilike.hanablive.LobbyState
 import eelst.ilike.hanablive.bot.HanabLiveBot
 import eelst.ilike.hanablive.entity.HanabLiveGame
 import eelst.ilike.hanablive.entity.dto.instruction.GameActionListData
+import eelst.ilike.hanablive.entity.dto.instruction.GameActionType
+import eelst.ilike.hanablive.entity.dto.instruction.HanabLiveGameAction
+import eelst.ilike.hanablive.entity.dto.instruction.HanabLiveGameActionData
 import eelst.ilike.hanablive.factory.GameStateFactory
 
 class InGameState(
     bot: HanabLiveBot,
     lobbyState: LobbyState,
-    private val globallyAvailableGameData: GloballyAvailableGameData,
+    private val game: HanabLiveGame,
 ) : HanabLiveBotState(
     bot = bot,
     lobbyState = lobbyState
 ) {
-    override suspend fun onGameActionListReceived(gameActionListData: GameActionListData) {
-        val categorizedGameActionData = parser.categorizeGameActionList(gameActionListData.list)
-        val initialTeamKnowledge = parser.parseInitialTeamKnowledge(categorizedGameActionData)
-        val initialPlayersState = parser.parsePlayers(categorizedGameActionData)
-        val initialGameState = GameStateFactory.createGameState(
-            globallyAvailableGameData = globallyAvailableGameData,
-            players = initialPlayersState,
-            teamKnowledge = initialTeamKnowledge
-        )
-        game.setInitialGameState(initialGameState)
-
+    override suspend fun onGameAction(gameAction: HanabLiveGameAction) {
+        super.onGameAction(gameAction)
     }
 
-    private val game = HanabLiveGame()
-    private val parser = HanabLiveDataParser(globallyAvailableGameData)
+    private fun takeTurn() {
+        TODO("If it's the bot's turn, choose and act")
+    }
 }
