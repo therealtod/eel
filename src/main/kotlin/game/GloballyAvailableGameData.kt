@@ -4,6 +4,7 @@ import eelst.ilike.game.entity.HanabiCard
 import eelst.ilike.game.entity.Hand
 import eelst.ilike.game.entity.PlayingStack
 import eelst.ilike.game.entity.TrashPile
+import eelst.ilike.game.entity.player.PlayerId
 import eelst.ilike.game.entity.player.PlayerMetadata
 import eelst.ilike.game.entity.suit.SuitId
 import eelst.ilike.game.entity.variant.Variant
@@ -15,11 +16,14 @@ data class GloballyAvailableGameData(
     val trashPile: TrashPile,
     val strikes: Int,
     val clueTokens: Int,
-    val numberOfPlayers: Int,
     val amountOfCardsPlayed: Int,
-    val possibleMaxScore: Int,
+    val amountOfCardsDiscarded: Int,
     val playersMetadata: List<PlayerMetadata>,
+    private val indexOfPlayerOnTurn: Int = 0,
 ) {
+    val numberOfPlayers = playersMetadata.size
+    val possibleMaxScore = variant.getMaxScore()
+
     /**
      * @return true if a certain card is already on the playing stacks
      */
@@ -46,9 +50,19 @@ data class GloballyAvailableGameData(
     }
 
     /**
+     * @return the updated [GloballyAvailableGameData] which result from a player playing a non specified card
+     */
+    fun getAfterPlay(): GloballyAvailableGameData {
+        return this.copy(
+            amountOfCardsPlayed = amountOfCardsPlayed + 1,
+            indexOfPlayerOnTurn = (indexOfPlayerOnTurn + 1) % numberOfPlayers,
+        )
+    }
+
+    /**
      * @return the updated [GloballyAvailableGameData] which result from a player playing the given [card]
      */
-    fun getAfterPlaying(card: HanabiCard, variant: Variant): GloballyAvailableGameData {
+    fun getAfterPlaying(card: HanabiCard): GloballyAvailableGameData {
         val stack = getPlayingStackByCard(card)
         val updatedStack = stack.getAfterPlaying(card, variant)
         val isPlayedSuccessfully = updatedStack.contains(card)
@@ -64,14 +78,28 @@ data class GloballyAvailableGameData(
                 playingStacks = newStacks,
                 clueTokens = newClueTokens,
                 amountOfCardsPlayed = amountOfCardsPlayed + 1,
+                indexOfPlayerOnTurn = (indexOfPlayerOnTurn + 1) % numberOfPlayers,
             )
         } else {
             return this.copy(
                 trashPile = trashPile.withAddedCard(card),
                 strikes = strikes + 1,
                 amountOfCardsPlayed = amountOfCardsPlayed + 1,
+                indexOfPlayerOnTurn = (indexOfPlayerOnTurn + 1) % numberOfPlayers,
             )
         }
+    }
+
+    /**
+     * @return the updated [GloballyAvailableGameData] which result from a player discarding a non specified card
+     *
+     * @throws [IllegalGameActionException] when discarding is not a legal action
+     */
+    fun getAfterDiscard(): GloballyAvailableGameData {
+        return this.copy(
+            amountOfCardsDiscarded = amountOfCardsDiscarded + 1,
+            indexOfPlayerOnTurn = (indexOfPlayerOnTurn + 1) % numberOfPlayers,
+        )
     }
 
     /**
@@ -91,6 +119,8 @@ data class GloballyAvailableGameData(
         return this.copy(
             trashPile = newTrashPile,
             clueTokens = newClueTokens,
+            amountOfCardsDiscarded = amountOfCardsDiscarded + 1,
+            indexOfPlayerOnTurn = (indexOfPlayerOnTurn + 1) % numberOfPlayers,
         )
     }
 
@@ -104,7 +134,8 @@ data class GloballyAvailableGameData(
             throw IllegalGameActionException("A clue cannot be given if there are no clue tokens in the bank")
         }
         return this.copy(
-            clueTokens = clueTokens - 1
+            clueTokens = clueTokens - 1,
+            indexOfPlayerOnTurn = (indexOfPlayerOnTurn + 1) % numberOfPlayers,
         )
     }
 
@@ -143,6 +174,13 @@ data class GloballyAvailableGameData(
      */
     fun isImmediatelyPlayable(card: HanabiCard): Boolean {
         return getAwayValue(card) == 0
+    }
+
+    /**
+     * @return the [PlayerMetadata] of the player on turn
+     */
+    fun getPlayerOnTurn(): PlayerMetadata{
+        return playersMetadata[indexOfPlayerOnTurn]
     }
 
     /**

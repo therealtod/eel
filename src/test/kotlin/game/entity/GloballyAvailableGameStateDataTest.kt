@@ -2,6 +2,8 @@ package game.entity
 
 import eelst.ilike.game.GloballyAvailableGameData
 import eelst.ilike.game.entity.*
+import eelst.ilike.game.entity.HanabiCard
+import eelst.ilike.game.entity.player.PlayerMetadata
 import eelst.ilike.game.exception.IllegalGameActionException
 import game.entity.suit.*
 import game.entity.variant.NoVariant
@@ -15,7 +17,7 @@ class GloballyAvailableGameStateDataTest {
     @Test
     fun `Should add a playable card to the playing stacks`() {
         val card = HanabiCard(suit = Blue, rank = Rank.ONE)
-        val updatedGame = data.getAfterPlaying(card, variant)
+        val updatedGame = data.getAfterPlaying(card)
 
         val expected = listOf(card)
         val actual = updatedGame.playingStacks[Blue.id]!!.cards
@@ -27,7 +29,7 @@ class GloballyAvailableGameStateDataTest {
     fun `Should not add a card to the playing stacks When it's not playable`() {
         val card = HanabiCard(suit = Blue, rank = Rank.THREE)
 
-        data.getAfterPlaying(card, variant)
+        data.getAfterPlaying(card)
 
         val expected = PlayingStack(cards = emptyList(), suit = Blue)
         val actual = data.playingStacks[Blue.id]
@@ -37,7 +39,7 @@ class GloballyAvailableGameStateDataTest {
     @Test
     fun `Should discard the misplayed card after a strike`() {
         val card = HanabiCard(suit = Blue, rank = Rank.THREE)
-        val updatedGame = data.getAfterPlaying(card, variant)
+        val updatedGame = data.getAfterPlaying(card)
 
         val expected = trashPileCards + card
         val actual = updatedGame.trashPile.cards
@@ -48,7 +50,7 @@ class GloballyAvailableGameStateDataTest {
     @Test
     fun `Should increase the number of strike tokens after a strike`() {
         val card = HanabiCard(suit = Blue, rank = Rank.THREE)
-        val updatedGame = data.getAfterPlaying(card, variant)
+        val updatedGame = data.getAfterPlaying(card)
 
         val expected = 1
         val actual = updatedGame.strikes
@@ -59,7 +61,7 @@ class GloballyAvailableGameStateDataTest {
     @Test
     fun `Should increase the number of clue tokens When successfully playing the last card of a suit`() {
         val card = HanabiCard(suit = Purple, rank = Rank.FIVE)
-        val updatedGame = data.getAfterPlaying(card, variant)
+        val updatedGame = data.getAfterPlaying(card)
 
         val expected = 6
         val actual = updatedGame.clueTokens
@@ -70,7 +72,7 @@ class GloballyAvailableGameStateDataTest {
     @Test
     fun `Should not increase the number of clue tokens When a suit is completed And the clue count is 8`() {
         val card = HanabiCard(suit = Purple, rank = Rank.FIVE)
-        val updatedGame = dataWith8Clues.getAfterPlaying(card, variant)
+        val updatedGame = dataWith8Clues.getAfterPlaying(card)
 
         val expected = 8
         val actual = updatedGame.clueTokens
@@ -201,6 +203,58 @@ class GloballyAvailableGameStateDataTest {
         Assertions.assertTrue(result)
     }
 
+    @Test
+    fun `Should rotate the player on turn When an unspecified card is played`() {
+        val expected = "Bob"
+        val actual = data.getAfterPlay().getPlayerOnTurn().playerId
+
+        Assertions.assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `Should rotate the player on turn When a card is played`() {
+        val expected = "Bob"
+        val actual = data.getAfterPlaying(HanabiCard(Red, Rank.FOUR)).getPlayerOnTurn().playerId
+
+        Assertions.assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `Should rotate the player on turn wrapping around`() {
+        var updatedData = data
+        repeat(3) {
+            updatedData = updatedData.getAfterPlay()
+        }
+        val expected = "Alice"
+        val actual = updatedData.getPlayerOnTurn().playerId
+
+        Assertions.assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `Should rotate the player on turn When a non specified card is discarded`() {
+        val expected = "Bob"
+        val actual = data.getAfterDiscard().getPlayerOnTurn().playerId
+
+        Assertions.assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `Should rotate the player on turn When a card is discarded`() {
+        val expected = "Bob"
+        val actual = data.getAfterDiscarding(HanabiCard(Red, Rank.FOUR)).getPlayerOnTurn().playerId
+
+        Assertions.assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `Should rotate the player on turn When a clue is given`() {
+        val expected = "Bob"
+        val actual = data.getAfterClueGiven().getPlayerOnTurn().playerId
+
+        Assertions.assertEquals(expected, actual)
+    }
+
     companion object {
         private val variant = NoVariant
         private val redStack = PlayingStack(
@@ -285,15 +339,17 @@ class GloballyAvailableGameStateDataTest {
                     "green" to greenStack,
                     "blue" to blueStack,
                     "purple" to purpleStack,
-
                     ),
                 trashPile = trashPile,
                 strikes = 0,
                 clueTokens = 5,
-                numberOfPlayers = 3,
                 amountOfCardsPlayed = 7,
-                possibleMaxScore = 25,
-                playersMetadata = mockk()
+                amountOfCardsDiscarded = trashPile.cards.size,
+                playersMetadata = listOf(
+                    PlayerMetadata("Alice", 0),
+                    PlayerMetadata("Bob", 1),
+                    PlayerMetadata("Cathy", 2),
+                )
             )
             dataWith8Clues = data.copy(clueTokens = 8)
             dataWith0Clues = data.copy(clueTokens = 0)

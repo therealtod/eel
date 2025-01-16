@@ -20,7 +20,7 @@ interface PlayerKnowledge {
     /**
      * Get the knowledge that the player has about their own hand
      */
-    fun getOwnHandKnowledge(): InferredHandKnowledge
+    fun getOwnHandKnowledge(): HandKnowledge
 
     /**
      * Get the identities of all the slots for which the hand owner has full empathy

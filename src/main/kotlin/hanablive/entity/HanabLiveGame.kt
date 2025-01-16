@@ -1,72 +1,75 @@
 package eelst.ilike.hanablive.entity
 
 import eelst.ilike.game.Game
-import eelst.ilike.game.GameConstants
 import eelst.ilike.game.GameState
-import eelst.ilike.game.GloballyAvailableGameData
-import eelst.ilike.game.entity.HanabiCard
-import eelst.ilike.game.entity.PlayingStack
-import eelst.ilike.game.entity.TrashPile
-import eelst.ilike.game.entity.action.ClueAction
-import eelst.ilike.game.entity.action.DiscardAction
-import eelst.ilike.game.entity.action.PlayAction
 import eelst.ilike.game.entity.player.PlayerMetadata
-import eelst.ilike.game.entity.suit.SuitId
-import eelst.ilike.game.entity.suit.SuitMetadata
-import eelst.ilike.game.entity.variant.VariantMetadata
-import eelst.ilike.game.factory.VariantFactory
+import eelst.ilike.game.entity.variant.Variant
 import eelst.ilike.hanablive.HanabLiveDataParser
-import eelst.ilike.hanablive.entity.dto.instruction.GameActionListData
-import eelst.ilike.hanablive.entity.dto.instruction.GameInitData
-import eelst.ilike.hanablive.entity.dto.instruction.HanabLiveGameActionData
-import eelst.ilike.hanablive.entity.parsed.ParsedGameActionList
-import eelst.ilike.hanablive.factory.GameStateFactory
+import eelst.ilike.hanablive.entity.dto.instruction.*
+import org.apache.logging.log4j.kotlin.Logging
 
 class HanabLiveGame(
-    gameInitData: GameInitData,
+    variant: Variant,
+    playersMetadata: List<PlayerMetadata>,
     gameActionListData: GameActionListData,
-    variantMetadata: VariantMetadata,
-    suitsMetadata: Map<SuitId, SuitMetadata>,
-): Game {
-    private val globallyAvailableGameData: GloballyAvailableGameData
-    private val parser: HanabLiveDataParser
+): Logging {
+    private val parser: HanabLiveDataParser = HanabLiveDataParser(variant, playersMetadata)
 
     init {
-        globallyAvailableGameData = parseGloballyAvailableInfo(
-            gameInitData = gameInitData,
-            variantMetadata = variantMetadata,
-            suitsMetadata = suitsMetadata,
-        )
-        parser = HanabLiveDataParser(globallyAvailableGameData)
-        val categorizedGameActionData = parser.parseGameActionList(gameActionListData.list)
-        setInitialGameState(categorizedGameActionData)
+
     }
 
-    override fun getGloballyAvailableGameData(): GloballyAvailableGameData {
-        return globallyAvailableGameData
+    fun getCurrentGameState(): HanabLiveGameStateAdapter {
+        return gameStates.last()
     }
 
-    override fun getAfter(playAction: PlayAction, playedCard: HanabiCard, isStrike: Boolean): Game {
-        val currentGameState = gameStates.last()
-        val newGameState = currentGameState.getAfter(playAction, playedCard, isStrike)
+    fun updateWith(drawActionData: GameDrawActionData): HanabLiveGame {
+        val currentGameState = getCurrentGameState()
+        val newGameState = currentGameState.getAfter(drawActionData, parser)
         gameStates.add(newGameState)
         return this
     }
 
-    override fun getAfter(discardAction: DiscardAction, discardedCard: HanabiCard): Game {
-        val currentGameState = gameStates.last()
-        val newGameState = currentGameState.getAfter(discardAction, discardedCard)
+    fun updateWith(playActionData: GamePlayActionData): HanabLiveGame {
+        val currentGameState = getCurrentGameState()
+        val newGameState = currentGameState.getAfter(playActionData, parser)
         gameStates.add(newGameState)
         return this
     }
 
-    override fun getAfter(clueAction: ClueAction, touchedSlotIndexes: Set<Int>): Game {
-        val currentGameState = gameStates.last()
-        val newGameState = currentGameState.getAfter(clueAction, touchedSlotIndexes)
+    fun getAfter(strikeActionData: GameStrikeActionData): HanabLiveGame {
+        val currentStrikes = getCurrentGameState().globallyAvailableGameData.strikes
+        val previousTurnStrikes = gameStates[gameStates.size - 2].globallyAvailableGameData.strikes
+        if (currentStrikes != previousTurnStrikes + 1 )
+            logger.error("A strike has not been correctly registered!")
+        return this
+    }
+
+    fun updateWith(discardActionData: GameDiscardActionData): HanabLiveGame {
+        val currentGameState = getCurrentGameState()
+        val newGameState = currentGameState.getAfter(discardActionData, parser)
         gameStates.add(newGameState)
         return this
     }
 
+    fun updateWith(clueActionData: GameClueActionData): HanabLiveGame {
+        val currentGameState = getCurrentGameState()
+        val newGameState = currentGameState.getAfter(clueActionData, parser)
+        gameStates.add(newGameState)
+        return this
+    }
+
+    fun getAfter(statusActionData: GameStatusActionData, touchedSlotIndexes: Set<Int>): HanabLiveGame {
+        TODO()
+    }
+
+    fun getAfter(turnActionData: GameTurnActionData): HanabLiveGame {
+        TODO()
+    }
+
+
+
+    /*
     private fun setInitialGameState(categorizedGameActions: ParsedGameActionList): Game {
         require(gameStates.isEmpty()) {
             "Cannot set the initial state of a game that has been already initialized"
@@ -85,30 +88,9 @@ class HanabLiveGame(
         return this
     }
 
-    private fun parseGloballyAvailableInfo(
-        gameInitData: GameInitData,
-        variantMetadata: VariantMetadata,
-        suitsMetadata: Map<SuitId, SuitMetadata>
-    ): GloballyAvailableGameData {
-        val variant = VariantFactory.createVariant(variantMetadata, suitsMetadata)
-        val suits = variant.getSuits()
-        return GloballyAvailableGameData(
-            variant = variant,
-            playingStacks = suits.associate { it.id to PlayingStack(emptyList(), it) },
-            trashPile = TrashPile(),
-            strikes = GameConstants.INITIAL_STRIKE_TOKENS_COUNT,
-            clueTokens = GameConstants.MAX_CLUE_TOKENS_COUNT,
-            numberOfPlayers = gameInitData.playerNames.size,
-            amountOfCardsPlayed = 0,
-            possibleMaxScore = variantMetadata.stackSize * suits.size,
-            playersMetadata = gameInitData.playerNames.mapIndexed { index, name ->
-                PlayerMetadata(
-                    playerId = name,
-                    playerIndex = index
-                )
-            }
-        )
-    }
-    private val gameStates: MutableList<GameState> = mutableListOf()
+     */
+
+
     private val actions: MutableList<HanabLiveGameActionData> = mutableListOf()
+    private val gameStates: MutableList<HanabLiveGameStateAdapter> = mutableListOf()
 }

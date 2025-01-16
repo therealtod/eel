@@ -10,7 +10,7 @@ class HanabLiveHand(
     override val size = slots.size
 
     override fun getSlot(slotIndex: Int): Slot {
-        return slots.values.first { it.index == slotIndex }
+        TODO()
     }
 
     override fun withNewSlot(slot: Slot): Hand {

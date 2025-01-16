@@ -8,7 +8,7 @@ class PlayerKnowledgeImpl(
     private val playerId: PlayerId,
     private val globallyVisibleCards: List<HanabiCard>,
     private val cardsVisibleInPlayerHands: Map<PlayerId, Map<Int, HanabiCard>>,
-    private val inferredHandKnowledge: Map<PlayerId, InferredHandKnowledge>,
+    private val handKnowledge: Map<PlayerId, HandKnowledge>,
 ) : PlayerKnowledge {
     override fun getVisibleCards(): List<HanabiCard> {
         TODO()
@@ -18,7 +18,7 @@ class PlayerKnowledgeImpl(
         return cardsVisibleInPlayerHands
     }
 
-    override fun getOwnHandKnowledge(): InferredHandKnowledge {
+    override fun getOwnHandKnowledge(): HandKnowledge {
         return getHandKnowledge(playerId)
     }
 
@@ -30,8 +30,8 @@ class PlayerKnowledgeImpl(
         TODO("Not yet implemented")
     }
 
-    private fun getHandKnowledge(playerId: PlayerId): InferredHandKnowledge {
-        return inferredHandKnowledge[playerId] ?: throw UnknownPlayerException(
+    private fun getHandKnowledge(playerId: PlayerId): HandKnowledge {
+        return handKnowledge[playerId] ?: throw UnknownPlayerException(
             "No player with playerId: $playerId to retrieve the hand knowledge of"
         )
     }

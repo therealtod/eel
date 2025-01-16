@@ -18,44 +18,41 @@ interface ConventionTech {
     val name: String
 
     /**
-     * @return all possible [GameAction] that can be generated using this technique in the given [gameState]
+     * @return all possible [GameAction]s that can be generated using this [ConventionTech]
      */
-    fun getGameActions(gameState: GameState): Set<GameAction>
+    fun getGameActions(gameState: GameState,  currentKnowledge: TeamKnowledge): Set<GameAction>
 
     /**
      * @return true if the [playAction] can be interpreted as an instance of this [ConventionTech]
      */
-    fun matches(playAction: PlayAction, gameState: GameState): Boolean
+    fun matchesPlay(playAction: PlayAction, gameState: GameState, currentKnowledge: TeamKnowledge): Boolean
 
     /**
      * @return true if the [discardAction] can be interpreted as an instance of this [ConventionTech]
      */
-    fun matches(discardAction: DiscardAction, gameState: GameState): Boolean
+    fun matchesDiscard(discardAction: DiscardAction, gameState: GameState, currentKnowledge: TeamKnowledge): Boolean
 
     /**
      * @return true if the [clueAction] can be interpreted as an instance of this [ConventionTech]
      */
-    fun matches(clueAction: ClueAction, touchedSlotsIndexes: Set<Int>, gameState: GameState): Boolean
+    fun matchesClue(clueAction: ClueAction, gameState: GameState, currentKnowledge: TeamKnowledge): Boolean
 
     /**
-     * @return what [TeamKnowledge] the team has acquired after the given [playAction] has been performed at the current
-     * [gameState]
+     * @return the updated [TeamKnowledge] after the given [playAction] is performed
      */
-    fun getGeneratedKnowledge(playAction: PlayAction, gameState: GameState): TeamKnowledge
+    fun getUpdatedKnowledge(playAction: PlayAction, currentKnowledge: TeamKnowledge): TeamKnowledge
 
     /**
-     * @return what [TeamKnowledge] the team has acquired after the given [discardAction] has been performed at the
-     * current [gameState]
+     * @return the updated [TeamKnowledge] after the given [discardAction] is performed
      */
-    fun getGeneratedKnowledge(discardAction: DiscardAction, gameState: GameState): TeamKnowledge
+    fun getUpdatedKnowledge(discardAction: DiscardAction, currentKnowledge: TeamKnowledge): TeamKnowledge
 
     /**
-     * @return what [TeamKnowledge] the team has acquired after the given [clueAction] has been performed at the current
-     * [gameState]
+     * @return the updated [TeamKnowledge] after the given [clueAction] is performed
      */
-    fun getGeneratedKnowledge(
+    fun getUpdatedKnowledge(
         clueAction: ClueAction,
         touchedSlotsIndexes: Set<Int>,
-        gameState: GameState
+        currentKnowledge: TeamKnowledge
     ): TeamKnowledge
 }

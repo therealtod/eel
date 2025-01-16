@@ -1,29 +1,36 @@
 package eelst.ilike.hanablive
 
+import eelst.ilike.engine.card.InGameCard
 import eelst.ilike.engine.knowledge.KnowledgeFactory
 import eelst.ilike.engine.knowledge.TeamKnowledge
 import eelst.ilike.engine.player.KnowledgeAwarePlayer
+import eelst.ilike.engine.slot.UnknownSlot
+import eelst.ilike.engine.slot.VisibleSlot
 import eelst.ilike.game.GloballyAvailableGameData
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.HanabiCard
 import eelst.ilike.game.entity.Rank
 import eelst.ilike.game.entity.SimpleHand
+import eelst.ilike.game.entity.action.ClueAction
+import eelst.ilike.game.entity.action.DiscardAction
 import eelst.ilike.game.entity.action.DrawAction
-import eelst.ilike.game.entity.action.GameAction
 import eelst.ilike.game.entity.action.PlayAction
 import eelst.ilike.game.entity.player.Player
 import eelst.ilike.game.entity.player.PlayerId
+import eelst.ilike.game.entity.player.PlayerMetadata
+import eelst.ilike.game.entity.slot.Slot
+import eelst.ilike.game.entity.variant.Variant
 import eelst.ilike.hanablive.entity.dto.instruction.*
 import eelst.ilike.hanablive.entity.parsed.ParsedGameActionList
 import eelst.ilike.hanablive.entity.slot.HanabLiveSlot
 import eelst.ilike.hanablive.entity.dto.instruction.GameActionType
+import engine.card.CardLocationDictionary
+import game.exception.UnknownPlayerException
 
 /**
  * Reads hanab.live produced objects and transforms them into entities understood by the engine
  */
-class HanabLiveDataParser(
-    private val globallyAvailableGameData: GloballyAvailableGameData,
-) {
+class HanabLiveDataParser(variant: Variant, private val playersMetadata: List<PlayerMetadata>) {
     fun parseGameActionList(actions: List<HanabLiveGameActionData>): ParsedGameActionList {
         val initialDrawActions = mutableListOf<GameDrawActionData>()
         val actionsByTurn = mutableListOf<MutableList<HanabLiveGameActionData>>(mutableListOf())
@@ -43,6 +50,71 @@ class HanabLiveDataParser(
         )
     }
 
+    fun parseDrawAction(drawActionData: GameDrawActionData): DrawAction {
+        val playerId = getPlayerId(drawActionData.playerIndex)
+        val inGameCard = parseInGameCard(
+            order = drawActionData.order,
+            suitIndex = drawActionData.suitIndex,
+            rank = drawActionData.rank,
+        )
+        return DrawAction(
+            playerId = playerId,
+        )
+    }
+
+    fun parsePlayAction(
+        playActionData: GamePlayActionData,
+        cardLocationDictionary: CardLocationDictionary,
+    ): PlayAction {
+        val playerId = getPlayerId(playActionData.playerIndex)
+        val slotIndex = cardLocationDictionary.getPlayerSlotIndex(
+            playerIndex = playActionData.playerIndex,
+            cardOrder = playActionData.order,
+        )
+        return PlayAction(
+            playerId = playerId,
+            slotIndex = slotIndex,
+        )
+    }
+
+    fun parseDiscardAction(
+        discardActionData: GameDiscardActionData,
+        cardLocationDictionary: CardLocationDictionary,
+    ): DiscardAction {
+        val playerId = getPlayerId(discardActionData.playerIndex)
+        val discardedCard = parseInGameCard(
+            order = discardActionData.order,
+            suitIndex = discardActionData.suitIndex,
+            rank = discardActionData.rank,
+        )
+        val slotIndex = cardLocationDictionary.getPlayerSlotIndex(
+            playerIndex = discardActionData.playerIndex,
+            cardOrder = discardActionData.order,
+        )
+        return DiscardAction(
+            playerId = playerId,
+            slotIndex = slotIndex,
+        )
+    }
+
+    fun parseClueAction(
+        clueActionData: GameClueActionData,
+        cardLocationDictionary: CardLocationDictionary,
+    ): ClueAction {
+        val clueGiverPlayerId = getPlayerId(clueActionData.giver)
+        val clueReceiverPlayerId = getPlayerId(clueActionData.target)
+        val clueValue = when(clueActionData.clue.type) {
+            0 -> colorCluesMap[clueActionData.clue.value]
+            1 -> rankCluesMap[clueActionData.clue.value]
+            else -> throw UnsupportedOperationException("Unrecognized clue type: ${clueActionData.clue.type}")
+        }
+        return ClueAction(
+            clueGiver = clueGiverPlayerId,
+            clueReceiver = clueReceiverPlayerId,
+            value = clueValue!!,
+        )
+    }
+
     private fun getInitialDrawActionsGroupedByPlayer(
         actions: List<HanabLiveGameActionData>
     ): Map<PlayerId, List<GameDrawActionData>> {
@@ -54,7 +126,7 @@ class HanabLiveDataParser(
             .mapKeys { getPlayerId(it.key) }
     }
 
-    fun parseCard(
+    fun parseCardIdentity(
         suitIndex: Int,
         rank: Int,
     ): HanabiCard {
@@ -64,6 +136,39 @@ class HanabLiveDataParser(
         )
     }
 
+    fun parseInGameCard(
+        order: Int,
+        suitIndex: Int,
+        rank: Int,
+    ): InGameCard {
+        if (suitIndex < 0){
+            return InGameCard(
+                positionInStartingDeck = order,
+                slotKnowledge = KnowledgeFactory.createEmptySlotKnowledge(playersMetadata)
+            )
+        } else {
+            val card = parseCardIdentity(suitIndex, rank)
+            return InGameCard(
+                positionInStartingDeck = order,
+                slotKnowledge = KnowledgeFactory.createSlotKnowledge(card, playersMetadata),
+            )
+        }
+    }
+
+    fun parseAsSlot(suitIndex: Int, rank: Int, order: Int): Slot {
+        return if (suitIndex < 0) {
+            UnknownSlot()
+        } else {
+            VisibleSlot(
+                identity = parseCardIdentity(
+                    suitIndex = suitIndex,
+                    rank = rank,
+                )
+            )
+        }
+    }
+
+    /*
     fun parseInitialTeamKnowledge(parsedGameActionList: ParsedGameActionList): TeamKnowledge {
         val drawActionsGroupedByPlayer = parsedGameActionList.initialDrawActionsGroupedByPlayerIndex
         val visibleCards = drawActionsGroupedByPlayer.mapValues { entry ->
@@ -72,9 +177,9 @@ class HanabLiveDataParser(
             }
                 .toMap()
                 .filterValues { it.suitIndex >= 0 }
-                .mapValues { parseCard(it.value.suitIndex, it.value.rank) }
+                .mapValues { parseCardIdentity(it.value.suitIndex, it.value.rank) }
         }.mapKeys { getPlayerId(it.key) }
-        val playersKnowledge = globallyAvailableGameData.playersMetadata.associate {
+        val playersKnowledge = playersMetadata.associate {
             it.playerId to KnowledgeFactory
                 .createPlayerKnowledge(
                     playerId = it.playerId,
@@ -88,6 +193,8 @@ class HanabLiveDataParser(
         return KnowledgeFactory.createTeamKnowledge(playersKnowledge)
     }
 
+     */
+/*
     /**
      * This method is an overkill but is just there in case the initial draws don't follow the traditional progressive
      * order
@@ -99,13 +206,12 @@ class HanabLiveDataParser(
                 drawActions.value.map {
                     HanabLiveSlot(
                         index = (it.order % drawActions.value.size) + 1,
-                        orderInStartingDeck = it.order
+                        positionInStartingDeck = it.order
                     )
                 }
             }
 
-        return globallyAvailableGameData
-            .playersMetadata
+        return playersMetadata
             .associate { playerMetadata ->
                 playerMetadata.playerId to KnowledgeAwarePlayer(
                     playerId = playerMetadata.playerId,
@@ -115,17 +221,23 @@ class HanabLiveDataParser(
             }
     }
 
-    private val suitMap = globallyAvailableGameData.variant.getSuits()
+ */
+
+    private val suitMap = variant.getSuits()
         .mapIndexed { index, suit ->
             Pair(index, suit)
         }.toMap()
 
     private fun getPlayerId(playerIndex: Int): PlayerId {
-        return globallyAvailableGameData.playersMetadata[playerIndex].playerId
+        return playersMetadataByPlayerIndex[playerIndex]?.playerId
+            ?: throw UnknownPlayerException(
+                "Could not find any player metadata corresponding to player index $playerIndex"
+            )
     }
 
-    private val availableClueValues = globallyAvailableGameData.variant.getClueValues()
+    private val availableClueValues = variant.getClueValues()
     private val colorClues = availableClueValues.filterIsInstance<Color>()
     private val colorCluesMap = colorClues.mapIndexed { index, color -> Pair(index, color) }.toMap()
     private val rankCluesMap = availableClueValues.filterIsInstance<Rank>().associateBy { it.numericalValue }
+    private val playersMetadataByPlayerIndex = playersMetadata.associateBy { it.playerIndex }
 }

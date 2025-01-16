@@ -1,14 +1,7 @@
 package eelst.ilike.hanablive.bot.state
 
-import eelst.ilike.game.GameConstants
-import eelst.ilike.game.GloballyAvailableGameData
-import eelst.ilike.game.entity.PlayingStack
-import eelst.ilike.game.entity.TrashPile
 import eelst.ilike.game.entity.player.PlayerMetadata
-import eelst.ilike.game.entity.suit.SuitId
-import eelst.ilike.game.entity.suit.SuitMetadata
-import eelst.ilike.game.entity.variant.VariantMetadata
-import eelst.ilike.game.factory.VariantFactory
+import eelst.ilike.game.entity.variant.VariantFactory
 import eelst.ilike.hanablive.LobbyState
 import eelst.ilike.hanablive.bot.HanabLiveBot
 import eelst.ilike.hanablive.entity.HanabLiveGame
@@ -39,11 +32,19 @@ class LoadingGameDataState(
         val variantMetadata = bot.getVariantMetadata(variantName)
         val suitIds = variantMetadata.suits
         val suitsMetadata = bot.getSuitsMetadata(suitIds)
-        val game = HanabLiveGame(
-            gameInitData = gameInitData,
-            gameActionListData = gameActionListData,
-            variantMetadata = variantMetadata,
+        val variant = VariantFactory.createVariant(
+            metadata = variantMetadata,
             suitsMetadata = suitsMetadata,
+        )
+        val game = HanabLiveGame(
+            variant = variant,
+            playersMetadata = gameInitData.playerNames.mapIndexed { index, name ->
+                PlayerMetadata(
+                    playerId = name,
+                    playerIndex = index
+                )
+            },
+            gameActionListData = gameActionListData,
         )
         val newState = InGameState(
             bot = bot,

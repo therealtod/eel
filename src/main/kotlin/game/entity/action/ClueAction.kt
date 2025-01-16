@@ -4,7 +4,7 @@ package eelst.ilike.game.entity.action
 import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.player.PlayerId
 
-sealed class ClueAction(
+open class ClueAction(
     open val clueGiver: PlayerId,
     open val clueReceiver: PlayerId,
     open val value: ClueValue

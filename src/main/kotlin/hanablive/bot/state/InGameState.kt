@@ -1,15 +1,9 @@
 package eelst.ilike.hanablive.bot.state
 
-import eelst.ilike.game.GloballyAvailableGameData
-import eelst.ilike.hanablive.HanabLiveDataParser
 import eelst.ilike.hanablive.LobbyState
 import eelst.ilike.hanablive.bot.HanabLiveBot
 import eelst.ilike.hanablive.entity.HanabLiveGame
-import eelst.ilike.hanablive.entity.dto.instruction.GameActionListData
-import eelst.ilike.hanablive.entity.dto.instruction.GameActionType
 import eelst.ilike.hanablive.entity.dto.instruction.HanabLiveGameAction
-import eelst.ilike.hanablive.entity.dto.instruction.HanabLiveGameActionData
-import eelst.ilike.hanablive.factory.GameStateFactory
 
 class InGameState(
     bot: HanabLiveBot,

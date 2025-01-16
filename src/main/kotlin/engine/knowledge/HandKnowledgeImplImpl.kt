@@ -1,10 +1,10 @@
 package eelst.ilike.engine.knowledge
 
 
-class InferredHandKnowledgeImpl(
+class HandKnowledgeImplImpl(
     private val slotKnowledge: Map<Int, SlotKnowledge> = emptyMap()
-) : InferredHandKnowledge {
-    override fun integrateWith(otherKnowledge: InferredHandKnowledge): InferredHandKnowledge {
+) : HandKnowledge {
+    override fun integrateWith(otherKnowledge: HandKnowledge): HandKnowledge {
         slotKnowledge.keys.forEach {
             slotKnowledge[it]!!.integrateWith(otherKnowledge.getSlotKnowledge(it))
         }

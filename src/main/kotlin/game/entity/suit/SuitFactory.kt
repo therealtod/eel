@@ -1,9 +1,6 @@
-package eelst.ilike.game.factory
+package eelst.ilike.game.entity.suit
 
 import eelst.ilike.game.entity.Color
-import eelst.ilike.game.entity.suit.ClassicSuit
-import eelst.ilike.game.entity.suit.Suit
-import eelst.ilike.game.entity.suit.SuitMetadata
 
 
 /**

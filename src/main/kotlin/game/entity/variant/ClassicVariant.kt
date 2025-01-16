@@ -18,4 +18,8 @@ open class ClassicVariant(
         val colorClues = suits.flatMap { it.getAssociatedColors() }
         return colorClues + rankClues
     }
+
+    override fun getMaxScore(): Int {
+        return suits.flatMap { it.getAllUniqueSuitCards() }.size
+    }
 }

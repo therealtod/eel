@@ -11,23 +11,23 @@ import eelst.ilike.game.entity.action.PlayAction
  * A [ConventionTech] associated with the action of discarding
  */
 interface DiscardTech : ConventionTech {
-    override fun matches(playAction: PlayAction, gameState: GameState): Boolean {
+    override fun matchesPlay(playAction: PlayAction, gameState: GameState, currentKnowledge: TeamKnowledge): Boolean {
         return false
     }
 
-    override fun matches(clueAction: ClueAction, touchedSlotsIndexes: Set<Int>, gameState: GameState): Boolean {
+    override fun matchesClue(clueAction: ClueAction, gameState: GameState, currentKnowledge: TeamKnowledge): Boolean {
         return false
     }
 
-    override fun getGeneratedKnowledge(playAction: PlayAction, gameState: GameState): TeamKnowledge {
-        return KnowledgeFactory.createEmptyTeamKnowledge(gameState)
+    override fun getUpdatedKnowledge(playAction: PlayAction, currentKnowledge: TeamKnowledge): TeamKnowledge {
+        return currentKnowledge
     }
 
-    override fun getGeneratedKnowledge(
+    override fun getUpdatedKnowledge(
         clueAction: ClueAction,
         touchedSlotsIndexes: Set<Int>,
-        gameState: GameState
+        currentKnowledge: TeamKnowledge
     ): TeamKnowledge {
-        return KnowledgeFactory.createEmptyTeamKnowledge(gameState)
+        return currentKnowledge
     }
 }

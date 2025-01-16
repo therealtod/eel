@@ -17,4 +17,9 @@ interface Variant {
      * @return all possible clue values that can be given in a game with this variant
      */
     fun getClueValues(): List<ClueValue>
+
+    /**
+     * @return the maximum score obtainable in a game of this [Variant]
+     */
+    fun getMaxScore(): Int
 }

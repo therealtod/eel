@@ -1,20 +1,33 @@
 package eelst.ilike.engine.knowledge
 
-import eelst.ilike.game.GameState
+import eelst.ilike.game.GameUtils
 import eelst.ilike.game.GloballyAvailableGameData
 import eelst.ilike.game.entity.HanabiCard
 import eelst.ilike.game.entity.player.PlayerId
+import eelst.ilike.game.entity.player.PlayerMetadata
 
 object KnowledgeFactory {
-    fun createEmptyTeamKnowledge(gameState: GameState): TeamKnowledge {
-        TODO()
+    fun createEmptyTeamKnowledge(playersMetadata: List<PlayerMetadata>): TeamKnowledge {
+        val handsSize = GameUtils.getHandSize(playersMetadata.size)
+        val slotsKnowledge = playersMetadata.map{ _->
+            List(handsSize) {
+                BaseSlotKnowledge()
+            }
+        }
+        val handsKnowledge = playersMetadata.map{ _ ->
+            createEmptyHandKnowledge()
+        }
+        return createTeamKnowledge(
+            slotsKnowledge = slotsKnowledge,
+            handsKnowledge = handsKnowledge,
+        )
     }
 
     fun createPlayerKnowledge(
         playerId: PlayerId,
         globallyAvailableGameData: GloballyAvailableGameData,
         cardsVisibleInPlayerHands: Map<PlayerId, Map<Int, HanabiCard>>,
-        inferredHandKnowledge: Map<PlayerId, InferredHandKnowledge>,
+        handKnowledge: Map<PlayerId, HandKnowledge>,
     ): PlayerKnowledge {
         val globallyVisibleCards = globallyAvailableGameData.getCardsOnStacks() +
                 globallyAvailableGameData.trashPile.cards
@@ -22,17 +35,29 @@ object KnowledgeFactory {
             playerId = playerId,
             globallyVisibleCards = globallyVisibleCards,
             cardsVisibleInPlayerHands = cardsVisibleInPlayerHands,
-            inferredHandKnowledge = inferredHandKnowledge
+            handKnowledge = handKnowledge
         )
     }
 
     fun createTeamKnowledge(
-        playersKnowledge: Map<PlayerId, PlayerKnowledge>
+        slotsKnowledge: List<List<SlotKnowledge>>,
+        handsKnowledge: List<HandKnowledge>
     ): TeamKnowledge {
-        return TeamKnowledgeImpl(playersKnowledge)
+        return PlayerIndexBasedTeamKnowledge(
+            slotsKnowledge = slotsKnowledge,
+            handsKnowledge = handsKnowledge,
+        )
     }
 
-    fun createEmptyInferredHandKnowledge(): InferredHandKnowledge {
-        return InferredHandKnowledgeImpl()
+    fun createEmptyHandKnowledge(): HandKnowledge {
+        return HandKnowledgeImplImpl()
+    }
+
+    fun createEmptySlotKnowledge(playersMetadata: Collection<PlayerMetadata>): SlotKnowledge {
+        TODO()
+    }
+
+    fun createSlotKnowledge(visibleCard: HanabiCard, playersMetadata: Collection<PlayerMetadata>): SlotKnowledge {
+        TODO()
     }
 }

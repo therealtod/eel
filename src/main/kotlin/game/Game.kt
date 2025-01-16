@@ -3,23 +3,46 @@ package eelst.ilike.game
 import eelst.ilike.game.entity.HanabiCard
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.DiscardAction
+import eelst.ilike.game.entity.action.DrawAction
 import eelst.ilike.game.entity.action.PlayAction
+import eelst.ilike.game.entity.player.PlayerMetadata
+import eelst.ilike.game.entity.variant.Variant
 
 interface Game {
+    /**
+     * @return the [Variant] set for this [Game]
+     */
+    fun getVariant(): Variant
+
+    /**
+     * @return a [List] of the [PlayerMetadata] of the players participating in this [Game]
+     */
+    fun getPlayersMetadata(): List<PlayerMetadata>
+
     /**
      * @return the [GloballyAvailableGameData] associated to the latest game state
      */
     fun getGloballyAvailableGameData(): GloballyAvailableGameData
 
     /**
-     * @return this [Game] after a player has played [playedCard]
+     * @return the latest (current) [GameState] of this game
      */
-    fun getAfter(playAction: PlayAction, playedCard: HanabiCard, isStrike: Boolean = false): Game
+    fun getCurrentGameState(): GameState
 
     /**
-     * @return this [Game] after a player has discarded [discardedCard]
+     * @return this [Game] after a player draws a card
      */
-    fun getAfter(discardAction: DiscardAction, discardedCard: HanabiCard): Game
+    fun getAfter(drawAction: DrawAction): Game
+
+    /**
+     * @return this [Game] after a player plays a card
+     */
+    fun getAfter(playAction: PlayAction): Game
+
+    /**
+     * @return this [Game] after a player discards a card
+     */
+    fun getAfter(discardAction: DiscardAction): Game
 
     /**
      * @return this [Game] after a player has given a clue
