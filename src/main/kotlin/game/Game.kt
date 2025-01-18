@@ -1,12 +1,12 @@
 package eelst.ilike.game
 
-import eelst.ilike.game.entity.HanabiCard
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.DiscardAction
 import eelst.ilike.game.entity.action.DrawAction
 import eelst.ilike.game.entity.action.PlayAction
 import eelst.ilike.game.entity.player.PlayerMetadata
 import eelst.ilike.game.entity.variant.Variant
+import eelst.ilike.game.gamestate.GameState
 
 interface Game {
     /**

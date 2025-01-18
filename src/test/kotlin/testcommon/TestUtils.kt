@@ -1,3 +1,5 @@
+package testcommon
+
 import eelst.ilike.common.Utils
 
 object TestUtils {

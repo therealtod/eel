@@ -5,7 +5,7 @@ import eelst.ilike.common.datastructure.tree.TreeNode
 import eelst.ilike.common.datastructure.tree.TreeNodeImpl
 import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
-import eelst.ilike.game.GameState
+import eelst.ilike.game.gamestate.GameState
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.DiscardAction
 import eelst.ilike.game.entity.action.PlayAction

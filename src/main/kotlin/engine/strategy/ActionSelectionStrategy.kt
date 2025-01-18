@@ -2,7 +2,7 @@ package eelst.ilike.engine.strategy
 
 import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.engine.convention.ConventionalAction
-import eelst.ilike.game.GameState
+import eelst.ilike.game.gamestate.GameState
 
 /**
  * Defines the strategy on how to select the [ConventionalAction] the player on turn would take

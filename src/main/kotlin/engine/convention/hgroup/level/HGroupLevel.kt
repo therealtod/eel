@@ -3,7 +3,7 @@ package eelst.ilike.engine.convention.hgroup.level
 import eelst.ilike.engine.convention.BaseConventionSet
 import eelst.ilike.engine.convention.tech.ConventionTech
 
-sealed class HGroupLevel(
+abstract class HGroupLevel(
     name: String,
     includes: Set<HGroupLevel> = emptySet(),
     definedTechs: Set<ConventionTech>,

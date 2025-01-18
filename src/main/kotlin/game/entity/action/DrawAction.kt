@@ -1,10 +1,11 @@
 package eelst.ilike.game.entity.action
 
 import eelst.ilike.game.entity.player.PlayerId
+import eelst.ilike.game.entity.player.PlayerMetadata
 
 data class DrawAction(
-    val playerId: PlayerId,
+    val playerMetadata: PlayerMetadata,
 ) : GameAction(
-    actionExecutor = playerId,
+    playerMetadata,
     actionType = GameActionType.DRAW,
 )

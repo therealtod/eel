@@ -3,7 +3,7 @@ Configuration:
     Console:
       name: "CONSOLE"
       PatternLayout:
-        pattern: "%p - %m%n"
+        pattern: "%d{yyyy-MM-dd HH:mm:ss} %p - %m%n"
   Loggers:
     Root:
       level: "INFO"

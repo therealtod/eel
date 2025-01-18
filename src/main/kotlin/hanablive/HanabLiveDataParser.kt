@@ -3,26 +3,21 @@ package eelst.ilike.hanablive
 import eelst.ilike.engine.card.InGameCard
 import eelst.ilike.engine.knowledge.KnowledgeFactory
 import eelst.ilike.engine.knowledge.TeamKnowledge
-import eelst.ilike.engine.player.KnowledgeAwarePlayer
 import eelst.ilike.engine.slot.UnknownSlot
-import eelst.ilike.engine.slot.VisibleSlot
 import eelst.ilike.game.GloballyAvailableGameData
 import eelst.ilike.game.entity.Color
 import eelst.ilike.game.entity.HanabiCard
 import eelst.ilike.game.entity.Rank
-import eelst.ilike.game.entity.SimpleHand
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.DiscardAction
 import eelst.ilike.game.entity.action.DrawAction
 import eelst.ilike.game.entity.action.PlayAction
-import eelst.ilike.game.entity.player.Player
 import eelst.ilike.game.entity.player.PlayerId
 import eelst.ilike.game.entity.player.PlayerMetadata
 import eelst.ilike.game.entity.slot.Slot
 import eelst.ilike.game.entity.variant.Variant
 import eelst.ilike.hanablive.entity.dto.instruction.*
 import eelst.ilike.hanablive.entity.parsed.ParsedGameActionList
-import eelst.ilike.hanablive.entity.slot.HanabLiveSlot
 import eelst.ilike.hanablive.entity.dto.instruction.GameActionType
 import engine.card.CardLocationDictionary
 import game.exception.UnknownPlayerException
@@ -51,14 +46,9 @@ class HanabLiveDataParser(variant: Variant, private val playersMetadata: List<Pl
     }
 
     fun parseDrawAction(drawActionData: GameDrawActionData): DrawAction {
-        val playerId = getPlayerId(drawActionData.playerIndex)
-        val inGameCard = parseInGameCard(
-            order = drawActionData.order,
-            suitIndex = drawActionData.suitIndex,
-            rank = drawActionData.rank,
-        )
+        val playerMetadata = getPlayerMetadata(drawActionData.playerIndex)
         return DrawAction(
-            playerId = playerId,
+            playerMetadata = playerMetadata
         )
     }
 
@@ -66,13 +56,13 @@ class HanabLiveDataParser(variant: Variant, private val playersMetadata: List<Pl
         playActionData: GamePlayActionData,
         cardLocationDictionary: CardLocationDictionary,
     ): PlayAction {
-        val playerId = getPlayerId(playActionData.playerIndex)
+        val playerMetadata = getPlayerMetadata(playActionData.playerIndex)
         val slotIndex = cardLocationDictionary.getPlayerSlotIndex(
             playerIndex = playActionData.playerIndex,
             cardOrder = playActionData.order,
         )
         return PlayAction(
-            playerId = playerId,
+            playerMetadata = playerMetadata,
             slotIndex = slotIndex,
         )
     }
@@ -81,18 +71,13 @@ class HanabLiveDataParser(variant: Variant, private val playersMetadata: List<Pl
         discardActionData: GameDiscardActionData,
         cardLocationDictionary: CardLocationDictionary,
     ): DiscardAction {
-        val playerId = getPlayerId(discardActionData.playerIndex)
-        val discardedCard = parseInGameCard(
-            order = discardActionData.order,
-            suitIndex = discardActionData.suitIndex,
-            rank = discardActionData.rank,
-        )
+        val playerMetadata = getPlayerMetadata(discardActionData.playerIndex)
         val slotIndex = cardLocationDictionary.getPlayerSlotIndex(
             playerIndex = discardActionData.playerIndex,
             cardOrder = discardActionData.order,
         )
         return DiscardAction(
-            playerId = playerId,
+            playerMetadata = playerMetadata,
             slotIndex = slotIndex,
         )
     }
@@ -101,29 +86,18 @@ class HanabLiveDataParser(variant: Variant, private val playersMetadata: List<Pl
         clueActionData: GameClueActionData,
         cardLocationDictionary: CardLocationDictionary,
     ): ClueAction {
-        val clueGiverPlayerId = getPlayerId(clueActionData.giver)
-        val clueReceiverPlayerId = getPlayerId(clueActionData.target)
+        val clueGiverPlayerMetadata = getPlayerMetadata(clueActionData.giver)
+        val clueReceiverPlayerMetadata = getPlayerMetadata(clueActionData.target)
         val clueValue = when(clueActionData.clue.type) {
             0 -> colorCluesMap[clueActionData.clue.value]
             1 -> rankCluesMap[clueActionData.clue.value]
             else -> throw UnsupportedOperationException("Unrecognized clue type: ${clueActionData.clue.type}")
         }
         return ClueAction(
-            clueGiver = clueGiverPlayerId,
-            clueReceiver = clueReceiverPlayerId,
+            clueGiver = clueGiverPlayerMetadata,
+            clueReceiver = clueGiverPlayerMetadata,
             value = clueValue!!,
         )
-    }
-
-    private fun getInitialDrawActionsGroupedByPlayer(
-        actions: List<HanabLiveGameActionData>
-    ): Map<PlayerId, List<GameDrawActionData>> {
-        val initialDrawActions = actions.takeWhile {
-            it.type == GameActionType.DRAW
-        }.map { it as GameDrawActionData }
-        return initialDrawActions
-            .groupBy { it.playerIndex }
-            .mapKeys { getPlayerId(it.key) }
     }
 
     fun parseCardIdentity(
@@ -134,38 +108,6 @@ class HanabLiveDataParser(variant: Variant, private val playersMetadata: List<Pl
             suit = suitMap[suitIndex]!!,
             rank = rankCluesMap[rank]!!
         )
-    }
-
-    fun parseInGameCard(
-        order: Int,
-        suitIndex: Int,
-        rank: Int,
-    ): InGameCard {
-        if (suitIndex < 0){
-            return InGameCard(
-                positionInStartingDeck = order,
-                slotKnowledge = KnowledgeFactory.createEmptySlotKnowledge(playersMetadata)
-            )
-        } else {
-            val card = parseCardIdentity(suitIndex, rank)
-            return InGameCard(
-                positionInStartingDeck = order,
-                slotKnowledge = KnowledgeFactory.createSlotKnowledge(card, playersMetadata),
-            )
-        }
-    }
-
-    fun parseAsSlot(suitIndex: Int, rank: Int, order: Int): Slot {
-        return if (suitIndex < 0) {
-            UnknownSlot()
-        } else {
-            VisibleSlot(
-                identity = parseCardIdentity(
-                    suitIndex = suitIndex,
-                    rank = rank,
-                )
-            )
-        }
     }
 
     /*
@@ -228,8 +170,8 @@ class HanabLiveDataParser(variant: Variant, private val playersMetadata: List<Pl
             Pair(index, suit)
         }.toMap()
 
-    private fun getPlayerId(playerIndex: Int): PlayerId {
-        return playersMetadataByPlayerIndex[playerIndex]?.playerId
+    private fun getPlayerMetadata(playerIndex: Int): PlayerMetadata {
+        return playersMetadataByPlayerIndex[playerIndex]
             ?: throw UnknownPlayerException(
                 "Could not find any player metadata corresponding to player index $playerIndex"
             )

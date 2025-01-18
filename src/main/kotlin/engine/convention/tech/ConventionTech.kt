@@ -2,11 +2,12 @@ package eelst.ilike.engine.convention.tech
 
 
 import eelst.ilike.engine.knowledge.TeamKnowledge
-import eelst.ilike.game.GameState
+import eelst.ilike.game.gamestate.GameState
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.DiscardAction
 import eelst.ilike.game.entity.action.GameAction
 import eelst.ilike.game.entity.action.PlayAction
+import eelst.ilike.game.entity.player.PlayerMetadata
 
 /**
  * A technique (tech) defined by some convention system
@@ -20,7 +21,7 @@ interface ConventionTech {
     /**
      * @return all possible [GameAction]s that can be generated using this [ConventionTech]
      */
-    fun getGameActions(gameState: GameState,  currentKnowledge: TeamKnowledge): Set<GameAction>
+    fun getGameActions(gameState: GameState, currentKnowledge: TeamKnowledge): Collection<GameAction>
 
     /**
      * @return true if the [playAction] can be interpreted as an instance of this [ConventionTech]
@@ -55,4 +56,15 @@ interface ConventionTech {
         touchedSlotsIndexes: Set<Int>,
         currentKnowledge: TeamKnowledge
     ): TeamKnowledge
+
+    /**
+     * @return true if the player's slot at the given [slotIndex] matches the condition needed to execute
+     * this [ConventionTech]
+     */
+    fun slotMatchesCondition(
+        slotIndex: Int,
+        playerMetadata: PlayerMetadata,
+        gameState: GameState,
+        currentKnowledge: TeamKnowledge
+    ): Boolean
 }

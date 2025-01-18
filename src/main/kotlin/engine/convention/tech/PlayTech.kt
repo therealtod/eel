@@ -1,7 +1,7 @@
 package eelst.ilike.engine.convention.tech
 
 import eelst.ilike.engine.knowledge.TeamKnowledge
-import eelst.ilike.game.GameState
+import eelst.ilike.game.gamestate.GameState
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.DiscardAction
 

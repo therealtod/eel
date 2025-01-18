@@ -1,6 +1,6 @@
 package eelst.ilike.engine.strategy
 
-import eelst.ilike.game.GameState
+import eelst.ilike.game.gamestate.GameState
 
 
 interface GameStateEvaluator {

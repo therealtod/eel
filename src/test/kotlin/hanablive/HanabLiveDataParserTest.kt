@@ -1,10 +1,8 @@
 package hanablive
 
-import TestUtils
+import testcommon.TestUtils
 import com.fasterxml.jackson.module.kotlin.readValue
 import eelst.ilike.common.Utils
-import eelst.ilike.game.GameConstants
-import eelst.ilike.game.GloballyAvailableGameData
 import eelst.ilike.game.entity.HanabiCard
 import eelst.ilike.game.entity.PlayingStack
 import eelst.ilike.game.entity.Rank
@@ -20,7 +18,7 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 
-class HanabLiveDataParserTest {
+internal class HanabLiveDataParserTest {
     @Test
     fun `Should correctly parse a card Given suitIndex and rank`() {
         val expected = HanabiCard(

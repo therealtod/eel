@@ -6,7 +6,7 @@ import eelst.ilike.common.datastructure.tree.TreeNodeImpl
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
-class TreeIterationTest {
+internal class TreeIterationTest {
     @Test
     fun `Should traverse the tree BF`() {
         val root = TreeNodeImpl(1)

@@ -50,3 +50,5 @@ src/main/resources/eel-credentials.json
 
 ### Logs ###
 logs
+
+newrelic/

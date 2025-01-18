@@ -13,21 +13,8 @@ object HanabLiveWebSocketClient {
         install(WebSockets)
         install(Logging) {
             logger = Logger.DEFAULT
-            level = LogLevel.HEADERS
+            level = LogLevel.INFO
         }
-        /*
-        defaultRequest {
-            url {
-                protocol = URLProtocol.WS
-                host = HanabLiveConstants.HOSTNAME
-                port = HanabLiveConstants.PORT
-                path(HanabLiveConstants.WEBSOCKET_PATH)
-            }
-            host = HanabLiveConstants.HOSTNAME
-            port = HanabLiveConstants.PORT
-        }
-
-         */
     }
 
     suspend fun connect(sessionIdCookieValue: String): ClientWebSocketSession {

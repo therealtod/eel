@@ -1,6 +1,8 @@
 package eelst.ilike.hanablive.bot
 
 
+import eelst.ilike.engine.convention.ConventionSet
+import eelst.ilike.engine.convention.hgroup.level.level1.Level1
 import eelst.ilike.game.entity.player.PlayerId
 import eelst.ilike.game.entity.suit.SuitId
 import eelst.ilike.game.entity.suit.SuitMetadata
@@ -89,6 +91,10 @@ class DefaultHanabLiveBot(
             val messageType = HanabLiveInstructionType.fromStringValue(messageTypeToken)
             handler.handle(messageType, payload, this)
         }
+    }
+
+    override fun getConventionSet(): ConventionSet {
+        return Level1
     }
 
     suspend fun run() {

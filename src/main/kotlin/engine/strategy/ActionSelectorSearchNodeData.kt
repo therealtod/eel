@@ -1,7 +1,7 @@
 package eelst.ilike.engine.strategy
 
 import eelst.ilike.engine.convention.ConventionalAction
-import eelst.ilike.game.GameState
+import eelst.ilike.game.gamestate.GameState
 
 data class ActionSelectorSearchNodeData(
     val action: ConventionalAction?,

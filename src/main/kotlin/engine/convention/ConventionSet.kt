@@ -20,4 +20,9 @@ interface ConventionSet {
      * @return all the [ConventionTech] instances associated to this [ConventionSet]
      */
     fun getTechs(): Set<ConventionTech>
+
+    /**
+     * @return all the [ConventionTech] that can result in the action of playing a card
+     */
+    fun getPlayTechs(): List<ConventionTech>
 }

@@ -1,8 +1,6 @@
 package eelst.ilike.hanablive.entity
 
-import eelst.ilike.engine.knowledge.KnowledgeFactory
-import eelst.ilike.engine.knowledge.TeamKnowledge
-import eelst.ilike.game.GameState
+import eelst.ilike.game.gamestate.GameState
 import eelst.ilike.hanablive.HanabLiveDataParser
 import eelst.ilike.hanablive.entity.dto.instruction.*
 import engine.card.CardLocationDictionary

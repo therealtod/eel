@@ -1,6 +1,7 @@
 package eelst.ilike.engine.convention
 
 import eelst.ilike.engine.convention.tech.ConventionTech
+import eelst.ilike.engine.convention.tech.PlayTech
 
 abstract class BaseConventionSet(
     override val name: String,
@@ -9,5 +10,9 @@ abstract class BaseConventionSet(
 ) : ConventionSet {
     override fun getTechs(): Set<ConventionTech> {
         return definedTechs + includes.flatMap { it.getTechs() }
+    }
+
+    override fun getPlayTechs(): List<ConventionTech> {
+        return getTechs().filterIsInstance<PlayTech>()
     }
 }

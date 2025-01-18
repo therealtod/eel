@@ -15,9 +15,14 @@ interface SlotKnowledge {
     fun integrateWith(otherKnowledge: SlotKnowledge): SlotKnowledge
 
     /**
-     * @return true if the slot owner has full empathy over the slot
+     * @return the empathy associated with the slot as seen by the player with the given [playerIndex]
      */
-    fun hasFullEmpathy(): Boolean
+    fun getEmpathy(playerIndex: Int): Set<HanabiCard>
+
+    /**
+     * @return true if the slot owner has full empathy over the slot as seen by the player with the given [playerIndex]
+     */
+    fun hasFullEmpathy(playerIndex: Int): Boolean
 
     /**
      * Get the set of identities that the slot owner can attribute to the slot
@@ -25,12 +30,29 @@ interface SlotKnowledge {
     fun getImpliedIdentities(): Set<HanabiCard>
 
     /**
-     * Get the list of [Signal] associated to the slot
+     * Get the signals that each player perceived has been given to this slot
      */
-    fun getSignals(): Map<Int, Signal>
+    fun getSignals(): List<List<Signal>>
+
+    /**
+     * Get the list of [Signal] associated to the slot as seen by the player with the given [playerIndex]
+     */
+    fun getSignalsPerceivedBy(playerIndex: Int): List<Signal>
 
     /**
      * @return true if the slot owner has received conflicting information about the slot
      */
     fun hasConflictingInformation(): Boolean
+
+    /**
+     * @return true if the owner thinks they know the identity fo this slot
+     */
+    fun slotIsKnownByOwner(): Boolean
+
+    /**
+     * @return the identity of this slot according to the slot owner
+     *
+     * @throws [IllegalAccessException] if the slot is not known
+     */
+    fun getInferredIdentity(): HanabiCard
 }

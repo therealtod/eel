@@ -1,6 +1,5 @@
 package eelst.ilike.engine.card
 
-import eelst.ilike.engine.knowledge.PlayerKnowledge
 import eelst.ilike.engine.knowledge.SlotKnowledge
 import eelst.ilike.game.entity.ClueValue
 import eelst.ilike.game.entity.player.PlayerId

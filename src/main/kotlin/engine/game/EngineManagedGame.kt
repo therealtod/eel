@@ -1,17 +1,5 @@
 package eelst.ilike.engine.game
 
-import eelst.ilike.engine.card.InGameCardsAggregatedData
-import eelst.ilike.game.Game
-import eelst.ilike.game.GameState
-import eelst.ilike.game.GloballyAvailableGameData
-import eelst.ilike.game.entity.HanabiCard
-import eelst.ilike.game.entity.action.ClueAction
-import eelst.ilike.game.entity.action.DiscardAction
-import eelst.ilike.game.entity.action.DrawAction
-import eelst.ilike.game.entity.action.PlayAction
-import eelst.ilike.game.entity.player.PlayerMetadata
-import eelst.ilike.game.entity.variant.Variant
-
 /*
 open class EngineManagedGame(
     variant: Variant,

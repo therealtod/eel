@@ -1,5 +1,6 @@
 package eelst.ilike.hanablive.bot
 
+import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.game.entity.player.PlayerId
 import eelst.ilike.game.entity.suit.SuitId
 import eelst.ilike.game.entity.suit.SuitMetadata
@@ -55,4 +56,9 @@ interface HanabLiveBot {
      * React to the gameActionList instruction
      */
     suspend fun onGameActionListReceived(gameActionListData: GameActionListData)
+
+    /**
+     * @return the value of the currently configured option for the [ConventionSet] to use during the game
+     */
+    fun getConventionSet(): ConventionSet
 }

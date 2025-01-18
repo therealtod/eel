@@ -1,7 +1,6 @@
 package eelst.ilike.hanablive.entity
 
-import eelst.ilike.game.Game
-import eelst.ilike.game.GameState
+import eelst.ilike.game.gamestate.GameState
 import eelst.ilike.game.entity.player.PlayerMetadata
 import eelst.ilike.game.entity.variant.Variant
 import eelst.ilike.hanablive.HanabLiveDataParser
@@ -12,12 +11,9 @@ class HanabLiveGame(
     variant: Variant,
     playersMetadata: List<PlayerMetadata>,
     gameActionListData: GameActionListData,
+    initialGameState: GameState,
 ): Logging {
     private val parser: HanabLiveDataParser = HanabLiveDataParser(variant, playersMetadata)
-
-    init {
-
-    }
 
     fun getCurrentGameState(): HanabLiveGameStateAdapter {
         return gameStates.last()

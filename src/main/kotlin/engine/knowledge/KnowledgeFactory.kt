@@ -3,39 +3,15 @@ package eelst.ilike.engine.knowledge
 import eelst.ilike.game.GameUtils
 import eelst.ilike.game.GloballyAvailableGameData
 import eelst.ilike.game.entity.HanabiCard
-import eelst.ilike.game.entity.player.PlayerId
 import eelst.ilike.game.entity.player.PlayerMetadata
 
 object KnowledgeFactory {
-    fun createEmptyTeamKnowledge(playersMetadata: List<PlayerMetadata>): TeamKnowledge {
-        val handsSize = GameUtils.getHandSize(playersMetadata.size)
-        val slotsKnowledge = playersMetadata.map{ _->
-            List(handsSize) {
-                BaseSlotKnowledge()
-            }
-        }
-        val handsKnowledge = playersMetadata.map{ _ ->
-            createEmptyHandKnowledge()
-        }
-        return createTeamKnowledge(
-            slotsKnowledge = slotsKnowledge,
-            handsKnowledge = handsKnowledge,
-        )
-    }
-
-    fun createPlayerKnowledge(
-        playerId: PlayerId,
+    fun createEmptyTeamKnowledge(
         globallyAvailableGameData: GloballyAvailableGameData,
-        cardsVisibleInPlayerHands: Map<PlayerId, Map<Int, HanabiCard>>,
-        handKnowledge: Map<PlayerId, HandKnowledge>,
-    ): PlayerKnowledge {
-        val globallyVisibleCards = globallyAvailableGameData.getCardsOnStacks() +
-                globallyAvailableGameData.trashPile.cards
-        return PlayerKnowledgeImpl(
-            playerId = playerId,
-            globallyVisibleCards = globallyVisibleCards,
-            cardsVisibleInPlayerHands = cardsVisibleInPlayerHands,
-            handKnowledge = handKnowledge
+    ): TeamKnowledge {
+        return createTeamKnowledge(
+            slotsKnowledge = List(globallyAvailableGameData.numberOfPlayers) { emptyList() },
+            handsKnowledge = List(globallyAvailableGameData.numberOfPlayers) { createEmptyHandKnowledge() },
         )
     }
 
@@ -43,21 +19,58 @@ object KnowledgeFactory {
         slotsKnowledge: List<List<SlotKnowledge>>,
         handsKnowledge: List<HandKnowledge>
     ): TeamKnowledge {
-        return PlayerIndexBasedTeamKnowledge(
+        return TeamKnowledgeImpl(
             slotsKnowledge = slotsKnowledge,
             handsKnowledge = handsKnowledge,
         )
     }
 
     fun createEmptyHandKnowledge(): HandKnowledge {
-        return HandKnowledgeImplImpl()
+        return HandKnowledgeImpl()
     }
 
-    fun createEmptySlotKnowledge(playersMetadata: Collection<PlayerMetadata>): SlotKnowledge {
-        TODO()
+    fun createSlotKnowledge(
+        slotOwnerPlayerMetadata: PlayerMetadata,
+        cardsVisibleInHandsPerPlayer: List<Collection<HanabiCard>>,
+        globallyAvailableGameData: GloballyAvailableGameData
+    ): SlotKnowledge {
+        val globallyVisibleCards = globallyAvailableGameData.getGloballyVisibleCards()
+        val empathyPerPlayer: List<Set<HanabiCard>> by lazy {
+            List(cardsVisibleInHandsPerPlayer.size) { index ->
+                GameUtils.getSlotEmpathy(
+                    visibleCards = globallyVisibleCards + cardsVisibleInHandsPerPlayer[index],
+                    positiveClues = emptyList(),
+                    negativeClues = emptyList(),
+                    suits = globallyAvailableGameData.variant.getSuits(),
+                )
+            }
+        }
+        return BaseSlotKnowledge(
+            slotOwnerPlayerIndex = slotOwnerPlayerMetadata.playerIndex,
+            empathyPerPlayer = empathyPerPlayer,
+        )
     }
 
-    fun createSlotKnowledge(visibleCard: HanabiCard, playersMetadata: Collection<PlayerMetadata>): SlotKnowledge {
-        TODO()
+    fun createSlotKnowledgeAfterDrawingCard(
+        slotOwnerPlayerMetadata: PlayerMetadata,
+        cardsVisibleInHandsPerPlayer: List<Collection<HanabiCard>>,
+        globallyAvailableGameData: GloballyAvailableGameData,
+        visibleCard: HanabiCard,
+    ): SlotKnowledge {
+        val globallyVisibleCards = globallyAvailableGameData.getGloballyVisibleCards()
+        val empathyPerPlayer: List<Set<HanabiCard>> by lazy {
+            List(cardsVisibleInHandsPerPlayer.size) { index ->
+                if (index == slotOwnerPlayerMetadata.playerIndex) GameUtils.getSlotEmpathy(
+                    visibleCards = listOf(visibleCard) + globallyVisibleCards + cardsVisibleInHandsPerPlayer[index],
+                    positiveClues = emptyList(),
+                    negativeClues = emptyList(),
+                    suits = globallyAvailableGameData.variant.getSuits(),
+                ) else setOf(visibleCard)
+            }
+        }
+        return BaseSlotKnowledge(
+            slotOwnerPlayerIndex = slotOwnerPlayerMetadata.playerIndex,
+            empathyPerPlayer = empathyPerPlayer,
+        )
     }
 }
