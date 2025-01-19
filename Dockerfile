@@ -37,7 +37,7 @@ FROM alpine
 # Copy the custom runtime and the JAR
 COPY --from=build /app/jre /app/jre/
 COPY --from=build /app/build/libs/eel-0.0.1-SNAPSHOT-standalone.jar /app/eel-bot.jar
-RUN mkdir -p /usr/local/newrelic
+# RUN mkdir -p /usr/local/newrelic
 # ADD ./newrelic/newrelic.jar /usr/local/newrelic/newrelic.jar
 # ADD ./newrelic/newrelic.yml /usr/local/newrelic/newrelic.yml
 

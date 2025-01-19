@@ -7,6 +7,7 @@ import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.DiscardAction
 import eelst.ilike.game.entity.action.DrawAction
 import eelst.ilike.game.entity.action.PlayAction
+import eelst.ilike.game.entity.player.PlayerMetadata
 
 class TeamKnowledgeImpl(
     private val slotsKnowledge: List<List<SlotKnowledge>>,
@@ -80,17 +81,14 @@ class TeamKnowledgeImpl(
         )
     }
 
-    override fun getAfterPlay(
-        playAction: PlayAction,
-        globallyAvailableGameData: GloballyAvailableGameData,
-    ): TeamKnowledge {
+    override fun withoutSlot(slotIndex: Int, playerMetadata: PlayerMetadata): TeamKnowledge {
         val updatedSlotsKnowledge = slotsKnowledge.mapIndexed { index, playerSlotKnowledge->
-            if(playAction.playerMetadata.playerIndex == index) {
-                playerSlotKnowledge.toMutableList().removeAt(playAction.slotIndex)
+            if(playerMetadata.playerIndex == index) {
+                playerSlotKnowledge.toMutableList().removeAt(slotIndex)
                 playerSlotKnowledge
             } else {
                 playerSlotKnowledge
-                }
+            }
         }
         return TeamKnowledgeImpl(
             slotsKnowledge = updatedSlotsKnowledge,
@@ -98,28 +96,6 @@ class TeamKnowledgeImpl(
         )
     }
 
-    override fun getAfterPlaying(
-        playAction: PlayAction,
-        playedCard: HanabiCard,
-        globallyAvailableGameData: GloballyAvailableGameData,
-    ): TeamKnowledge {
-        TODO("Not yet implemented")
-    }
-
-    override fun getAfterDiscard(
-        discardAction: DiscardAction,
-        globallyAvailableGameData: GloballyAvailableGameData,
-    ): TeamKnowledge {
-        TODO("Not yet implemented")
-    }
-
-    override fun getAfterDiscarding(
-        discardAction: DiscardAction,
-        discardedCard: HanabiCard,
-        globallyAvailableGameData: GloballyAvailableGameData,
-    ): TeamKnowledge {
-        TODO("Not yet implemented")
-    }
 
     override fun getAfterClueGiven(
         clueAction: ClueAction,
@@ -136,6 +112,10 @@ class TeamKnowledgeImpl(
                 innerAcc + if (empathy.size == 1) listOf(empathy.first()) else emptyList()
             }
         }
+    }
+
+    override fun getMergedWith(other: TeamKnowledge): TeamKnowledge {
+        TODO("Not yet implemented")
     }
 
     private fun getCardsVisibleOnHandsPerPlayer(): List<Collection<HanabiCard>> {

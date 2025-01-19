@@ -2,6 +2,7 @@ package eelst.ilike.engine.convention.tech
 
 
 import eelst.ilike.engine.knowledge.TeamKnowledge
+import eelst.ilike.game.GloballyAvailableGameData
 import eelst.ilike.game.gamestate.GameState
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.PlayAction
@@ -10,15 +11,26 @@ import eelst.ilike.game.entity.action.PlayAction
  * A [ConventionTech] associated with the action of discarding
  */
 interface DiscardTech : ConventionTech {
-    override fun matchesPlay(playAction: PlayAction, gameState: GameState, currentKnowledge: TeamKnowledge): Boolean {
+    override fun matchesPlay(
+        playAction: PlayAction,
+        globallyAvailableGameData: GloballyAvailableGameData,
+        currentKnowledge: TeamKnowledge
+    ): Boolean {
         return false
     }
 
-    override fun matchesClue(clueAction: ClueAction, gameState: GameState, currentKnowledge: TeamKnowledge): Boolean {
+    override fun matchesClue(
+        clueAction: ClueAction,
+        globallyAvailableGameData: GloballyAvailableGameData,
+        currentKnowledge: TeamKnowledge
+    ): Boolean {
         return false
     }
 
-    override fun getUpdatedKnowledge(playAction: PlayAction, currentKnowledge: TeamKnowledge): TeamKnowledge {
+    override fun getUpdatedKnowledge(
+        playAction: PlayAction,
+        currentKnowledge: TeamKnowledge
+    ): TeamKnowledge {
         return currentKnowledge
     }
 

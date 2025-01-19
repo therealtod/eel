@@ -1,6 +1,7 @@
 package eelst.ilike.engine.convention.tech
 
 import eelst.ilike.engine.knowledge.TeamKnowledge
+import eelst.ilike.game.GloballyAvailableGameData
 import eelst.ilike.game.gamestate.GameState
 import eelst.ilike.game.entity.action.ClueAction
 import eelst.ilike.game.entity.action.DiscardAction
@@ -11,18 +12,25 @@ import eelst.ilike.game.entity.action.DiscardAction
 interface PlayTech : ConventionTech {
     override fun matchesDiscard(
         discardAction: DiscardAction,
-        gameState: GameState,
+        globallyAvailableGameData: GloballyAvailableGameData,
         currentKnowledge: TeamKnowledge
     ): Boolean {
         return false
     }
 
-    override fun matchesClue(clueAction: ClueAction, gameState: GameState, currentKnowledge: TeamKnowledge): Boolean {
+    override fun matchesClue(
+        clueAction: ClueAction,
+        globallyAvailableGameData: GloballyAvailableGameData,
+        currentKnowledge: TeamKnowledge
+    ): Boolean {
         return false
     }
 
 
-    override fun getUpdatedKnowledge(discardAction: DiscardAction, currentKnowledge: TeamKnowledge): TeamKnowledge {
+    override fun getUpdatedKnowledge(
+        discardAction: DiscardAction,
+        currentKnowledge: TeamKnowledge
+    ): TeamKnowledge {
         return currentKnowledge
     }
 

@@ -1,6 +1,8 @@
 package eelst.ilike.engine.convention
 
+import eelst.ilike.engine.convention.tech.ClueTech
 import eelst.ilike.engine.convention.tech.ConventionTech
+import eelst.ilike.engine.convention.tech.DiscardTech
 import eelst.ilike.engine.convention.tech.PlayTech
 
 abstract class BaseConventionSet(
@@ -14,5 +16,13 @@ abstract class BaseConventionSet(
 
     override fun getPlayTechs(): List<ConventionTech> {
         return getTechs().filterIsInstance<PlayTech>()
+    }
+
+    override fun getDiscardTechs(): List<ConventionTech> {
+        return getTechs().filterIsInstance<DiscardTech>()
+    }
+
+    override fun getClueTechs(): List<ConventionTech> {
+        return getTechs().filterIsInstance<ClueTech>()
     }
 }

@@ -1,12 +1,10 @@
 package eelst.ilike.engine.knowledge
 
-import eelst.ilike.engine.convention.ConventionSet
 import eelst.ilike.game.GloballyAvailableGameData
 import eelst.ilike.game.entity.HanabiCard
 import eelst.ilike.game.entity.action.ClueAction
-import eelst.ilike.game.entity.action.DiscardAction
 import eelst.ilike.game.entity.action.DrawAction
-import eelst.ilike.game.entity.action.PlayAction
+import eelst.ilike.game.entity.player.PlayerMetadata
 
 interface TeamKnowledge {
     /**
@@ -30,38 +28,10 @@ interface TeamKnowledge {
         ): TeamKnowledge
 
     /**
-     * @return the updated [TeamKnowledge] after a player plays an unspecified card
+     * @return this [TeamKnowledge] after the slot with index [slotIndex] of the player with metadata [playerMetadata]
+     * is removed from the player's hand (by playing it or discarding it
      */
-    fun getAfterPlay(
-        playAction: PlayAction,
-        globallyAvailableGameData: GloballyAvailableGameData,
-    ): TeamKnowledge
-
-    /**
-     * @return the updated [TeamKnowledge] after a player plays [playedCard]
-     */
-    fun getAfterPlaying(
-        playAction: PlayAction,
-        playedCard: HanabiCard,
-        globallyAvailableGameData: GloballyAvailableGameData,
-    ): TeamKnowledge
-
-    /**
-     * @return the updated [TeamKnowledge] after a player discards an unspecified card
-     */
-    fun getAfterDiscard(
-        discardAction: DiscardAction,
-        globallyAvailableGameData: GloballyAvailableGameData,
-    ): TeamKnowledge
-
-    /**
-     * @return the updated [TeamKnowledge] after a player discards [discardedCard]
-     */
-    fun getAfterDiscarding(
-        discardAction: DiscardAction,
-        discardedCard: HanabiCard,
-        globallyAvailableGameData: GloballyAvailableGameData,
-    ): TeamKnowledge
+    fun withoutSlot(slotIndex: Int, playerMetadata: PlayerMetadata): TeamKnowledge
 
     /**
      * @return the updated [TeamKnowledge] after a player gives a clue
@@ -77,4 +47,9 @@ interface TeamKnowledge {
      * (including the own hand)
      */
     fun getCardsVisibleOnHands(playerIndex: Int): Collection<HanabiCard>
+
+    /**
+     * @return a new [TeamKnowledge] combining the knowledge contained in this object and [other]
+     */
+    fun getMergedWith(other: TeamKnowledge): TeamKnowledge
 }

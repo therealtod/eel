@@ -1,15 +1,17 @@
 package eelst.ilike.engine.convention.hgroup.level.level1.tech
 
+import eelst.ilike.engine.convention.hgroup.tech.HGroupInterpretationTier
 import eelst.ilike.engine.convention.hgroup.tech.HGroupTech
 import eelst.ilike.engine.convention.tech.PlayTech
 import eelst.ilike.engine.knowledge.TeamKnowledge
+import eelst.ilike.game.GloballyAvailableGameData
 import eelst.ilike.game.gamestate.GameState
 import eelst.ilike.game.entity.HanabiCard
 import eelst.ilike.game.entity.action.PlayAction
 import eelst.ilike.game.entity.player.PlayerMetadata
 import eelst.ilike.game.entity.variant.Variant
 
-object PlayKnownPlayable : HGroupTech("Play Known Playable"), PlayTech {
+object PlayKnownPlayable : HGroupTech("Play Known Playable", HGroupInterpretationTier.DEFAULT), PlayTech {
     override fun appliesTo(card: HanabiCard, variant: Variant): Boolean {
         return true
     }
@@ -18,14 +20,17 @@ object PlayKnownPlayable : HGroupTech("Play Known Playable"), PlayTech {
         return currentKnowledge
     }
 
-    override fun getGameActions(gameState: GameState, currentKnowledge: TeamKnowledge): Collection<PlayAction> {
+    override fun getGameActions(
+        globallyAvailableGameData: GloballyAvailableGameData,
+        currentKnowledge: TeamKnowledge
+    ): Collection<PlayAction> {
         val actions = mutableListOf<PlayAction>()
-        val playerOnTurn = gameState.globallyAvailableGameData.getPlayerOnTurn()
+        val playerOnTurn = globallyAvailableGameData.getPlayerOnTurn()
         playerOnTurn.forEachSlot { slotIndex, _ ->
             if (slotMatchesCondition(
                 slotIndex = slotIndex,
                 playerMetadata = playerOnTurn.getMetadata(),
-                gameState =gameState,
+                globallyAvailableGameData = globallyAvailableGameData,
                 currentKnowledge = currentKnowledge,
             )) {
                 val action = PlayAction(
@@ -38,11 +43,15 @@ object PlayKnownPlayable : HGroupTech("Play Known Playable"), PlayTech {
         return actions
     }
 
-    override fun matchesPlay(playAction: PlayAction, gameState: GameState, currentKnowledge: TeamKnowledge): Boolean {
+    override fun matchesPlay(
+        playAction: PlayAction,
+        globallyAvailableGameData: GloballyAvailableGameData,
+        currentKnowledge: TeamKnowledge
+    ): Boolean {
         return slotMatchesCondition(
             slotIndex = playAction.slotIndex,
             playerMetadata = playAction.playerMetadata,
-            gameState = gameState,
+            globallyAvailableGameData = globallyAvailableGameData,
             currentKnowledge = currentKnowledge,
         )
     }
@@ -50,11 +59,11 @@ object PlayKnownPlayable : HGroupTech("Play Known Playable"), PlayTech {
     override fun slotMatchesCondition(
         slotIndex: Int,
         playerMetadata: PlayerMetadata,
-        gameState: GameState,
+        globallyAvailableGameData: GloballyAvailableGameData,
         currentKnowledge: TeamKnowledge
     ): Boolean {
         val slotKnowledge = currentKnowledge.getSlotKnowledge(playerMetadata.playerIndex, slotIndex)
         return slotKnowledge.slotIsKnownByOwner()
-                && gameState.globallyAvailableGameData.isImmediatelyPlayable(slotKnowledge.getInferredIdentity())
+                && globallyAvailableGameData.isImmediatelyPlayable(slotKnowledge.getInferredIdentity())
     }
 }

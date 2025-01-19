@@ -25,4 +25,14 @@ interface ConventionSet {
      * @return all the [ConventionTech] that can result in the action of playing a card
      */
     fun getPlayTechs(): List<ConventionTech>
+
+    /**
+     * @return all the [ConventionTech] that can result in the action of discarding a card
+     */
+    fun getDiscardTechs(): List<ConventionTech>
+
+    /**
+     * @return all the [ConventionTech] that can result in the action of giving a clue
+     */
+    fun getClueTechs(): List<ConventionTech>
 }

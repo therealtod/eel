@@ -177,10 +177,6 @@ class TeamKnowledgeImplTest {
             playerMetadata = CommonData.aliceMetadata,
             slotIndex = 1
         )
-        val updatedKnowledge = someTeamKnowledge.getAfterPlay(
-            playAction,
-            globallyAvailableGameData,
-        )
         TODO()
     }
 }
