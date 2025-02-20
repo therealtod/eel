@@ -1,11 +1,19 @@
-use crate::game::card::hanabi_card::HanabiCard;
-use crate::game::rank::Rank;
-use crate::game::suit::Suit;
+use clap::Parser;
 
 mod game;
-mod common;
 mod engine;
 
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(short, long)]
+    name: String,
+
+    #[arg(short, long, default_value_t = 1)]
+    count: u8,
+}
+
 fn main() {
-    println!("Compiles");
+    
 }

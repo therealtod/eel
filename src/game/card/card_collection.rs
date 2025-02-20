@@ -1,14 +1,19 @@
-use crate::game::card::{CardPositionInStartingDeck, Empathy, UniqueCardId};
-use crate::game::MAX_UNIQUE_CARDS_IN_DECK;
-use crate::game::variant::Variant;
+use crate::game::card::{CardDeckIndex, VariantCardId};
 
-#[derive(Debug)]
-pub struct CardCollection {
-    card_copies_count: [u8; MAX_UNIQUE_CARDS_IN_DECK],
-}
+/// An unordered collection of [HanabiCard]
+pub trait InGameCardCollection {
+    /// Return an empty [InGameCardCollection]
+    fn empty() -> Self;
 
-impl CardCollection {
-    pub fn add_card(&mut self, card_id: UniqueCardId) {
-        self.card_copies_count[card_id] += 1
-    }
+    /// Increase the size of the collection
+    fn add_card(&mut self);
+
+    /// Add the card with known identity `card_id` to this collection
+    fn add_card_with_id(&mut self, card_id: VariantCardId);
+
+    /// Return [true] if this collection contains the card with the given [card_id]
+    fn contains_card_with_id(&self, card_id: VariantCardId) -> bool;
+    
+    /// Return the size of this collection
+    fn size(&self) -> u8;
 }

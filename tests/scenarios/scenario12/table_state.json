@@ -1,0 +1,13 @@
+{
+  "suits": ["red", "yellow", "green", "blue", "purple"],
+  "playing_stacks": [["r1"], [], [], ["b1", "b2"], []],
+  "discard_pile": [],
+  "clue_tokens": 5,
+  "strikes": 0,
+  "player_on_turn": 0,
+  "hands": [
+    ["x", "x", "x", "x", "x"],
+    ["b4", "r4", "r2", "p2", "r1"],
+    ["p5", "b3", "y4", "b1", "r3"]
+  ]
+}
