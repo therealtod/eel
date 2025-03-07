@@ -67,7 +67,7 @@ impl TwoSave {
 
 impl ClueTech for TwoSave {
     fn clue_game_actions(&self, pov: &dyn PlayerPOV) -> Vec<GameAction> {
-        let active = pov.player_on_turn_index();
+        let active = pov.active_player_index();
         let num_players = pov.static_data().number_of_players as usize;
 
         (0..num_players)
@@ -98,7 +98,7 @@ impl ClueTech for TwoSave {
             return false;
         }
         if let Some(game_state_snapshot) = history.get(turn) {
-            let giver = game_state_snapshot.table_state.player_on_turn_index;
+            let giver = game_state_snapshot.table_state.active_player_index;
             let giver_pov = game_state_snapshot.player_pov(giver, pov.static_data());
             Self::is_two_saveable_for_target(player_index, &giver_pov)
         } else {
@@ -116,7 +116,7 @@ impl ClueTech for TwoSave {
         player_pov: &dyn PlayerPOV,
     ) -> Vec<KnowledgeUpdate> {
         let snap = history.get(turn).unwrap();
-        let giver = snap.table_state.player_on_turn_index;
+        let giver = snap.table_state.active_player_index;
         let giver_pov = snap.player_pov(giver, player_pov.static_data());
         let receiver = player_index;
         let focus = match get_clue_focus(receiver, touched, &giver_pov) {
@@ -169,10 +169,10 @@ mod tests {
         // Stacks empty → R2 is 1-away (not playable). No other player has R2 → can be saved.
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.current_turn = 2; // Expected turn in action
         table_state.update_with_draw_action(10); // R2
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         let knowledge = knowledge_with_visible(0, &[(10, R2_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -201,9 +201,9 @@ mod tests {
             R1.as_variant_card_id(),
             &static_data,
         );
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10); // R2, now playable
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         let knowledge = knowledge_with_visible(0, &[(10, R2_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -217,9 +217,9 @@ mod tests {
     fn returns_empty_when_chop_is_not_a_2() {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10); // R3
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         let knowledge = knowledge_with_visible(0, &[(10, R3_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -234,12 +234,12 @@ mod tests {
         // Player 2 has R2 not on chop → R2 is already safe → no two-save needed.
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10); // R2 on chop of player 1
-        table_state.player_on_turn_index = 2;
+        table_state.active_player_index = 2;
         table_state.update_with_draw_action(20); // older card (chop of player 2)
         table_state.update_with_draw_action(30); // R2 not on chop of player 2
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         // R2 id = 1; player 2's chop = card 20, not card 30
         let knowledge = knowledge_with_visible(0, &[(10, R2_MASK), (20, Y1_MASK), (30, R2_MASK)]);
@@ -255,10 +255,10 @@ mod tests {
         // Player 1 has R2 on chop (card 10) and Y2 newer (card 20).
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10); // oldest = R2 (chop)
         table_state.update_with_draw_action(20); // newest = Y2
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         let knowledge = knowledge_with_visible(0, &[(10, R2_MASK), (20, Y2_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -284,9 +284,9 @@ mod tests {
     fn matches_action_true_when_chop_is_saveable_2() {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         let knowledge = knowledge_with_visible(0, &[(10, R2_MASK)]);
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -315,9 +315,9 @@ mod tests {
             R1.as_variant_card_id(),
             &static_data,
         );
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10); // R2 now playable
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         let knowledge = knowledge_with_visible(0, &[(10, R2_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -411,7 +411,7 @@ mod tests {
             R1.as_variant_card_id(),
             &static_data,
         );
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
         table_state.update_with_draw_action(10);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
@@ -481,9 +481,9 @@ mod tests {
         // matches_action safely returns false when no history is available.
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
         let knowledge = PlayerKnowledge::new(0);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         let pov =
@@ -536,7 +536,7 @@ mod tests {
         for &card_id in &[R1, Y1, G1, B1, P1] {
             table_state.update_with_play_action_of_specific_card(0, card_id as usize, &static_data);
         }
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
         table_state.update_with_draw_action(10);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());

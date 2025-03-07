@@ -129,7 +129,7 @@ When implementing a tech's `matches_clue` method (to match an observed action), 
 ```rust
 fn matches_clue(&self, player_index: PlayerIndex, touched: &[CardDeckIndex], clue: &Clue, pov: &dyn PlayerPOV) -> bool {
     // Reconstruct the clue giver's POV
-    let giver_pov = pov.as_player_pov(pov.player_on_turn_index());
+    let giver_pov = pov.as_player_pov(pov.active_player_index());
     // Now use giver_pov for all checks about what the clue giver knew/saw
 }
 ```

@@ -59,7 +59,7 @@ impl SimplePrompt {
 
 impl ClueTech for SimplePrompt {
     fn clue_game_actions(&self, pov: &dyn PlayerPOV) -> Vec<GameAction> {
-        let active = pov.player_on_turn_index();
+        let active = pov.active_player_index();
         let num_players = pov.static_data().number_of_players as usize;
 
         (0..num_players)
@@ -98,7 +98,7 @@ impl ClueTech for SimplePrompt {
         let Some(game_state_snapshot) = history.get(turn) else {
             return false;
         };
-        let giver = game_state_snapshot.table_state.player_on_turn_index;
+        let giver = game_state_snapshot.table_state.active_player_index;
         let giver_pov = game_state_snapshot.player_pov(giver, observer_pov.static_data());
         get_clue_focus(target_player_index, touched, &giver_pov)
             .and_then(|focus| giver_pov.card_identity(focus))
@@ -106,7 +106,7 @@ impl ClueTech for SimplePrompt {
             .map(|card_id| {
                 let connecting_id = card_id - 1;
                 (0..giver_pov.static_data().number_of_players as usize)
-                    .filter(|&p| p != giver_pov.player_on_turn_index())
+                    .filter(|&p| p != giver_pov.active_player_index())
                     .any(|p| Self::is_valid_prompt_situation(connecting_id, p, &giver_pov))
             })
             .unwrap_or(false)
@@ -124,9 +124,9 @@ impl ClueTech for SimplePrompt {
         let Some(snap) = history.get(turn) else {
             return vec![];
         };
-        let giver = snap.table_state.player_on_turn_index;
+        let giver = snap.table_state.active_player_index;
         let giver_pov = snap.player_pov(giver, observer_pov.static_data());
-        let current = observer_pov.player_on_turn_index();
+        let current = observer_pov.active_player_index();
         let static_data = giver_pov.static_data();
         let total_ids =
             static_data.variant.number_of_suits as usize * static_data.variant.stacks_size as usize;
@@ -188,7 +188,7 @@ impl ClueTech for SimplePrompt {
             .collect();
         if let Some(focus) = get_clue_focus(clue_receiver_index, &touched, &giver_pov) {
             let num_players = giver_pov.static_data().number_of_players as usize;
-            let giver_idx = giver_pov.player_on_turn_index();
+            let giver_idx = giver_pov.active_player_index();
             let mask: u64 = (0..total_ids)
                 .filter(|&id| {
                     (1u64 << id) & clue_mask != 0
@@ -256,10 +256,10 @@ mod tests {
         }
 
         for &(player, deck_idx, _) in cards {
-            table_state.player_on_turn_index = player;
+            table_state.active_player_index = player;
             table_state.update_with_draw_action(deck_idx as u8);
         }
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         for &idx in touched {
             table_state.clue_touched_cards |= 1u64 << idx;
@@ -307,11 +307,11 @@ mod tests {
             R1.as_variant_card_id(),
             &static_data,
         );
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10); // R2
-        table_state.player_on_turn_index = 2;
+        table_state.active_player_index = 2;
         table_state.update_with_draw_action(20); // R3
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
         table_state.clue_touched_cards |= 1u64 << 10;
 
         let mut knowledge = PlayerKnowledge::new(0);

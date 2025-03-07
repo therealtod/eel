@@ -19,7 +19,7 @@ use serde::Deserialize;
 ///   "discard_pile": ["p4", "r2"],
 ///   "clue_tokens": 5,
 ///   "strikes": 0,
-///   "player_on_turn": 0,
+///   "active_player": 0,
 ///   "hands": [["r3", "b2", "g4", "y1", "p2"], ["b3", "r5", "y2", "g3", "p1"], ...]
 /// }
 /// ```
@@ -32,7 +32,7 @@ pub struct ScenarioJson {
     pub discard_pile: Vec<String>,
     pub clue_tokens: u8,
     pub strikes: u8,
-    pub player_on_turn: usize,
+    pub active_player: usize,
     /// Each element is one player's hand, listed slot1-first (newest card first, oldest last).
     /// Unknown cards can be represented as `"x"` and will be assigned a placeholder deck index.
     pub hands: Vec<Vec<String>>,
@@ -204,7 +204,7 @@ pub fn build_from_scenario(
         ClueTokenBank::new_from_whole_tokens(scenario.clue_tokens),
         deck,
         hands,
-        scenario.player_on_turn,
+        scenario.active_player,
         0, // turn_counter
         playing_stacks,
         scenario.strikes,

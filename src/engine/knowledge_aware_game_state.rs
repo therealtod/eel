@@ -387,11 +387,11 @@ impl KnowledgeAwareGameState {
         // simple_prompt/finesse Case 1). Only apply updates for cards in their own hand.
         let num_players = self.static_data.number_of_players as usize;
         for target in (0..num_players).filter(|&t| t != receiver) {
-            // Build a temporary table state with player_on_turn_index set to `target` so that
+            // Build a temporary table state with active_player_index set to `target` so that
             // tech.knowledge_updates can identify who the current observer is without mutating
             // the shared state (which would corrupt state if a panic or early return occurred).
             let mut target_table_state = self.table_state.clone();
-            target_table_state.player_on_turn_index = target;
+            target_table_state.active_player_index = target;
             let target_pov = LightweightPlayerPOV::new(
                 target,
                 self.team_knowledge.player(giver),
@@ -427,11 +427,11 @@ impl KnowledgeAwareGameState {
         }
     }
 
-    /// Advance `player_on_turn_index` to the next player.
+    /// Advance `active_player_index` to the next player.
     pub fn advance_turn(&mut self) {
         let num_players = self.static_data.number_of_players as usize;
-        self.table_state.player_on_turn_index =
-            (self.table_state.player_on_turn_index + 1) % num_players;
+        self.table_state.active_player_index =
+            (self.table_state.active_player_index + 1) % num_players;
     }
 
     /// If the deck is non-empty, deal the next unknown card to `player_index`.

@@ -35,7 +35,7 @@ const RANK_5_CLUE: Clue = Clue {
 
 impl ClueTech for FiveSave {
     fn clue_game_actions(&self, active_player_pov: &dyn PlayerPOV) -> Vec<GameAction> {
-        let active = active_player_pov.player_on_turn_index();
+        let active = active_player_pov.active_player_index();
         let num_players = active_player_pov.static_data().number_of_players as usize;
 
         (0..num_players)
@@ -66,7 +66,7 @@ impl ClueTech for FiveSave {
             return false;
         }
         if let Some(game_state_snapshot) = history.get(turn) {
-            let giver = game_state_snapshot.table_state.player_on_turn_index;
+            let giver = game_state_snapshot.table_state.active_player_index;
             let giver_pov = game_state_snapshot.player_pov(giver, observer_pov.static_data());
             is_five_saveable(player_index, &giver_pov)
         } else {
@@ -112,10 +112,10 @@ mod tests {
     fn generates_rank5_clue_when_chop_is_a_5() {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.current_turn = 2; // Expected turn in action
         table_state.update_with_draw_action(10); // chop = R5
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         let knowledge = knowledge_with_visible(0, &[(10, R5_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -142,9 +142,9 @@ mod tests {
     fn returns_empty_when_chop_is_not_a_5() {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10); // chop = R1
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         let knowledge = knowledge_with_visible(0, &[(10, R1_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -159,10 +159,10 @@ mod tests {
         // Player 1 has two 5s: R5 on chop (oldest) and Y5 (newest).
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10); // oldest = R5 (chop)
         table_state.update_with_draw_action(20); // newest = Y5
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         let knowledge = knowledge_with_visible(0, &[(10, R5_MASK), (20, Y5_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -187,9 +187,9 @@ mod tests {
     fn matches_action_true_when_chop_is_a_5_and_clue_is_rank5() {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         let knowledge = knowledge_with_visible(0, &[(10, R5_MASK)]);
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -216,9 +216,9 @@ mod tests {
     fn matches_action_false_when_chop_is_not_a_5() {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         let knowledge = knowledge_with_visible(0, &[(10, R1_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);

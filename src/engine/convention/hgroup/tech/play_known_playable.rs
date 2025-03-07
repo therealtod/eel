@@ -16,7 +16,7 @@ pub struct PlayKnownPlayable;
 
 impl PlayTech for PlayKnownPlayable {
     fn play_game_actions(&self, active_player_pov: &dyn PlayerPOV) -> Vec<GameAction> {
-        let player_index = active_player_pov.player_on_turn_index();
+        let player_index = active_player_pov.active_player_index();
         let knowledge = active_player_pov.team_knowledge().player(player_index);
         let table_state = active_player_pov.table_state();
         let playable = table_state.playable_cards(active_player_pov.static_data());
@@ -116,7 +116,7 @@ mod tests {
         let mut table_state = initial_five_players_table_state();
         table_state.current_turn = 2; // Expected turn in action
         table_state.update_with_draw_action(10);
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         let mut knowledge = PlayerKnowledge::new(0);
         knowledge.own_hand = 1 << 10;
@@ -145,7 +145,7 @@ mod tests {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
         table_state.update_with_draw_action(10);
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         let signal = Signal::Play {
             card_deck_index: 10,
@@ -174,7 +174,7 @@ mod tests {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
         table_state.update_with_draw_action(10);
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         let signal = Signal::Play {
             card_deck_index: 10,

@@ -28,7 +28,7 @@ pub struct TableState {
     pub deck: Deck,
     pub hands: [Hand; MAX_PLAYERS_IN_GAME],
     pub all_hand_bits: DeckCardsBitField,
-    pub player_on_turn_index: usize,
+    pub active_player_index: usize,
     pub current_turn: usize,
     pub playing_stacks: PlayingStacks,
     pub strike_tokens: u8,
@@ -43,7 +43,7 @@ impl TableState {
         clue_token_bank: ClueTokenBank,
         deck: Deck,
         hands: [Hand; MAX_PLAYERS_IN_GAME],
-        player_on_turn_index: usize,
+        active_player_index: usize,
         current_turn: usize,
         playing_stacks: PlayingStacks,
         strike_tokens: u8,
@@ -56,7 +56,7 @@ impl TableState {
             deck,
             all_hand_bits: 0,
             hands,
-            player_on_turn_index,
+            active_player_index,
             current_turn,
             playing_stacks,
             strike_tokens,
@@ -80,20 +80,20 @@ impl TableState {
     /// Returns the index of the player whose turn it is.
     #[inline]
     pub fn active_player_index(&self) -> usize {
-        self.player_on_turn_index
+        self.active_player_index
     }
 
     /// Advances to the next player's turn (increments `turn_counter` and wraps player index).
     #[inline]
     pub fn advance_turn(&mut self, num_players: usize) {
         self.current_turn += 1;
-        self.player_on_turn_index = (self.player_on_turn_index + 1) % num_players;
+        self.active_player_index = (self.active_player_index + 1) % num_players;
     }
 
     /// Update this [crate::game::game_state::GameState] when the player draws the given card with
     /// the given `player index`
     pub fn update_with_draw_action(&mut self, card_deck_index: CardDeckIndex) {
-        self.hands[self.player_on_turn_index].add_card_to_slot_1(card_deck_index);
+        self.hands[self.active_player_index].add_card_to_slot_1(card_deck_index);
         self.deck.decrement_size(1);
         self.all_hand_bits |= 1u64 << card_deck_index;
     }
@@ -101,7 +101,7 @@ impl TableState {
     /// Update this [crate::game::game_state::GameState] when the player with the given
     /// `player_index` tries to play a card
     pub fn update_with_play_action(&mut self, card_deck_index: CardDeckIndex) {
-        self.hands[self.player_on_turn_index].remove_card(card_deck_index);
+        self.hands[self.active_player_index].remove_card(card_deck_index);
         self.all_hand_bits &= !(1u64 << card_deck_index);
     }
 
@@ -142,7 +142,7 @@ impl TableState {
         card_deck_index: CardDeckIndex,
         static_game_data: &StaticGameData,
     ) {
-        self.hands[self.player_on_turn_index].remove_card(card_deck_index);
+        self.hands[self.active_player_index].remove_card(card_deck_index);
         self.all_hand_bits &= !(1u64 << card_deck_index);
         self.discard_pile.add_card();
         let bonus_tokens = static_game_data.variant.bonus_half_clue_tokens_for_discard;
@@ -157,7 +157,7 @@ impl TableState {
         card_id: VariantCardId,
         static_game_data: &StaticGameData,
     ) {
-        self.hands[self.player_on_turn_index].remove_card(card_deck_index);
+        self.hands[self.active_player_index].remove_card(card_deck_index);
         self.all_hand_bits &= !(1u64 << card_deck_index);
         self.discard_pile.add_card_with_id(card_id);
         let bonus_tokens = static_game_data.variant.bonus_half_clue_tokens_for_discard;
@@ -279,7 +279,7 @@ pub mod unit_test_constants {
                 clue_token_bank,
                 deck,
                 hands,
-                0, // player_on_turn_index
+                0, // active_player_index
                 0, // turn_counter
                 playing_stacks,
                 strike_tokens,
@@ -288,7 +288,7 @@ pub mod unit_test_constants {
         }
 
         /// 3-player state with empty playing stacks.
-        pub fn empty_stacks_table_state(player_on_turn_index: usize) -> TableState {
+        pub fn empty_stacks_table_state(active_player_index: usize) -> TableState {
             let clue_token_bank = ClueTokenBank::new(10);
             let deck = Deck::new(&NO_VARIANT);
             let mut hands = Hand::empty_array();
@@ -307,7 +307,7 @@ pub mod unit_test_constants {
                     .chain(10..=13)
                     .fold(0u64, |acc, i| acc | (1 << i)),
                 hands,
-                player_on_turn_index,
+                active_player_index,
                 current_turn: 0,
                 playing_stacks,
                 strike_tokens: 0,
@@ -316,7 +316,7 @@ pub mod unit_test_constants {
         }
 
         /// 3-player state with B1–B4 on the playing stacks.
-        pub fn stacked_table_state(player_on_turn_index: usize) -> TableState {
+        pub fn stacked_table_state(active_player_index: usize) -> TableState {
             let clue_token_bank = ClueTokenBank::new(10);
             let deck = Deck::new(&NO_VARIANT);
             let mut hands = Hand::empty_array();
@@ -339,7 +339,7 @@ pub mod unit_test_constants {
                     .chain(10..=13)
                     .fold(0u64, |acc, i| acc | (1 << i)),
                 hands,
-                player_on_turn_index,
+                active_player_index,
                 current_turn: 0,
                 playing_stacks,
                 strike_tokens: 0,
@@ -359,32 +359,32 @@ mod tests {
 
     #[test]
     fn should_be_correctly_updated_after_a_draw() {
-        let player_on_turn_index = 0;
-        let mut game_state = empty_stacks_table_state(player_on_turn_index);
+        let active_player_index = 0;
+        let mut game_state = empty_stacks_table_state(active_player_index);
         let drawn_card_deck_index = 14;
 
         game_state.update_with_draw_action(drawn_card_deck_index);
 
-        let player_hand = &game_state.hands[player_on_turn_index];
+        let player_hand = &game_state.hands[active_player_index];
         assert!(player_hand.cards().contains(&drawn_card_deck_index));
     }
 
     #[test]
     fn should_be_correctly_updated_after_a_play() {
-        let player_on_turn_index = 1;
-        let mut game_state = empty_stacks_table_state(player_on_turn_index);
+        let active_player_index = 1;
+        let mut game_state = empty_stacks_table_state(active_player_index);
         let card_deck_index = 8;
 
         game_state.update_with_play_action(card_deck_index);
 
-        let player_hand = &game_state.hands[player_on_turn_index];
+        let player_hand = &game_state.hands[active_player_index];
         assert!(!player_hand.cards().contains(&card_deck_index));
     }
 
     #[test]
     fn should_be_correctly_updated_after_playing_a_specific_card() {
-        let player_on_turn_index = 1;
-        let mut game_state = empty_stacks_table_state(player_on_turn_index);
+        let active_player_index = 1;
+        let mut game_state = empty_stacks_table_state(active_player_index);
         let static_game_data = StaticGameData {
             number_of_players: 3,
             variant: NO_VARIANT,
@@ -397,7 +397,7 @@ mod tests {
             &static_game_data,
         );
 
-        let player_hand = &game_state.hands[player_on_turn_index];
+        let player_hand = &game_state.hands[active_player_index];
         assert!(!player_hand.cards().contains(&card_deck_index));
     }
 

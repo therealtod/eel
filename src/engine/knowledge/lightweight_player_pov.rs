@@ -149,7 +149,7 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
         total > 0 && discarded == total - 1
     }
 
-    fn player_on_turn_index(&self) -> PlayerIndex {
+    fn active_player_index(&self) -> PlayerIndex {
         self.table_state.active_player_index()
     }
 

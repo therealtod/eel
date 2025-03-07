@@ -68,13 +68,13 @@ pub trait ClueTech: Sync {
     /// Compute knowledge updates for an observed clue action, from one player's perspective.
     ///
     /// Called once per player after a clue is matched to this tech. `player_index` is the clue
-    /// receiver; `pov.player_on_turn_index()` is the player whose knowledge is being updated
+    /// receiver; `pov.active_player_index()` is the player whose knowledge is being updated
     /// (may be the receiver or any other player that the convention affects).
     ///
     /// ## POV semantics in `knowledge_updates`
     ///
-    /// By the time this method is called, `table_state.player_on_turn_index` has been set to
-    /// the current observer — so `pov.player_on_turn_index()` identifies *who* is computing
+    /// By the time this method is called, `table_state.active_player_index` has been set to
+    /// the current observer — so `pov.active_player_index()` identifies *who* is computing
     /// their knowledge, not who gave the clue.
     ///
     /// `pov`'s personal knowledge (`pov.card_identity`, etc.) comes from
@@ -83,7 +83,7 @@ pub trait ClueTech: Sync {
     ///
     /// ## Typical patterns
     ///
-    /// - **Clue receiver** (`pov.player_on_turn_index() == player_index`): return a
+    /// - **Clue receiver** (`pov.active_player_index() == player_index`): return a
     ///   `NarrowPossibilities` update on the focus card, restricting it to identities consistent
     ///   with this tech's semantics.
     /// - **Third party** (prompted or finessed player): return `NarrowPossibilities` and/or

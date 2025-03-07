@@ -37,7 +37,7 @@ pub trait PlayerPOV {
 
     fn is_critical_card_id(&self, variant_card_id: VariantCardId) -> bool;
 
-    fn player_on_turn_index(&self) -> PlayerIndex;
+    fn active_player_index(&self) -> PlayerIndex;
 
     fn table_state(&self) -> &TableState;
 

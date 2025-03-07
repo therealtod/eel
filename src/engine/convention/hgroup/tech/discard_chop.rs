@@ -20,7 +20,7 @@ pub struct DiscardChop;
 
 impl DiscardTech for DiscardChop {
     fn discard_game_actions(&self, active_player_pov: &dyn PlayerPOV) -> Vec<GameAction> {
-        let player_index = active_player_pov.player_on_turn_index();
+        let player_index = active_player_pov.active_player_index();
         match get_chop_index(player_index, active_player_pov) {
             Some(card_deck_index) => vec![GameAction::Discard {
                 player_index,

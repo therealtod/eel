@@ -23,7 +23,7 @@ impl SimpleFinesse {
     /// after the active player.
     fn plays_before(earlier: usize, later: usize, pov: &dyn PlayerPOV) -> bool {
         let n = pov.static_data().number_of_players as usize;
-        let active = pov.player_on_turn_index();
+        let active = pov.active_player_index();
         let dist = |p: usize| (p + n - active) % n;
         dist(earlier) < dist(later)
     }
@@ -44,7 +44,7 @@ impl SimpleFinesse {
     ///   2. The prerequisite card (focus_card - 1) sits on the finesse position of a teammate
     ///      who plays before `target`.
     fn is_finesse_setup(focus_card: VariantCardId, target: usize, pov: &dyn PlayerPOV) -> bool {
-        let active = pov.player_on_turn_index();
+        let active = pov.active_player_index();
         let num_players = pov.static_data().number_of_players as usize;
 
         if pov.away_value(focus_card) != Some(1) {
@@ -65,7 +65,7 @@ impl SimpleFinesse {
 
 impl ClueTech for SimpleFinesse {
     fn clue_game_actions(&self, pov: &dyn PlayerPOV) -> Vec<GameAction> {
-        let active = pov.player_on_turn_index();
+        let active = pov.active_player_index();
         let num_players = pov.static_data().number_of_players as usize;
 
         (0..num_players)
@@ -97,7 +97,7 @@ impl ClueTech for SimpleFinesse {
         let Some(game_state_snapshot) = history.get(turn) else {
             return false;
         };
-        let giver = game_state_snapshot.table_state.player_on_turn_index;
+        let giver = game_state_snapshot.table_state.active_player_index;
         let giver_pov = game_state_snapshot.player_pov(giver, observer_pov.static_data());
 
         get_clue_focus(target_player_index, touched, &giver_pov)
@@ -118,7 +118,7 @@ impl ClueTech for SimpleFinesse {
         let Some(snap) = history.get(turn) else {
             return vec![];
         };
-        let giver = snap.table_state.player_on_turn_index;
+        let giver = snap.table_state.active_player_index;
         let giver_pov = snap.player_pov(giver, observer_pov.static_data());
 
         let focus = match get_clue_focus(clue_receiver_index, touched, &giver_pov) {
@@ -207,15 +207,15 @@ mod tests {
         );
 
         // Bob (player 1) draws R2 — his finesse position.
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
 
         // Cathy (player 2) draws R3 — the clue focus.
-        table_state.player_on_turn_index = 2;
+        table_state.active_player_index = 2;
         table_state.update_with_draw_action(20);
 
         // Alice (player 0) is the clue giver. Snapshot captures the pre-clue state.
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).inferred_identities[10] =
             Some(Empathy::from_bits(R2_MASK).unwrap());
@@ -226,7 +226,7 @@ mod tests {
         let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
 
         // Observer is Bob (player 1, the finessed player).
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         let knowledge = knowledge_with_visible(1, &[(20, R3_MASK)]);
         let pov =
             LightweightPlayerPOV::new(1, &knowledge, &team_knowledge, &table_state, &static_data);
@@ -260,12 +260,12 @@ mod tests {
     fn knowledge_updates_no_signal_when_focus_is_directly_playable() {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10); // some card in player 1's hand
-        table_state.player_on_turn_index = 2;
+        table_state.active_player_index = 2;
         table_state.update_with_draw_action(20); // R1 in player 2's hand (away=0, touched)
         table_state.clue_touched_cards |= 1 << 20;
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
 
         let knowledge = knowledge_with_visible(1, &[(10, R1_MASK), (20, R1_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -301,12 +301,12 @@ mod tests {
             R1.as_variant_card_id(),
             &static_data,
         );
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10); // Y2 — not the connecting card for R3
-        table_state.player_on_turn_index = 2;
+        table_state.active_player_index = 2;
         table_state.update_with_draw_action(20); // R3 (focus, 1-away)
         table_state.clue_touched_cards |= 1 << 20;
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
 
         let knowledge = knowledge_with_visible(1, &[(10, Y2_MASK), (20, R3_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -342,11 +342,11 @@ mod tests {
             R1.as_variant_card_id(),
             &static_data,
         );
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
         table_state.update_with_draw_action(10); // R3, NOT touched
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(20); // R2 on finesse position
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         let knowledge = knowledge_with_visible(0, &[(10, R3_MASK), (20, R2_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);

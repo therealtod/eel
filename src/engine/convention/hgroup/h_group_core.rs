@@ -10,16 +10,16 @@ use crate::game::static_game_data::StaticGameData;
 use crate::game::{MAX_CLUE_VALUES_PER_TYPE, MAX_HAND_SIZE};
 use smallvec::SmallVec;
 
-/// Reconstruct the POV of `pov.player_on_turn_index()` using that player's own
+/// Reconstruct the POV of `pov.active_player_index()` using that player's own
 /// `team_knowledge` entry.
 ///
-/// In `matches_clue` and `clue_game_actions`, `pov.player_on_turn_index()` is the clue giver,
+/// In `matches_clue` and `clue_game_actions`, `pov.active_player_index()` is the clue giver,
 /// so this gives the giver's perspective. In `clue_knowledge_updates` the runtime sets
-/// `player_on_turn_index` to the current observer before calling, so this yields the observer's
+/// `active_player_index` to the current observer before calling, so this yields the observer's
 /// own team-knowledge view. The name reflects that it always reconstructs the POV of whoever
 /// is the current actor (giver or observer), not a fixed role.
 pub fn actor_pov(pov: &dyn PlayerPOV) -> LightweightPlayerPOV<'_> {
-    pov.as_player_pov(pov.player_on_turn_index())
+    pov.as_player_pov(pov.active_player_index())
 }
 
 /// Returns the deck indices of cards in `player_index`'s hand that are touched by `clue`.
@@ -291,7 +291,7 @@ mod tests {
     // ── actor_pov ──────────────────────────────────────────────────────
 
     #[test]
-    fn actor_pov_returns_pov_of_player_on_turn() {
+    fn actor_pov_returns_pov_of_active_player() {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let table_state = initial_five_players_table_state();
         let knowledge = knowledge_for_hand(&[10, 20, 30]);
@@ -300,21 +300,21 @@ mod tests {
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let g = actor_pov(&pov);
-        assert_eq!(g.player_on_turn_index(), 0);
+        assert_eq!(g.active_player_index(), 0);
     }
 
     #[test]
     fn actor_pov_respects_different_turn_index() {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 2;
+        table_state.active_player_index = 2;
         let knowledge = knowledge_with_visible(0, &[]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let g = actor_pov(&pov);
-        assert_eq!(g.player_on_turn_index(), 2);
+        assert_eq!(g.active_player_index(), 2);
     }
 
     // ── get_chop_index ──────────────────────────────────────────────────────
@@ -446,9 +446,9 @@ mod tests {
         // Player 0 does not know card 10's identity → no clue can be computed.
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         let knowledge = knowledge_with_visible(0, &[]); // card 10 not visible
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -464,9 +464,9 @@ mod tests {
         // Both produce focus = 10 (the only card = chop).
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         let knowledge = knowledge_with_visible(0, &[(10, R1_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -492,10 +492,10 @@ mod tests {
         // Rank-1 clue touches only card 20 → focus = 20 (R1).
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10); // R2, oldest
         table_state.update_with_draw_action(20); // R1, newest
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         let knowledge = knowledge_with_visible(0, &[(10, R2_MASK), (20, R1_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -537,9 +537,9 @@ mod tests {
         // Every card ID overlaps with still-needed → no bad touch.
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
 
         assert_eq!(
             super::count_bad_touches(&[10], 1, &table_state, &static_data),
@@ -565,7 +565,7 @@ mod tests {
         );
 
         // Draw card 10 for player 1 and mark it as R1 in the deck.
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
         table_state
             .deck
@@ -588,7 +588,7 @@ mod tests {
         let mut table_state = initial_five_players_table_state();
 
         // Card 20 → player 2, revealed as R1, marked as clue-touched.
-        table_state.player_on_turn_index = 2;
+        table_state.active_player_index = 2;
         table_state.update_with_draw_action(20);
         table_state
             .deck
@@ -596,7 +596,7 @@ mod tests {
         table_state.clue_touched_cards |= 1 << 20;
 
         // Card 10 → player 1 (receiver) with fresh deck empathy (all IDs possible).
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
 
         assert_eq!(

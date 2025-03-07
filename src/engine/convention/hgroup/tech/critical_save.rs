@@ -42,7 +42,7 @@ fn critical_save_actions(
     clue_type: ClueType,
     clue_value_for_id: impl Fn(usize) -> u8,
 ) -> Vec<GameAction> {
-    let active_player_index = active_player_pov.player_on_turn_index();
+    let active_player_index = active_player_pov.active_player_index();
     let num_players = active_player_pov.static_data().number_of_players as usize;
 
     (0..num_players)
@@ -81,7 +81,7 @@ fn critical_save_knowledge_updates(
     observer_pov: &dyn PlayerPOV,
 ) -> Vec<KnowledgeUpdate> {
     let snap = history.get(turn).unwrap();
-    let giver = snap.table_state.player_on_turn_index;
+    let giver = snap.table_state.active_player_index;
     let giver_pov = snap.player_pov(giver, observer_pov.static_data());
     let chop = match get_chop_index(receiver, &giver_pov) {
         Some(c) if touched_card_deck_indexes.contains(&c) => c,
@@ -124,7 +124,7 @@ fn critical_save_matches(
         return false;
     }
     if let Some(game_state_snapshot) = history.get(turn) {
-        let giver = game_state_snapshot.table_state.player_on_turn_index;
+        let giver = game_state_snapshot.table_state.active_player_index;
         let giver_pov = game_state_snapshot.player_pov(giver, observer_pov.static_data());
         can_be_critical_saved(player_index, &giver_pov)
             && get_chop_index(player_index, &giver_pov)
@@ -252,9 +252,9 @@ mod tests {
     ) -> (crate::game::state::table_state::TableState, PlayerKnowledge) {
         let _static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10); // chop
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
         // Discard one copy to make it critical (R4 has 2 copies, so 1 discarded = critical)
         table_state.discard_pile.add_card_with_id(card_id);
         let knowledge = knowledge_with_visible(0, &[(10, card_mask)]);
@@ -297,9 +297,9 @@ mod tests {
     fn returns_empty_when_chop_is_not_critical() {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
         // No discards — R4 still has 2 copies, not critical
         let knowledge = knowledge_with_visible(0, &[(10, R4_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -314,9 +314,9 @@ mod tests {
     fn returns_empty_when_chop_identity_unknown() {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
         table_state.discard_pile.add_card_with_id(3);
         // Card 10 identity not known to player 0
         let knowledge = knowledge_with_visible(0, &[]);
@@ -333,10 +333,10 @@ mod tests {
         // Player 1 has R4 (chop, critical) and R2 (newer).
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10); // oldest = R4 (chop)
         table_state.update_with_draw_action(20); // newest = R2
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
         table_state.discard_pile.add_card_with_id(3); // discard one R4
         let knowledge = knowledge_with_visible(0, &[(10, R4_MASK), (20, R2_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -386,9 +386,9 @@ mod tests {
         // Both ColorCriticalSave and RankCriticalSave safely return false with &[].
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
         table_state.discard_pile.add_card_with_id(3); // make R4 critical
         let knowledge = knowledge_with_visible(0, &[(10, R4_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -439,9 +439,9 @@ mod tests {
     fn matches_action_false_when_chop_is_not_critical() {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.player_on_turn_index = 1;
+        table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
-        table_state.player_on_turn_index = 0;
+        table_state.active_player_index = 0;
         let knowledge = knowledge_with_visible(0, &[(10, Y4_MASK)]);
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         *team_knowledge.player_mut(0) = knowledge.clone();
