@@ -133,14 +133,7 @@ impl ClueTech for SimplePrompt {
 
         // ── Case 1: current player is the prompted player ─────────────────────
         if current != clue_receiver_index {
-            let recv_touched: Vec<CardDeckIndex> = giver_pov.table_state().hands
-                [clue_receiver_index]
-                .cards()
-                .iter()
-                .copied()
-                .filter(|&idx| giver_pov.is_touched(idx))
-                .collect();
-            let focus = get_clue_focus(clue_receiver_index, &recv_touched, &giver_pov);
+            let focus = get_clue_focus(clue_receiver_index, &touched, &giver_pov);
             if let Some(focus) = focus {
                 let focus_id = match giver_pov.card_identity(focus) {
                     Some(id) if giver_pov.away_value(id) == Some(1) => id,
@@ -180,12 +173,6 @@ impl ClueTech for SimplePrompt {
             .variant
             .empathy_for_clue(clue)
             .as_bits();
-        let touched: Vec<CardDeckIndex> = giver_pov.table_state().hands[clue_receiver_index]
-            .cards()
-            .iter()
-            .copied()
-            .filter(|&idx| giver_pov.is_touched(idx))
-            .collect();
         if let Some(focus) = get_clue_focus(clue_receiver_index, &touched, &giver_pov) {
             let num_players = giver_pov.static_data().number_of_players as usize;
             let giver_idx = giver_pov.active_player_index();
@@ -470,7 +457,7 @@ mod tests {
         let updates = SimplePrompt.knowledge_updates(
             &GameAction::Clue {
                 player_index: 0,
-                touched_card_deck_indexes: smallvec::smallvec![],
+                touched_card_deck_indexes: smallvec::smallvec![10],
                 clue: Clue {
                     clue_type: ClueType::Color,
                     clue_value: 0,
@@ -522,7 +509,7 @@ mod tests {
         let updates = SimplePrompt.knowledge_updates(
             &GameAction::Clue {
                 player_index: 0,
-                touched_card_deck_indexes: smallvec::smallvec![],
+                touched_card_deck_indexes: smallvec::smallvec![10],
                 clue: Clue {
                     clue_type: ClueType::Color,
                     clue_value: 0,
