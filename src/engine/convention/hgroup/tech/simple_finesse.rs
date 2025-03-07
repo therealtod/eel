@@ -19,15 +19,6 @@ use crate::impl_convention_tech_for_hgroup_clue_tech;
 pub struct SimpleFinesse;
 
 impl SimpleFinesse {
-    /// Returns true if `earlier` takes their turn before `later` in the circular order starting
-    /// after the active player.
-    fn plays_before(earlier: usize, later: usize, pov: &dyn PlayerPOV) -> bool {
-        let n = pov.static_data().number_of_players as usize;
-        let active = pov.active_player_index();
-        let dist = |p: usize| (p + n - active) % n;
-        dist(earlier) < dist(later)
-    }
-
     /// Returns true if `player`'s finesse position (first unclued card, newest) holds `card_id`.
     fn has_on_finesse_position(card_id: VariantCardId, player: usize, pov: &dyn PlayerPOV) -> bool {
         pov.table_state().hands[player]
@@ -54,7 +45,7 @@ impl SimpleFinesse {
         (0..num_players)
             .filter(|&p| p != active && p != target)
             .any(|p| {
-                Self::plays_before(p, target, pov)
+                pov.static_data().plays_before(p, target, active)
                     && Self::has_on_finesse_position(prerequisite, p, pov)
                     && get_finesse_position(p, pov)
                         .map(|fp| !has_pending_play_signal(p, fp, pov))
@@ -110,7 +101,7 @@ impl ClueTech for SimpleFinesse {
         &self,
         clue_receiver_index: PlayerIndex,
         touched: &[CardDeckIndex],
-        clue: &Clue,
+        _clue: &Clue,
         turn: usize,
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
@@ -138,7 +129,7 @@ impl ClueTech for SimpleFinesse {
         let Some(finessed_player_index) = (0..num_players)
             .filter(|&p| p != clue_receiver_index && p != giver)
             .find(|&p| {
-                Self::plays_before(p, clue_receiver_index, &giver_pov)
+                observer_pov.static_data().plays_before(p, clue_receiver_index, giver)
                     && Self::has_on_finesse_position(connecting_id, p, &giver_pov)
             })
         else {

@@ -11,6 +11,7 @@ use crate::game::playing_stacks::PlayingStacks;
 use crate::game::static_game_data::StaticGameData;
 use crate::game::variant::Variant;
 use smallvec::SmallVec;
+use crate::game::state::PlayerIndex;
 
 /// The state of the table of a game of Hanabi
 ///
@@ -28,7 +29,7 @@ pub struct TableState {
     pub deck: Deck,
     pub hands: [Hand; MAX_PLAYERS_IN_GAME],
     pub all_hand_bits: DeckCardsBitField,
-    pub active_player_index: usize,
+    pub active_player_index: PlayerIndex,
     pub current_turn: usize,
     pub playing_stacks: PlayingStacks,
     pub strike_tokens: u8,
