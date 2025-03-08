@@ -20,7 +20,9 @@ fn can_be_critical_saved(target_player_index: PlayerIndex, observer_pov: &dyn Pl
         Some(id) => id,
         None => return false,
     };
-    if !observer_pov.is_critical_card_id(card_id) {
+    if !observer_pov.is_critical_card_id(card_id)
+        || observer_pov.static_data().variant.rank_of(card_id) == 5
+    {
         return false;
     }
     if observer_pov
