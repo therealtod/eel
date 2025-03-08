@@ -16,6 +16,9 @@ use mockall::automock;
 /// [`PlayerKnowledgeState`](super::player_knowledge::PlayerKnowledgeState) directly.
 #[cfg_attr(test, automock)]
 pub trait PlayerPOV {
+    /// Get the player's own player index
+    fn player_index(&self) -> PlayerIndex;
+    
     /// Get the "away value" of a card (how many plays away from being playable).
     fn away_value(&self, card_id: VariantCardId) -> Option<u8>;
 

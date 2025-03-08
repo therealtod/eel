@@ -276,6 +276,20 @@ pub fn is_good_touch_principle_compliant(
     ) == 0
 }
 
+/// Returns true if `player`'s finesse position (first unclued card, newest) holds `card_id`.
+pub fn has_on_finesse_position(
+    card_id: VariantCardId,
+    player_index: usize,
+    observer_pov: &dyn PlayerPOV,
+) -> bool {
+    observer_pov.table_state().hands[player_index]
+        .cards()
+        .iter()
+        .find(|&&idx| !observer_pov.is_touched(idx))
+        .map(|&idx| observer_pov.card_identity(idx) == Some(card_id))
+        .unwrap_or(false)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -680,5 +694,157 @@ mod tests {
         let touched: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = smallvec::smallvec![10];
 
         assert!(is_minimal_clue_value_compliant(&clue, &0, &touched, &pov));
+    }
+
+    // ── has_on_finesse_position ───────────────────────────────────────────
+
+    #[test]
+    fn returns_true_when_finesse_position_card_matches() {
+        use crate::game::deck::unit_test_constants::novariant_constants::{
+            NoVarCards, R1_MASK, R2_MASK,
+        };
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        // Player 0 draws R1 (card 10) then R2 (card 11). Newest = R2.
+        table_state.update_with_draw_action(10); // R1
+        table_state.update_with_draw_action(11); // R2
+        // Reveal card identities in deck.
+        table_state
+            .deck
+            .reveal_card(10, NoVarCards::R1.as_variant_card_id());
+        table_state
+            .deck
+            .reveal_card(11, NoVarCards::R2.as_variant_card_id());
+
+        // Observer knows both cards.
+        let knowledge = knowledge_with_visible(0, &[(10, R1_MASK), (11, R2_MASK)]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        // Finesse position = newest unclued card = R2 (card 11).
+        assert!(has_on_finesse_position(
+            NoVarCards::R2.as_variant_card_id(),
+            0,
+            &pov
+        ));
+    }
+
+    #[test]
+    fn returns_false_when_finesse_position_card_does_not_match() {
+        use crate::game::deck::unit_test_constants::novariant_constants::{
+            NoVarCards, R1_MASK, R2_MASK,
+        };
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_draw_action(10); // R1
+        table_state.update_with_draw_action(11); // R2
+        table_state
+            .deck
+            .reveal_card(10, NoVarCards::R1.as_variant_card_id());
+        table_state
+            .deck
+            .reveal_card(11, NoVarCards::R2.as_variant_card_id());
+
+        let knowledge = knowledge_with_visible(0, &[(10, R1_MASK), (11, R2_MASK)]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        // Finesse position = R2, not R3.
+        assert!(!has_on_finesse_position(
+            NoVarCards::R3.as_variant_card_id(),
+            0,
+            &pov
+        ));
+    }
+
+    #[test]
+    fn returns_false_when_all_cards_are_clued() {
+        use crate::game::deck::unit_test_constants::novariant_constants::{NoVarCards, R1_MASK};
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_draw_action(10); // R1
+        table_state
+            .deck
+            .reveal_card(10, NoVarCards::R1.as_variant_card_id());
+        // Mark the only card as clued.
+        table_state.clue_touched_cards |= 1 << 10;
+
+        let knowledge = knowledge_with_visible(0, &[(10, R1_MASK)]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        // No unclued cards → no finesse position.
+        assert!(!has_on_finesse_position(
+            NoVarCards::R1.as_variant_card_id(),
+            0,
+            &pov
+        ));
+    }
+
+    #[test]
+    fn returns_false_when_hand_is_empty() {
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards;
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let table_state = initial_five_players_table_state();
+
+        let knowledge = knowledge_with_visible(0, &[]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert!(!has_on_finesse_position(
+            NoVarCards::R1.as_variant_card_id(),
+            0,
+            &pov
+        ));
+    }
+
+    #[test]
+    fn finesse_position_is_newest_unclued_card() {
+        use crate::game::deck::unit_test_constants::novariant_constants::{
+            NoVarCards, R1_MASK, R2_MASK, R3_MASK,
+        };
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        // Draw order: R1 (oldest), R2, R3 (newest).
+        table_state.update_with_draw_action(10); // R1
+        table_state.update_with_draw_action(11); // R2
+        table_state.update_with_draw_action(12); // R3
+        table_state
+            .deck
+            .reveal_card(10, NoVarCards::R1.as_variant_card_id());
+        table_state
+            .deck
+            .reveal_card(11, NoVarCards::R2.as_variant_card_id());
+        table_state
+            .deck
+            .reveal_card(12, NoVarCards::R3.as_variant_card_id());
+        // Clue R1 and R2, leaving R3 as the only unclued card.
+        table_state.clue_touched_cards |= (1 << 10) | (1 << 11);
+
+        let knowledge = knowledge_with_visible(0, &[(10, R1_MASK), (11, R2_MASK), (12, R3_MASK)]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        // Finesse position = R3 (newest unclued).
+        assert!(has_on_finesse_position(
+            NoVarCards::R3.as_variant_card_id(),
+            0,
+            &pov
+        ));
+        assert!(!has_on_finesse_position(
+            NoVarCards::R2.as_variant_card_id(),
+            0,
+            &pov
+        ));
     }
 }

@@ -8,10 +8,10 @@ use crate::game::clue_token_bank::ClueTokenBank;
 use crate::game::deck::Deck;
 use crate::game::hand::Hand;
 use crate::game::playing_stacks::PlayingStacks;
+use crate::game::state::PlayerIndex;
 use crate::game::static_game_data::StaticGameData;
 use crate::game::variant::Variant;
 use smallvec::SmallVec;
-use crate::game::state::PlayerIndex;
 
 /// The state of the table of a game of Hanabi
 ///

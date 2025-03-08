@@ -39,6 +39,10 @@ impl<'a> LightweightPlayerPOV<'a> {
 }
 
 impl PlayerPOV for LightweightPlayerPOV<'_> {
+    fn player_index(&self) -> PlayerIndex {
+        self.player_index
+    }
+
     fn away_value(&self, card_id: VariantCardId) -> Option<u8> {
         if self
             .table_state

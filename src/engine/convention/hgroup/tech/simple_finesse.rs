@@ -1,6 +1,7 @@
 use crate::engine::convention::convention_tech::ClueTech;
 use crate::engine::convention::hgroup::h_group_core::{
-    clues_for_player_with_focus, get_clue_focus, get_finesse_position, has_pending_play_signal,
+    clues_for_player_with_focus, get_clue_focus, get_finesse_position, has_on_finesse_position,
+    has_pending_play_signal,
 };
 use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, PlayClueTech, priority};
 use crate::engine::convention::hgroup::signal::Signal;
@@ -19,16 +20,6 @@ use crate::impl_convention_tech_for_hgroup_clue_tech;
 pub struct SimpleFinesse;
 
 impl SimpleFinesse {
-    /// Returns true if `player`'s finesse position (first unclued card, newest) holds `card_id`.
-    fn has_on_finesse_position(card_id: VariantCardId, player: usize, pov: &dyn PlayerPOV) -> bool {
-        pov.table_state().hands[player]
-            .cards()
-            .iter()
-            .find(|&&idx| !pov.is_touched(idx))
-            .map(|&idx| pov.card_identity(idx) == Some(card_id))
-            .unwrap_or(false)
-    }
-
     /// Core finesse detection: checks if giving a clue about `focus_card` to `target` constitutes
     /// a valid finesse. Returns true if:
     ///   1. `focus_card` is exactly 1-away from playable, AND
@@ -46,7 +37,7 @@ impl SimpleFinesse {
             .filter(|&p| p != active && p != target)
             .any(|p| {
                 pov.static_data().plays_before(p, target, active)
-                    && Self::has_on_finesse_position(prerequisite, p, pov)
+                    && has_on_finesse_position(prerequisite, p, pov)
                     && get_finesse_position(p, pov)
                         .map(|fp| !has_pending_play_signal(p, fp, pov))
                         .unwrap_or(false)
@@ -80,7 +71,7 @@ impl ClueTech for SimpleFinesse {
         &self,
         target_player_index: PlayerIndex,
         touched: &[CardDeckIndex],
-        clue: &Clue,
+        _clue: &Clue,
         turn: usize,
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
@@ -121,7 +112,13 @@ impl ClueTech for SimpleFinesse {
             _ => return vec![],
         };
         let connecting_id = focus_id - 1;
-
+        
+        // The clue receiver should never match 
+        if observer_pov.player_index() == clue_receiver_index {
+            return vec![];
+        }
+        
+        
         // Find the finessed player using the giver's POV: it has full visibility of all hands,
         // so `card_identity` returns the actual identity for every player's card, including
         // the observer's own cards which are invisible to themselves.
@@ -129,8 +126,10 @@ impl ClueTech for SimpleFinesse {
         let Some(finessed_player_index) = (0..num_players)
             .filter(|&p| p != clue_receiver_index && p != giver)
             .find(|&p| {
-                observer_pov.static_data().plays_before(p, clue_receiver_index, giver)
-                    && Self::has_on_finesse_position(connecting_id, p, &giver_pov)
+                observer_pov
+                    .static_data()
+                    .plays_before(p, clue_receiver_index, giver)
+                    && has_on_finesse_position(connecting_id, p, &giver_pov)
             })
         else {
             return vec![];
