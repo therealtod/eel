@@ -112,13 +112,12 @@ impl ClueTech for SimpleFinesse {
             _ => return vec![],
         };
         let connecting_id = focus_id - 1;
-        
-        // The clue receiver should never match 
+
+        // The clue receiver should never match
         if observer_pov.player_index() == clue_receiver_index {
             return vec![];
         }
-        
-        
+
         // Find the finessed player using the giver's POV: it has full visibility of all hands,
         // so `card_identity` returns the actual identity for every player's card, including
         // the observer's own cards which are invisible to themselves.
