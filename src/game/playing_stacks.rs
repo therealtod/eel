@@ -90,6 +90,10 @@ impl PlayingStacks {
         }
         next_cards
     }
+    
+    pub fn total_size(&self) -> u8 {
+        self.stacks.iter().map(|stack| stack.played_cards_count).sum()
+    }
 }
 
 impl Default for PlayingStacks {

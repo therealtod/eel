@@ -182,6 +182,10 @@ impl TableState {
     pub fn playable_cards(&self, static_game_data: &StaticGameData) -> VariantCardsBitField {
         self.playing_stacks.next_cards(&static_game_data.variant)
     }
+t
+    pub fn score(&self) -> u8 {
+        self.playing_stacks.total_size()
+    }
 }
 
 #[cfg(test)]
