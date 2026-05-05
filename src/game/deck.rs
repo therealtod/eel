@@ -17,7 +17,7 @@ pub struct Deck {
 
 impl Deck {
     pub fn new(variant: &Variant) -> Self {
-        let unknown = Empathy::all(variant.all_cards_mask());
+        let unknown = Empathy::all(variant);
         Deck {
             current_size: variant.deck_size,
             total_copies_per_id: variant.card_copies_count_by_id,
@@ -125,6 +125,7 @@ pub mod unit_test_constants {
     use crate::game::deck::Deck;
     use crate::game::deck::unit_test_constants::novariant_constants::COPIES_COUNT_BY_ID;
     use crate::game::{MAX_CARDS_IN_DECK, MAX_UNIQUE_CARDS_IN_DECK};
+    use crate::game::variant::test_variants::NO_VARIANT;
 
     pub mod novariant_constants {
         use crate::game::MAX_UNIQUE_CARDS_IN_DECK;
@@ -203,13 +204,14 @@ pub mod unit_test_constants {
         current_size: 50,
         total_copies_per_id: COPIES_COUNT_BY_ID,
         revealed_copies_per_index: [0; MAX_UNIQUE_CARDS_IN_DECK],
-        empathy_by_index: [Empathy::all(novariant_constants::ALL_CARDS_MASK); MAX_CARDS_IN_DECK],
+        empathy_by_index: [Empathy::all(&NO_VARIANT); MAX_CARDS_IN_DECK],
         revealed_indexes: 0,
     };
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::game::variant::test_variants::NO_VARIANT;
     use super::*;
     use super::unit_test_constants::NEW_DECK;
     use super::unit_test_constants::novariant_constants::*;
@@ -250,7 +252,7 @@ mod tests {
     #[test]
     fn should_recursively_update_empathy() {
         let empathy_by_index: [Empathy; MAX_CARDS_IN_DECK] = {
-            let mut arr = [Empathy::all(ALL_CARDS_MASK); MAX_CARDS_IN_DECK];
+            let mut arr = [Empathy::all(&NO_VARIANT); MAX_CARDS_IN_DECK];
             let pairs: &[(usize, VariantCardsBitField)] = &[
                 (0, R1_MASK),
                 (1, R1_MASK),

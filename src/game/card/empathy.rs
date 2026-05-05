@@ -1,3 +1,4 @@
+use crate::game::variant::Variant;
 use super::{VariantCardId, VariantCardsBitField};
 
 /// A non-zero bitmask of possible card identities for a single deck position.
@@ -12,8 +13,8 @@ pub struct Empathy(VariantCardsBitField);
 
 impl Empathy {
     /// All identities are possible for a variant with the given card mask.
-    pub const fn all(all_cards_mask: VariantCardsBitField) -> Self {
-        Empathy(all_cards_mask)
+    pub const fn all(variant: &Variant) -> Self {
+        Empathy(variant.all_cards_mask())
     }
 
     /// Exactly one identity is possible.

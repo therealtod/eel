@@ -1,0 +1,167 @@
+use crate::engine::convention::convention_tech::PlayTech;
+use crate::engine::convention::hgroup::signal::Signal;
+use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
+use crate::engine::knowledge::player_pov::PlayerPOV;
+use crate::game::action::game_action::GameAction;
+use crate::game::card::CardDeckIndex;
+use crate::game::state::PlayerIndex;
+use crate::impl_convention_tech_for_play_tech;
+
+/// Trivial technique: play a card that is known to be playable from the active player's POV.
+///
+/// Only fires for empathy-playable cards (all remaining possibilities are playable). Untouched
+/// cards that carry a `Signal::Play` are BlindPlay territory and are excluded here.
+pub struct PlayKnownPlayable;
+
+impl PlayTech for PlayKnownPlayable {
+    fn play_game_actions(&self, pov: &dyn PlayerPOV) -> Vec<GameAction> {
+        let player_index = pov.player_on_turn_index();
+        let knowledge = pov.team_knowledge().player(player_index);
+        let table_state = pov.table_state();
+        let playable = table_state.playable_cards(pov.static_data());
+        let mut actions = vec![];
+        let mut hand_mask = knowledge.own_hand;
+        while hand_mask != 0 {
+            let card_deck_index = hand_mask.trailing_zeros() as CardDeckIndex;
+            let has_play_signal = knowledge.signals[card_deck_index as usize]
+                .iter()
+                .any(|s| matches!(s, Signal::Play { .. }));
+            // Use global empathy from Deck (game-rule based) merged with inferred identities
+            let combined = knowledge.combined_possible_identities(card_deck_index, table_state, &pov.static_data().variant);
+            let bits = combined.as_bits();
+            let empathy_playable = bits != 0 && bits & playable == bits;
+            if empathy_playable && !has_play_signal {
+                actions.push(GameAction::Play { player_index, card_deck_index });
+            }
+            hand_mask &= !(1u64 << card_deck_index);
+        }
+        actions
+    }
+
+    fn matches_play(
+        &self,
+        player_index: PlayerIndex,
+        card_deck_index: CardDeckIndex,
+        pov: &dyn PlayerPOV,
+    ) -> bool {
+        let knowledge = pov.team_knowledge().player(player_index);
+        let has_play_signal = knowledge.signals[card_deck_index as usize]
+            .iter()
+            .any(|s| matches!(s, Signal::Play { .. }));
+        let table_state = pov.table_state();
+        let playable = table_state.playable_cards(pov.static_data());
+        let combined = knowledge.combined_possible_identities(card_deck_index, table_state, &pov.static_data().variant);
+        let bits = combined.as_bits();
+        bits != 0 && bits & playable == bits && !has_play_signal
+    }
+
+    fn play_knowledge_updates(
+        &self,
+        _player_index: PlayerIndex,
+        _card: CardDeckIndex,
+        _pov: &dyn PlayerPOV,
+    ) -> Vec<KnowledgeUpdate> {
+        vec![]
+    }
+}
+
+impl_convention_tech_for_play_tech!(PlayKnownPlayable);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::engine::convention::convention_tech::ConventionTech;
+    use crate::engine::convention::hgroup::signal::Signal;
+    use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
+    use crate::engine::knowledge::player_knowledge_state::PlayerKnowledgeState;
+    use crate::engine::knowledge::team_knowledge::TeamKnowledge;
+    use crate::game::card::Empathy;
+    use crate::game::deck::unit_test_constants::novariant_constants::{R1_MASK, R2_MASK};
+    use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
+        NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
+    };
+
+    #[test]
+    fn no_actions_when_hand_is_empty() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let table_state = initial_five_players_table_state();
+        let knowledge = PlayerKnowledgeState::new(0);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert!(PlayKnownPlayable.game_actions(&pov).is_empty());
+    }
+
+    #[test]
+    fn plays_empathy_playable_card() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_draw_action(10);
+        table_state.player_on_turn_index = 0;
+
+        let mut knowledge = PlayerKnowledgeState::new(0);
+        knowledge.own_hand = 1 << 10;
+        knowledge.inferred_identities[10] = Some(Empathy::from_bits(R1_MASK).unwrap());
+
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(0).own_hand = 1 << 10;
+        team_knowledge.player_mut(0).inferred_identities[10] = Some(Empathy::from_bits(R1_MASK).unwrap());
+
+        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert_eq!(
+            PlayKnownPlayable.game_actions(&pov),
+            vec![GameAction::Play { player_index: 0, card_deck_index: 10 }]
+        );
+    }
+
+    #[test]
+    fn no_action_for_empathy_playable_card_with_play_signal() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_draw_action(10);
+        table_state.player_on_turn_index = 0;
+
+        let signal = Signal::Play {
+            card_deck_index: 10,
+            knowledge_updates: vec![]
+        };
+
+        let mut knowledge = PlayerKnowledgeState::new(0);
+        knowledge.own_hand = 1 << 10;
+        knowledge.inferred_identities[10] = Some(Empathy::from_bits(R1_MASK).unwrap());
+        knowledge.signals[10].push(signal.clone());
+
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(0).own_hand = 1 << 10;
+        team_knowledge.player_mut(0).inferred_identities[10] = Some(Empathy::from_bits(R1_MASK).unwrap());
+        team_knowledge.player_mut(0).signals[10].push(signal);
+
+        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert!(PlayKnownPlayable.game_actions(&pov).is_empty());
+    }
+
+    #[test]
+    fn matches_play_false_for_empathy_playable_card_with_play_signal() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_draw_action(10);
+        table_state.player_on_turn_index = 0;
+
+        let signal = Signal::Play {
+            card_deck_index: 10,
+            knowledge_updates: vec![]
+        };
+
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(0).own_hand = 1 << 10;
+        team_knowledge.player_mut(0).inferred_identities[10] = Some(Empathy::from_bits(R1_MASK).unwrap());
+        team_knowledge.player_mut(0).signals[10].push(signal);
+
+        let knowledge = PlayerKnowledgeState::new(0);
+        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert!(!PlayKnownPlayable.matches_action(&GameAction::Play { player_index: 0, card_deck_index: 10 }, &pov));
+    }
+}
