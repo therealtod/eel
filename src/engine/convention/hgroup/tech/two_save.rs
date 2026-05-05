@@ -1,8 +1,9 @@
 use crate::engine::convention::convention_tech::ClueTech;
 use crate::engine::convention::hgroup::h_group_core::{
-    get_chop_index, get_clue_focus, giver_pov, touched_cards_for_clue,
+    get_chop_index, get_clue_focus, touched_cards_for_clue,
 };
 use crate::engine::convention::hgroup::h_group_tech::{priority, HGroupClueTech, SaveClueTech};
+use crate::engine::game_state_snapshot::GameStateSnapshot;
 use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
@@ -74,6 +75,7 @@ impl ClueTech for TwoSave {
                     player_index: target,
                     touched_card_deck_indexes: touched,
                     clue: RANK_2_CLUE,
+                    turn: None,
                 }
             })
             .collect()
@@ -84,31 +86,45 @@ impl ClueTech for TwoSave {
         player_index: PlayerIndex,
         _touched: &[CardDeckIndex],
         clue: &Clue,
+        snapshot: Option<&GameStateSnapshot>,
         pov: &dyn PlayerPOV,
     ) -> bool {
         if *clue != RANK_2_CLUE {
             return false;
         }
-        let giver_pov = giver_pov(pov);
-        Self::is_two_saveable_for_target(player_index, &giver_pov)
+        let giver_pov_holder;
+        let giver_pov: &dyn PlayerPOV = match snapshot {
+            Some(snap) => {
+                let giver = snap.table_state.player_on_turn_index;
+                giver_pov_holder = snap.player_pov(giver, pov.static_data());
+                &giver_pov_holder
+            }
+            None => pov,
+        };
+        Self::is_two_saveable_for_target(player_index, giver_pov)
     }
 
     fn clue_knowledge_updates(
         &self,
         player_index: PlayerIndex,
-        _touched: &[CardDeckIndex],
+        touched: &[CardDeckIndex],
         _clue: &Clue,
+        snapshot: Option<&GameStateSnapshot>,
         player_pov: &dyn PlayerPOV,
     ) -> Vec<KnowledgeUpdate> {
-        let giver_pov = giver_pov(player_pov);
+        // Reconstruct the pre-clue giver POV so that get_clue_focus sees the correct
+        // pre-touch hand state and identifies the right focus card.
+        let giver_pov_holder;
+        let giver_pov: &dyn PlayerPOV = match snapshot {
+            Some(snap) => {
+                let giver = snap.table_state.player_on_turn_index;
+                giver_pov_holder = snap.player_pov(giver, player_pov.static_data());
+                &giver_pov_holder
+            }
+            None => player_pov,
+        };
         let receiver = player_index;
-        let touched: Vec<CardDeckIndex> = giver_pov.table_state().hands[receiver]
-            .cards()
-            .iter()
-            .copied()
-            .filter(|&idx| giver_pov.is_touched(idx))
-            .collect();
-        let focus = match get_clue_focus(receiver, &touched, &giver_pov) {
+        let focus = match get_clue_focus(receiver, touched, giver_pov) {
             Some(f) => f,
             None => return vec![],
         };
@@ -174,6 +190,7 @@ mod tests {
                 player_index: 1,
                 touched_card_deck_indexes: smallvec::smallvec![10],
                 clue: RANK_2_CLUE,
+                turn: None,
             }]
         );
     }
@@ -281,8 +298,9 @@ mod tests {
             player_index: 1,
             touched_card_deck_indexes: smallvec::smallvec![10],
             clue: RANK_2_CLUE,
+            turn: None,
         };
-        assert!(TwoSave.matches_action(&action, &pov));
+        assert!(TwoSave.matches_action(&action, None, &pov));
     }
 
     #[test]
@@ -306,8 +324,9 @@ mod tests {
             player_index: 1,
             touched_card_deck_indexes: smallvec::smallvec![10],
             clue: RANK_2_CLUE,
+            turn: None,
         };
-        assert!(!TwoSave.matches_action(&action, &pov));
+        assert!(!TwoSave.matches_action(&action, None, &pov));
     }
 
     #[test]
@@ -323,6 +342,7 @@ mod tests {
                 player_index: 0,
                 card_deck_index: 5
             },
+            None,
             &pov
         ));
     }
@@ -345,12 +365,14 @@ mod tests {
         let updates = TwoSave.knowledge_updates(
             &GameAction::Clue {
                 player_index: 0,
-                touched_card_deck_indexes: smallvec::smallvec![],
+                touched_card_deck_indexes: smallvec::smallvec![10],
                 clue: Clue {
                     clue_type: ClueType::Rank,
                     clue_value: 2,
                 },
+                turn: None,
             },
+            None,
             &pov,
         );
         assert_eq!(updates.len(), 1);
@@ -391,12 +413,14 @@ mod tests {
         let updates = TwoSave.knowledge_updates(
             &GameAction::Clue {
                 player_index: 0,
-                touched_card_deck_indexes: smallvec::smallvec![],
+                touched_card_deck_indexes: smallvec::smallvec![10],
                 clue: Clue {
                     clue_type: ClueType::Rank,
                     clue_value: 2,
                 },
+                turn: None,
             },
+            None,
             &pov,
         );
         assert_eq!(updates.len(), 1);
@@ -427,8 +451,10 @@ mod tests {
                         clue: Clue {
                             clue_type: ClueType::Rank,
                             clue_value: 2
-                        }
+                        },
+                        turn: None,
                     },
+                    None,
                     &pov
                 )
                 .is_empty()
@@ -460,8 +486,10 @@ mod tests {
                         clue: Clue {
                             clue_type: ClueType::Rank,
                             clue_value: 2
-                        }
+                        },
+                        turn: None,
                     },
+                    None,
                     &pov
                 )
                 .is_empty()

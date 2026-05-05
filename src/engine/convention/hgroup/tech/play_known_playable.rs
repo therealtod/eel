@@ -162,6 +162,6 @@ mod tests {
         let knowledge = PlayerKnowledgeState::new(0);
         let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
-        assert!(!PlayKnownPlayable.matches_action(&GameAction::Play { player_index: 0, card_deck_index: 10 }, &pov));
+        assert!(!PlayKnownPlayable.matches_action(&GameAction::Play { player_index: 0, card_deck_index: 10 }, None, &pov));
     }
 }

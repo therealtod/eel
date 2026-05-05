@@ -1,8 +1,9 @@
 use crate::engine::convention::convention_tech::ClueTech;
 use crate::engine::convention::hgroup::h_group_core::{
-    get_chop_index, giver_pov, touched_cards_for_clue,
+    get_chop_index, touched_cards_for_clue,
 };
 use crate::engine::convention::hgroup::h_group_tech::{priority, HGroupClueTech, SaveClueTech};
+use crate::engine::game_state_snapshot::GameStateSnapshot;
 use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
@@ -44,6 +45,7 @@ impl ClueTech for FiveSave {
                     player_index: target,
                     touched_card_deck_indexes: touched,
                     clue: RANK_5_CLUE,
+                    turn: None,
                 }
             })
             .collect()
@@ -54,13 +56,24 @@ impl ClueTech for FiveSave {
         player_index: PlayerIndex,
         _touched: &[CardDeckIndex],
         clue: &Clue,
+        snapshot: Option<&GameStateSnapshot>,
         pov: &dyn PlayerPOV,
     ) -> bool {
         if *clue != RANK_5_CLUE {
             return false;
         }
-        let giver_pov = giver_pov(pov);
-        is_five_saveable(player_index, &giver_pov)
+        // pov is already the pre-clue giver's POV when called from apply_clue.
+        // When a snapshot is available, reconstruct it precisely from there.
+        let giver_pov_holder;
+        let giver_pov: &dyn PlayerPOV = match snapshot {
+            Some(snap) => {
+                let giver = snap.table_state.player_on_turn_index;
+                giver_pov_holder = snap.player_pov(giver, pov.static_data());
+                &giver_pov_holder
+            }
+            None => pov,
+        };
+        is_five_saveable(player_index, giver_pov)
     }
 
     fn clue_knowledge_updates(
@@ -68,6 +81,7 @@ impl ClueTech for FiveSave {
         _player_index: PlayerIndex,
         _touched: &[CardDeckIndex],
         _clue: &Clue,
+        _snapshot: Option<&GameStateSnapshot>,
         _pov: &dyn PlayerPOV,
     ) -> Vec<KnowledgeUpdate> {
         vec![]
@@ -117,6 +131,7 @@ mod tests {
                     clue_type: ClueType::Rank,
                     clue_value: 5
                 },
+                turn: None,
             }]
         );
     }
@@ -185,8 +200,9 @@ mod tests {
                 clue_type: ClueType::Rank,
                 clue_value: 5,
             },
+            turn: None,
         };
-        assert!(FiveSave.matches_action(&action, &pov));
+        assert!(FiveSave.matches_action(&action, None, &pov));
     }
 
     #[test]
@@ -208,7 +224,8 @@ mod tests {
                 clue_type: ClueType::Rank,
                 clue_value: 5,
             },
+            turn: None,
         };
-        assert!(!FiveSave.matches_action(&action, &pov));
+        assert!(!FiveSave.matches_action(&action, None, &pov));
     }
 }

@@ -167,6 +167,7 @@ pub fn clues_for_player_with_focus(
                         player_index: target_player_index,
                         touched_card_deck_indexes: touched,
                         clue,
+                        turn: None,
                     },
                     focus_idx,
                 ));

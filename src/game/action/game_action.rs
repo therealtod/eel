@@ -22,5 +22,9 @@ pub enum GameAction {
         player_index: PlayerIndex,
         touched_card_deck_indexes: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]>,
         clue: Clue,
+        /// Index into the game history (the `KnowledgeAwareGameState::history` snapshot vec)
+        /// recording the state *before* this clue was given.
+        /// `None` for hypothetical/proposed actions that have not yet been applied to the game.
+        turn: Option<usize>,
     },
 }

@@ -3,6 +3,7 @@ use crate::game::MAX_HAND_SIZE;
 use crate::engine::convention::convention_set::ConventionSet;
 use crate::engine::game_state_snapshot::GameStateSnapshot;
 use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
+use crate::engine::knowledge::player_pov_snapshot::PlayerPOVSnapshot;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, VariantCardId};
@@ -18,6 +19,10 @@ use crate::game::static_game_data::StaticGameData;
 /// Two variants of each mutating method are provided:
 /// - `*_of_specific_card`: used when the card identity is known (spectator / replay mode).
 /// - without suffix: used when the identity is unknown (alpha-beta search over hidden state).
+///
+/// Call [`record_snapshot`](Self::record_snapshot) before each action to build up a turn
+/// history. Use [`pov_at_turn`](Self::pov_at_turn) to retrieve any player's POV as it looked
+/// at that moment — useful for retrospective analysis of why a player chose a given action.
 #[derive(Clone)]
 pub struct KnowledgeAwareGameState {
     pub table_state: TableState,
@@ -26,6 +31,9 @@ pub struct KnowledgeAwareGameState {
     /// The deck index that will be assigned to the next synthesized draw.
     /// Initialized to `MAX_CARDS_IN_DECK - deck.current_size`.
     pub next_deck_index: u8,
+    /// Per-turn snapshots recorded by [`record_snapshot`](Self::record_snapshot).
+    /// Index `i` holds the state *before* the action taken on turn `i`.
+    history: Vec<GameStateSnapshot>,
 }
 
 impl KnowledgeAwareGameState {
@@ -37,6 +45,7 @@ impl KnowledgeAwareGameState {
             team_knowledge,
             static_data,
             next_deck_index: 0,
+            history: Vec::new(),
         }
     }
 
@@ -52,6 +61,7 @@ impl KnowledgeAwareGameState {
             team_knowledge,
             static_data,
             next_deck_index,
+            history: Vec::new(),
         }
     }
 
@@ -159,19 +169,32 @@ impl KnowledgeAwareGameState {
 
     // ── Search helpers ────────────────────────────────────────────────────────
 
-    /// Apply a `GameAction` (hidden-information flavor) and propagate convention knowledge.
+    /// Apply a `GameAction` (hidden-information flavour) and propagate convention knowledge.
     /// Does NOT advance the turn; call `advance_turn()` separately.
+    ///
+    /// For clue actions the `turn` field is set to `self.history_len() - 1` so the action
+    /// permanently records which snapshot in `history` captures the state before this clue.
+    /// Call [`record_snapshot`](Self::record_snapshot) *before* `apply` so the snapshot is
+    /// already in `history` when this assignment runs.
+    ///
     /// The search uses clone-and-recurse, so no undo token is needed.
-    pub fn apply(&mut self, action: &GameAction, convention_set: &dyn ConventionSet) {
+    pub fn apply(&mut self, action: &mut GameAction, convention_set: &dyn ConventionSet) {
         match action {
             GameAction::Play { card_deck_index, .. } => self.apply_play(*card_deck_index, convention_set),
             GameAction::Discard { card_deck_index, .. } => self.apply_discard(*card_deck_index),
-            GameAction::Clue { touched_card_deck_indexes, clue, player_index, .. } => {
-                self.apply_clue(touched_card_deck_indexes, clue, *player_index, action, convention_set);
+            GameAction::Clue { touched_card_deck_indexes, clue, player_index, turn } => {
+                // Stamp the turn so callers can later look up this snapshot in history.
+                *turn = self.history.len().checked_sub(1);
+                let touched = touched_card_deck_indexes.clone();
+                let clue_val = clue.clone();
+                let receiver = *player_index;
+                // Re-borrow as shared; apply_clue only needs to read the action.
+                let action_ref: &GameAction = action;
+                self.apply_clue(&touched, &clue_val, receiver, action_ref, convention_set);
             }
             GameAction::Draw { card_deck_index, player_index } => {
                 self.table_state.update_with_draw_action(*card_deck_index);
-                self.team_knowledge.player_mut(*player_index).own_hand |= 1 << card_deck_index;
+                self.team_knowledge.player_mut(*player_index).own_hand |= 1u64 << *card_deck_index;
             }
         }
     }
@@ -189,11 +212,11 @@ impl KnowledgeAwareGameState {
         let matched_tech = convention_set
             .techs()
             .iter()
-            .find(|tech| tech.matches_action(&action, &pov));
+            .find(|tech| tech.matches_action(&action, None, &pov));
         let updates: Vec<_> = matched_tech
             .map(|tech| {
                 tracing::debug!(target: "eel::apply", giver = p, action = ?action, "tech_matched");
-                tech.knowledge_updates(&action, &pov)
+                tech.knowledge_updates(&action, None, &pov)
             })
             .unwrap_or_default();
 
@@ -301,8 +324,9 @@ impl KnowledgeAwareGameState {
         convention_set: &dyn ConventionSet,
     ) {
         let giver = self.table_state.player_on_turn_index;
-        // Snapshot the pre-clue state so that matches_action sees the chop before the clue
-        // marks it as touched (save techs identify the chop by finding the oldest unclued card).
+        // Capture the full pre-clue state. This snapshot is threaded through all tech calls so
+        // that chop/focus calculations are always based on the hand state before any card was
+        // marked as touched by this clue.
         let pre_clue_snapshot = self.snapshot();
         self.table_state.update_with_clue_action(
             touched_card_deck_indexes.clone(),
@@ -314,7 +338,7 @@ impl KnowledgeAwareGameState {
         let matched_tech = convention_set
             .techs()
             .iter()
-            .find(|tech| tech.matches_action(action, &pre_clue_giver_pov));
+            .find(|tech| tech.matches_action(action, Some(&pre_clue_snapshot), &pre_clue_giver_pov));
         let Some(tech) = matched_tech else { return };
         tracing::debug!(target: "eel::apply", giver, action = ?action, "tech_matched");
         // Set player_on_turn_index to receiver so techs using player_on_turn_index()
@@ -327,7 +351,7 @@ impl KnowledgeAwareGameState {
             &self.table_state,
             &self.static_data,
         );
-        let updates = tech.knowledge_updates(action, &receiver_pov);
+        let updates = tech.knowledge_updates(action, Some(&pre_clue_snapshot), &receiver_pov);
         self.team_knowledge.player_mut(receiver).apply_updates(&updates, &self.static_data.variant);
         // Also update non-receiver players (e.g. prompted/finessed player in
         // simple_prompt/finesse Case 1). Only apply updates for cards in their own hand.
@@ -341,7 +365,7 @@ impl KnowledgeAwareGameState {
                 &self.table_state,
                 &self.static_data,
             );
-            let updates = tech.knowledge_updates(action, &target_pov);
+            let updates = tech.knowledge_updates(action, Some(&pre_clue_snapshot), &target_pov);
             // Only apply updates for cards in target's own hand to avoid incorrectly
             // narrowing knowledge of cards in other players' hands.
             let own_hand = self.team_knowledge.player(target).own_hand;
@@ -401,6 +425,34 @@ impl KnowledgeAwareGameState {
     /// Capture the current board state and team knowledge as an owned snapshot.
     pub fn snapshot(&self) -> GameStateSnapshot {
         GameStateSnapshot::new(self.table_state.clone(), self.team_knowledge.clone())
+    }
+
+    /// Push a snapshot of the current state onto the history.
+    ///
+    /// Call this *before* applying the action for a given turn so that
+    /// `history[t]` reflects the state each player saw when deciding on turn `t`.
+    pub fn record_snapshot(&mut self) {
+        self.history.push(self.snapshot());
+    }
+
+    /// Retrieve the POV of `player_index` as it looked at the start of turn `turn`.
+    ///
+    /// Returns `None` if `turn` is out of range (no snapshot was recorded for it)
+    /// or `player_index` is invalid.
+    ///
+    /// Call [`PlayerPOVSnapshot::as_pov`] with [`Self::static_data`] to materialise a
+    /// [`LightweightPlayerPOV`] from the returned snapshot.
+    pub fn pov_at_turn(&self, turn: usize, player_index: usize) -> Option<PlayerPOVSnapshot> {
+        let snapshot = self.history.get(turn)?.clone();
+        if player_index >= self.static_data.number_of_players as usize {
+            return None;
+        }
+        Some(PlayerPOVSnapshot::new(player_index, snapshot))
+    }
+
+    /// The number of snapshots recorded so far.
+    pub fn history_len(&self) -> usize {
+        self.history.len()
     }
 }
 

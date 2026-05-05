@@ -1,8 +1,9 @@
 use crate::engine::convention::convention_tech::ClueTech;
 use crate::engine::convention::hgroup::h_group_core::{
-    get_chop_index, giver_pov, touched_cards_for_clue,
+    get_chop_index, touched_cards_for_clue,
 };
 use crate::engine::convention::hgroup::h_group_tech::{priority, HGroupClueTech, SaveClueTech};
+use crate::engine::game_state_snapshot::GameStateSnapshot;
 use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
@@ -59,6 +60,7 @@ fn critical_save_actions(
                 player_index: target,
                 touched_card_deck_indexes: touched,
                 clue,
+                turn: None,
             }
         })
         .collect()
@@ -68,17 +70,23 @@ fn critical_save_knowledge_updates(
     receiver: PlayerIndex,
     touched_card_deck_indexes: &[CardDeckIndex],
     clue: &Clue,
+    snapshot: Option<&GameStateSnapshot>,
     player_pov: &dyn PlayerPOV,
 ) -> Vec<KnowledgeUpdate> {
-    let giver_pov = giver_pov(player_pov);
-    let chop = match giver_pov.table_state().hands[receiver]
-        .cards()
-        .iter()
-        .copied()
-        .find(|idx| touched_card_deck_indexes.contains(idx))
-    {
-        Some(c) => c,
-        None => return vec![],
+    // Reconstruct the giver's POV as it was before the clue was applied so that the chop
+    // is computed against the pre-clue hand state (before any card was marked as touched).
+    let giver_pov_holder;
+    let giver_pov: &dyn PlayerPOV = match snapshot {
+        Some(snap) => {
+            let giver = snap.table_state.player_on_turn_index;
+            giver_pov_holder = snap.player_pov(giver, player_pov.static_data());
+            &giver_pov_holder
+        }
+        None => player_pov,
+    };
+    let chop = match get_chop_index(receiver, giver_pov) {
+        Some(c) if touched_card_deck_indexes.contains(&c) => c,
+        _ => return vec![],
     };
     let static_data = giver_pov.static_data();
     let stacks_size = static_data.variant.stacks_size as usize;
@@ -91,7 +99,7 @@ fn critical_save_knowledge_updates(
             }
             if (1u64 << id) & clue_mask == 0 {
                 return false;
-            } // matches the clue by empathy
+            }
             giver_pov.is_critical_card_id(id)
         })
         .fold(0u64, |acc, id| acc | (1 << id));
@@ -108,30 +116,28 @@ fn critical_save_matches(
     player_index: PlayerIndex,
     touched_card_deck_indexes: &[CardDeckIndex],
     clue: &Clue,
+    snapshot: Option<&GameStateSnapshot>,
     player_pov: &dyn PlayerPOV,
     clue_type: ClueType,
 ) -> bool {
     if clue.clue_type != clue_type {
         return false;
     }
-    let giver_pov = giver_pov(player_pov);
-    can_be_critical_saved(player_index, &giver_pov) && {
-        let newly_touched_mask: u64 = touched_card_deck_indexes
-            .iter()
-            .fold(0u64, |acc, &idx| acc | (1 << idx));
-        giver_pov.table_state().hands[player_index]
-            .cards()
-            .iter()
-            .rev()
-            .copied()
-            .find(|&idx| {
-                let was_already_touched =
-                    giver_pov.is_touched(idx) && (newly_touched_mask & (1 << idx) == 0);
-                !was_already_touched
-            })
+    // Reconstruct the giver's POV from the pre-clue snapshot so that chop/focus are computed
+    // against the hand state before this clue's touch flags were applied.
+    let giver_pov_holder;
+    let giver_pov: &dyn PlayerPOV = match snapshot {
+        Some(snap) => {
+            let giver = snap.table_state.player_on_turn_index;
+            giver_pov_holder = snap.player_pov(giver, player_pov.static_data());
+            &giver_pov_holder
+        }
+        None => player_pov,
+    };
+    can_be_critical_saved(player_index, giver_pov)
+        && get_chop_index(player_index, giver_pov)
             .map(|chop| touched_card_deck_indexes.contains(&chop))
             .unwrap_or(false)
-    }
 }
 
 /// Save a critical card on chop by cluing its color (suit).
@@ -150,9 +156,10 @@ impl ClueTech for ColorCriticalSave {
         player_index: PlayerIndex,
         touched: &[CardDeckIndex],
         clue: &Clue,
+        snapshot: Option<&GameStateSnapshot>,
         pov: &dyn PlayerPOV,
     ) -> bool {
-        critical_save_matches(player_index, touched, clue, pov, ClueType::Color)
+        critical_save_matches(player_index, touched, clue, snapshot, pov, ClueType::Color)
     }
 
     fn clue_knowledge_updates(
@@ -160,9 +167,10 @@ impl ClueTech for ColorCriticalSave {
         player_index: PlayerIndex,
         touched: &[CardDeckIndex],
         clue: &Clue,
+        snapshot: Option<&GameStateSnapshot>,
         player_pov: &dyn PlayerPOV,
     ) -> Vec<KnowledgeUpdate> {
-        critical_save_knowledge_updates(player_index, touched, clue, player_pov)
+        critical_save_knowledge_updates(player_index, touched, clue, snapshot, player_pov)
     }
 }
 
@@ -186,9 +194,10 @@ impl ClueTech for RankCriticalSave {
         player_index: PlayerIndex,
         touched: &[CardDeckIndex],
         clue: &Clue,
+        snapshot: Option<&GameStateSnapshot>,
         pov: &dyn PlayerPOV,
     ) -> bool {
-        critical_save_matches(player_index, touched, clue, pov, ClueType::Rank)
+        critical_save_matches(player_index, touched, clue, snapshot, pov, ClueType::Rank)
     }
 
     fn clue_knowledge_updates(
@@ -196,9 +205,10 @@ impl ClueTech for RankCriticalSave {
         player_index: PlayerIndex,
         touched: &[CardDeckIndex],
         clue: &Clue,
+        snapshot: Option<&GameStateSnapshot>,
         player_pov: &dyn PlayerPOV,
     ) -> Vec<KnowledgeUpdate> {
-        critical_save_knowledge_updates(player_index, touched, clue, player_pov)
+        critical_save_knowledge_updates(player_index, touched, clue, snapshot, player_pov)
     }
 }
 
@@ -344,8 +354,9 @@ mod tests {
                 clue_type: ClueType::Color,
                 clue_value: 0,
             },
+            turn: None,
         };
-        assert!(ColorCriticalSave.matches_action(&action, &pov));
+        assert!(ColorCriticalSave.matches_action(&action, None, &pov));
     }
 
     #[test]
@@ -367,7 +378,8 @@ mod tests {
                 clue_type: ClueType::Color,
                 clue_value: 1,
             },
+            turn: None,
         };
-        assert!(!ColorCriticalSave.matches_action(&action, &pov));
+        assert!(!ColorCriticalSave.matches_action(&action, None, &pov));
     }
 }

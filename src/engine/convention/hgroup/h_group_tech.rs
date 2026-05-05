@@ -46,16 +46,16 @@ macro_rules! impl_convention_tech_for_hgroup_clue_tech {
                 actions.retain(|a| filters.iter().all(|f| f.apply(a, pov)));
                 actions
             }
-            fn matches_action(&self, action: &$crate::game::action::game_action::GameAction, pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV) -> bool {
-                if let GameAction::Clue { player_index, touched_card_deck_indexes, clue } = action {
-                        $crate::engine::convention::convention_tech::ClueTech::matches_clue(self, *player_index, touched_card_deck_indexes, clue, pov)
+            fn matches_action(&self, action: &$crate::game::action::game_action::GameAction, snapshot: Option<&$crate::engine::game_state_snapshot::GameStateSnapshot>, pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV) -> bool {
+                if let GameAction::Clue { player_index, touched_card_deck_indexes, clue, .. } = action {
+                        $crate::engine::convention::convention_tech::ClueTech::matches_clue(self, *player_index, touched_card_deck_indexes, clue, snapshot, pov)
                 } else {
                     false
                 }
             }
-            fn knowledge_updates(&self, action: &$crate::game::action::game_action::GameAction, pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV) -> Vec<$crate::engine::knowledge::knowledge_update::KnowledgeUpdate> {
-                if let GameAction::Clue { player_index, touched_card_deck_indexes, clue } = action {
-                    $crate::engine::convention::convention_tech::ClueTech::clue_knowledge_updates(self, *player_index, touched_card_deck_indexes, clue, pov)
+            fn knowledge_updates(&self, action: &$crate::game::action::game_action::GameAction, snapshot: Option<&$crate::engine::game_state_snapshot::GameStateSnapshot>, pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV) -> Vec<$crate::engine::knowledge::knowledge_update::KnowledgeUpdate> {
+                if let GameAction::Clue { player_index, touched_card_deck_indexes, clue, .. } = action {
+                    $crate::engine::convention::convention_tech::ClueTech::clue_knowledge_updates(self, *player_index, touched_card_deck_indexes, clue, snapshot, pov)
                 } else { vec![] }
             }
         }

@@ -146,7 +146,7 @@ mod tests {
                 player_index: 0,
                 card_deck_index: 10,
             };
-            assert!(DiscardChop.matches_action(&chop_action, &pov));
+            assert!(DiscardChop.matches_action(&chop_action, None, &pov));
         }
 
         #[test]
@@ -165,7 +165,7 @@ mod tests {
                 player_index: 0,
                 card_deck_index: 30,
             };
-            assert!(!DiscardChop.matches_action(&non_chop, &pov));
+            assert!(!DiscardChop.matches_action(&non_chop, None, &pov));
         }
     }
 }
