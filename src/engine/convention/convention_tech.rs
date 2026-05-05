@@ -117,25 +117,70 @@ pub trait ClueTech: Sync {
 macro_rules! impl_convention_tech_for_clue_tech {
     ($t:ty, $priority:expr) => {
         impl $crate::engine::convention::convention_tech::ConventionTech for $t {
-            fn name(&self) -> &'static str { stringify!($t) }
+            fn name(&self) -> &'static str {
+                stringify!($t)
+            }
             fn interpretation_priority(&self) -> u8 {
                 $priority
             }
 
-            fn game_actions(&self, pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV) -> Vec<$crate::game::action::game_action::GameAction> {
+            fn game_actions(
+                &self,
+                pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV,
+            ) -> Vec<$crate::game::action::game_action::GameAction> {
                 $crate::engine::convention::convention_tech::ClueTech::clue_game_actions(self, pov)
             }
 
-            fn matches_action(&self, action: &$crate::game::action::game_action::GameAction, snapshot: Option<&$crate::engine::game_state_snapshot::GameStateSnapshot>, pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV) -> bool {
-                if let $crate::game::action::game_action::GameAction::Clue { player_index, touched_card_deck_indexes, clue, .. } = action {
-                    $crate::engine::convention::convention_tech::ClueTech::matches_clue(self, *player_index, touched_card_deck_indexes, clue, snapshot, pov)
-                } else { false }
+            fn matches_action(
+                &self,
+                action: &$crate::game::action::game_action::GameAction,
+                snapshot: Option<&$crate::engine::game_state_snapshot::GameStateSnapshot>,
+                pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV,
+            ) -> bool {
+                if let $crate::game::action::game_action::GameAction::Clue {
+                    player_index,
+                    touched_card_deck_indexes,
+                    clue,
+                    ..
+                } = action
+                {
+                    $crate::engine::convention::convention_tech::ClueTech::matches_clue(
+                        self,
+                        *player_index,
+                        touched_card_deck_indexes,
+                        clue,
+                        snapshot,
+                        pov,
+                    )
+                } else {
+                    false
+                }
             }
 
-            fn knowledge_updates(&self, action: &$crate::game::action::game_action::GameAction, snapshot: Option<&$crate::engine::game_state_snapshot::GameStateSnapshot>, pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV) -> Vec<$crate::engine::knowledge::knowledge_update::KnowledgeUpdate> {
-                if let $crate::game::action::game_action::GameAction::Clue { player_index, touched_card_deck_indexes, clue, .. } = action {
-                    $crate::engine::convention::convention_tech::ClueTech::clue_knowledge_updates(self, *player_index, touched_card_deck_indexes, clue, snapshot, pov)
-                } else { vec![] }
+            fn knowledge_updates(
+                &self,
+                action: &$crate::game::action::game_action::GameAction,
+                snapshot: Option<&$crate::engine::game_state_snapshot::GameStateSnapshot>,
+                pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV,
+            ) -> Vec<$crate::engine::knowledge::knowledge_update::KnowledgeUpdate> {
+                if let $crate::game::action::game_action::GameAction::Clue {
+                    player_index,
+                    touched_card_deck_indexes,
+                    clue,
+                    ..
+                } = action
+                {
+                    $crate::engine::convention::convention_tech::ClueTech::clue_knowledge_updates(
+                        self,
+                        *player_index,
+                        touched_card_deck_indexes,
+                        clue,
+                        snapshot,
+                        pov,
+                    )
+                } else {
+                    vec![]
+                }
             }
         }
     };
@@ -163,24 +208,59 @@ pub trait PlayTech: Sync {
 macro_rules! impl_convention_tech_for_play_tech {
     ($t:ty) => {
         impl $crate::engine::convention::convention_tech::ConventionTech for $t {
-            fn name(&self) -> &'static str { stringify!($t) }
-            fn interpretation_priority(&self) -> u8 { 0 }
+            fn name(&self) -> &'static str {
+                stringify!($t)
+            }
+            fn interpretation_priority(&self) -> u8 {
+                0
+            }
 
-            fn game_actions(&self, pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV) -> Vec<$crate::game::action::game_action::GameAction> {
+            fn game_actions(
+                &self,
+                pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV,
+            ) -> Vec<$crate::game::action::game_action::GameAction> {
                 $crate::engine::convention::convention_tech::PlayTech::play_game_actions(self, pov)
             }
 
-            fn matches_action(&self, action: &$crate::game::action::game_action::GameAction, _snapshot: Option<&$crate::engine::game_state_snapshot::GameStateSnapshot>, pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV) -> bool {
-                if let GameAction::Play { player_index, card_deck_index } = action {
-                    $crate::engine::convention::convention_tech::PlayTech::matches_play(self, *player_index, *card_deck_index, pov)
+            fn matches_action(
+                &self,
+                action: &$crate::game::action::game_action::GameAction,
+                _snapshot: Option<&$crate::engine::game_state_snapshot::GameStateSnapshot>,
+                pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV,
+            ) -> bool {
+                if let GameAction::Play {
+                    player_index,
+                    card_deck_index,
+                } = action
+                {
+                    $crate::engine::convention::convention_tech::PlayTech::matches_play(
+                        self,
+                        *player_index,
+                        *card_deck_index,
+                        pov,
+                    )
                 } else {
                     false
                 }
             }
 
-            fn knowledge_updates(&self, action: &$crate::game::action::game_action::GameAction, _snapshot: Option<&$crate::engine::game_state_snapshot::GameStateSnapshot>, pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV) -> Vec<$crate::engine::knowledge::knowledge_update::KnowledgeUpdate> {
-                if let GameAction::Play { player_index, card_deck_index } = action {
-                    $crate::engine::convention::convention_tech::PlayTech::play_knowledge_updates(self, *player_index, *card_deck_index, pov)
+            fn knowledge_updates(
+                &self,
+                action: &$crate::game::action::game_action::GameAction,
+                _snapshot: Option<&$crate::engine::game_state_snapshot::GameStateSnapshot>,
+                pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV,
+            ) -> Vec<$crate::engine::knowledge::knowledge_update::KnowledgeUpdate> {
+                if let GameAction::Play {
+                    player_index,
+                    card_deck_index,
+                } = action
+                {
+                    $crate::engine::convention::convention_tech::PlayTech::play_knowledge_updates(
+                        self,
+                        *player_index,
+                        *card_deck_index,
+                        pov,
+                    )
                 } else {
                     vec![]
                 }

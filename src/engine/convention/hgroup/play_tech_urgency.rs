@@ -2,5 +2,5 @@
 /// defer a play action at will, or not.
 pub enum PlayTechUrgency {
     Default,
-    BlindPlay
+    BlindPlay,
 }

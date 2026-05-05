@@ -1,9 +1,11 @@
 use smallvec::SmallVec;
 
-use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
 use crate::engine::convention::hgroup::signal::Signal;
+use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
 use crate::game::MAX_CARDS_IN_DECK;
-use crate::game::card::{CardDeckIndex, DeckCardsBitField, Empathy, VariantCardId, VariantCardsBitField};
+use crate::game::card::{
+    CardDeckIndex, DeckCardsBitField, Empathy, VariantCardId, VariantCardsBitField,
+};
 use crate::game::state::table_state::TableState;
 use crate::game::variant::Variant;
 
@@ -69,7 +71,7 @@ impl PlayerKnowledgeState {
         &mut self,
         card_deck_index: CardDeckIndex,
         mask: VariantCardsBitField,
-        variant: &Variant
+        variant: &Variant,
     ) {
         let idx = card_deck_index as usize;
         let current = self.inferred_identities[idx].unwrap_or_else(|| Empathy::all(variant));
@@ -150,7 +152,8 @@ impl PlayerKnowledgeState {
 pub fn knowledge_with_visible(player_index: usize, visible: &[(u8, u64)]) -> PlayerKnowledgeState {
     let mut k = PlayerKnowledgeState::new(player_index);
     for &(idx, mask) in visible {
-        k.inferred_identities[idx as usize] = Some(Empathy::from_bits(mask).expect("zero mask in knowledge_with_visible"));
+        k.inferred_identities[idx as usize] =
+            Some(Empathy::from_bits(mask).expect("zero mask in knowledge_with_visible"));
         k.visible_cards |= 1 << idx;
     }
     k
@@ -170,8 +173,8 @@ pub fn knowledge_with_empathy(
     possible_identities: VariantCardsBitField,
 ) -> PlayerKnowledgeState {
     let mut k = PlayerKnowledgeState::new(0);
-    k.inferred_identities[card_deck_index as usize] = Some(Empathy::from_bits(possible_identities)
-        .expect("zero mask in knowledge_with_empathy"));
+    k.inferred_identities[card_deck_index as usize] =
+        Some(Empathy::from_bits(possible_identities).expect("zero mask in knowledge_with_empathy"));
     k.own_hand = 1 << card_deck_index;
     k
 }

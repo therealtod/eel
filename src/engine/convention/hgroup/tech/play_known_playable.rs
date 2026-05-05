@@ -27,11 +27,18 @@ impl PlayTech for PlayKnownPlayable {
                 .iter()
                 .any(|s| matches!(s, Signal::Play { .. }));
             // Use global empathy from Deck (game-rule based) merged with inferred identities
-            let combined = knowledge.combined_possible_identities(card_deck_index, table_state, &pov.static_data().variant);
+            let combined = knowledge.combined_possible_identities(
+                card_deck_index,
+                table_state,
+                &pov.static_data().variant,
+            );
             let bits = combined.as_bits();
             let empathy_playable = bits != 0 && bits & playable == bits;
             if empathy_playable && !has_play_signal {
-                actions.push(GameAction::Play { player_index, card_deck_index });
+                actions.push(GameAction::Play {
+                    player_index,
+                    card_deck_index,
+                });
             }
             hand_mask &= !(1u64 << card_deck_index);
         }
@@ -50,7 +57,11 @@ impl PlayTech for PlayKnownPlayable {
             .any(|s| matches!(s, Signal::Play { .. }));
         let table_state = pov.table_state();
         let playable = table_state.playable_cards(pov.static_data());
-        let combined = knowledge.combined_possible_identities(card_deck_index, table_state, &pov.static_data().variant);
+        let combined = knowledge.combined_possible_identities(
+            card_deck_index,
+            table_state,
+            &pov.static_data().variant,
+        );
         let bits = combined.as_bits();
         bits != 0 && bits & playable == bits && !has_play_signal
     }
@@ -87,7 +98,8 @@ mod tests {
         let table_state = initial_five_players_table_state();
         let knowledge = PlayerKnowledgeState::new(0);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         assert!(PlayKnownPlayable.game_actions(&pov).is_empty());
     }
@@ -105,13 +117,18 @@ mod tests {
 
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).own_hand = 1 << 10;
-        team_knowledge.player_mut(0).inferred_identities[10] = Some(Empathy::from_bits(R1_MASK).unwrap());
+        team_knowledge.player_mut(0).inferred_identities[10] =
+            Some(Empathy::from_bits(R1_MASK).unwrap());
 
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         assert_eq!(
             PlayKnownPlayable.game_actions(&pov),
-            vec![GameAction::Play { player_index: 0, card_deck_index: 10 }]
+            vec![GameAction::Play {
+                player_index: 0,
+                card_deck_index: 10
+            }]
         );
     }
 
@@ -124,7 +141,7 @@ mod tests {
 
         let signal = Signal::Play {
             card_deck_index: 10,
-            knowledge_updates: vec![]
+            knowledge_updates: vec![],
         };
 
         let mut knowledge = PlayerKnowledgeState::new(0);
@@ -134,10 +151,12 @@ mod tests {
 
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).own_hand = 1 << 10;
-        team_knowledge.player_mut(0).inferred_identities[10] = Some(Empathy::from_bits(R1_MASK).unwrap());
+        team_knowledge.player_mut(0).inferred_identities[10] =
+            Some(Empathy::from_bits(R1_MASK).unwrap());
         team_knowledge.player_mut(0).signals[10].push(signal);
 
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         assert!(PlayKnownPlayable.game_actions(&pov).is_empty());
     }
@@ -151,17 +170,26 @@ mod tests {
 
         let signal = Signal::Play {
             card_deck_index: 10,
-            knowledge_updates: vec![]
+            knowledge_updates: vec![],
         };
 
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).own_hand = 1 << 10;
-        team_knowledge.player_mut(0).inferred_identities[10] = Some(Empathy::from_bits(R1_MASK).unwrap());
+        team_knowledge.player_mut(0).inferred_identities[10] =
+            Some(Empathy::from_bits(R1_MASK).unwrap());
         team_knowledge.player_mut(0).signals[10].push(signal);
 
         let knowledge = PlayerKnowledgeState::new(0);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
-        assert!(!PlayKnownPlayable.matches_action(&GameAction::Play { player_index: 0, card_deck_index: 10 }, None, &pov));
+        assert!(!PlayKnownPlayable.matches_action(
+            &GameAction::Play {
+                player_index: 0,
+                card_deck_index: 10
+            },
+            None,
+            &pov
+        ));
     }
 }

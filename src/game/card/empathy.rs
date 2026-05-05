@@ -1,5 +1,5 @@
-use crate::game::variant::Variant;
 use super::{VariantCardId, VariantCardsBitField};
+use crate::game::variant::Variant;
 
 /// A non-zero bitmask of possible card identities for a single deck position.
 ///

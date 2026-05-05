@@ -1,8 +1,6 @@
 use crate::engine::convention::convention_tech::ClueTech;
-use crate::engine::convention::hgroup::h_group_core::{
-    get_chop_index, touched_cards_for_clue,
-};
-use crate::engine::convention::hgroup::h_group_tech::{priority, HGroupClueTech, SaveClueTech};
+use crate::engine::convention::hgroup::h_group_core::{get_chop_index, touched_cards_for_clue};
+use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, SaveClueTech, priority};
 use crate::engine::game_state_snapshot::GameStateSnapshot;
 use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
 use crate::engine::knowledge::player_pov::PlayerPOV;
@@ -220,9 +218,9 @@ impl_convention_tech_for_hgroup_clue_tech!(RankCriticalSave, priority::SAVE);
 mod tests {
     use super::*;
     use crate::engine::convention::convention_tech::ConventionTech;
+    use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
     use crate::engine::knowledge::player_knowledge_state::PlayerKnowledgeState;
     use crate::engine::knowledge::player_knowledge_state::knowledge_with_visible;
-    use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
     use crate::engine::knowledge::team_knowledge::TeamKnowledge;
     use crate::game::deck::unit_test_constants::novariant_constants::{R2_MASK, R4_MASK, Y4_MASK};
     use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
@@ -253,7 +251,8 @@ mod tests {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let (table_state, knowledge) = setup_with_critical_chop(3, R4_MASK); // R4 = id 3
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let actions = ColorCriticalSave.game_actions(&pov);
 
@@ -268,7 +267,8 @@ mod tests {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let (table_state, knowledge) = setup_with_critical_chop(3, R4_MASK); // R4 = rank 4
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let actions = RankCriticalSave.game_actions(&pov);
 
@@ -288,7 +288,8 @@ mod tests {
         // No discards — R4 still has 2 copies, not critical
         let knowledge = knowledge_with_visible(0, &[(10, R4_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         assert!(ColorCriticalSave.game_actions(&pov).is_empty());
         assert!(RankCriticalSave.game_actions(&pov).is_empty());
@@ -305,7 +306,8 @@ mod tests {
         // Card 10 identity not known to player 0
         let knowledge = knowledge_with_visible(0, &[]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         assert!(ColorCriticalSave.game_actions(&pov).is_empty());
         assert!(RankCriticalSave.game_actions(&pov).is_empty());
@@ -323,7 +325,8 @@ mod tests {
         table_state.discard_pile.add_card_with_id(3); // discard one R4
         let knowledge = knowledge_with_visible(0, &[(10, R4_MASK), (20, R2_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let actions = ColorCriticalSave.game_actions(&pov);
 
@@ -345,7 +348,8 @@ mod tests {
         let (table_state, knowledge) = setup_with_critical_chop(3, R4_MASK);
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         *team_knowledge.player_mut(0) = knowledge.clone();
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let action = GameAction::Clue {
             player_index: 1,
@@ -369,7 +373,8 @@ mod tests {
         let knowledge = knowledge_with_visible(0, &[(10, Y4_MASK)]);
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         *team_knowledge.player_mut(0) = knowledge.clone();
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let action = GameAction::Clue {
             player_index: 1,

@@ -16,7 +16,10 @@ pub struct GameStateSnapshot {
 
 impl GameStateSnapshot {
     pub fn new(table_state: TableState, team_knowledge: TeamKnowledge) -> Self {
-        GameStateSnapshot { table_state, team_knowledge }
+        GameStateSnapshot {
+            table_state,
+            team_knowledge,
+        }
     }
 
     pub fn player_pov<'a>(

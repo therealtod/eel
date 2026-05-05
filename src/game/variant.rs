@@ -60,7 +60,7 @@ impl Variant {
         self.rank_by_id[variant_card_id]
     }
 
-    /// Returns the identity (if any) of the card that needs to be played before the given 
+    /// Returns the identity (if any) of the card that needs to be played before the given
     /// `variant_card_id`
     pub fn prerequisite(&self, variant_card_id: VariantCardId) -> Option<VariantCardId> {
         if 1 << variant_card_id & self.stack_starting_cards != 0 {
@@ -69,7 +69,7 @@ impl Variant {
             Some(variant_card_id - 1)
         }
     }
-    
+
     pub fn is_stack_ending_card(&self, variant_card_id: VariantCardId) -> bool {
         1 << variant_card_id & self.stack_ending_cards != 0
     }
@@ -131,6 +131,6 @@ pub mod test_variants {
             0, 0, 0, 0, 0, 0,
         ],
         stack_starting_cards: ONES_BITFIELD,
-        stack_ending_cards: FIVES_BITFIELD
+        stack_ending_cards: FIVES_BITFIELD,
     };
 }

@@ -1,8 +1,8 @@
+use crate::game::MAX_HAND_SIZE;
 use crate::game::card::CardDeckIndex;
 use crate::game::clue::Clue;
 use crate::game::state::PlayerIndex;
 use smallvec::SmallVec;
-use crate::game::MAX_HAND_SIZE;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum GameAction {

@@ -1,15 +1,15 @@
-use smallvec::SmallVec;
-use crate::game::MAX_HAND_SIZE;
 use crate::engine::convention::convention_set::ConventionSet;
 use crate::engine::game_state_snapshot::GameStateSnapshot;
 use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 use crate::engine::knowledge::player_pov_snapshot::PlayerPOVSnapshot;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
+use crate::game::MAX_HAND_SIZE;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, VariantCardId};
 use crate::game::clue::Clue;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
+use smallvec::SmallVec;
 
 /// A [TableState] with associated player knowledge and convention awareness.
 ///
@@ -180,9 +180,18 @@ impl KnowledgeAwareGameState {
     /// The search uses clone-and-recurse, so no undo token is needed.
     pub fn apply(&mut self, action: &mut GameAction, convention_set: &dyn ConventionSet) {
         match action {
-            GameAction::Play { card_deck_index, .. } => self.apply_play(*card_deck_index, convention_set),
-            GameAction::Discard { card_deck_index, .. } => self.apply_discard(*card_deck_index),
-            GameAction::Clue { touched_card_deck_indexes, clue, player_index, turn } => {
+            GameAction::Play {
+                card_deck_index, ..
+            } => self.apply_play(*card_deck_index, convention_set),
+            GameAction::Discard {
+                card_deck_index, ..
+            } => self.apply_discard(*card_deck_index),
+            GameAction::Clue {
+                touched_card_deck_indexes,
+                clue,
+                player_index,
+                turn,
+            } => {
                 // Stamp the turn so callers can later look up this snapshot in history.
                 *turn = self.history.len().checked_sub(1);
                 let touched = touched_card_deck_indexes.clone();
@@ -192,7 +201,10 @@ impl KnowledgeAwareGameState {
                 let action_ref: &GameAction = action;
                 self.apply_clue(&touched, &clue_val, receiver, action_ref, convention_set);
             }
-            GameAction::Draw { card_deck_index, player_index } => {
+            GameAction::Draw {
+                card_deck_index,
+                player_index,
+            } => {
                 self.table_state.update_with_draw_action(*card_deck_index);
                 self.team_knowledge.player_mut(*player_index).own_hand |= 1u64 << *card_deck_index;
             }
@@ -201,7 +213,10 @@ impl KnowledgeAwareGameState {
 
     fn apply_play(&mut self, card_deck_index: CardDeckIndex, convention_set: &dyn ConventionSet) {
         let p = self.table_state.player_on_turn_index;
-        let action = GameAction::Play { player_index: p, card_deck_index };
+        let action = GameAction::Play {
+            player_index: p,
+            card_deck_index,
+        };
         let pov = LightweightPlayerPOV::new(
             p,
             self.team_knowledge.player(p),
@@ -233,10 +248,17 @@ impl KnowledgeAwareGameState {
         // advancing stacks), since guessing wrong would corrupt the search state.
         let known_id = {
             let knowledge = self.team_knowledge.player(p);
-            let has_play_signal = knowledge.signals[card_deck_index as usize]
-                .iter()
-                .any(|s| matches!(s, crate::engine::convention::hgroup::signal::Signal::Play { .. }));
-            let combined = knowledge.combined_possible_identities(card_deck_index, &self.table_state, &self.static_data.variant);
+            let has_play_signal = knowledge.signals[card_deck_index as usize].iter().any(|s| {
+                matches!(
+                    s,
+                    crate::engine::convention::hgroup::signal::Signal::Play { .. }
+                )
+            });
+            let combined = knowledge.combined_possible_identities(
+                card_deck_index,
+                &self.table_state,
+                &self.static_data.variant,
+            );
             // Primary: use the identity directly if fully resolved (covers both non-touched
             // cards with inferred_identities and clue-touched cards narrowed to a single card
             // by NarrowPossibilities from a play clue).
@@ -266,17 +288,27 @@ impl KnowledgeAwareGameState {
         let num_players = self.static_data.number_of_players as usize;
         for target in (0..num_players).filter(|&t| t != p) {
             let own_hand = self.team_knowledge.player(target).own_hand;
-            let filtered: Vec<_> = updates.iter().filter(|u| {
-                use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
-                let idx = match u {
-                    KnowledgeUpdate::NarrowPossibilities { card_deck_index, .. }
-                    | KnowledgeUpdate::AddSignal { card_deck_index, .. } => *card_deck_index,
-                };
-                own_hand & (1 << idx) != 0
-            }).cloned().collect();
+            let filtered: Vec<_> = updates
+                .iter()
+                .filter(|u| {
+                    use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
+                    let idx = match u {
+                        KnowledgeUpdate::NarrowPossibilities {
+                            card_deck_index, ..
+                        }
+                        | KnowledgeUpdate::AddSignal {
+                            card_deck_index, ..
+                        } => *card_deck_index,
+                    };
+                    own_hand & (1 << idx) != 0
+                })
+                .cloned()
+                .collect();
             if !filtered.is_empty() {
                 tracing::debug!(target: "eel::apply", target, updates = ?filtered, "knowledge_updated");
-                self.team_knowledge.player_mut(target).apply_updates(&filtered, &self.static_data.variant);
+                self.team_knowledge
+                    .player_mut(target)
+                    .apply_updates(&filtered, &self.static_data.variant);
             }
         }
     }
@@ -290,7 +322,11 @@ impl KnowledgeAwareGameState {
             .filter(|&obs| obs != p)
             .map(|obs| {
                 let pk = self.team_knowledge.player(obs);
-                pk.combined_possible_identities(card_deck_index, &self.table_state, &self.static_data.variant)
+                pk.combined_possible_identities(
+                    card_deck_index,
+                    &self.table_state,
+                    &self.static_data.variant,
+                )
             })
             .find(|e| e.is_exactly_known())
             .unwrap_or_else(|| self.table_state.deck.get_global_empathy(card_deck_index));
@@ -309,7 +345,8 @@ impl KnowledgeAwareGameState {
             let bonus_tokens = self.static_data.variant.bonus_half_clue_tokens_for_discard;
             self.table_state.clue_token_bank.add_tokens(bonus_tokens);
         } else {
-            self.table_state.update_with_discard_action(card_deck_index, &self.static_data);
+            self.table_state
+                .update_with_discard_action(card_deck_index, &self.static_data);
         }
         self.remove_card_from_own_hand(p, card_deck_index);
         self.synthesize_draw(p);
@@ -335,10 +372,9 @@ impl KnowledgeAwareGameState {
             &self.static_data,
         );
         let pre_clue_giver_pov = pre_clue_snapshot.player_pov(giver, &self.static_data);
-        let matched_tech = convention_set
-            .techs()
-            .iter()
-            .find(|tech| tech.matches_action(action, Some(&pre_clue_snapshot), &pre_clue_giver_pov));
+        let matched_tech = convention_set.techs().iter().find(|tech| {
+            tech.matches_action(action, Some(&pre_clue_snapshot), &pre_clue_giver_pov)
+        });
         let Some(tech) = matched_tech else { return };
         tracing::debug!(target: "eel::apply", giver, action = ?action, "tech_matched");
         // Set player_on_turn_index to receiver so techs using player_on_turn_index()
@@ -352,7 +388,9 @@ impl KnowledgeAwareGameState {
             &self.static_data,
         );
         let updates = tech.knowledge_updates(action, Some(&pre_clue_snapshot), &receiver_pov);
-        self.team_knowledge.player_mut(receiver).apply_updates(&updates, &self.static_data.variant);
+        self.team_knowledge
+            .player_mut(receiver)
+            .apply_updates(&updates, &self.static_data.variant);
         // Also update non-receiver players (e.g. prompted/finessed player in
         // simple_prompt/finesse Case 1). Only apply updates for cards in their own hand.
         let num_players = self.static_data.number_of_players as usize;
@@ -369,15 +407,24 @@ impl KnowledgeAwareGameState {
             // Only apply updates for cards in target's own hand to avoid incorrectly
             // narrowing knowledge of cards in other players' hands.
             let own_hand = self.team_knowledge.player(target).own_hand;
-            let filtered: Vec<_> = updates.into_iter().filter(|u| {
-                use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
-                let idx = match u {
-                    KnowledgeUpdate::NarrowPossibilities { card_deck_index, .. }
-                    | KnowledgeUpdate::AddSignal { card_deck_index, .. } => *card_deck_index,
-                };
-                own_hand & (1 << idx) != 0
-            }).collect();
-            self.team_knowledge.player_mut(target).apply_updates(&filtered, &self.static_data.variant);
+            let filtered: Vec<_> = updates
+                .into_iter()
+                .filter(|u| {
+                    use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
+                    let idx = match u {
+                        KnowledgeUpdate::NarrowPossibilities {
+                            card_deck_index, ..
+                        }
+                        | KnowledgeUpdate::AddSignal {
+                            card_deck_index, ..
+                        } => *card_deck_index,
+                    };
+                    own_hand & (1 << idx) != 0
+                })
+                .collect();
+            self.team_knowledge
+                .player_mut(target)
+                .apply_updates(&filtered, &self.static_data.variant);
             if !filtered.is_empty() {
                 tracing::debug!(target: "eel::apply", target, updates = ?filtered, "knowledge_updated");
             }
@@ -479,10 +526,19 @@ mod tests {
         state.update_with_draw_action_of_specific_card(0, card_deck_index, card_id);
 
         // Players 1 and 2 can see the card
-        assert_ne!(state.team_knowledge().player(1).visible_cards & (1 << card_deck_index), 0);
-        assert_ne!(state.team_knowledge().player(2).visible_cards & (1 << card_deck_index), 0);
+        assert_ne!(
+            state.team_knowledge().player(1).visible_cards & (1 << card_deck_index),
+            0
+        );
+        assert_ne!(
+            state.team_knowledge().player(2).visible_cards & (1 << card_deck_index),
+            0
+        );
         // The drawer cannot see it
-        assert_eq!(state.team_knowledge().player(0).visible_cards & (1 << card_deck_index), 0);
+        assert_eq!(
+            state.team_knowledge().player(0).visible_cards & (1 << card_deck_index),
+            0
+        );
     }
 
     #[test]
@@ -492,7 +548,10 @@ mod tests {
 
         state.update_with_draw_action_of_specific_card(0, card_deck_index, 3);
 
-        assert_ne!(state.team_knowledge().player(0).own_hand & (1 << card_deck_index), 0);
+        assert_ne!(
+            state.team_knowledge().player(0).own_hand & (1 << card_deck_index),
+            0
+        );
     }
 
     #[test]
@@ -506,7 +565,10 @@ mod tests {
 
         // The drawer cannot see their own card: combined empathy must be fully unknown,
         // not the omniscient deck identity. Only convention signals can narrow it.
-        let combined = state.team_knowledge().player(0).combined_possible_identities(card_deck_index, &state.table_state, &variant);
+        let combined = state
+            .team_knowledge()
+            .player(0)
+            .combined_possible_identities(card_deck_index, &state.table_state, &variant);
         assert_eq!(
             combined.as_bits(),
             Empathy::all(&variant).as_bits(),

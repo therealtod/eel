@@ -55,8 +55,8 @@ mod tests {
     mod integration {
         use crate::engine::convention::convention_tech::ConventionTech;
         use crate::engine::convention::hgroup::tech::discard_chop::DiscardChop;
-        use crate::engine::knowledge::player_knowledge_state::knowledge_for_hand;
         use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
+        use crate::engine::knowledge::player_knowledge_state::knowledge_for_hand;
         use crate::engine::knowledge::team_knowledge::TeamKnowledge;
         use crate::game::action::game_action::GameAction;
         use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
@@ -73,8 +73,13 @@ mod tests {
             }
             let knowledge = knowledge_for_hand(&[10, 20, 30, 40, 50]);
             let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-            let pov =
-                LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+            let pov = LightweightPlayerPOV::new(
+                0,
+                &knowledge,
+                &team_knowledge,
+                &table_state,
+                &static_data,
+            );
 
             let actions = DiscardChop.game_actions(&pov);
 
@@ -99,8 +104,13 @@ mod tests {
             let knowledge = knowledge_for_hand(&[10, 20, 30, 40, 50]);
 
             let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-            let pov =
-                LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+            let pov = LightweightPlayerPOV::new(
+                0,
+                &knowledge,
+                &team_knowledge,
+                &table_state,
+                &static_data,
+            );
 
             let actions = DiscardChop.game_actions(&pov);
 
@@ -124,8 +134,13 @@ mod tests {
             let knowledge = knowledge_for_hand(&[10, 20]);
 
             let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-            let pov =
-                LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+            let pov = LightweightPlayerPOV::new(
+                0,
+                &knowledge,
+                &team_knowledge,
+                &table_state,
+                &static_data,
+            );
 
             assert!(DiscardChop.game_actions(&pov).is_empty());
         }
@@ -139,8 +154,13 @@ mod tests {
             }
             let knowledge = knowledge_for_hand(&[10, 20, 30]);
             let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-            let pov =
-                LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+            let pov = LightweightPlayerPOV::new(
+                0,
+                &knowledge,
+                &team_knowledge,
+                &table_state,
+                &static_data,
+            );
 
             let chop_action = GameAction::Discard {
                 player_index: 0,
@@ -158,8 +178,13 @@ mod tests {
             }
             let knowledge = knowledge_for_hand(&[10, 20, 30]);
             let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-            let pov =
-                LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+            let pov = LightweightPlayerPOV::new(
+                0,
+                &knowledge,
+                &team_knowledge,
+                &table_state,
+                &static_data,
+            );
 
             let non_chop = GameAction::Discard {
                 player_index: 0,

@@ -16,8 +16,19 @@ impl GameActionFilter {
     pub fn minimum_clue_value() -> Self {
         GameActionFilter {
             filter: |action, pov| {
-                if let GameAction::Clue { player_index, touched_card_deck_indexes, clue, .. } = action {
-                    is_minimal_clue_value_compliant(clue, player_index, touched_card_deck_indexes, pov)
+                if let GameAction::Clue {
+                    player_index,
+                    touched_card_deck_indexes,
+                    clue,
+                    ..
+                } = action
+                {
+                    is_minimal_clue_value_compliant(
+                        clue,
+                        player_index,
+                        touched_card_deck_indexes,
+                        pov,
+                    )
                 } else {
                     true
                 }

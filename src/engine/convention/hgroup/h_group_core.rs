@@ -1,14 +1,14 @@
 use crate::engine::convention::hgroup::signal::Signal;
-use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
-use crate::game::{MAX_CLUE_VALUES_PER_TYPE, MAX_HAND_SIZE};
+use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, VariantCardId, VariantCardsBitField};
 use crate::game::clue::Clue;
+use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
+use crate::game::{MAX_CLUE_VALUES_PER_TYPE, MAX_HAND_SIZE};
 use smallvec::SmallVec;
-use crate::game::state::PlayerIndex;
 
 /// Reconstruct the POV of `pov.player_on_turn_index()` using that player's own
 /// `team_knowledge` entry.
@@ -28,7 +28,11 @@ pub fn touched_cards_for_clue(
     clue: &Clue,
     player_pov: &dyn PlayerPOV,
 ) -> SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> {
-    let empathy_mask = player_pov.static_data().variant.empathy_for_clue(clue).as_bits();
+    let empathy_mask = player_pov
+        .static_data()
+        .variant
+        .empathy_for_clue(clue)
+        .as_bits();
     player_pov.table_state().hands[player_index]
         .cards()
         .iter()
@@ -89,7 +93,7 @@ pub fn get_clue_focus(
 
 pub fn get_finesse_position(
     player_index: PlayerIndex,
-    player_pov: &dyn PlayerPOV
+    player_pov: &dyn PlayerPOV,
 ) -> Option<CardDeckIndex> {
     let hand = &player_pov.table_state().hands[player_index];
     hand.cards()
@@ -107,9 +111,7 @@ pub fn has_pending_play_signal(
     card_deck_index: CardDeckIndex,
     pov: &dyn PlayerPOV,
 ) -> bool {
-    pov.team_knowledge()
-        .player(player_index)
-        .signals[card_deck_index as usize]
+    pov.team_knowledge().player(player_index).signals[card_deck_index as usize]
         .iter()
         .any(|s| matches!(s, Signal::Play { .. }))
 }
@@ -160,8 +162,7 @@ pub fn clues_for_player_with_focus(
                 clue_value: clue_value as u8,
             };
 
-            if let Some(focus_idx) = get_clue_focus(target_player_index, &touched, player_pov)
-            {
+            if let Some(focus_idx) = get_clue_focus(target_player_index, &touched, player_pov) {
                 result.push((
                     GameAction::Clue {
                         player_index: target_player_index,
@@ -189,11 +190,16 @@ pub fn is_minimal_clue_value_compliant(
 ) -> bool {
     debug_assert!(!touched_cards.is_empty(), "No touched cards");
     let already_touched = player_pov.table_state().clue_touched_cards;
-    touched_cards.iter().any(|&idx| already_touched & (1u64 << idx) == 0)
+    touched_cards
+        .iter()
+        .any(|&idx| already_touched & (1u64 << idx) == 0)
 }
 
 /// Bitmask of variant card IDs still needed to complete the stacks.
-fn still_needed_cards_mask(table_state: &TableState, static_data: &StaticGameData) -> VariantCardsBitField {
+fn still_needed_cards_mask(
+    table_state: &TableState,
+    static_data: &StaticGameData,
+) -> VariantCardsBitField {
     let variant = &static_data.variant;
     let stacks_size = variant.stacks_size as usize;
     let mut needed: VariantCardsBitField = 0;
@@ -273,10 +279,10 @@ pub fn is_good_touch_principle_compliant(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
     use crate::engine::knowledge::player_knowledge_state::{
         knowledge_for_hand, knowledge_with_visible,
     };
-    use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
     use crate::engine::knowledge::team_knowledge::TeamKnowledge;
     use crate::game::clue_type::ClueType;
     use crate::game::deck::unit_test_constants::novariant_constants::{R1_MASK, R2_MASK};
@@ -292,7 +298,8 @@ mod tests {
         let table_state = initial_five_players_table_state();
         let knowledge = knowledge_for_hand(&[10, 20, 30]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let g = giver_pov(&pov);
         assert_eq!(g.player_on_turn_index(), 0);
@@ -305,7 +312,8 @@ mod tests {
         table_state.player_on_turn_index = 2;
         let knowledge = knowledge_with_visible(0, &[]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let g = giver_pov(&pov);
         assert_eq!(g.player_on_turn_index(), 2);
@@ -322,7 +330,8 @@ mod tests {
         }
         let knowledge = knowledge_for_hand(&[10, 20, 30]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         assert_eq!(get_chop_index(0, &pov), Some(10));
     }
@@ -337,7 +346,8 @@ mod tests {
         table_state.clue_touched_cards |= 1 << 10;
         let knowledge = knowledge_for_hand(&[10, 20, 30]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         assert_eq!(get_chop_index(0, &pov), Some(20));
     }
@@ -352,7 +362,8 @@ mod tests {
         table_state.clue_touched_cards |= (1 << 10) | (1 << 20);
         let knowledge = knowledge_for_hand(&[10, 20]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         assert_eq!(get_chop_index(0, &pov), None);
     }
@@ -369,7 +380,8 @@ mod tests {
         }
         let knowledge = knowledge_for_hand(&[10, 20, 30]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         // Clue touches chop (10) and an interior card (30).
         assert_eq!(get_clue_focus(0, &[10, 30], &pov), Some(10));
@@ -385,7 +397,8 @@ mod tests {
         }
         let knowledge = knowledge_for_hand(&[10, 20, 30, 40, 50]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         // Clue touches 20 and 50 (neither is chop). Newest touched = 50 (slot 1).
         assert_eq!(get_clue_focus(0, &[20, 50], &pov), Some(50));
@@ -403,7 +416,8 @@ mod tests {
         table_state.clue_touched_cards |= 1 << 50;
         let knowledge = knowledge_for_hand(&[10, 20, 30, 40, 50]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         // Clue touches 20 and 50. 50 is already clued, so focus = 20 (newest new touch).
         assert_eq!(get_clue_focus(0, &[20, 50], &pov), Some(20));
@@ -420,7 +434,8 @@ mod tests {
         table_state.clue_touched_cards |= (1 << 20) | (1 << 30);
         let knowledge = knowledge_for_hand(&[10, 20, 30]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         // Chop (10) not touched; all touched already clued → focus = leftmost (newest) = 30.
         assert_eq!(get_clue_focus(0, &[20, 30], &pov), Some(30));
@@ -439,7 +454,8 @@ mod tests {
 
         let knowledge = knowledge_with_visible(0, &[]); // card 10 not visible
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         assert!(clues_for_player_with_focus(1, &pov).is_empty());
     }
@@ -456,7 +472,8 @@ mod tests {
 
         let knowledge = knowledge_with_visible(0, &[(10, R1_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let result = clues_for_player_with_focus(1, &pov);
 
@@ -484,7 +501,8 @@ mod tests {
 
         let knowledge = knowledge_with_visible(0, &[(10, R2_MASK), (20, R1_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let result = clues_for_player_with_focus(1, &pov);
 
@@ -529,9 +547,13 @@ mod tests {
 
         let knowledge = knowledge_with_visible(0, &[]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
-        let clue = Clue { clue_type: ClueType::Rank, clue_value: 1 };
+        let clue = Clue {
+            clue_type: ClueType::Rank,
+            clue_value: 1,
+        };
         let touched: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = smallvec::smallvec![10, 20];
 
         assert!(is_minimal_clue_value_compliant(&clue, &0, &touched, &pov));
@@ -551,9 +573,13 @@ mod tests {
 
         let knowledge = knowledge_with_visible(0, &[]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
-        let clue = Clue { clue_type: ClueType::Rank, clue_value: 1 };
+        let clue = Clue {
+            clue_type: ClueType::Rank,
+            clue_value: 1,
+        };
         let touched: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = smallvec::smallvec![10, 20];
 
         assert!(!is_minimal_clue_value_compliant(&clue, &0, &touched, &pov));
@@ -570,9 +596,13 @@ mod tests {
 
         let knowledge = knowledge_with_visible(0, &[]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
-        let clue = Clue { clue_type: ClueType::Color, clue_value: 0 };
+        let clue = Clue {
+            clue_type: ClueType::Color,
+            clue_value: 0,
+        };
         let touched: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = smallvec::smallvec![10];
 
         assert!(is_minimal_clue_value_compliant(&clue, &0, &touched, &pov));

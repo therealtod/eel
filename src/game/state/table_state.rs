@@ -1,3 +1,4 @@
+use crate::game::MAX_HAND_SIZE;
 use crate::game::MAX_PLAYERS_IN_GAME;
 use crate::game::card::DeckCardsBitField;
 use crate::game::card::copies_counting_card_collection::CopiesCountingCardCollection;
@@ -10,7 +11,6 @@ use crate::game::playing_stacks::PlayingStacks;
 use crate::game::static_game_data::StaticGameData;
 use crate::game::variant::Variant;
 use smallvec::SmallVec;
-use crate::game::MAX_HAND_SIZE;
 
 /// The state of the table of a game of Hanabi
 ///
@@ -32,6 +32,7 @@ pub struct TableState {
     pub playing_stacks: PlayingStacks,
     pub strike_tokens: u8,
     pub discard_pile: CopiesCountingCardCollection,
+    pub history: Vec<TableState>,
 }
 
 impl TableState {
@@ -58,6 +59,7 @@ impl TableState {
             playing_stacks,
             strike_tokens,
             discard_pile,
+            history: Vec::new(),
         }
     }
 
@@ -172,6 +174,26 @@ impl TableState {
         self.clues_given += 1;
     }
 
+    /// Save a snapshot of the current state to history before applying an action.
+    ///
+    /// After calling this, `history[n]` contains the TableState as it was at turn n-1.
+    pub fn record_history(&mut self) {
+        let snapshot = self.clone();
+        self.history.push(snapshot);
+    }
+
+    /// Returns the TableState from turn `turn` (0-indexed), i.e., the state before the action on turn `turn`.
+    ///
+    /// Returns `None` if `turn` is out of range.
+    pub fn history_at_turn(&self, turn: usize) -> &TableState {
+        self.history.get(turn).unwrap_or_else(|| {
+            panic!(
+                "turn {} out of range (history length: {})",
+                turn, self.history.len()
+            )
+        })
+    }
+
     /// Return a [VariantCardsBitField] of the cards that can be played successfully in the current
     /// game state
     pub fn playable_cards(&self, static_game_data: &StaticGameData) -> VariantCardsBitField {
@@ -284,12 +306,16 @@ pub mod unit_test_constants {
                 clue_touched_cards: 0,
                 clues_given: 0,
                 deck,
-                all_hand_bits: (0..=3u64).chain(5..=9).chain(10..=13).fold(0u64, |acc, i| acc | (1 << i)),
+                all_hand_bits: (0..=3u64)
+                    .chain(5..=9)
+                    .chain(10..=13)
+                    .fold(0u64, |acc, i| acc | (1 << i)),
                 hands,
                 player_on_turn_index,
                 playing_stacks,
                 strike_tokens: 0,
                 discard_pile,
+                history: Vec::new(),
             }
         }
 
@@ -312,12 +338,16 @@ pub mod unit_test_constants {
                 clue_touched_cards: 0,
                 clues_given: 0,
                 deck,
-                all_hand_bits: (0..=4u64).chain(5..=9).chain(10..=13).fold(0u64, |acc, i| acc | (1 << i)),
+                all_hand_bits: (0..=4u64)
+                    .chain(5..=9)
+                    .chain(10..=13)
+                    .fold(0u64, |acc, i| acc | (1 << i)),
                 hands,
                 player_on_turn_index,
                 playing_stacks,
                 strike_tokens: 0,
                 discard_pile,
+                history: Vec::new(),
             }
         }
     }

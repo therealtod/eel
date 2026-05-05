@@ -43,13 +43,21 @@ impl<'a> LightweightPlayerPOV<'a> {
 
 impl PlayerPOV for LightweightPlayerPOV<'_> {
     fn away_value(&self, card_id: VariantCardId) -> Option<u8> {
-        if self.table_state.playing_stacks.contains_card_with_id(card_id) {
+        if self
+            .table_state
+            .playing_stacks
+            .contains_card_with_id(card_id)
+        {
             return None;
         }
         let mut away_value: u8 = 0;
         let mut current_card_id = card_id;
         while let Some(prereq_id) = self.static_data.variant.prerequisite(current_card_id) {
-            if self.table_state.playing_stacks.contains_card_with_id(prereq_id) {
+            if self
+                .table_state
+                .playing_stacks
+                .contains_card_with_id(prereq_id)
+            {
                 break;
             }
             away_value += 1;
@@ -60,7 +68,11 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
 
     fn card_identity(&self, card_deck_index: CardDeckIndex) -> Option<VariantCardId> {
         // Use combined empathy: game-rule from Deck + convention-inferred from techs
-        let combined = self.knowledge.combined_possible_identities(card_deck_index, self.table_state, &self.static_data.variant);
+        let combined = self.knowledge.combined_possible_identities(
+            card_deck_index,
+            self.table_state,
+            &self.static_data.variant,
+        );
         combined.known_card_id()
     }
 
@@ -108,7 +120,11 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
         while hand_mask != 0 {
             let card_deck_index = hand_mask.trailing_zeros() as CardDeckIndex;
             // Use combined empathy: game-rule from Deck + convention-inferred from techs
-            let possible = self.knowledge.combined_possible_identities(card_deck_index, self.table_state, &self.static_data.variant);
+            let possible = self.knowledge.combined_possible_identities(
+                card_deck_index,
+                self.table_state,
+                &self.static_data.variant,
+            );
             // A card is playable if ALL its possible identities are playable (empathy-based),
             // OR if it has a Signal::Play (convention-inferred identity).
             let empathy_playable = (possible.as_bits() & playable_cards) == possible.as_bits();
@@ -125,7 +141,11 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
 
     fn is_playable(&self, card_deck_index: CardDeckIndex) -> bool {
         let playable_cards = self.table_state.playable_cards(self.static_data);
-        let possible = self.knowledge.combined_possible_identities(card_deck_index, self.table_state, &self.static_data.variant);
+        let possible = self.knowledge.combined_possible_identities(
+            card_deck_index,
+            self.table_state,
+            &self.static_data.variant,
+        );
         let empathy_playable = (possible.as_bits() & playable_cards) == possible.as_bits();
         let signal_playable = self.knowledge.signals[card_deck_index as usize]
             .iter()
@@ -230,9 +250,11 @@ mod tests {
         knowledge.own_hand = 1 << 0u64;
         knowledge.inferred_identities[0] = Some(Empathy::from_bits(R1_MASK).unwrap());
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        team_knowledge.player_mut(1).inferred_identities[1] = Some(Empathy::from_bits(R2_MASK).unwrap());
+        team_knowledge.player_mut(1).inferred_identities[1] =
+            Some(Empathy::from_bits(R2_MASK).unwrap());
 
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
         let actions = pov.valid_actions();
 
         assert!(
@@ -259,9 +281,11 @@ mod tests {
         knowledge.inferred_identities[0] = Some(Empathy::from_bits(R1_MASK).unwrap());
         // Give player 1 a known card so clues_for_player_with_focus would return something.
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        team_knowledge.player_mut(1).inferred_identities[1] = Some(Empathy::from_bits(R2_MASK).unwrap());
+        team_knowledge.player_mut(1).inferred_identities[1] =
+            Some(Empathy::from_bits(R2_MASK).unwrap());
 
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
         let actions = pov.valid_actions();
 
         assert!(
@@ -287,7 +311,8 @@ mod tests {
         knowledge.inferred_identities[0] = Some(Empathy::from_bits(R1_MASK).unwrap());
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
 
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
         let actions = pov.valid_actions();
 
         assert!(
@@ -317,7 +342,8 @@ mod tests {
 
         let knowledge = knowledge_with_empathy(42, R3_MASK);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         assert!(pov.is_playable(42));
     }
@@ -341,7 +367,8 @@ mod tests {
 
         let knowledge = knowledge_with_empathy(42, B3_MASK);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         assert!(!pov.is_playable(42));
     }
@@ -377,7 +404,8 @@ mod tests {
 
         let knowledge = knowledge_with_empathy(42, R1_MASK | Y2_MASK | G1_MASK | B3_MASK | P1_MASK);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         assert!(pov.is_playable(42));
     }
@@ -416,7 +444,8 @@ mod tests {
             R1_MASK | Y2_MASK | Y3_MASK | G1_MASK | B3_MASK | P1_MASK,
         );
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         assert!(!pov.is_playable(42));
     }

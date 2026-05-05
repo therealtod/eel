@@ -124,8 +124,8 @@ pub mod unit_test_constants {
     use crate::game::card::Empathy;
     use crate::game::deck::Deck;
     use crate::game::deck::unit_test_constants::novariant_constants::COPIES_COUNT_BY_ID;
-    use crate::game::{MAX_CARDS_IN_DECK, MAX_UNIQUE_CARDS_IN_DECK};
     use crate::game::variant::test_variants::NO_VARIANT;
+    use crate::game::{MAX_CARDS_IN_DECK, MAX_UNIQUE_CARDS_IN_DECK};
 
     pub mod novariant_constants {
         use crate::game::MAX_UNIQUE_CARDS_IN_DECK;
@@ -211,10 +211,10 @@ pub mod unit_test_constants {
 
 #[cfg(test)]
 mod tests {
-    use crate::game::variant::test_variants::NO_VARIANT;
-    use super::*;
     use super::unit_test_constants::NEW_DECK;
     use super::unit_test_constants::novariant_constants::*;
+    use super::*;
+    use crate::game::variant::test_variants::NO_VARIANT;
 
     #[test]
     fn should_decrement_size_when_drawing_a_card() {
@@ -241,8 +241,14 @@ mod tests {
 
         deck.reveal_card(42, 2);
         deck.reveal_card(22, 2);
-        assert_eq!(Empathy::from_bits(R3_MASK).unwrap(), deck.empathy_by_index[42]);
-        assert_eq!(Empathy::from_bits(R3_MASK).unwrap(), deck.empathy_by_index[22]);
+        assert_eq!(
+            Empathy::from_bits(R3_MASK).unwrap(),
+            deck.empathy_by_index[42]
+        );
+        assert_eq!(
+            Empathy::from_bits(R3_MASK).unwrap(),
+            deck.empathy_by_index[22]
+        );
         assert_eq!(
             Empathy::from_bits(ALL_CARDS_MASK & !R3_MASK).unwrap(),
             deck.empathy_by_index[1]
@@ -311,8 +317,8 @@ mod tests {
             arr
         };
         let revealed_copies_per_index: [u8; MAX_UNIQUE_CARDS_IN_DECK] = [
-            3, 2, 2, 2, 1, 3, 2, 1, 2, 0, 3, 2, 2, 2, 1, 3, 2, 2, 2, 1, 3, 2, 2, 2, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0,
+            3, 2, 2, 2, 1, 3, 2, 1, 2, 0, 3, 2, 2, 2, 1, 3, 2, 2, 2, 1, 3, 2, 2, 2, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0,
         ];
         let mut deck = Deck::of(
             50,
@@ -323,8 +329,17 @@ mod tests {
         );
 
         deck.reveal_card(47, 7);
-        assert_eq!(Empathy::from_bits(Y3_MASK).unwrap(), deck.empathy_by_index[47]);
-        assert_eq!(Empathy::from_bits(Y5_MASK).unwrap(), deck.empathy_by_index[48]);
-        assert_eq!(Empathy::from_bits(P5_MASK).unwrap(), deck.empathy_by_index[49]);
+        assert_eq!(
+            Empathy::from_bits(Y3_MASK).unwrap(),
+            deck.empathy_by_index[47]
+        );
+        assert_eq!(
+            Empathy::from_bits(Y5_MASK).unwrap(),
+            deck.empathy_by_index[48]
+        );
+        assert_eq!(
+            Empathy::from_bits(P5_MASK).unwrap(),
+            deck.empathy_by_index[49]
+        );
     }
 }
