@@ -46,8 +46,7 @@ impl TwoSave {
             }
             // They have a copy — it must be on their chop
             get_chop_index(p, pov)
-                .map(|chop| pov.card_identity(chop) == Some(card_id))
-                .unwrap_or(false)
+                .is_some_and(|chop| pov.card_identity(chop) == Some(card_id))
         })
     }
 
@@ -60,8 +59,7 @@ impl TwoSave {
     fn is_two_saveable_for_target(target: PlayerIndex, pov: &dyn PlayerPOV) -> bool {
         get_chop_index(target, pov)
             .and_then(|chop| pov.card_identity(chop))
-            .map(|card_id| Self::is_two_saveable(card_id, target, pov))
-            .unwrap_or(false)
+            .is_some_and(|card_id| Self::is_two_saveable(card_id, target, pov))
     }
 }
 

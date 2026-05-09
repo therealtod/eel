@@ -40,8 +40,7 @@ pub fn touched_cards_for_clue(
         .filter(|&idx| {
             player_pov
                 .card_identity(idx)
-                .map(|id| (1u64 << id) & empathy_mask != 0)
-                .unwrap_or(false)
+                .is_some_and(|id| (1u64 << id) & empathy_mask != 0)
         })
         .collect()
 }
@@ -146,8 +145,7 @@ pub fn clues_for_player_with_focus(
                 .filter(|&idx| {
                     player_pov
                         .card_identity(idx)
-                        .map(|id| (1u64 << id) & empathy_bits != 0)
-                        .unwrap_or(false)
+                        .is_some_and(|id| (1u64 << id) & empathy_bits != 0)
                 })
                 .collect();
 
@@ -284,8 +282,7 @@ pub fn has_on_finesse_position(
         .cards()
         .iter()
         .find(|&&idx| !observer_pov.is_touched(idx))
-        .map(|&idx| observer_pov.card_identity(idx) == Some(card_id))
-        .unwrap_or(false)
+        .is_some_and(|&idx| observer_pov.card_identity(idx) == Some(card_id))
 }
 
 #[cfg(test)]

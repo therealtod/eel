@@ -86,8 +86,7 @@ impl ClueTech for DelayedPlayClue {
         let giver_pov = game_state_snapshot.player_pov(giver, observer_pov.static_data());
         get_clue_focus(player_index, touched, &giver_pov)
             .and_then(|focus| giver_pov.card_identity(focus))
-            .map(|card_id| Self::is_delayed_play_situation(card_id, &giver_pov))
-            .unwrap_or(false)
+            .is_some_and(|card_id| Self::is_delayed_play_situation(card_id, &giver_pov))
     }
 
     fn clue_knowledge_updates(

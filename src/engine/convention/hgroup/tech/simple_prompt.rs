@@ -103,13 +103,12 @@ impl ClueTech for SimplePrompt {
         get_clue_focus(target_player_index, touched, &giver_pov)
             .and_then(|focus| giver_pov.card_identity(focus))
             .filter(|&card_id| giver_pov.away_value(card_id) == Some(1))
-            .map(|card_id| {
+            .is_some_and(|card_id| {
                 let connecting_id = card_id - 1;
                 (0..giver_pov.static_data().number_of_players as usize)
                     .filter(|&p| p != giver_pov.active_player_index())
                     .any(|p| Self::is_valid_prompt_situation(connecting_id, p, &giver_pov))
             })
-            .unwrap_or(false)
     }
 
     fn clue_knowledge_updates(

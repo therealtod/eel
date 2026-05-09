@@ -130,8 +130,7 @@ fn critical_save_matches(
         let giver_pov = game_state_snapshot.player_pov(giver, observer_pov.static_data());
         can_be_critical_saved(player_index, &giver_pov)
             && get_chop_index(player_index, &giver_pov)
-                .map(|chop| touched_card_deck_indexes.contains(&chop))
-                .unwrap_or(false)
+                .is_some_and(|chop| touched_card_deck_indexes.contains(&chop))
     } else {
         false
     }
