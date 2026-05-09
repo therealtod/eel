@@ -2,7 +2,7 @@ use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::knowledge::player_knowledge::PlayerKnowledge;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
-use crate::game::card::{CardDeckIndex, DeckCardsBitField, VariantCardId};
+use crate::game::card::{CardDeckIndex, CardIdentityMask, DeckCardsBitField, VariantCardId};
 use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
@@ -200,6 +200,14 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
         }
 
         false
+    }
+
+    fn empathy(&self, card_deck_index: CardDeckIndex) -> CardIdentityMask {
+        self.knowledge.combined_possible_identities(
+            card_deck_index,
+            self.table_state,
+            &self.static_data.variant,
+        )
     }
 }
 

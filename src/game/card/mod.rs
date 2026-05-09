@@ -1,5 +1,5 @@
-pub mod copies_counting_card_collection;
 pub mod card_identity_mask;
+pub mod copies_counting_card_collection;
 
 pub use card_identity_mask::CardIdentityMask;
 

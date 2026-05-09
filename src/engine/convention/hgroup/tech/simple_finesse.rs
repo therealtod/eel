@@ -1,7 +1,6 @@
 use crate::engine::convention::convention_tech::ClueTech;
 use crate::engine::convention::hgroup::h_group_core::{
-    clues_for_player_with_focus, get_clue_focus, get_finesse_position, has_on_finesse_position,
-    has_pending_play_signal,
+    clues_for_player_with_focus, get_clue_focus, get_finesse_position, has_on_finesse_position
 };
 use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, PlayClueTech, priority};
 use crate::engine::convention::hgroup::signal::Signal;
@@ -38,8 +37,6 @@ impl SimpleFinesse {
             .any(|p| {
                 pov.static_data().plays_before(p, target, active)
                     && has_on_finesse_position(prerequisite, p, pov)
-                    && get_finesse_position(p, pov)
-                        .is_some_and(|fp| !has_pending_play_signal(p, fp, pov))
             })
     }
 }
@@ -80,10 +77,43 @@ impl ClueTech for SimpleFinesse {
         };
         let giver = game_state_snapshot.table_state.active_player_index;
         let giver_pov = game_state_snapshot.player_pov(giver, observer_pov.static_data());
+        let clue_focus = get_clue_focus(target_player_index, touched, &giver_pov);
 
-        get_clue_focus(target_player_index, touched, &giver_pov)
-            .and_then(|focus| giver_pov.card_identity(focus))
-            .is_some_and(|card_id| Self::is_finesse_setup(card_id, target_player_index, &giver_pov))
+        // The clue receiver spots a potential finesse setup when there is a playable card on
+        // someone's finesse position (except for the clue giver), and such card is compatible
+        // with the given clue
+        if observer_pov.player_index() == target_player_index {
+            let num_players = observer_pov.static_data().number_of_players as usize;
+            (0..num_players)
+                .filter(|&player_index| {
+                    player_index != giver && player_index != target_player_index
+                })
+                .any(|player_index| {
+                    giver_pov
+                        .static_data()
+                        .plays_before(player_index, target_player_index, giver)
+                        && get_finesse_position(player_index, &giver_pov).is_some_and(
+                            |finesse_position_card_index| {
+                                giver_pov.is_playable(finesse_position_card_index)
+                                    && giver_pov
+                                        .card_identity(finesse_position_card_index)
+                                        .is_some_and(|card_id| {
+                                            observer_pov
+                                                .empathy(finesse_position_card_index)
+                                                .contains(card_id + 1)
+                                        })
+                            },
+                        )
+                })
+        }
+        // Anyone else can see that the focused card is 1 away from playable, which signals a finesse
+        else {
+            clue_focus.is_some_and(|focus_idx| {
+                giver_pov
+                    .card_identity(focus_idx)
+                    .is_some_and(|variant_card_id| giver_pov.away_value(variant_card_id) == Some(1))
+            })
+        }
     }
 
     fn clue_knowledge_updates(

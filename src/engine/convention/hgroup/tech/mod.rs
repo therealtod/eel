@@ -1,3 +1,4 @@
+pub mod blind_play;
 pub mod critical_save;
 pub mod delayed_play_clue;
 pub mod discard_chop;

@@ -52,13 +52,25 @@ impl CardIdentityMask {
     /// Returns `None` if the intersection would be empty.
     pub fn narrow(self, mask: VariantCardsBitField) -> Option<Self> {
         let bits = self.0 & mask;
-        if bits == 0 { None } else { Some(CardIdentityMask(bits)) }
+        if bits == 0 {
+            None
+        } else {
+            Some(CardIdentityMask(bits))
+        }
     }
 
     /// Remove identities present in `mask` (negative clue elimination).
     /// Returns `None` if all identities would be eliminated.
     pub fn exclude(self, mask: VariantCardsBitField) -> Option<Self> {
         let bits = self.0 & !mask;
-        if bits == 0 { None } else { Some(CardIdentityMask(bits)) }
+        if bits == 0 {
+            None
+        } else {
+            Some(CardIdentityMask(bits))
+        }
+    }
+
+    pub fn contains(self, variant_card_id: VariantCardId) -> bool {
+        self.0 & 1 << variant_card_id != 0
     }
 }

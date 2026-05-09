@@ -4,7 +4,7 @@ use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
 use crate::game::MAX_CARDS_IN_DECK;
 use crate::game::card::{
-    CardDeckIndex, DeckCardsBitField, CardIdentityMask, VariantCardId, VariantCardsBitField,
+    CardDeckIndex, CardIdentityMask, DeckCardsBitField, VariantCardId, VariantCardsBitField,
 };
 use crate::game::state::table_state::TableState;
 use crate::game::variant::Variant;
@@ -74,7 +74,8 @@ impl PlayerKnowledge {
         variant: &Variant,
     ) {
         let idx = card_deck_index as usize;
-        let current = self.inferred_identities[idx].unwrap_or_else(|| CardIdentityMask::all(variant));
+        let current =
+            self.inferred_identities[idx].unwrap_or_else(|| CardIdentityMask::all(variant));
         if let Some(new_empathy) = current.narrow(mask) {
             self.inferred_identities[idx] = Some(new_empathy);
             if new_empathy.is_exactly_known() {
@@ -152,8 +153,7 @@ impl PlayerKnowledge {
 pub fn knowledge_with_visible(player_index: usize, visible: &[(u8, u64)]) -> PlayerKnowledge {
     let mut k = PlayerKnowledge::new(player_index);
     for &(idx, mask) in visible {
-        k.inferred_identities[idx as usize] =
-            Some(CardIdentityMask::from_bits(mask));
+        k.inferred_identities[idx as usize] = Some(CardIdentityMask::from_bits(mask));
         k.visible_cards |= 1 << idx;
     }
     k
