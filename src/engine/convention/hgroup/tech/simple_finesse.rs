@@ -39,8 +39,7 @@ impl SimpleFinesse {
                 pov.static_data().plays_before(p, target, active)
                     && has_on_finesse_position(prerequisite, p, pov)
                     && get_finesse_position(p, pov)
-                        .map(|fp| !has_pending_play_signal(p, fp, pov))
-                        .unwrap_or(false)
+                        .is_some_and(|fp| !has_pending_play_signal(p, fp, pov))
             })
     }
 }
@@ -84,8 +83,7 @@ impl ClueTech for SimpleFinesse {
 
         get_clue_focus(target_player_index, touched, &giver_pov)
             .and_then(|focus| giver_pov.card_identity(focus))
-            .map(|card_id| Self::is_finesse_setup(card_id, target_player_index, &giver_pov))
-            .unwrap_or(false)
+            .is_some_and(|card_id| Self::is_finesse_setup(card_id, target_player_index, &giver_pov))
     }
 
     fn clue_knowledge_updates(

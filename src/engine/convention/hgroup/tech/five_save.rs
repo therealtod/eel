@@ -14,7 +14,7 @@ use crate::impl_convention_tech_for_hgroup_clue_tech;
 fn is_five_saveable(target: PlayerIndex, pov: &dyn PlayerPOV) -> bool {
     get_chop_index(target, pov)
         .and_then(|chop| pov.card_identity(chop))
-        .map(|id| {
+        .is_some_and(|id| {
             let rank5_mask = pov
                 .static_data()
                 .variant
@@ -22,7 +22,6 @@ fn is_five_saveable(target: PlayerIndex, pov: &dyn PlayerPOV) -> bool {
                 .as_bits();
             (1u64 << id) & rank5_mask != 0
         })
-        .unwrap_or(false)
 }
 
 /// Clue rank 5 to a teammate whose chop card is a 5.
