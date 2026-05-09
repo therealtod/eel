@@ -61,8 +61,8 @@ pub fn get_chop_index(player_index: usize, player_pov: &dyn PlayerPOV) -> Option
 ///
 /// Focus rules (H-Group):
 /// 1. If the chop is among the touched cards, the chop is the focus.
-/// 2. Otherwise, if any newly-touched cards exist, the focus is the leftmost (newest, slot 1) one.
-/// 3. If all touched cards were already clued, the focus is the leftmost (newest, slot 1) touched card.
+/// 2. Otherwise, if any newly touched cards exist, the focus is the leftmost (newest) one.
+/// 3. If all touched cards were already clued, the focus is the leftmost (newest) touched card.
 pub fn get_clue_focus(
     player_index: PlayerIndex,
     touched: &[CardDeckIndex],
