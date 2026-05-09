@@ -1,5 +1,7 @@
 use crate::engine::convention::convention_tech::ClueTech;
 use crate::engine::convention::hgroup::game_action_filter::GameActionFilter;
+use crate::engine::knowledge::player_pov::PlayerPOV;
+use crate::game::action::game_action::GameAction;
 
 /// H-Group interpretation priority tiers. Lower value = higher priority.
 pub mod priority {
@@ -19,6 +21,13 @@ pub trait HGroupClueTech: ClueTech {
     fn clue_action_filters(&self) -> Vec<GameActionFilter> {
         vec![GameActionFilter::minimum_clue_value()]
     }
+
+    fn filtered_clue_game_actions(&self, pov: &dyn PlayerPOV) -> Vec<GameAction> {
+        let mut actions = self.clue_game_actions(pov);
+        let filters = self.clue_action_filters();
+        actions.retain(|a| filters.iter().all(|f| f.apply(a, pov)));
+        actions
+    }
 }
 
 /// Save clue techniques.
@@ -36,28 +45,19 @@ pub trait PlayClueTech: HGroupClueTech {}
 macro_rules! impl_convention_tech_for_hgroup_clue_tech {
     ($t:ty, $priority:expr) => {
         impl $crate::engine::convention::convention_tech::ConventionTech for $t {
-            fn name(&self) -> &'static str { stringify!($t) }
+            fn name(&self) -> &'static str {
+                stringify!($t)
+            }
             fn interpretation_priority(&self) -> u8 {
                 $priority
             }
-            fn game_actions(&self, pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV) -> Vec<$crate::game::action::game_action::GameAction> {
-                let mut actions = $crate::engine::convention::convention_tech::ClueTech::clue_game_actions(self, pov);
-                let filters = $crate::engine::convention::hgroup::h_group_tech::HGroupClueTech::clue_action_filters(self);
-                actions.retain(|a| filters.iter().all(|f| f.apply(a, pov)));
-                actions
+            fn game_actions(
+                &self,
+                pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV,
+            ) -> Vec<$crate::game::action::game_action::GameAction> {
+                $crate::engine::convention::hgroup::h_group_tech::HGroupClueTech::filtered_clue_game_actions(self, pov)
             }
-            fn matches_action(&self, action: &$crate::game::action::game_action::GameAction, history: &[$crate::engine::game_state_snapshot::GameStateSnapshot], pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV) -> bool {
-                if let GameAction::Clue { player_index, touched_card_deck_indexes, clue, turn } = action {
-                    $crate::engine::convention::convention_tech::ClueTech::matches_clue(self, *player_index, touched_card_deck_indexes, clue, *turn, history, pov)
-                } else {
-                    false
-                }
-            }
-            fn knowledge_updates(&self, action: &$crate::game::action::game_action::GameAction, history: &[$crate::engine::game_state_snapshot::GameStateSnapshot], pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV) -> Vec<$crate::engine::knowledge::knowledge_update::KnowledgeUpdate> {
-                if let GameAction::Clue { player_index, touched_card_deck_indexes, clue, turn } = action {
-                    $crate::engine::convention::convention_tech::ClueTech::clue_knowledge_updates(self, *player_index, touched_card_deck_indexes, clue, *turn, history, pov)
-                } else { vec![] }
-            }
+            $crate::__impl_clue_tech_matches_and_updates!();
         }
     };
 }

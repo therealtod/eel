@@ -104,6 +104,68 @@ pub trait ClueTech: Sync {
     ) -> Vec<KnowledgeUpdate>;
 }
 
+/// Internal macro: expands to the `matches_action` and `knowledge_updates` method bodies shared
+/// by all clue-tech `ConventionTech` impls. Not part of the public API.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __impl_clue_tech_matches_and_updates {
+    () => {
+        fn matches_action(
+            &self,
+            action: &$crate::game::action::game_action::GameAction,
+            history: &[$crate::engine::game_state_snapshot::GameStateSnapshot],
+            observer_pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV,
+        ) -> bool {
+            if let $crate::game::action::game_action::GameAction::Clue {
+                player_index,
+                touched_card_deck_indexes,
+                clue,
+                turn,
+            } = action
+            {
+                $crate::engine::convention::convention_tech::ClueTech::matches_clue(
+                    self,
+                    *player_index,
+                    touched_card_deck_indexes,
+                    clue,
+                    *turn,
+                    history,
+                    observer_pov,
+                )
+            } else {
+                false
+            }
+        }
+
+        fn knowledge_updates(
+            &self,
+            action: &$crate::game::action::game_action::GameAction,
+            history: &[$crate::engine::game_state_snapshot::GameStateSnapshot],
+            observer_pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV,
+        ) -> Vec<$crate::engine::knowledge::knowledge_update::KnowledgeUpdate> {
+            if let $crate::game::action::game_action::GameAction::Clue {
+                player_index,
+                touched_card_deck_indexes,
+                clue,
+                turn,
+            } = action
+            {
+                $crate::engine::convention::convention_tech::ClueTech::clue_knowledge_updates(
+                    self,
+                    *player_index,
+                    touched_card_deck_indexes,
+                    clue,
+                    *turn,
+                    history,
+                    observer_pov,
+                )
+            } else {
+                vec![]
+            }
+        }
+    };
+}
+
 /// Generates a `ConventionTech` impl for a type that implements `ClueTech`.
 /// Usage: `impl_convention_tech_for_clue_tech!(MyType, priority_value);`
 #[macro_export]
@@ -116,7 +178,6 @@ macro_rules! impl_convention_tech_for_clue_tech {
             fn interpretation_priority(&self) -> u8 {
                 $priority
             }
-
             fn game_actions(
                 &self,
                 active_player_pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV,
@@ -126,60 +187,7 @@ macro_rules! impl_convention_tech_for_clue_tech {
                     active_player_pov,
                 )
             }
-
-            fn matches_action(
-                &self,
-                action: &$crate::game::action::game_action::GameAction,
-                history: &[$crate::engine::game_state_snapshot::GameStateSnapshot],
-                observer_pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV,
-            ) -> bool {
-                if let $crate::game::action::game_action::GameAction::Clue {
-                    player_index,
-                    touched_card_deck_indexes,
-                    clue,
-                    turn,
-                } = action
-                {
-                    $crate::engine::convention::convention_tech::ClueTech::matches_clue(
-                        self,
-                        *player_index,
-                        touched_card_deck_indexes,
-                        clue,
-                        *turn,
-                        history,
-                        observer_pov,
-                    )
-                } else {
-                    false
-                }
-            }
-
-            fn knowledge_updates(
-                &self,
-                action: &$crate::game::action::game_action::GameAction,
-                history: &[$crate::engine::game_state_snapshot::GameStateSnapshot],
-                observer_pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV,
-            ) -> Vec<$crate::engine::knowledge::knowledge_update::KnowledgeUpdate> {
-                if let $crate::game::action::game_action::GameAction::Clue {
-                    player_index,
-                    touched_card_deck_indexes,
-                    clue,
-                    turn,
-                } = action
-                {
-                    $crate::engine::convention::convention_tech::ClueTech::clue_knowledge_updates(
-                        self,
-                        *player_index,
-                        touched_card_deck_indexes,
-                        clue,
-                        *turn,
-                        history,
-                        observer_pov,
-                    )
-                } else {
-                    vec![]
-                }
-            }
+            $crate::__impl_clue_tech_matches_and_updates!();
         }
     };
 }
