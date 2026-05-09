@@ -45,8 +45,7 @@ impl TwoSave {
                 return true;
             }
             // They have a copy — it must be on their chop
-            get_chop_index(p, pov)
-                .is_some_and(|chop| pov.card_identity(chop) == Some(card_id))
+            get_chop_index(p, pov).is_some_and(|chop| pov.card_identity(chop) == Some(card_id))
         })
     }
 

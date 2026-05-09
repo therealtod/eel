@@ -1,6 +1,6 @@
 use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
-use crate::game::card::{CardDeckIndex, DeckCardsBitField, VariantCardId};
+use crate::game::card::{CardDeckIndex, CardIdentityMask, DeckCardsBitField, VariantCardId};
 use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
@@ -63,5 +63,9 @@ pub trait PlayerPOV {
         )
     }
 
+    /// Returns true if the card is known to be trash from this POV
     fn is_known_trash(&self, card_deck_index: CardDeckIndex) -> bool;
+
+    /// Get the empathy that this player has for the given card.
+    fn empathy(&self, card_deck_index: CardDeckIndex) -> CardIdentityMask;
 }
