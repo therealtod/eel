@@ -45,14 +45,13 @@ impl Variant {
     ///
     /// Rank clue values are **1-based** (pass `5` for a rank-5 clue).
     /// Color clue values are **0-based** suit indices (pass `0` for Red, `1` for Yellow, …).
-    pub fn empathy_by_clue(&self, clue_type: ClueType, clue_value: usize) -> Option<CardIdentityMask> {
+    pub fn empathy_by_clue(&self, clue_type: ClueType, clue_value: usize) -> CardIdentityMask {
         CardIdentityMask::from_bits(self.empathy_by_clue[clue_type as usize][clue_value])
     }
 
     /// Returns the empathy for a [`Clue`]. Panics if the clue maps to an empty mask.
     pub fn empathy_for_clue(&self, clue: &Clue) -> CardIdentityMask {
         self.empathy_by_clue(clue.clue_type, clue.clue_value as usize)
-            .expect("valid game clue always has non-empty empathy mask")
     }
 
     /// Returns the rank associated with the given `variant_card_id` in this variant

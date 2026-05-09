@@ -137,9 +137,7 @@ pub fn clues_for_player_with_focus(
 
     for clue_type in &static_data.variant.clue_types {
         for clue_value in 0..MAX_CLUE_VALUES_PER_TYPE {
-            let Some(empathy) = static_data.variant.empathy_by_clue(*clue_type, clue_value) else {
-                continue;
-            };
+            let empathy = static_data.variant.empathy_by_clue(*clue_type, clue_value);
             let empathy_bits = empathy.as_bits();
 
             let touched: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = hand_cards

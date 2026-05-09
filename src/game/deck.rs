@@ -230,7 +230,7 @@ mod tests {
         let mut deck = NEW_DECK.clone();
 
         deck.reveal_card(42, 2);
-        let expected = CardIdentityMask::from_bits(R3_MASK).unwrap();
+        let expected = CardIdentityMask::from_bits(R3_MASK);
         let actual = deck.empathy_by_index[42];
         assert_eq!(expected, actual);
     }
@@ -242,15 +242,15 @@ mod tests {
         deck.reveal_card(42, 2);
         deck.reveal_card(22, 2);
         assert_eq!(
-            CardIdentityMask::from_bits(R3_MASK).unwrap(),
+            CardIdentityMask::from_bits(R3_MASK),
             deck.empathy_by_index[42]
         );
         assert_eq!(
-            CardIdentityMask::from_bits(R3_MASK).unwrap(),
+            CardIdentityMask::from_bits(R3_MASK),
             deck.empathy_by_index[22]
         );
         assert_eq!(
-            CardIdentityMask::from_bits(ALL_CARDS_MASK & !R3_MASK).unwrap(),
+            CardIdentityMask::from_bits(ALL_CARDS_MASK & !R3_MASK),
             deck.empathy_by_index[1]
         );
     }
@@ -312,7 +312,7 @@ mod tests {
                 (49, Y5_MASK | P5_MASK),
             ];
             for &(i, m) in pairs {
-                arr[i] = CardIdentityMask::from_bits(m).unwrap();
+                arr[i] = CardIdentityMask::from_bits(m);
             }
             arr
         };
@@ -330,15 +330,15 @@ mod tests {
 
         deck.reveal_card(47, 7);
         assert_eq!(
-            CardIdentityMask::from_bits(Y3_MASK).unwrap(),
+            CardIdentityMask::from_bits(Y3_MASK),
             deck.empathy_by_index[47]
         );
         assert_eq!(
-            CardIdentityMask::from_bits(Y5_MASK).unwrap(),
+            CardIdentityMask::from_bits(Y5_MASK),
             deck.empathy_by_index[48]
         );
         assert_eq!(
-            CardIdentityMask::from_bits(P5_MASK).unwrap(),
+            CardIdentityMask::from_bits(P5_MASK),
             deck.empathy_by_index[49]
         );
     }

@@ -153,7 +153,7 @@ pub fn knowledge_with_visible(player_index: usize, visible: &[(u8, u64)]) -> Pla
     let mut k = PlayerKnowledge::new(player_index);
     for &(idx, mask) in visible {
         k.inferred_identities[idx as usize] =
-            Some(CardIdentityMask::from_bits(mask).expect("zero mask in knowledge_with_visible"));
+            Some(CardIdentityMask::from_bits(mask));
         k.visible_cards |= 1 << idx;
     }
     k
@@ -175,7 +175,7 @@ pub fn knowledge_with_empathy(
 ) -> PlayerKnowledge {
     let mut k = PlayerKnowledge::new(0);
     k.inferred_identities[card_deck_index as usize] =
-        Some(CardIdentityMask::from_bits(possible_identities).expect("zero mask in knowledge_with_empathy"));
+        Some(CardIdentityMask::from_bits(possible_identities));
     k.own_hand = 1 << card_deck_index;
     k
 }

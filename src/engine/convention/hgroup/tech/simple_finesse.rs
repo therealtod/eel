@@ -207,10 +207,10 @@ mod tests {
         table_state.active_player_index = 0;
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).inferred_identities[10] =
-            Some(CardIdentityMask::from_bits(R2_MASK).unwrap());
+            Some(CardIdentityMask::from_bits(R2_MASK));
         team_knowledge.player_mut(0).visible_cards |= 1u64 << 10;
         team_knowledge.player_mut(0).inferred_identities[20] =
-            Some(CardIdentityMask::from_bits(R3_MASK).unwrap());
+            Some(CardIdentityMask::from_bits(R3_MASK));
         team_knowledge.player_mut(0).visible_cards |= 1u64 << 20;
         let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
 

@@ -1,10 +1,7 @@
 use super::{VariantCardId, VariantCardsBitField};
 use crate::game::variant::Variant;
 
-/// A non-zero bitmask of possible card identities for a single deck position.
-///
-/// Invariant: the inner bitmask is never zero. A zero mask would mean a card has no possible
-/// identity — always a contradiction in a valid game state.
+/// A bitmask of possible card identities for a single deck position.
 ///
 /// Methods that could produce an empty result (like [`narrow`] and [`exclude`]) return
 /// `None` so callers decide whether to keep the old value or treat the situation as a bug.
@@ -23,8 +20,8 @@ impl CardIdentityMask {
     }
 
     /// Construct from a raw bitmask. Returns `None` if `bits` is zero.
-    pub fn from_bits(bits: VariantCardsBitField) -> Option<Self> {
-        if bits == 0 { None } else { Some(CardIdentityMask(bits)) }
+    pub fn from_bits(bits: VariantCardsBitField) -> Self {
+        CardIdentityMask(bits)
     }
 
     /// Returns `true` if exactly one identity remains possible.

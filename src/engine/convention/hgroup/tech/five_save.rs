@@ -194,7 +194,7 @@ mod tests {
         let knowledge = knowledge_with_visible(0, &[(10, R5_MASK)]);
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).inferred_identities[10] =
-            Some(CardIdentityMask::from_bits(R5_MASK).unwrap());
+            Some(CardIdentityMask::from_bits(R5_MASK));
         team_knowledge.player_mut(0).visible_cards |= 1 << 10;
         let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
         let pov =

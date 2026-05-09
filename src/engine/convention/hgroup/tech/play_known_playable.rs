@@ -120,12 +120,12 @@ mod tests {
 
         let mut knowledge = PlayerKnowledge::new(0);
         knowledge.own_hand = 1 << 10;
-        knowledge.inferred_identities[10] = Some(CardIdentityMask::from_bits(R1_MASK).unwrap());
+        knowledge.inferred_identities[10] = Some(CardIdentityMask::from_bits(R1_MASK));
 
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).own_hand = 1 << 10;
         team_knowledge.player_mut(0).inferred_identities[10] =
-            Some(CardIdentityMask::from_bits(R1_MASK).unwrap());
+            Some(CardIdentityMask::from_bits(R1_MASK));
 
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
@@ -154,13 +154,13 @@ mod tests {
 
         let mut knowledge = PlayerKnowledge::new(0);
         knowledge.own_hand = 1 << 10;
-        knowledge.inferred_identities[10] = Some(CardIdentityMask::from_bits(R1_MASK).unwrap());
+        knowledge.inferred_identities[10] = Some(CardIdentityMask::from_bits(R1_MASK));
         knowledge.signals[10].push(signal.clone());
 
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).own_hand = 1 << 10;
         team_knowledge.player_mut(0).inferred_identities[10] =
-            Some(CardIdentityMask::from_bits(R1_MASK).unwrap());
+            Some(CardIdentityMask::from_bits(R1_MASK));
         team_knowledge.player_mut(0).signals[10].push(signal);
 
         let pov =
@@ -184,7 +184,7 @@ mod tests {
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).own_hand = 1 << 10;
         team_knowledge.player_mut(0).inferred_identities[10] =
-            Some(CardIdentityMask::from_bits(R1_MASK).unwrap());
+            Some(CardIdentityMask::from_bits(R1_MASK));
         team_knowledge.player_mut(0).signals[10].push(signal);
 
         let knowledge = PlayerKnowledge::new(0);

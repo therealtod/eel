@@ -255,14 +255,14 @@ mod tests {
         let mut knowledge = PlayerKnowledge::new(0);
         for &(_, deck_idx, mask) in cards {
             knowledge.inferred_identities[deck_idx as usize] =
-                Some(CardIdentityMask::from_bits(mask).unwrap());
+                Some(CardIdentityMask::from_bits(mask));
             knowledge.visible_cards |= 1u64 << deck_idx;
         }
 
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         for &(_, deck_idx, mask) in cards {
             team_knowledge.player_mut(0).inferred_identities[deck_idx as usize] =
-                Some(CardIdentityMask::from_bits(mask).unwrap());
+                Some(CardIdentityMask::from_bits(mask));
             team_knowledge.player_mut(0).visible_cards |= 1u64 << deck_idx;
         }
         (table_state, knowledge, team_knowledge, static_data)
@@ -302,9 +302,9 @@ mod tests {
         table_state.clue_touched_cards |= 1u64 << 10;
 
         let mut knowledge = PlayerKnowledge::new(0);
-        knowledge.inferred_identities[10] = Some(CardIdentityMask::from_bits(R2_MASK).unwrap());
+        knowledge.inferred_identities[10] = Some(CardIdentityMask::from_bits(R2_MASK));
         knowledge.visible_cards |= 1u64 << 10;
-        knowledge.inferred_identities[20] = Some(CardIdentityMask::from_bits(R3_MASK).unwrap());
+        knowledge.inferred_identities[20] = Some(CardIdentityMask::from_bits(R3_MASK));
         knowledge.visible_cards |= 1u64 << 20;
 
         // Mark R2 (card 10) as known to its holder (player 1) in team_knowledge.
@@ -497,10 +497,10 @@ mod tests {
         let (table_state, knowledge, mut team_knowledge, static_data) =
             setup(&[(0, 10, R3_MASK), (1, 20, R2_MASK)], &[10, 20], &[R1]);
         team_knowledge.player_mut(0).inferred_identities[10] =
-            Some(CardIdentityMask::from_bits(R3_MASK).unwrap());
+            Some(CardIdentityMask::from_bits(R3_MASK));
         team_knowledge.player_mut(0).visible_cards |= 1u64 << 10;
         team_knowledge.player_mut(0).inferred_identities[20] =
-            Some(CardIdentityMask::from_bits(R2_MASK).unwrap());
+            Some(CardIdentityMask::from_bits(R2_MASK));
         team_knowledge.player_mut(0).visible_cards |= 1u64 << 20;
         let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
         let pov =
