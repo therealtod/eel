@@ -24,7 +24,7 @@ pub fn actor_pov(pov: &dyn PlayerPOV) -> LightweightPlayerPOV<'_> {
 
 /// Returns the deck indices of cards in `player_index`'s hand that are touched by `clue`.
 pub fn touched_cards_for_clue(
-    player_index: usize,
+    player_index: PlayerIndex,
     clue: &Clue,
     player_pov: &dyn PlayerPOV,
 ) -> SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> {
