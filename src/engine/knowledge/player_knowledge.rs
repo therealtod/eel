@@ -4,7 +4,7 @@ use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
 use crate::game::MAX_CARDS_IN_DECK;
 use crate::game::card::{
-    CardDeckIndex, DeckCardsBitField, Empathy, VariantCardId, VariantCardsBitField,
+    CardDeckIndex, DeckCardsBitField, CardIdentityMask, VariantCardId, VariantCardsBitField,
 };
 use crate::game::state::table_state::TableState;
 use crate::game::variant::Variant;
@@ -26,7 +26,7 @@ pub struct PlayerKnowledge {
     pub player_index: usize,
     /// For each card: identities inferred through convention interpretation.
     /// This is the subset of game-rule empathy that results from decoding conventions.
-    pub inferred_identities: [Option<Empathy>; MAX_CARDS_IN_DECK],
+    pub inferred_identities: [Option<CardIdentityMask>; MAX_CARDS_IN_DECK],
     /// Signals (play/discard/save) attached to cards by convention interpretation.
     /// `SmallVec<[Signal; 2]>` avoids heap allocation for the common 0–2 signals case.
     pub signals: [SmallVec<[Signal; 2]>; MAX_CARDS_IN_DECK],
@@ -60,7 +60,7 @@ impl PlayerKnowledge {
         card_id: VariantCardId,
     ) {
         let idx = card_deck_index as usize;
-        self.inferred_identities[idx] = Some(Empathy::known(card_id));
+        self.inferred_identities[idx] = Some(CardIdentityMask::known(card_id));
         self.visible_cards |= 1 << card_deck_index;
     }
 
@@ -74,7 +74,7 @@ impl PlayerKnowledge {
         variant: &Variant,
     ) {
         let idx = card_deck_index as usize;
-        let current = self.inferred_identities[idx].unwrap_or_else(|| Empathy::all(variant));
+        let current = self.inferred_identities[idx].unwrap_or_else(|| CardIdentityMask::all(variant));
         if let Some(new_empathy) = current.narrow(mask) {
             self.inferred_identities[idx] = Some(new_empathy);
             if new_empathy.is_exactly_known() {
@@ -110,7 +110,7 @@ impl PlayerKnowledge {
 
     /// Get the possible identities for a card (convention-inferred only).
     /// Returns None if no convention narrowing has been applied yet.
-    pub fn possible_identities(&self, card_deck_index: CardDeckIndex) -> Option<Empathy> {
+    pub fn possible_identities(&self, card_deck_index: CardDeckIndex) -> Option<CardIdentityMask> {
         self.inferred_identities[card_deck_index as usize]
     }
 
@@ -128,14 +128,14 @@ impl PlayerKnowledge {
         card_deck_index: CardDeckIndex,
         table_state: &TableState,
         variant: &Variant,
-    ) -> Empathy {
+    ) -> CardIdentityMask {
         let is_own_unseen = (self.own_hand >> card_deck_index) & 1 != 0
             && (self.visible_cards >> card_deck_index) & 1 == 0;
 
         if is_own_unseen {
             // Only convention-inferred knowledge; fully unknown if no clue has touched it.
             return self.inferred_identities[card_deck_index as usize]
-                .unwrap_or_else(|| Empathy::all(variant));
+                .unwrap_or_else(|| CardIdentityMask::all(variant));
         }
 
         let game_empathy = table_state.deck.get_global_empathy(card_deck_index);
@@ -153,7 +153,7 @@ pub fn knowledge_with_visible(player_index: usize, visible: &[(u8, u64)]) -> Pla
     let mut k = PlayerKnowledge::new(player_index);
     for &(idx, mask) in visible {
         k.inferred_identities[idx as usize] =
-            Some(Empathy::from_bits(mask).expect("zero mask in knowledge_with_visible"));
+            Some(CardIdentityMask::from_bits(mask).expect("zero mask in knowledge_with_visible"));
         k.visible_cards |= 1 << idx;
     }
     k
@@ -175,7 +175,7 @@ pub fn knowledge_with_empathy(
 ) -> PlayerKnowledge {
     let mut k = PlayerKnowledge::new(0);
     k.inferred_identities[card_deck_index as usize] =
-        Some(Empathy::from_bits(possible_identities).expect("zero mask in knowledge_with_empathy"));
+        Some(CardIdentityMask::from_bits(possible_identities).expect("zero mask in knowledge_with_empathy"));
     k.own_hand = 1 << card_deck_index;
     k
 }

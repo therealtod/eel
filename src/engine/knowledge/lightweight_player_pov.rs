@@ -208,7 +208,7 @@ mod tests {
     use super::*;
     use crate::engine::knowledge::player_knowledge::knowledge_with_empathy;
     use crate::game::action::game_action::GameAction;
-    use crate::game::card::Empathy;
+    use crate::game::card::CardIdentityMask;
     use crate::game::clue_type::ClueType;
     use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards::*;
     use crate::game::deck::unit_test_constants::novariant_constants::*;

@@ -92,7 +92,7 @@ mod tests {
     use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
     use crate::engine::knowledge::player_knowledge::PlayerKnowledge;
     use crate::engine::knowledge::team_knowledge::TeamKnowledge;
-    use crate::game::card::Empathy;
+    use crate::game::card::CardIdentityMask;
     use crate::game::deck::unit_test_constants::novariant_constants::{R1_MASK, R2_MASK};
     use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
         NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
@@ -120,12 +120,12 @@ mod tests {
 
         let mut knowledge = PlayerKnowledge::new(0);
         knowledge.own_hand = 1 << 10;
-        knowledge.inferred_identities[10] = Some(Empathy::from_bits(R1_MASK).unwrap());
+        knowledge.inferred_identities[10] = Some(CardIdentityMask::from_bits(R1_MASK).unwrap());
 
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).own_hand = 1 << 10;
         team_knowledge.player_mut(0).inferred_identities[10] =
-            Some(Empathy::from_bits(R1_MASK).unwrap());
+            Some(CardIdentityMask::from_bits(R1_MASK).unwrap());
 
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
@@ -154,13 +154,13 @@ mod tests {
 
         let mut knowledge = PlayerKnowledge::new(0);
         knowledge.own_hand = 1 << 10;
-        knowledge.inferred_identities[10] = Some(Empathy::from_bits(R1_MASK).unwrap());
+        knowledge.inferred_identities[10] = Some(CardIdentityMask::from_bits(R1_MASK).unwrap());
         knowledge.signals[10].push(signal.clone());
 
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).own_hand = 1 << 10;
         team_knowledge.player_mut(0).inferred_identities[10] =
-            Some(Empathy::from_bits(R1_MASK).unwrap());
+            Some(CardIdentityMask::from_bits(R1_MASK).unwrap());
         team_knowledge.player_mut(0).signals[10].push(signal);
 
         let pov =
@@ -184,7 +184,7 @@ mod tests {
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).own_hand = 1 << 10;
         team_knowledge.player_mut(0).inferred_identities[10] =
-            Some(Empathy::from_bits(R1_MASK).unwrap());
+            Some(CardIdentityMask::from_bits(R1_MASK).unwrap());
         team_knowledge.player_mut(0).signals[10].push(signal);
 
         let knowledge = PlayerKnowledge::new(0);

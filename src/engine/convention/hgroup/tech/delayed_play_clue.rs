@@ -145,7 +145,7 @@ mod tests {
     use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
     use crate::engine::knowledge::player_knowledge::{PlayerKnowledge, knowledge_with_visible};
     use crate::engine::knowledge::team_knowledge::TeamKnowledge;
-    use crate::game::card::Empathy;
+    use crate::game::card::CardIdentityMask;
     use crate::game::clue::Clue;
     use crate::game::clue_type::ClueType;
     use crate::game::deck::unit_test_constants::novariant_constants::*;
@@ -296,10 +296,10 @@ mod tests {
         let knowledge = knowledge_with_visible(0, &[(10, R3_MASK), (20, R2_MASK)]);
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).inferred_identities[10] =
-            Some(Empathy::from_bits(R3_MASK).unwrap());
+            Some(CardIdentityMask::from_bits(R3_MASK).unwrap());
         team_knowledge.player_mut(0).visible_cards |= 1 << 10;
         team_knowledge.player_mut(0).inferred_identities[20] =
-            Some(Empathy::from_bits(R2_MASK).unwrap());
+            Some(CardIdentityMask::from_bits(R2_MASK).unwrap());
         team_knowledge.player_mut(0).visible_cards |= 1 << 20;
         team_knowledge.player_mut(2).own_hand |= 1 << 20;
         team_knowledge.player_mut(2).visible_cards |= 1 << 20;
@@ -332,7 +332,7 @@ mod tests {
         let knowledge = knowledge_with_visible(0, &[(10, R1_MASK)]);
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).inferred_identities[10] =
-            Some(Empathy::from_bits(R1_MASK).unwrap());
+            Some(CardIdentityMask::from_bits(R1_MASK).unwrap());
         team_knowledge.player_mut(0).visible_cards |= 1 << 10;
         let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
         let pov =
@@ -362,7 +362,7 @@ mod tests {
         let knowledge = knowledge_with_visible(0, &[(10, R3_MASK)]);
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).inferred_identities[10] =
-            Some(Empathy::from_bits(R3_MASK).unwrap());
+            Some(CardIdentityMask::from_bits(R3_MASK).unwrap());
         team_knowledge.player_mut(0).visible_cards |= 1 << 10;
         let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
         let pov =
@@ -425,10 +425,10 @@ mod tests {
         let knowledge = knowledge_with_visible(0, &[(10, R3_MASK), (20, R2_MASK)]);
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).inferred_identities[10] =
-            Some(Empathy::from_bits(R3_MASK).unwrap());
+            Some(CardIdentityMask::from_bits(R3_MASK).unwrap());
         team_knowledge.player_mut(0).visible_cards |= 1u64 << 10;
         team_knowledge.player_mut(0).inferred_identities[20] =
-            Some(Empathy::from_bits(R2_MASK).unwrap());
+            Some(CardIdentityMask::from_bits(R2_MASK).unwrap());
         team_knowledge.player_mut(0).visible_cards |= 1u64 << 20;
         team_knowledge.player_mut(1).own_hand |= 1 << 20;
         team_knowledge.player_mut(1).visible_cards |= 1 << 20;

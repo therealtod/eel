@@ -208,7 +208,7 @@ mod tests {
     use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
     use crate::engine::knowledge::player_knowledge::PlayerKnowledge;
     use crate::engine::knowledge::team_knowledge::TeamKnowledge;
-    use crate::game::card::Empathy;
+    use crate::game::card::CardIdentityMask;
     use crate::game::clue::Clue;
     use crate::game::clue_type::ClueType;
     use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards::*;
@@ -255,14 +255,14 @@ mod tests {
         let mut knowledge = PlayerKnowledge::new(0);
         for &(_, deck_idx, mask) in cards {
             knowledge.inferred_identities[deck_idx as usize] =
-                Some(Empathy::from_bits(mask).unwrap());
+                Some(CardIdentityMask::from_bits(mask).unwrap());
             knowledge.visible_cards |= 1u64 << deck_idx;
         }
 
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         for &(_, deck_idx, mask) in cards {
             team_knowledge.player_mut(0).inferred_identities[deck_idx as usize] =
-                Some(Empathy::from_bits(mask).unwrap());
+                Some(CardIdentityMask::from_bits(mask).unwrap());
             team_knowledge.player_mut(0).visible_cards |= 1u64 << deck_idx;
         }
         (table_state, knowledge, team_knowledge, static_data)
@@ -302,9 +302,9 @@ mod tests {
         table_state.clue_touched_cards |= 1u64 << 10;
 
         let mut knowledge = PlayerKnowledge::new(0);
-        knowledge.inferred_identities[10] = Some(Empathy::from_bits(R2_MASK).unwrap());
+        knowledge.inferred_identities[10] = Some(CardIdentityMask::from_bits(R2_MASK).unwrap());
         knowledge.visible_cards |= 1u64 << 10;
-        knowledge.inferred_identities[20] = Some(Empathy::from_bits(R3_MASK).unwrap());
+        knowledge.inferred_identities[20] = Some(CardIdentityMask::from_bits(R3_MASK).unwrap());
         knowledge.visible_cards |= 1u64 << 20;
 
         // Mark R2 (card 10) as known to its holder (player 1) in team_knowledge.
@@ -497,10 +497,10 @@ mod tests {
         let (table_state, knowledge, mut team_knowledge, static_data) =
             setup(&[(0, 10, R3_MASK), (1, 20, R2_MASK)], &[10, 20], &[R1]);
         team_knowledge.player_mut(0).inferred_identities[10] =
-            Some(Empathy::from_bits(R3_MASK).unwrap());
+            Some(CardIdentityMask::from_bits(R3_MASK).unwrap());
         team_knowledge.player_mut(0).visible_cards |= 1u64 << 10;
         team_knowledge.player_mut(0).inferred_identities[20] =
-            Some(Empathy::from_bits(R2_MASK).unwrap());
+            Some(CardIdentityMask::from_bits(R2_MASK).unwrap());
         team_knowledge.player_mut(0).visible_cards |= 1u64 << 20;
         let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
         let pov =

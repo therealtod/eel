@@ -1,4 +1,4 @@
-use crate::game::card::{CardDeckIndex, Empathy, VariantCardId, VariantCardsBitField};
+use crate::game::card::{CardDeckIndex, CardIdentityMask, VariantCardId, VariantCardsBitField};
 use crate::game::variant::Variant;
 use crate::game::{MAX_CARDS_IN_DECK, MAX_UNIQUE_CARDS_IN_DECK};
 use smallvec::SmallVec;
@@ -11,13 +11,13 @@ pub struct Deck {
     pub current_size: u8,
     total_copies_per_id: [u8; MAX_UNIQUE_CARDS_IN_DECK],
     revealed_copies_per_index: [u8; MAX_UNIQUE_CARDS_IN_DECK],
-    empathy_by_index: [Empathy; MAX_CARDS_IN_DECK],
+    empathy_by_index: [CardIdentityMask; MAX_CARDS_IN_DECK],
     revealed_indexes: u64,
 }
 
 impl Deck {
     pub fn new(variant: &Variant) -> Self {
-        let unknown = Empathy::all(variant);
+        let unknown = CardIdentityMask::all(variant);
         Deck {
             current_size: variant.deck_size,
             total_copies_per_id: variant.card_copies_count_by_id,
@@ -32,7 +32,7 @@ impl Deck {
         current_size: u8,
         total_copies_per_id: [u8; MAX_UNIQUE_CARDS_IN_DECK],
         revealed_copies_per_index: [u8; MAX_UNIQUE_CARDS_IN_DECK],
-        empathy_by_index: [Empathy; MAX_CARDS_IN_DECK],
+        empathy_by_index: [CardIdentityMask; MAX_CARDS_IN_DECK],
         revealed_indexes: u64,
     ) -> Self {
         Deck {
@@ -49,7 +49,7 @@ impl Deck {
         self.current_size -= amount;
     }
 
-    pub fn get_global_empathy(&self, deck_card_index: CardDeckIndex) -> Empathy {
+    pub fn get_global_empathy(&self, deck_card_index: CardDeckIndex) -> CardIdentityMask {
         self.empathy_by_index[deck_card_index as usize]
     }
 
@@ -63,7 +63,7 @@ impl Deck {
         while let Some((pos, id)) = worklist.pop() {
             let identity_mask: VariantCardsBitField = 1 << id;
             self.revealed_copies_per_index[id] += 1;
-            self.empathy_by_index[pos as usize] = Empathy::known(id);
+            self.empathy_by_index[pos as usize] = CardIdentityMask::known(id);
             self.revealed_indexes |= 1u64 << pos;
             if self.revealed_copies_per_index[id] == self.total_copies_per_id[id] {
                 let valid_mask = (1u64 << self.current_size) - 1;
@@ -121,7 +121,7 @@ impl Deck {
 
 #[cfg(any(test, feature = "test-support"))]
 pub mod unit_test_constants {
-    use crate::game::card::Empathy;
+    use crate::game::card::CardIdentityMask;
     use crate::game::deck::Deck;
     use crate::game::deck::unit_test_constants::novariant_constants::COPIES_COUNT_BY_ID;
     use crate::game::variant::test_variants::NO_VARIANT;
@@ -204,7 +204,7 @@ pub mod unit_test_constants {
         current_size: 50,
         total_copies_per_id: COPIES_COUNT_BY_ID,
         revealed_copies_per_index: [0; MAX_UNIQUE_CARDS_IN_DECK],
-        empathy_by_index: [Empathy::all(&NO_VARIANT); MAX_CARDS_IN_DECK],
+        empathy_by_index: [CardIdentityMask::all(&NO_VARIANT); MAX_CARDS_IN_DECK],
         revealed_indexes: 0,
     };
 }
@@ -230,7 +230,7 @@ mod tests {
         let mut deck = NEW_DECK.clone();
 
         deck.reveal_card(42, 2);
-        let expected = Empathy::from_bits(R3_MASK).unwrap();
+        let expected = CardIdentityMask::from_bits(R3_MASK).unwrap();
         let actual = deck.empathy_by_index[42];
         assert_eq!(expected, actual);
     }
@@ -242,23 +242,23 @@ mod tests {
         deck.reveal_card(42, 2);
         deck.reveal_card(22, 2);
         assert_eq!(
-            Empathy::from_bits(R3_MASK).unwrap(),
+            CardIdentityMask::from_bits(R3_MASK).unwrap(),
             deck.empathy_by_index[42]
         );
         assert_eq!(
-            Empathy::from_bits(R3_MASK).unwrap(),
+            CardIdentityMask::from_bits(R3_MASK).unwrap(),
             deck.empathy_by_index[22]
         );
         assert_eq!(
-            Empathy::from_bits(ALL_CARDS_MASK & !R3_MASK).unwrap(),
+            CardIdentityMask::from_bits(ALL_CARDS_MASK & !R3_MASK).unwrap(),
             deck.empathy_by_index[1]
         );
     }
 
     #[test]
     fn should_recursively_update_empathy() {
-        let empathy_by_index: [Empathy; MAX_CARDS_IN_DECK] = {
-            let mut arr = [Empathy::all(&NO_VARIANT); MAX_CARDS_IN_DECK];
+        let empathy_by_index: [CardIdentityMask; MAX_CARDS_IN_DECK] = {
+            let mut arr = [CardIdentityMask::all(&NO_VARIANT); MAX_CARDS_IN_DECK];
             let pairs: &[(usize, VariantCardsBitField)] = &[
                 (0, R1_MASK),
                 (1, R1_MASK),
@@ -312,7 +312,7 @@ mod tests {
                 (49, Y5_MASK | P5_MASK),
             ];
             for &(i, m) in pairs {
-                arr[i] = Empathy::from_bits(m).unwrap();
+                arr[i] = CardIdentityMask::from_bits(m).unwrap();
             }
             arr
         };
@@ -330,15 +330,15 @@ mod tests {
 
         deck.reveal_card(47, 7);
         assert_eq!(
-            Empathy::from_bits(Y3_MASK).unwrap(),
+            CardIdentityMask::from_bits(Y3_MASK).unwrap(),
             deck.empathy_by_index[47]
         );
         assert_eq!(
-            Empathy::from_bits(Y5_MASK).unwrap(),
+            CardIdentityMask::from_bits(Y5_MASK).unwrap(),
             deck.empathy_by_index[48]
         );
         assert_eq!(
-            Empathy::from_bits(P5_MASK).unwrap(),
+            CardIdentityMask::from_bits(P5_MASK).unwrap(),
             deck.empathy_by_index[49]
         );
     }

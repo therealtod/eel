@@ -507,7 +507,7 @@ impl KnowledgeAwareGameState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::game::card::Empathy;
+    use crate::game::card::CardIdentityMask;
     use crate::game::variant::test_variants::NO_VARIANT;
 
     fn make_state() -> KnowledgeAwareGameState {
@@ -572,7 +572,7 @@ mod tests {
             .combined_possible_identities(card_deck_index, &state.table_state, &variant);
         assert_eq!(
             combined.as_bits(),
-            Empathy::all(&variant).as_bits(),
+            CardIdentityMask::all(&variant).as_bits(),
             "drawer should not know the card's identity"
         );
     }

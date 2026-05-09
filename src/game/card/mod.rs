@@ -1,7 +1,7 @@
 pub mod copies_counting_card_collection;
-pub mod empathy;
+pub mod card_identity_mask;
 
-pub use empathy::Empathy;
+pub use card_identity_mask::CardIdentityMask;
 
 pub type CardDeckIndex = u8;
 pub type VariantCardsBitField = u64;

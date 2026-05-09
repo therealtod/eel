@@ -9,22 +9,22 @@ use crate::game::variant::Variant;
 /// Methods that could produce an empty result (like [`narrow`] and [`exclude`]) return
 /// `None` so callers decide whether to keep the old value or treat the situation as a bug.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct Empathy(VariantCardsBitField);
+pub struct CardIdentityMask(VariantCardsBitField);
 
-impl Empathy {
+impl CardIdentityMask {
     /// All identities are possible for a variant with the given card mask.
     pub const fn all(variant: &Variant) -> Self {
-        Empathy(variant.all_cards_mask())
+        CardIdentityMask(variant.all_cards_mask())
     }
 
     /// Exactly one identity is possible.
     pub const fn known(card_id: VariantCardId) -> Self {
-        Empathy(1 << card_id)
+        CardIdentityMask(1 << card_id)
     }
 
     /// Construct from a raw bitmask. Returns `None` if `bits` is zero.
     pub fn from_bits(bits: VariantCardsBitField) -> Option<Self> {
-        if bits == 0 { None } else { Some(Empathy(bits)) }
+        if bits == 0 { None } else { Some(CardIdentityMask(bits)) }
     }
 
     /// Returns `true` if exactly one identity remains possible.
@@ -55,13 +55,13 @@ impl Empathy {
     /// Returns `None` if the intersection would be empty.
     pub fn narrow(self, mask: VariantCardsBitField) -> Option<Self> {
         let bits = self.0 & mask;
-        if bits == 0 { None } else { Some(Empathy(bits)) }
+        if bits == 0 { None } else { Some(CardIdentityMask(bits)) }
     }
 
     /// Remove identities present in `mask` (negative clue elimination).
     /// Returns `None` if all identities would be eliminated.
     pub fn exclude(self, mask: VariantCardsBitField) -> Option<Self> {
         let bits = self.0 & !mask;
-        if bits == 0 { None } else { Some(Empathy(bits)) }
+        if bits == 0 { None } else { Some(CardIdentityMask(bits)) }
     }
 }
