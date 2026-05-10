@@ -1,9 +1,12 @@
+use eel::engine::game_state_snapshot::GameStateSnapshot;
 use eel::engine::knowledge::player_knowledge::PlayerKnowledge;
 use eel::engine::knowledge::team_knowledge::TeamKnowledge;
+use eel::game::action::game_action::GameAction;
 use eel::game::card::CardIdentityMask;
 use eel::game::state::table_state::TableState;
 use eel::game::state::table_state_json::{
-    ScenarioJson, build_from_scenario, parse_card, parse_empathy_mask, parse_scenario,
+    ScenarioJson, build_from_scenario, build_game_actions, parse_card, parse_empathy_mask,
+    parse_scenario,
 };
 use eel::game::static_game_data::StaticGameData;
 use eel::game::variant::test_variants::NO_VARIANT;
@@ -76,34 +79,38 @@ pub fn team_knowledge_from_scenario(scenario: &ScenarioJson) -> TeamKnowledge {
                 continue;
             }
             let hand_size = hand.len();
-            for (slot_pos, card_str) in hand.iter().enumerate() {
+            for (slot_pos, slot) in hand.iter().enumerate() {
                 let deck_idx = indices[hand_size - 1 - slot_pos];
-                if card_str != "x" {
+                let id = slot.id();
+                if id != "x" {
                     team_knowledge
                         .player_mut(p)
-                        .update_with_revealed_card(deck_idx, parse_card(card_str));
+                        .update_with_revealed_card(deck_idx, parse_card(id));
                 }
             }
         }
     }
 
-    for (p, inferred_hand) in scenario.inferred_identities.iter().enumerate() {
+    for (p, player_hand) in scenario.hands.iter().enumerate() {
         if p >= num_players {
             break;
         }
         let indices = &player_indices[p];
-        let hand_size = scenario.hands[p].len();
-        for (slot_pos, entry) in inferred_hand.iter().enumerate() {
+        let hand_size = player_hand.len();
+        for (slot_pos, slot) in player_hand.iter().enumerate() {
             if slot_pos >= hand_size {
                 break;
             }
-            if entry != "x" {
-                let deck_idx = indices[hand_size - 1 - slot_pos];
-                let mask = parse_empathy_mask(entry);
-                let emp = CardIdentityMask::from_bits(mask);
-                team_knowledge.player_mut(p).inferred_identities[deck_idx as usize] = Some(emp);
-                if emp.is_exactly_known() {
-                    team_knowledge.player_mut(p).visible_cards |= 1u64 << deck_idx;
+            if let Some(inferred_str) = slot.inferred() {
+                if inferred_str != "x" {
+                    let deck_idx = indices[hand_size - 1 - slot_pos];
+                    let mask = parse_empathy_mask(inferred_str);
+                    let emp = CardIdentityMask::from_bits(mask);
+                    team_knowledge.player_mut(p).inferred_identities[deck_idx as usize] =
+                        Some(emp);
+                    if emp.is_exactly_known() {
+                        team_knowledge.player_mut(p).visible_cards |= 1u64 << deck_idx;
+                    }
                 }
             }
         }
@@ -112,8 +119,56 @@ pub fn team_knowledge_from_scenario(scenario: &ScenarioJson) -> TeamKnowledge {
     team_knowledge
 }
 
+/// Apply a `GameAction` to a `TableState` at the table-state level only (no convention
+/// knowledge propagation). Used to build intermediate history snapshots when replaying
+/// `prior_actions`.
+fn apply_action_for_history(ts: &mut TableState, action: &GameAction, static_data: &StaticGameData) {
+    match action {
+        GameAction::Clue {
+            player_index,
+            touched_card_deck_indexes,
+            clue,
+            ..
+        } => {
+            ts.update_with_clue_action(
+                touched_card_deck_indexes.clone(),
+                clue.clone(),
+                *player_index,
+                static_data,
+            );
+        }
+        GameAction::Play {
+            card_deck_index, ..
+        } => {
+            ts.update_with_play_action(*card_deck_index);
+        }
+        GameAction::Discard {
+            card_deck_index, ..
+        } => {
+            ts.update_with_discard_action(*card_deck_index, static_data);
+        }
+        GameAction::Draw { .. } => {}
+    }
+}
+
+/// Load a scenario with team knowledge, history, and parsed actions.
+///
+/// Returns the base scenario state (before `prior_actions` are applied), the team knowledge
+/// derived from the scenario, a history of snapshots (one per prior action, each capturing
+/// the state before that action), and the `prior_actions` as `GameAction`s.
+///
+/// Tests use `history[i]` as the snapshot before `actions[i]`, eliminating the need to
+/// manually fabricate history or hardcode action structs.
 #[allow(dead_code)]
-pub fn load_scenario_with_knowledge(n: u32) -> (TableState, StaticGameData, TeamKnowledge) {
+pub fn load_scenario_with_knowledge(
+    n: u32,
+) -> (
+    TableState,
+    StaticGameData,
+    TeamKnowledge,
+    Vec<GameStateSnapshot>,
+    Vec<GameAction>,
+) {
     init_tracing();
     let path: PathBuf = [
         env!("CARGO_MANIFEST_DIR"),
@@ -130,7 +185,20 @@ pub fn load_scenario_with_knowledge(n: u32) -> (TableState, StaticGameData, Team
     let scenario = parse_scenario(&json);
     let team_knowledge = team_knowledge_from_scenario(&scenario);
     let (table_state, static_data) = build_from_scenario(&scenario, NO_VARIANT);
-    (table_state, static_data, team_knowledge)
+
+    let actions = build_game_actions(&scenario, &static_data.variant);
+
+    let mut history = Vec::with_capacity(actions.len());
+    let mut running_ts = table_state.clone();
+    for action in &actions {
+        history.push(GameStateSnapshot::new(
+            running_ts.clone(),
+            team_knowledge.clone(),
+        ));
+        apply_action_for_history(&mut running_ts, action, &static_data);
+    }
+
+    (table_state, static_data, team_knowledge, history, actions)
 }
 
 #[allow(dead_code)]

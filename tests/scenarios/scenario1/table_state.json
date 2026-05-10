@@ -1,4 +1,5 @@
 {
+  "scenario_description": "3p, stacks=[r1,b2], player 0 on turn. Alice (p0) gives a rank-3 finesse clue to Cathy (p2) targeting r3 (deck 13). Bob's finesse position (deck 9 = r2) is the connecting card.",
   "suits": [
     "red",
     "yellow",
@@ -17,5 +18,8 @@
     ["x", "x", "x", "x", "x"],
     ["r2", "b3", "y4", "b1", "r3"],
     ["b4", "r3", "p2", "p2", "r1"]
+  ],
+  "prior_actions": [
+    {"type": "clue", "giver": 0, "receiver": 2, "clue": "3"}
   ]
 }

@@ -5,14 +5,10 @@ use eel::engine::convention::hgroup::signal::Signal;
 use eel::engine::convention::hgroup::tech::critical_save::RankCriticalSave;
 use eel::engine::convention::hgroup::tech::play_known_playable::PlayKnownPlayable;
 use eel::engine::convention::hgroup::tech::simple_finesse::SimpleFinesse;
-use eel::engine::game_state_snapshot::GameStateSnapshot;
 use eel::engine::knowledge::knowledge_update::{Hypothesis, KnowledgeUpdate, PendingTrigger};
 use eel::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 use eel::engine::knowledge::player_knowledge::PlayerKnowledge;
 use eel::game::action::game_action::GameAction;
-use eel::game::clue::Clue;
-use eel::game::clue_type::ClueType;
-use smallvec::smallvec;
 
 // Scenario 1: 3p, stacks=[r1,b2], player 0 on turn
 // p1=["r2","b3","y4","b1","r3"] → slot1=deck9=r2 (finesse position, id=1, playable)
@@ -21,7 +17,10 @@ use smallvec::smallvec;
 // → SimpleFinesse generates a clue to p2 focusing r3
 #[test]
 fn all_players_understand_simple_finesse_semantics() {
-    let (table_state, static_data, team_knowledge) = common::load_scenario_with_knowledge(1);
+    let (table_state, static_data, team_knowledge, history, actions) =
+        common::load_scenario_with_knowledge(1);
+    // history[0] = pre-clue snapshot; actions[0] = Alice's rank-3 clue to Cathy (deck 13)
+    let finesse_action = &actions[0];
 
     // ── Part 1: Alice (player 0) can generate the rank-3 finesse clue to Cathy ─────────────────
     // Rank 3 touches only deck 13 (r3) in Cathy's hand; r3 is 1-away (red stack at r1, r2 not
@@ -35,27 +34,13 @@ fn all_players_understand_simple_finesse_semantics() {
         &static_data,
     );
 
-    let actions = SimpleFinesse.game_actions(&alice_pov);
-    let finesse_action = GameAction::Clue {
-        player_index: 2,
-        touched_card_deck_indexes: smallvec![13],
-        clue: Clue {
-            clue_type: ClueType::Rank,
-            clue_value: 3,
-        },
-        turn: 0,
-    };
+    let generated_actions = SimpleFinesse.game_actions(&alice_pov);
     assert!(
-        actions.contains(&finesse_action),
+        generated_actions.contains(finesse_action),
         "Alice should generate a rank-3 finesse clue to Cathy (deck 13 = r3, 1-away)"
     );
 
-    // ── Part 2: Build pre-clue history snapshot ──────────────────────────────────────────────────
-    // The snapshot captures the game state before Alice gives the clue.
-    let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
-    let history = vec![snapshot];
-
-    // ── Part 3: Bob (player 1) receives an unconditional Play signal on his finesse position ─────
+    // ── Part 2: Bob (player 1) receives an unconditional Play signal on his finesse position ─────
     // Bob is a third-party observer who sees both hands. He recognises that Cathy's deck 13 is
     // r3 (1-away) and that his own deck 9 (r2) is the connecting card, so he must blind-play it.
     let mut bob_table_state = table_state.clone();
@@ -69,7 +54,7 @@ fn all_players_understand_simple_finesse_semantics() {
         &static_data,
     );
 
-    let bob_updates = SimpleFinesse.knowledge_updates(&finesse_action, &history, &bob_pov);
+    let bob_updates = SimpleFinesse.knowledge_updates(finesse_action, &history, &bob_pov);
     assert!(
         bob_updates.trigger.is_none(),
         "Bob's play obligation is unconditional: he can see all the information directly"
@@ -95,7 +80,7 @@ fn all_players_understand_simple_finesse_semantics() {
         "Bob must receive a Play signal on deck 9 (r2, his finesse position)"
     );
 
-    // ── Part 4: Cathy (player 2) holds two competing interpretations of the rank-3 clue ─────────
+    // ── Part 3: Cathy (player 2) holds two competing interpretations of the rank-3 clue ─────────
     // From Cathy's POV the clue is ambiguous:
     //   a) Direct play clue → focused card is b3 (blue 3, directly playable since blue stack = b2)
     //      (contributed by DelayedPlayClue / other tech, not tested here)
@@ -117,7 +102,7 @@ fn all_players_understand_simple_finesse_semantics() {
         &static_data,
     );
 
-    let cathy_updates = SimpleFinesse.knowledge_updates(&finesse_action, &history, &cathy_pov);
+    let cathy_updates = SimpleFinesse.knowledge_updates(finesse_action, &history, &cathy_pov);
 
     // The finesse hypothesis pins the focused card (deck 13) to r3 (id = 2, mask = 1 << 2).
     const R3_MASK: u64 = 1u64 << 2; // R3 = red suit offset 0, rank 3, id = 0 + 3 - 1 = 2
@@ -152,7 +137,7 @@ fn all_players_understand_simple_finesse_semantics() {
 const R3_MASK: u64 = 1u64 << 2; // R3 = red offset 0, rank 3, id = 2
 const B3_MASK: u64 = 1u64 << 17; // B3 = blue offset 15, rank 3, id = 17
 
-/// Build Cathy's live `PlayerKnowledge` for scenario 16 after Alice gives a rank-3 finesse clue.
+/// Build Cathy's live `PlayerKnowledge` for scenario 1 after Alice gives a rank-3 finesse clue.
 ///
 /// Returns a knowledge state with two live hypotheses in cohort 0:
 ///   - finesse (r3, provisional on Bob blind-playing deck 9): from `SimpleFinesse`
@@ -161,20 +146,9 @@ const B3_MASK: u64 = 1u64 << 17; // B3 = blue offset 15, rank 3, id = 17
 /// While both are live the effective mask for deck 13 is r3 | b3.
 fn cathy_knowledge_after_finesse_clue()
 -> (PlayerKnowledge, eel::game::static_game_data::StaticGameData) {
-    let (table_state, static_data, team_knowledge) = common::load_scenario_with_knowledge(1);
-
-    let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
-    let history = vec![snapshot];
-
-    let finesse_action = GameAction::Clue {
-        player_index: 2,
-        touched_card_deck_indexes: smallvec![13],
-        clue: Clue {
-            clue_type: ClueType::Rank,
-            clue_value: 3,
-        },
-        turn: 0,
-    };
+    let (table_state, static_data, team_knowledge, history, actions) =
+        common::load_scenario_with_knowledge(1);
+    let finesse_action = &actions[0];
 
     let mut cathy_table_state = table_state.clone();
     cathy_table_state.active_player_index = 2;
@@ -187,7 +161,8 @@ fn cathy_knowledge_after_finesse_clue()
         &static_data,
     );
 
-    let finesse_hypothesis = SimpleFinesse.knowledge_updates(&finesse_action, &history, &cathy_pov);
+    let finesse_hypothesis =
+        SimpleFinesse.knowledge_updates(finesse_action, &history, &cathy_pov);
     let b3_direct_play = Hypothesis::unconditional(vec![KnowledgeUpdate::NarrowPossibilities {
         card_deck_index: 13,
         mask: B3_MASK,
@@ -289,19 +264,9 @@ fn cathy_finesse_hypothesis_rejects_when_bob_does_not_blind_play() {
 fn rank_3_clue_on_chop_three_interpretations_finesse_excluded_by_critical_save() {
     const G3_MASK: u64 = 1u64 << 12; // G3 = green offset 10, rank 3, id = 12
 
-    let (table_state, static_data, team_knowledge) = common::load_scenario_with_knowledge(2);
-
-    let clue_action = GameAction::Clue {
-        player_index: 2,
-        touched_card_deck_indexes: smallvec![10],
-        clue: Clue {
-            clue_type: ClueType::Rank,
-            clue_value: 3,
-        },
-        turn: 0,
-    };
-    let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
-    let history = vec![snapshot];
+    let (table_state, static_data, team_knowledge, history, actions) =
+        common::load_scenario_with_knowledge(2);
+    let clue_action = &actions[0];
 
     // ── Part 1: Alice generates a rank-3 critical save, not a finesse ─────────────────────────
     let alice_knowledge = team_knowledge.player(0).clone();
@@ -313,11 +278,11 @@ fn rank_3_clue_on_chop_three_interpretations_finesse_excluded_by_critical_save()
         &static_data,
     );
     assert!(
-        RankCriticalSave.game_actions(&alice_pov).contains(&clue_action),
+        RankCriticalSave.game_actions(&alice_pov).contains(clue_action),
         "Alice should generate a rank-3 critical save to Cathy (deck 10 = g3, critical chop)"
     );
     assert!(
-        !SimpleFinesse.game_actions(&alice_pov).contains(&clue_action),
+        !SimpleFinesse.game_actions(&alice_pov).contains(clue_action),
         "Alice should NOT treat rank-3 to Cathy as a finesse (g3 is 3-away, not a finesse target)"
     );
 
@@ -336,7 +301,7 @@ fn rank_3_clue_on_chop_three_interpretations_finesse_excluded_by_critical_save()
     );
     assert!(
         SimpleFinesse
-            .knowledge_updates(&clue_action, &history, &bob_pov)
+            .knowledge_updates(clue_action, &history, &bob_pov)
             .is_empty(),
         "Bob sees g3 on Cathy's chop (3-away): no finesse, SimpleFinesse returns empty for Bob"
     );
@@ -353,10 +318,9 @@ fn rank_3_clue_on_chop_three_interpretations_finesse_excluded_by_critical_save()
         &static_data,
     );
 
-    let finesse_hypothesis =
-        SimpleFinesse.knowledge_updates(&clue_action, &history, &cathy_pov);
+    let finesse_hypothesis = SimpleFinesse.knowledge_updates(clue_action, &history, &cathy_pov);
     let critical_save_hypothesis =
-        RankCriticalSave.knowledge_updates(&clue_action, &history, &cathy_pov);
+        RankCriticalSave.knowledge_updates(clue_action, &history, &cathy_pov);
     let direct_play_b3 = Hypothesis::unconditional(vec![KnowledgeUpdate::NarrowPossibilities {
         card_deck_index: 10,
         mask: B3_MASK,
