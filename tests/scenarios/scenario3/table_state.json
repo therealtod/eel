@@ -1,0 +1,31 @@
+{
+  "scenario_description": "3p, stacks=[r1,b2], discard=[g3], player 0 on turn. Alice (p0) clues blue to Cathy (p2) focusing b4 (deck 14) prompting b3 to Bob on his leftmost clued slot with empathy compatible with b3.",
+  "suits": [
+    "red",
+    "yellow",
+    "green",
+    "blue",
+    "purple"
+  ],
+  "playing_stacks": [
+    ["r1"], [], [], ["b1", "b2"], []
+  ],
+  "discard_pile": ["g3"],
+  "clue_tokens": 5,
+  "strikes": 0,
+  "active_player": 0,
+  "hands": [
+    ["x", "x", "x", "x", "x"],
+    [
+      {"id": "y4", "positive": ["4"]},
+      {"id": "b3", "positive": ["3"]},
+      {"id": "r3", "positive": ["3"]},
+      {"id": "p3", "positive": ["3"]},
+      "r2"
+    ],
+    ["b4", "b5", "p2", "p2", "g3"]
+  ],
+  "prior_actions": [
+    {"type": "clue", "giver": 0, "receiver": 2, "clue": "blue"}
+  ]
+}

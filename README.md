@@ -108,6 +108,86 @@ cargo clippy               # lint
 cargo fmt                  # format
 ```
 
+## Test scenarios
+
+Game positions are stored as JSON files under `tests/scenarios/scenario{n}/table_state.json`.
+Load them in integration tests via helpers in `tests/common/mod.rs`:
+
+```rust
+// Board state only
+let (table_state, static_data) = common::load_scenario(n);
+
+// Board state + team knowledge + history + parsed actions
+let (table_state, static_data, team_knowledge, history, actions) =
+    common::load_scenario_with_knowledge(n);
+```
+
+`history[i]` is the `GameStateSnapshot` taken before `actions[i]`, so tests can call
+`tech.knowledge_updates(&actions[0], &history, &pov)` without manually fabricating snapshots
+or hardcoding action structs.
+
+### Scenario JSON format
+
+```json
+{
+  "scenario_description": "Human-readable summary of the position.",
+  "suits": ["red", "yellow", "green", "blue", "purple"],
+  "playing_stacks": [["r1"], [], [], ["b1", "b2"], []],
+  "discard_pile": ["g3"],
+  "clue_tokens": 5,
+  "strikes": 0,
+  "active_player": 0,
+  "hands": [
+    ["x", "x", "x", "x", "x"],
+    ["r2", "b3", "y4", "b1", "r3"],
+    [
+      "b4",
+      {"id": "g3", "positive": ["3"], "negative": ["red", "blue"], "inferred": "g3"},
+      "p2",
+      "p2",
+      "r1"
+    ]
+  ],
+  "prior_actions": [
+    {"type": "clue", "giver": 0, "receiver": 2, "clue": "3"}
+  ]
+}
+```
+
+**`hands`** — Each element is a player's hand listed slot-1-first (newest → oldest).
+Each slot is either a plain card string or a full object:
+
+| Field      | Type             | Meaning                                                                                             |
+|------------|------------------|-----------------------------------------------------------------------------------------------------|
+| `id`       | `string`         | Card identity (`"r3"`, `"b4"`, …) or `"x"` for an unknown card.                                   |
+| `positive` | `string[]`       | Clue values that **touched** this slot. Each entry narrows the deck empathy and marks the slot as clued. |
+| `negative` | `string[]`       | Clue values that were given but did **not** touch this slot. Each entry excludes those identities from the empathy mask. |
+| `inferred` | `string \| null` | Convention-based identity, stored in `TeamKnowledge`. Same format as `id` but may concatenate multiple possibilities (`"r3b3"`). |
+
+Clue value strings: rank digit `"1"`–`"5"` or colour name `"red"`, `"yellow"`, `"green"`,
+`"blue"`, `"purple"`. Using `positive`/`negative` per slot replaces the old separate
+`empathy`, `clued_cards`, and `inferred_identities` top-level arrays; plain string slots
+remain fully supported for positions with no clue history.
+
+**`prior_actions`** — Actions that happen after the scenario state, in order. Supported types:
+
+| Type      | Fields                                          | Notes                                                         |
+|-----------|-------------------------------------------------|---------------------------------------------------------------|
+| `"clue"`  | `giver`, `receiver` (player indices), `clue`    | Touched cards computed automatically from hand identities.    |
+| `"play"`  | `player` (player index), `slot` (1-indexed)     |                                                               |
+| `"discard"` | `player` (player index), `slot` (1-indexed)   |                                                               |
+
+The loader replays `prior_actions` at the table-state level to build `history` and returns the
+parsed `Vec<GameAction>`, so neither needs to be constructed in test code.
+
+### Card ID encoding (no-variant)
+
+`id = suit_offset + rank − 1`, with suit offsets R=0, Y=5, G=10, B=15, P=20.
+
+| Card | R1 | R2 | R3 | R4 | R5 | Y1 | … | G1 | … | B1 | … | P1 | … | P5 |
+|------|----|----|----|----|----|----|---|----|----|----|----|----|----|-----|
+| ID   | 0  | 1  | 2  | 3  | 4  | 5  | … | 10 | … | 15 | … | 20 | … | 24 |
+
 ## Hanabi-specific terminology
 
 | Term           | Meaning                                                                                                                                                                                                                                                                         |

@@ -179,7 +179,7 @@ fn cathy_knowledge_after_finesse_clue()
     (knowledge_live, static_data)
 }
 
-// Scenario 16: Bob blind-plays deck 9 → finesse confirmed, deck 13 pinned to r3
+// Scenario 1: Bob blind-plays deck 9 → finesse confirmed, deck 13 pinned to r3
 #[test]
 fn cathy_finesse_hypothesis_confirms_when_bob_blind_plays() {
     let (mut knowledge, static_data) = cathy_knowledge_after_finesse_clue();
