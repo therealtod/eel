@@ -1,0 +1,63 @@
+{
+  "scenario_description": "Alice should choose to play g2 instead of saving a critical card on Cathy's chop, slowing down the tempo. That same save clue can be given by Bob, which is a more desirable outcome",
+  "suits": [
+    "red",
+    "yellow",
+    "green",
+    "blue",
+    "purple"
+  ],
+  "playing_stacks": [
+    [],
+    [
+      "y1"
+    ],
+    [
+      "g1"
+    ],
+    [
+      "b1"
+    ],
+    [
+      "p1"
+    ]
+  ],
+  "discard_pile": [
+    "y3"
+  ],
+  "clue_tokens": 4,
+  "strikes": 0,
+  "active_player": 0,
+  "empathy": [
+    [
+      "x",
+      "g2",
+      "x",
+      "x",
+      "x"
+    ]
+  ],
+  "hands": [
+    [
+      "x",
+      "g2",
+      "x",
+      "x",
+      "x"
+    ],
+    [
+      "y4",
+      "b4",
+      "b1",
+      "g3",
+      "r4"
+    ],
+    [
+      "r1",
+      "b1",
+      "r3",
+      "p4",
+      "y3"
+    ]
+  ]
+}

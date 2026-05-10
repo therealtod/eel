@@ -1,0 +1,56 @@
+{
+  "scenario_description": "Alice should recognize that saving a critical card is more important than giving a play clue, since there is a high chance Bob will discard",
+  "suits": [
+    "red",
+    "yellow",
+    "green",
+    "blue",
+    "purple"
+  ],
+  "playing_stacks": [
+    [
+      "r1"
+    ],
+    [
+      "y1"
+    ],
+    [
+      "g1"
+    ],
+    [
+      "b1"
+    ],
+    [
+      "p1"
+    ]
+  ],
+  "discard_pile": [
+    "g3"
+  ],
+  "clue_tokens": 3,
+  "strikes": 0,
+  "active_player": 0,
+  "hands": [
+    [
+      "x",
+      "x",
+      "x",
+      "x",
+      "x"
+    ],
+    [
+      "r5",
+      "y4",
+      "b4",
+      "b1",
+      "g3"
+    ],
+    [
+      "y4",
+      "r5",
+      "r3",
+      "p4",
+      "r2"
+    ]
+  ]
+}

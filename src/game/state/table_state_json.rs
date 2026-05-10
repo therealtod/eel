@@ -40,7 +40,8 @@ pub struct ScenarioJson {
     /// Optional; defaults to empty.
     #[serde(default)]
     pub clued_cards: Vec<[usize; 2]>,
-    /// Per-player, per-slot empathy: what each player believes about their own hand.
+    /// Per-player, per-slot empathy: what each player believes about their own hand based on
+    /// game rules (clues, visible cards, etc.). This gets stored in the Deck.
     /// Outer index = player, inner index = slot (slot1-first, same order as `hands`).
     /// Each entry is a string of concatenated card identities the player considers possible,
     /// e.g. `"r1"` (known exactly), `"b3b4"` (either b3 or b4), or `null`/omitted (unknown).
@@ -48,6 +49,14 @@ pub struct ScenarioJson {
     /// Use `"x"` for a slot with no information (same convention as `hands`).
     #[serde(default)]
     pub empathy: Vec<Vec<String>>,
+    /// Per-player, per-slot inferred identities: convention-based knowledge derived from
+    /// action interpretation via techs (e.g., save clues, prompts, finesses). This is independent
+    /// of game-rule empathy and gets stored in TeamKnowledge.inferred_identities.
+    /// Outer index = player, inner index = slot (slot1-first, same order as `hands`).
+    /// Same format as `empathy`: a string of concatenated card identities, `"x"` for unknown.
+    /// Optional; defaults to empty (no inferred identities).
+    #[serde(default)]
+    pub inferred_identities: Vec<Vec<String>>,
 }
 
 /// Parse a card string like `"r1"`, `"b3"`, `"p4"` into a `VariantCardId` for no-variant.

@@ -1,0 +1,57 @@
+{
+  "scenario_description": "When a color play clue and a rank play clue would be equally good in terms of efficiency, we should prefer the color clue because it reveals the full identity of the card to the clue receiver (better empathy)",
+  "suits": [
+    "red",
+    "yellow",
+    "green",
+    "blue",
+    "purple"
+  ],
+  "playing_stacks": [
+    [
+      "r1"
+    ],
+    [
+      "y1"
+    ],
+    [
+      "g1"
+    ],
+    [
+      "b1"
+    ],
+    [
+      "p1"
+    ]
+  ],
+  "discard_pile": [],
+  "clue_tokens": 6,
+  "strikes": 0,
+  "active_player": 0,
+  "hands": [
+    [
+      "x",
+      "x",
+      "x",
+      "x"
+    ],
+    [
+      "g4",
+      "r2",
+      "b1",
+      "b1"
+    ],
+    [
+      "b5",
+      "p4",
+      "r1",
+      "p1"
+    ],
+    [
+      "y4",
+      "p1",
+      "r4",
+      "b4"
+    ]
+  ]
+}
