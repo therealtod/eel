@@ -1,5 +1,4 @@
 {
-  "scenario_description": "Player 0 has received clues: slot 2 is blue (b3 or b4), slot 4 is green (known to be g1). A critical p4 is on Cathy's chop.",
   "suits": [
     "red",
     "yellow",
@@ -8,30 +7,15 @@
     "purple"
   ],
   "playing_stacks": [
-    [],
-    [],
-    [],
-    [],
-    []
+    ["r1"], [], [], ["b1", "b2"], []
   ],
-  "discard_pile": [
-    "p4"
-  ],
+  "discard_pile": [],
   "clue_tokens": 5,
   "strikes": 0,
   "active_player": 0,
   "hands": [
-    ["x", "x", "x", "x"],
-    ["g5", "r2", "r2", "b2"],
-    ["b1", "p3", "g4", "p4"],
-    ["y3", "p5", "r1", "b4"]
-  ],
-  "empathy": [
-    [
-      "x",
-      "b3b4",
-      "x",
-      "x"
-    ]
+    ["x", "x", "x", "x", "x"],
+    ["r2", "b3", "y4", "b1", "r3"],
+    ["b4", "r3", "p2", "p2", "r1"]
   ]
 }

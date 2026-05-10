@@ -12,14 +12,14 @@ use eel::game::clue::Clue;
 use eel::game::clue_type::ClueType;
 use smallvec::smallvec;
 
-// Scenario 16: 3p, stacks=[r1,b2], player 0 on turn
+// Scenario 1: 3p, stacks=[r1,b2], player 0 on turn
 // p1=["r2","b3","y4","b1","r3"] → slot1=deck9=r2 (finesse position, id=1, playable)
 // p2=["b4","r3","p2","p2","r1"] → slot2=deck13=r3 (id=2, 1-away; connecting=r2)
 // p1 plays before p2; p1 finesse position = r2 = connecting card for r3
 // → SimpleFinesse generates a clue to p2 focusing r3
 #[test]
 fn all_players_understand_simple_finesse_semantics() {
-    let (table_state, static_data, team_knowledge) = common::load_scenario_with_knowledge(16);
+    let (table_state, static_data, team_knowledge) = common::load_scenario_with_knowledge(1);
 
     // ── Part 1: Alice (player 0) can generate the rank-3 finesse clue to Cathy ─────────────────
     // Rank 3 touches only deck 13 (r3) in Cathy's hand; r3 is 1-away (red stack at r1, r2 not
@@ -159,7 +159,7 @@ const B3_MASK: u64 = 1u64 << 17; // B3 = blue offset 15, rank 3, id = 17
 /// While both are live the effective mask for deck 13 is r3 | b3.
 fn cathy_knowledge_after_finesse_clue()
 -> (PlayerKnowledge, eel::game::static_game_data::StaticGameData) {
-    let (table_state, static_data, team_knowledge) = common::load_scenario_with_knowledge(16);
+    let (table_state, static_data, team_knowledge) = common::load_scenario_with_knowledge(1);
 
     let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
     let history = vec![snapshot];
@@ -272,66 +272,3 @@ fn cathy_finesse_hypothesis_rejects_when_bob_does_not_blind_play() {
     );
 }
 
-// Scenario 17: 3p, stacks=[r1,b2]
-// p1=["r3","b3","y4","b1","g5"] → slot1=deck9=r3 (id=2, 1-away; NOT a connecting card for any 1-away focus)
-// p2=["r2","r3","p2","p2","y2"] → chop=deck10=y2 (1-away), slot1=deck14=r2 (playable)
-// p1 finesse position = r3 (id=2). For finesse: need focus with connecting=r3, i.e. focus=r4 (2-away). No valid finesse.
-#[test]
-#[ignore]
-fn simple_finesse_returns_empty_when_no_valid_finesse_setup() {
-    let (table_state, static_data, team_knowledge) = common::load_scenario_with_knowledge(17);
-    let knowledge = team_knowledge.player(0).clone();
-    let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
-
-    // No player has a 1-away card whose connecting card is on p1's finesse position (r3)
-    // (r4 would need r3 as connecting, but no one has r4 as a 1-away focus)
-    let actions = SimpleFinesse.game_actions(&pov);
-
-    assert!(
-        !actions.iter().any(|a| matches!(a, GameAction::Clue { player_index: 2, .. }
-            if matches!(a, GameAction::Clue { clue, .. } if clue.clue_type == ClueType::Color && clue.clue_value == 0))),
-        "should not generate a red finesse clue to player 2"
-    );
-}
-
-// Scenario 16: matches_action true for a red clue to p2 focusing r3 (finesse on p1's r2)
-#[test]
-#[ignore]
-fn simple_finesse_matches_action_true_for_valid_finesse_clue() {
-    let (table_state, static_data, team_knowledge) = common::load_scenario_with_knowledge(16);
-    let knowledge = team_knowledge.player(0).clone();
-    let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
-
-    // Red clue to p2 touching deck13=r3 (focus, 1-away; connecting=r2 on p1's finesse position)
-    let action = GameAction::Clue {
-        player_index: 2,
-        touched_card_deck_indexes: smallvec::smallvec![13],
-        clue: Clue {
-            clue_type: ClueType::Color,
-            clue_value: 0,
-        }, // red
-        turn: 0,
-    };
-    assert!(SimpleFinesse.matches_action(&action, &[], &pov));
-}
-
-// Scenario 16: matches_action false for a clue whose focus is directly playable (not 1-away)
-#[test]
-#[ignore]
-fn simple_finesse_matches_action_false_when_focus_not_1_away() {
-    let (table_state, static_data, team_knowledge) = common::load_scenario_with_knowledge(16);
-    let knowledge = team_knowledge.player(0).clone();
-    let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
-
-    // Blue clue to p2 touching deck11=p2 (not 1-away)
-    let action = GameAction::Clue {
-        player_index: 2,
-        touched_card_deck_indexes: smallvec::smallvec![14],
-        clue: Clue {
-            clue_type: ClueType::Color,
-            clue_value: 2,
-        }, // blue (b4 at deck14)
-        turn: 0,
-    };
-    assert!(!SimpleFinesse.matches_action(&action, &[], &pov));
-}
