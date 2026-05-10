@@ -1,12 +1,12 @@
-use crate::engine::knowledge::player_knowledge::PlayerKnowledge;
-use crate::engine::knowledge::team_knowledge::TeamKnowledge;
-use crate::game::card::CardIdentityMask;
-use crate::game::state::table_state::TableState;
-use crate::game::state::table_state_json::{
+use eel::engine::knowledge::player_knowledge::PlayerKnowledge;
+use eel::engine::knowledge::team_knowledge::TeamKnowledge;
+use eel::game::card::CardIdentityMask;
+use eel::game::state::table_state::TableState;
+use eel::game::state::table_state_json::{
     ScenarioJson, build_from_scenario, parse_card, parse_empathy_mask, parse_scenario,
 };
-use crate::game::static_game_data::StaticGameData;
-use crate::game::variant::test_variants::NO_VARIANT;
+use eel::game::static_game_data::StaticGameData;
+use eel::game::variant::test_variants::NO_VARIANT;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
@@ -47,7 +47,6 @@ pub fn load_scenario(n: u32) -> (TableState, StaticGameData) {
 
 #[allow(dead_code)]
 pub fn team_knowledge_from_scenario(scenario: &ScenarioJson) -> TeamKnowledge {
-    use crate::game::MAX_PLAYERS_IN_GAME;
     let num_players = scenario.hands.len();
     let mut team_knowledge = TeamKnowledge::new(num_players);
 
@@ -114,9 +113,7 @@ pub fn team_knowledge_from_scenario(scenario: &ScenarioJson) -> TeamKnowledge {
 }
 
 #[allow(dead_code)]
-pub fn load_scenario_with_knowledge(
-    n: u32,
-) -> (TableState, StaticGameData, TeamKnowledge) {
+pub fn load_scenario_with_knowledge(n: u32) -> (TableState, StaticGameData, TeamKnowledge) {
     init_tracing();
     let path: PathBuf = [
         env!("CARGO_MANIFEST_DIR"),
