@@ -1,6 +1,9 @@
 use crate::engine::convention::convention_set::ConventionSet;
+use crate::engine::convention::convention_tech::ConventionTech;
 use crate::engine::game_state_snapshot::GameStateSnapshot;
+use crate::engine::knowledge::knowledge_update::{Hypothesis, HypothesisId};
 use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
+use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge::player_pov_snapshot::PlayerPOVSnapshot;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
 use crate::game::MAX_HAND_SIZE;
@@ -10,6 +13,22 @@ use crate::game::clue::Clue;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
 use smallvec::SmallVec;
+
+/// Collect every tech's hypothesis for `action` from `observer_pov`. Empty hypotheses
+/// (techs that do not match) are dropped.
+fn collect_hypotheses(
+    techs: &[Box<dyn ConventionTech>],
+    action: &GameAction,
+    history: &[GameStateSnapshot],
+    observer_pov: &dyn PlayerPOV,
+) -> Vec<Hypothesis> {
+    techs
+        .iter()
+        .filter(|t| t.matches_action(action, history, observer_pov))
+        .map(|t| t.knowledge_updates(action, history, observer_pov))
+        .filter(|h| !h.is_empty())
+        .collect()
+}
 
 /// A [TableState] with associated player knowledge and convention awareness.
 ///
@@ -34,6 +53,8 @@ pub struct KnowledgeAwareGameState {
     /// Per-turn snapshots recorded by [`record_snapshot`](Self::record_snapshot).
     /// Index `i` holds the state *before* the action taken on turn `i`.
     history: Vec<GameStateSnapshot>,
+    /// Monotonic counter for unique hypothesis ids.
+    next_hypothesis_id: HypothesisId,
 }
 
 impl KnowledgeAwareGameState {
@@ -46,6 +67,7 @@ impl KnowledgeAwareGameState {
             static_data,
             next_deck_index: 0,
             history: Vec::new(),
+            next_hypothesis_id: 0,
         }
     }
 
@@ -62,6 +84,7 @@ impl KnowledgeAwareGameState {
             static_data,
             next_deck_index,
             history: Vec::new(),
+            next_hypothesis_id: 0,
         }
     }
 
@@ -184,6 +207,7 @@ impl KnowledgeAwareGameState {
     ///
     /// The search uses clone-and-recurse, so no undo token is needed.
     pub fn apply(&mut self, action: &GameAction, convention_set: &dyn ConventionSet) {
+        let actor = self.table_state.active_player_index();
         match action {
             GameAction::Play {
                 card_deck_index, ..
@@ -210,6 +234,19 @@ impl KnowledgeAwareGameState {
                 self.team_knowledge.player_mut(*player_index).own_hand |= 1u64 << *card_deck_index;
             }
         }
+
+        // Resolve pending interpretations across all players keyed on `actor`'s action.
+        // Draw actions never trigger a resolution.
+        if !matches!(action, GameAction::Draw { .. }) {
+            let num_players = self.static_data.number_of_players as usize;
+            for p in 0..num_players {
+                self.team_knowledge.player_mut(p).resolve_pending(
+                    actor,
+                    action,
+                    &self.static_data.variant,
+                );
+            }
+        }
     }
 
     fn apply_play(&mut self, card_deck_index: CardDeckIndex, convention_set: &dyn ConventionSet) {
@@ -227,16 +264,11 @@ impl KnowledgeAwareGameState {
             &self.table_state,
             &self.static_data,
         );
-        let matched_tech = convention_set
-            .techs()
-            .iter()
-            .find(|tech| tech.matches_action(&action, &self.history, &pov));
-        let updates: Vec<_> = matched_tech
-            .map(|tech| {
-                tracing::debug!(target: "eel::apply", giver = p, action = ?action, "tech_matched");
-                tech.knowledge_updates(&action, &self.history, &pov)
-            })
-            .unwrap_or_default();
+        let actor_hypotheses =
+            collect_hypotheses(convention_set.techs(), &action, &self.history, &pov);
+        if !actor_hypotheses.is_empty() {
+            tracing::debug!(target: "eel::apply", giver = p, action = ?action, "tech_matched");
+        }
 
         // Resolve the played card's identity so we can advance the stacks and give subsequent
         // players accurate playability information. Two cases where identity can be inferred:
@@ -251,12 +283,7 @@ impl KnowledgeAwareGameState {
         // advancing stacks), since guessing wrong would corrupt the search state.
         let known_id = {
             let knowledge = self.team_knowledge.player(p);
-            let has_play_signal = knowledge.signals[card_deck_index as usize].iter().any(|s| {
-                matches!(
-                    s,
-                    crate::engine::convention::hgroup::signal::Signal::Play { .. }
-                )
-            });
+            let has_play_signal = knowledge.has_play_signal(card_deck_index);
             let combined = knowledge.combined_possible_identities(
                 card_deck_index,
                 &self.table_state,
@@ -289,30 +316,32 @@ impl KnowledgeAwareGameState {
         self.update_with_unkown_card_draw(p);
 
         let num_players = self.static_data.number_of_players as usize;
+        let cohort_id = self.next_hypothesis_id;
+        self.next_hypothesis_id += 1;
         for target in (0..num_players).filter(|&t| t != p) {
             let own_hand = self.team_knowledge.player(target).own_hand;
-            let filtered: Vec<_> = updates
+            let filtered: Vec<Hypothesis> = actor_hypotheses
                 .iter()
-                .filter(|u| {
-                    use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
-                    let idx = match u {
-                        KnowledgeUpdate::NarrowPossibilities {
-                            card_deck_index, ..
-                        }
-                        | KnowledgeUpdate::AddSignal {
-                            card_deck_index, ..
-                        } => *card_deck_index,
-                    };
-                    own_hand & (1 << idx) != 0
+                .map(|h| Hypothesis {
+                    immediate: h
+                        .immediate
+                        .iter()
+                        .filter(|u| own_hand & (1 << u.card_deck_index()) != 0)
+                        .cloned()
+                        .collect(),
+                    trigger: h.trigger.clone(),
                 })
-                .cloned()
+                .filter(|h| !h.is_empty())
                 .collect();
             if !filtered.is_empty() {
-                tracing::debug!(target: "eel::apply", target, updates = ?filtered, "knowledge_updated");
-                self.team_knowledge
-                    .player_mut(target)
-                    .apply_updates(&filtered, &self.static_data.variant);
+                tracing::debug!(target: "eel::apply", target, hypotheses = ?filtered, "knowledge_updated");
             }
+            self.team_knowledge.player_mut(target).apply_cohort(
+                cohort_id,
+                filtered,
+                &mut self.next_hypothesis_id,
+                &self.static_data.variant,
+            );
         }
     }
 
@@ -371,25 +400,29 @@ impl KnowledgeAwareGameState {
             receiver,
             &self.static_data,
         );
-        let pre_clue_giver_pov = pre_clue_snapshot.player_pov(giver, &self.static_data);
-        let matched_tech = convention_set
-            .techs()
-            .iter()
-            .find(|tech| tech.matches_action(action, &self.history, &pre_clue_giver_pov));
-        let Some(tech) = matched_tech else { return };
-        tracing::debug!(target: "eel::apply", giver, action = ?action, "tech_matched");
-        let receiver_pov = pre_clue_snapshot.player_pov(receiver, &self.static_data);
-        let updates = tech.knowledge_updates(action, &self.history, &receiver_pov);
-        self.team_knowledge
-            .player_mut(receiver)
-            .apply_updates(&updates, &self.static_data.variant);
-        // Also update non-receiver players (e.g. prompted/finessed player in
-        // simple_prompt/finesse Case 1). Only apply updates for cards in their own hand.
+
+        let cohort_id = self.next_hypothesis_id;
+        self.next_hypothesis_id += 1;
         let num_players = self.static_data.number_of_players as usize;
+        let techs = convention_set.techs();
+
+        // Receiver: collect all matching techs' hypotheses from the receiver's own POV.
+        let receiver_pov = pre_clue_snapshot.player_pov(receiver, &self.static_data);
+        let receiver_hypotheses = collect_hypotheses(techs, action, &self.history, &receiver_pov);
+        if !receiver_hypotheses.is_empty() {
+            tracing::debug!(target: "eel::apply", giver, action = ?action, hypotheses = receiver_hypotheses.len(), "receiver_hypotheses");
+        }
+        self.team_knowledge.player_mut(receiver).apply_cohort(
+            cohort_id,
+            receiver_hypotheses,
+            &mut self.next_hypothesis_id,
+            &self.static_data.variant,
+        );
+
+        // Non-receivers: each observer evaluates all techs from their own POV. Receiver-targeted
+        // updates are filtered down to the observer's own hand (other-hand updates are redundant
+        // since they can see those hands directly via visible_cards).
         for target in (0..num_players).filter(|&t| t != receiver) {
-            // Build a temporary table state with active_player_index set to `target` so that
-            // tech.knowledge_updates can identify who the current observer is without mutating
-            // the shared state (which would corrupt state if a panic or early return occurred).
             let mut target_table_state = self.table_state.clone();
             target_table_state.active_player_index = target;
             let target_pov = LightweightPlayerPOV::new(
@@ -399,31 +432,29 @@ impl KnowledgeAwareGameState {
                 &target_table_state,
                 &self.static_data,
             );
-            let updates = tech.knowledge_updates(action, &self.history, &target_pov);
-            // Only apply updates for cards in target's own hand to avoid incorrectly
-            // narrowing knowledge of cards in other players' hands.
+            let raw = collect_hypotheses(techs, action, &self.history, &target_pov);
             let own_hand = self.team_knowledge.player(target).own_hand;
-            let filtered: Vec<_> = updates
+            let filtered: Vec<Hypothesis> = raw
                 .into_iter()
-                .filter(|u| {
-                    use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
-                    let idx = match u {
-                        KnowledgeUpdate::NarrowPossibilities {
-                            card_deck_index, ..
-                        }
-                        | KnowledgeUpdate::AddSignal {
-                            card_deck_index, ..
-                        } => *card_deck_index,
-                    };
-                    own_hand & (1 << idx) != 0
+                .map(|h| Hypothesis {
+                    immediate: h
+                        .immediate
+                        .into_iter()
+                        .filter(|u| own_hand & (1 << u.card_deck_index()) != 0)
+                        .collect(),
+                    trigger: h.trigger,
                 })
+                .filter(|h| !h.is_empty())
                 .collect();
-            self.team_knowledge
-                .player_mut(target)
-                .apply_updates(&filtered, &self.static_data.variant);
             if !filtered.is_empty() {
-                tracing::debug!(target: "eel::apply", target, updates = ?filtered, "knowledge_updated");
+                tracing::debug!(target: "eel::apply", target, hypotheses = filtered.len(), "knowledge_updated");
             }
+            self.team_knowledge.player_mut(target).apply_cohort(
+                cohort_id,
+                filtered,
+                &mut self.next_hypothesis_id,
+                &self.static_data.variant,
+            );
         }
     }
 

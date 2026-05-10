@@ -1,7 +1,7 @@
 use crate::engine::convention::convention_tech::PlayTech;
 use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::game_state_snapshot::GameStateSnapshot;
-use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
+use crate::engine::knowledge::knowledge_update::Hypothesis;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::CardDeckIndex;
@@ -77,8 +77,8 @@ impl PlayTech for PlayKnownPlayable {
         _turn: usize,
         _history: &[GameStateSnapshot],
         _observer_pov: &dyn PlayerPOV,
-    ) -> Vec<KnowledgeUpdate> {
-        vec![]
+    ) -> Hypothesis {
+        Hypothesis::empty()
     }
 }
 
@@ -149,7 +149,8 @@ mod tests {
 
         let signal = Signal::Play {
             card_deck_index: 10,
-            knowledge_updates: vec![],
+            committed_identity: 0,
+            deadline_turn: 1,
         };
 
         let mut knowledge = PlayerKnowledge::new(0);
@@ -178,7 +179,8 @@ mod tests {
 
         let signal = Signal::Play {
             card_deck_index: 10,
-            knowledge_updates: vec![],
+            committed_identity: 0,
+            deadline_turn: 1,
         };
 
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);

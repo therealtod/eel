@@ -4,7 +4,7 @@ use crate::engine::convention::hgroup::h_group_core::{
 };
 use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, PlayClueTech, priority};
 use crate::engine::game_state_snapshot::GameStateSnapshot;
-use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
+use crate::engine::knowledge::knowledge_update::{Hypothesis, KnowledgeUpdate};
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, VariantCardId};
@@ -119,9 +119,9 @@ impl ClueTech for SimplePrompt {
         turn: usize,
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
-    ) -> Vec<KnowledgeUpdate> {
+    ) -> Hypothesis {
         let Some(snap) = history.get(turn) else {
-            return vec![];
+            return Hypothesis::empty();
         };
         let giver = snap.table_state.active_player_index;
         let giver_pov = snap.player_pov(giver, observer_pov.static_data());
@@ -136,7 +136,7 @@ impl ClueTech for SimplePrompt {
             if let Some(focus) = focus {
                 let focus_id = match giver_pov.card_identity(focus) {
                     Some(id) if giver_pov.away_value(id) == Some(1) => id,
-                    _ => return vec![],
+                    _ => return Hypothesis::empty(),
                 };
                 let connecting_id = focus_id - 1;
                 let hand = giver_pov.table_state().hands[current].cards();
@@ -155,15 +155,17 @@ impl ClueTech for SimplePrompt {
                         .all(|&idx| giver_pov.is_playable(idx))
                     {
                         if let Some(card) = touched_in_hand.first().copied() {
-                            return vec![KnowledgeUpdate::NarrowPossibilities {
-                                card_deck_index: card,
-                                mask: 1 << connecting_id,
-                            }];
+                            return Hypothesis::unconditional(vec![
+                                KnowledgeUpdate::NarrowPossibilities {
+                                    card_deck_index: card,
+                                    mask: 1 << connecting_id,
+                                },
+                            ]);
                         }
                     }
                 }
             }
-            return vec![];
+            return Hypothesis::empty();
         }
 
         // ── Case 2: clue receiver ─────────────────────────────────────────────
@@ -185,14 +187,14 @@ impl ClueTech for SimplePrompt {
                 })
                 .fold(0u64, |acc, id| acc | (1 << id));
             if mask != 0 {
-                return vec![KnowledgeUpdate::NarrowPossibilities {
+                return Hypothesis::unconditional(vec![KnowledgeUpdate::NarrowPossibilities {
                     card_deck_index: focus,
                     mask,
-                }];
+                }]);
             }
         }
 
-        vec![]
+        Hypothesis::empty()
     }
 }
 
@@ -467,11 +469,11 @@ mod tests {
             &pov,
         );
 
-        assert_eq!(updates.len(), 1);
+        assert_eq!(updates.immediate.len(), 1);
         if let KnowledgeUpdate::NarrowPossibilities {
             card_deck_index,
             mask,
-        } = &updates[0]
+        } = &updates.immediate[0]
         {
             assert_eq!(*card_deck_index, 10);
             assert_ne!(mask & R3_MASK, 0, "R3 should be in the mask");
@@ -519,11 +521,11 @@ mod tests {
             &pov,
         );
 
-        assert_eq!(updates.len(), 1);
+        assert_eq!(updates.immediate.len(), 1);
         if let KnowledgeUpdate::NarrowPossibilities {
             card_deck_index,
             mask,
-        } = &updates[0]
+        } = &updates.immediate[0]
         {
             assert_eq!(*card_deck_index, 10);
             assert_ne!(mask & R3_MASK, 0, "R3 should be in the mask");

@@ -4,7 +4,7 @@ use crate::engine::convention::hgroup::h_group_core::{
 };
 use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, SaveClueTech, priority};
 use crate::engine::game_state_snapshot::GameStateSnapshot;
-use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
+use crate::engine::knowledge::knowledge_update::{Hypothesis, KnowledgeUpdate};
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, VariantCardId};
@@ -111,14 +111,14 @@ impl ClueTech for TwoSave {
         turn: usize,
         history: &[GameStateSnapshot],
         player_pov: &dyn PlayerPOV,
-    ) -> Vec<KnowledgeUpdate> {
+    ) -> Hypothesis {
         let snap = history.get(turn).unwrap();
         let giver = snap.table_state.active_player_index;
         let giver_pov = snap.player_pov(giver, player_pov.static_data());
         let receiver = player_index;
         let focus = match get_clue_focus(receiver, touched, &giver_pov) {
             Some(f) => f,
-            None => return vec![],
+            None => return Hypothesis::empty(),
         };
         let static_data = giver_pov.static_data();
         let total_ids =
@@ -128,12 +128,12 @@ impl ClueTech for TwoSave {
             .filter(|&id| (1u64 << id) & rank2_mask != 0 && giver_pov.away_value(id) > Some(0))
             .fold(0u64, |acc, id| acc | (1 << id));
         if mask == 0 {
-            return vec![];
+            return Hypothesis::empty();
         }
-        vec![KnowledgeUpdate::NarrowPossibilities {
+        Hypothesis::unconditional(vec![KnowledgeUpdate::NarrowPossibilities {
             card_deck_index: focus,
             mask,
-        }]
+        }])
     }
 }
 
@@ -381,11 +381,12 @@ mod tests {
             &[snapshot],
             &pov,
         );
-        assert_eq!(updates.len(), 1);
+        assert_eq!(updates.immediate.len(), 1);
+        assert!(updates.trigger.is_none());
         if let KnowledgeUpdate::NarrowPossibilities {
             card_deck_index,
             mask,
-        } = &updates[0]
+        } = &updates.immediate[0]
         {
             assert_eq!(*card_deck_index, 10);
             // All rank-2 IDs (R2=1, Y2=6, G2=11, B2=16, P2=21) should be in the mask.
@@ -431,8 +432,8 @@ mod tests {
             &[snapshot],
             &pov,
         );
-        assert_eq!(updates.len(), 1);
-        if let KnowledgeUpdate::NarrowPossibilities { mask, .. } = &updates[0] {
+        assert_eq!(updates.immediate.len(), 1);
+        if let KnowledgeUpdate::NarrowPossibilities { mask, .. } = &updates.immediate[0] {
             assert!(mask & R2_MASK == 0, "R2 is playable, must not be in mask");
             assert!(mask & Y2_MASK != 0, "Y2 is still 1-away, must be in mask");
         } else {

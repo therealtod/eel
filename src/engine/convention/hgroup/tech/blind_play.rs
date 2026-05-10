@@ -1,7 +1,7 @@
 use crate::engine::convention::convention_tech::PlayTech;
 use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::game_state_snapshot::GameStateSnapshot;
-use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
+use crate::engine::knowledge::knowledge_update::Hypothesis;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::CardDeckIndex;
@@ -11,7 +11,9 @@ use crate::impl_convention_tech_for_play_tech;
 /// Play a card that carries a `Signal::Play` and is not clue-touched.
 ///
 /// Blind plays arise from finesses and other convention techs that attach a play signal to an
-/// untouched card. If the signal carries `knowledge_updates`, they are propagated here.
+/// untouched card. The signal carries the committed identity directly; downstream knowledge
+/// updates (e.g. promoting other observers' interpretations) are handled via pending
+/// interpretations, not from this tech.
 pub struct BlindPlay;
 
 impl PlayTech for BlindPlay {
@@ -41,8 +43,8 @@ impl PlayTech for BlindPlay {
         &self,
         player_index: PlayerIndex,
         card: CardDeckIndex,
-        turn: usize,
-        history: &[GameStateSnapshot],
+        _turn: usize,
+        _history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
     ) -> bool {
         let knowledge = observer_pov.team_knowledge().player(player_index);
@@ -54,25 +56,13 @@ impl PlayTech for BlindPlay {
 
     fn play_knowledge_updates(
         &self,
-        player_index: PlayerIndex,
-        card: CardDeckIndex,
-        turn: usize,
-        history: &[GameStateSnapshot],
-        observer_pov: &dyn PlayerPOV,
-    ) -> Vec<KnowledgeUpdate> {
-        observer_pov.team_knowledge().player(player_index).signals[card as usize]
-            .iter()
-            .find_map(|s| {
-                if let Signal::Play {
-                    knowledge_updates, ..
-                } = s
-                {
-                    Some(knowledge_updates.clone())
-                } else {
-                    None
-                }
-            })
-            .unwrap_or_default()
+        _player_index: PlayerIndex,
+        _card: CardDeckIndex,
+        _turn: usize,
+        _history: &[GameStateSnapshot],
+        _observer_pov: &dyn PlayerPOV,
+    ) -> Hypothesis {
+        Hypothesis::empty()
     }
 }
 
@@ -123,14 +113,18 @@ mod tests {
         (table_state, knowledge, team_knowledge, static_data)
     }
 
+    fn play_signal(card_deck_index: CardDeckIndex) -> Signal {
+        Signal::Play {
+            card_deck_index,
+            committed_identity: R2.as_variant_card_id(),
+            deadline_turn: 1,
+        }
+    }
+
     #[test]
     fn generates_play_action_for_untouched_card_with_play_signal() {
-        let signal = Signal::Play {
-            card_deck_index: 5,
-            knowledge_updates: vec![],
-        };
         let (table_state, knowledge, team_knowledge, static_data) =
-            pov_with_signal(5, signal, false);
+            pov_with_signal(5, play_signal(5), false);
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
@@ -148,12 +142,8 @@ mod tests {
 
     #[test]
     fn no_action_for_touched_card_with_play_signal() {
-        let signal = Signal::Play {
-            card_deck_index: 5,
-            knowledge_updates: vec![],
-        };
         let (table_state, knowledge, team_knowledge, static_data) =
-            pov_with_signal(5, signal, true);
+            pov_with_signal(5, play_signal(5), true);
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
@@ -180,12 +170,8 @@ mod tests {
 
     #[test]
     fn matches_play_true_for_untouched_card_with_play_signal() {
-        let signal = Signal::Play {
-            card_deck_index: 5,
-            knowledge_updates: vec![],
-        };
         let (table_state, knowledge, team_knowledge, static_data) =
-            pov_with_signal(5, signal, false);
+            pov_with_signal(5, play_signal(5), false);
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
@@ -202,12 +188,8 @@ mod tests {
 
     #[test]
     fn matches_play_false_for_touched_card_with_play_signal() {
-        let signal = Signal::Play {
-            card_deck_index: 5,
-            knowledge_updates: vec![],
-        };
         let (table_state, knowledge, team_knowledge, static_data) =
-            pov_with_signal(5, signal, true);
+            pov_with_signal(5, play_signal(5), true);
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
@@ -248,17 +230,9 @@ mod tests {
     }
 
     #[test]
-    fn knowledge_updates_returns_signal_updates() {
-        let inner_update = KnowledgeUpdate::NarrowPossibilities {
-            card_deck_index: 10,
-            mask: R3_MASK,
-        };
-        let signal = Signal::Play {
-            card_deck_index: 5,
-            knowledge_updates: vec![inner_update.clone()],
-        };
+    fn knowledge_updates_returns_empty() {
         let (table_state, knowledge, team_knowledge, static_data) =
-            pov_with_signal(5, signal, false);
+            pov_with_signal(5, play_signal(5), false);
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
@@ -272,36 +246,6 @@ mod tests {
             &pov,
         );
 
-        assert_eq!(updates, vec![inner_update]);
-    }
-
-    #[test]
-    fn knowledge_updates_returns_empty_when_no_signal() {
-        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
-        let mut table_state = initial_five_players_table_state();
-        table_state.update_with_draw_action(5);
-        table_state.active_player_index = 0;
-
-        let mut knowledge = PlayerKnowledge::new(0);
-        knowledge.own_hand = 1 << 5u64;
-        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        team_knowledge.player_mut(0).own_hand = 1 << 5u64;
-
-        let pov =
-            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
-
-        assert!(
-            BlindPlay
-                .knowledge_updates(
-                    &GameAction::Play {
-                        player_index: 0,
-                        card_deck_index: 5,
-                        turn: 0
-                    },
-                    &[],
-                    &pov
-                )
-                .is_empty()
-        );
+        assert!(updates.is_empty());
     }
 }
