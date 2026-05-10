@@ -2,6 +2,8 @@ mod common;
 
 use eel::engine::convention::convention_tech::ConventionTech;
 use eel::engine::convention::hgroup::signal::Signal;
+use eel::engine::convention::hgroup::tech::critical_save::RankCriticalSave;
+use eel::engine::convention::hgroup::tech::play_known_playable::PlayKnownPlayable;
 use eel::engine::convention::hgroup::tech::simple_finesse::SimpleFinesse;
 use eel::engine::game_state_snapshot::GameStateSnapshot;
 use eel::engine::knowledge::knowledge_update::{Hypothesis, KnowledgeUpdate, PendingTrigger};
@@ -241,7 +243,7 @@ fn cathy_finesse_hypothesis_confirms_when_bob_blind_plays() {
     );
 }
 
-// Scenario 16: Bob discards instead → finesse rejected, only the direct-play (b3) interpretation remains
+// Scenario 2: Bob discards instead → finesse rejected, only the direct-play (b3) interpretation remains
 #[test]
 fn cathy_finesse_hypothesis_rejects_when_bob_does_not_blind_play() {
     let (mut knowledge, static_data) = cathy_knowledge_after_finesse_clue();
@@ -272,3 +274,163 @@ fn cathy_finesse_hypothesis_rejects_when_bob_does_not_blind_play() {
     );
 }
 
+// Scenario 2: 3p, stacks=[r1,0,0,b2,0], discard=[g3], player 0 on turn
+// p1=["r2","b3","y4","b1","r3"] → slot1=deck9=r2 (finesse position, playable), slot5=deck5=r3 (chop)
+// p2=["b4","b4","p2","p2","g3"] → chop=deck10=g3 (critical, rank-3, 3-away from green stack)
+//
+// Alice's rank-3 clue to Cathy is a critical save on g3 (chop). From Cathy's POV it is ambiguous:
+//   a) critical save → deck 10 is g3 (unconditional, from RankCriticalSave)
+//   b) finesse → deck 10 is r3, confirmed if Bob blind-plays r2/deck9 (provisional, SimpleFinesse)
+//   c) direct play → deck 10 is b3, playable since blue stack = b2 (unconditional stand-in)
+// Bob sees g3 on chop (3-away, not a finesse target), so SimpleFinesse is empty for him.
+// After Bob discards instead of blind-playing, finesse is rejected; b3 | g3 remain.
+// Cathy cannot safely play deck 10 because g3 is not playable.
+#[test]
+fn rank_3_clue_on_chop_three_interpretations_finesse_excluded_by_critical_save() {
+    const G3_MASK: u64 = 1u64 << 12; // G3 = green offset 10, rank 3, id = 12
+
+    let (table_state, static_data, team_knowledge) = common::load_scenario_with_knowledge(2);
+
+    let clue_action = GameAction::Clue {
+        player_index: 2,
+        touched_card_deck_indexes: smallvec![10],
+        clue: Clue {
+            clue_type: ClueType::Rank,
+            clue_value: 3,
+        },
+        turn: 0,
+    };
+    let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
+    let history = vec![snapshot];
+
+    // ── Part 1: Alice generates a rank-3 critical save, not a finesse ─────────────────────────
+    let alice_knowledge = team_knowledge.player(0).clone();
+    let alice_pov = LightweightPlayerPOV::new(
+        0,
+        &alice_knowledge,
+        &team_knowledge,
+        &table_state,
+        &static_data,
+    );
+    assert!(
+        RankCriticalSave.game_actions(&alice_pov).contains(&clue_action),
+        "Alice should generate a rank-3 critical save to Cathy (deck 10 = g3, critical chop)"
+    );
+    assert!(
+        !SimpleFinesse.game_actions(&alice_pov).contains(&clue_action),
+        "Alice should NOT treat rank-3 to Cathy as a finesse (g3 is 3-away, not a finesse target)"
+    );
+
+    // ── Part 2: Bob (third-party) gets no blind-play signal ───────────────────────────────────
+    // From Bob's POV: focus = deck 10 = g3 (away=3), not a finesse setup.
+    // The critical-save interpretation makes it clear to him: no finesse, no blind-play needed.
+    let mut bob_table_state = table_state.clone();
+    bob_table_state.active_player_index = 1;
+    let bob_knowledge = team_knowledge.player(1).clone();
+    let bob_pov = LightweightPlayerPOV::new(
+        1,
+        &bob_knowledge,
+        &team_knowledge,
+        &bob_table_state,
+        &static_data,
+    );
+    assert!(
+        SimpleFinesse
+            .knowledge_updates(&clue_action, &history, &bob_pov)
+            .is_empty(),
+        "Bob sees g3 on Cathy's chop (3-away): no finesse, SimpleFinesse returns empty for Bob"
+    );
+
+    // ── Part 3: Cathy holds three live interpretations ────────────────────────────────────────
+    let mut cathy_table_state = table_state.clone();
+    cathy_table_state.active_player_index = 2;
+    let cathy_knowledge = team_knowledge.player(2).clone();
+    let cathy_pov = LightweightPlayerPOV::new(
+        2,
+        &cathy_knowledge,
+        &team_knowledge,
+        &cathy_table_state,
+        &static_data,
+    );
+
+    let finesse_hypothesis =
+        SimpleFinesse.knowledge_updates(&clue_action, &history, &cathy_pov);
+    let critical_save_hypothesis =
+        RankCriticalSave.knowledge_updates(&clue_action, &history, &cathy_pov);
+    let direct_play_b3 = Hypothesis::unconditional(vec![KnowledgeUpdate::NarrowPossibilities {
+        card_deck_index: 10,
+        mask: B3_MASK,
+    }]);
+
+    assert!(
+        finesse_hypothesis.trigger.is_some(),
+        "SimpleFinesse should give Cathy a provisional hypothesis (trigger on Bob's blind-play)"
+    );
+    assert!(
+        !critical_save_hypothesis.is_empty(),
+        "RankCriticalSave should give Cathy an unconditional hypothesis pinning deck 10 to g3"
+    );
+
+    let mut cathy_live = cathy_knowledge.clone();
+    let mut next_id = 0u32;
+    cathy_live.apply_cohort(
+        0,
+        vec![finesse_hypothesis, critical_save_hypothesis, direct_play_b3],
+        &mut next_id,
+        &static_data.variant,
+    );
+
+    let pre_mask = cathy_live
+        .effective_inferred_mask(10, &static_data.variant)
+        .as_bits();
+    assert_eq!(
+        pre_mask & (R3_MASK | B3_MASK | G3_MASK),
+        R3_MASK | B3_MASK | G3_MASK,
+        "before Bob acts, deck 10 admits r3 (finesse), b3 (direct play), and g3 (critical save)"
+    );
+
+    // ── Part 4: Bob discards → finesse rejected; g3 and b3 interpretations remain ──────────────
+    cathy_live.resolve_pending(
+        1,
+        &GameAction::Discard {
+            player_index: 1,
+            card_deck_index: 5,
+            turn: 1,
+        },
+        &static_data.variant,
+    );
+
+    assert_eq!(
+        cathy_live.hypotheses.len(),
+        2,
+        "after Bob discards, finesse is rejected; the two unconditional hypotheses (g3 save and b3 play) remain"
+    );
+    let post_mask = cathy_live
+        .effective_inferred_mask(10, &static_data.variant)
+        .as_bits();
+    assert_eq!(
+        post_mask & (R3_MASK | B3_MASK | G3_MASK),
+        B3_MASK | G3_MASK,
+        "after Bob discards, only direct-play (b3) and critical-save (g3) interpretations survive"
+    );
+
+    // ── Part 5: Cathy does not play deck 10 (b3 playable, g3 not) ───────────────────────────
+    // PlayKnownPlayable requires ALL possibilities to be playable. b3 is playable (blue=b2),
+    // but g3 is not (green stack empty). So no play is generated for deck 10.
+    let mut team_knowledge_post = team_knowledge.clone();
+    *team_knowledge_post.player_mut(2) = cathy_live.clone();
+    let cathy_post_pov = LightweightPlayerPOV::new(
+        2,
+        &cathy_live,
+        &team_knowledge_post,
+        &cathy_table_state,
+        &static_data,
+    );
+    assert!(
+        !PlayKnownPlayable
+            .game_actions(&cathy_post_pov)
+            .iter()
+            .any(|a| matches!(a, GameAction::Play { card_deck_index: 10, .. })),
+        "Cathy should not play deck 10: it could be g3 (not playable), making the play unsafe"
+    );
+}
