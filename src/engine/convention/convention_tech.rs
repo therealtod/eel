@@ -1,5 +1,5 @@
 use crate::engine::game_state_snapshot::GameStateSnapshot;
-use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
+use crate::engine::knowledge::knowledge_update::Hypothesis;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::CardDeckIndex;
@@ -28,15 +28,23 @@ pub trait ConventionTech: Sync {
         observer_pov: &dyn PlayerPOV,
     ) -> bool;
 
-    /// Compute the knowledge updates produced by the action for one player.
+    /// Compute this tech's hypothesis for the action from the observer's POV.
     ///
-    /// `history` is the same slice as in `matches_action`.
+    /// Each tech contributes a *single* hypothesis (its interpretation of the action).
+    /// The dispatcher collects hypotheses from all matching techs into a *cohort* —
+    /// the observer's effective narrowing on any card is the **union** of cohort
+    /// hypothesis masks targeting that card. A hypothesis with a trigger is
+    /// provisional: confirmation prunes its siblings, rejection drops the hypothesis.
+    ///
+    /// Return `Hypothesis::empty()` when this tech has nothing to claim from this
+    /// observer's POV (typically when the action does not match the tech's action
+    /// type — clue techs return empty for play/discard actions, etc.).
     fn knowledge_updates(
         &self,
         action: &GameAction,
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
-    ) -> Vec<KnowledgeUpdate>;
+    ) -> Hypothesis;
 }
 
 // ── ClueTech ─────────────────────────────────────────────────────────────────
@@ -65,34 +73,32 @@ pub trait ClueTech: Sync {
         observer_pov: &dyn PlayerPOV,
     ) -> bool;
 
-    /// Compute knowledge updates for an observed clue action, from one player's perspective.
+    /// Compute the [`Hypothesis`] this tech contributes for an observed clue action,
+    /// from one observer's perspective.
     ///
-    /// Called once per player after a clue is matched to this tech. `player_index` is the clue
-    /// receiver; `pov.active_player_index()` is the player whose knowledge is being updated
-    /// (may be the receiver or any other player that the convention affects).
+    /// Called once per observer. `player_index` is the clue *receiver*;
+    /// `pov.active_player_index()` identifies the observer whose knowledge is being
+    /// computed (which may be the receiver, the clue giver, or any third party).
     ///
-    /// ## POV semantics in `knowledge_updates`
+    /// ## POV semantics
     ///
-    /// By the time this method is called, `table_state.active_player_index` has been set to
-    /// the current observer — so `pov.active_player_index()` identifies *who* is computing
-    /// their knowledge, not who gave the clue.
+    /// By the time this method is called, `table_state.active_player_index` has been
+    /// set to the current observer — so `pov.active_player_index()` identifies *who*
+    /// is computing their knowledge, not who gave the clue.
     ///
     /// `pov`'s personal knowledge (`pov.card_identity`, etc.) comes from
-    /// `team_knowledge.player(giver)` — i.e., the clue giver's empathy — because the giver
-    /// has full visibility of all hands at the time the clue was given.
+    /// `team_knowledge.player(giver)` for non-receiver observers — i.e., the clue
+    /// giver's empathy — because the giver has full visibility of all hands at the
+    /// time the clue was given.
     ///
     /// ## Typical patterns
     ///
-    /// - **Clue receiver** (`pov.active_player_index() == player_index`): return a
-    ///   `NarrowPossibilities` update on the focus card, restricting it to identities consistent
-    ///   with this tech's semantics.
-    /// - **Third party** (prompted or finessed player): return `NarrowPossibilities` and/or
-    ///   `AddSignal` updates on the card in their own hand that the convention targets.
-    ///   Only updates for cards in the observer's `own_hand` bitmask are applied by the caller.
-    ///
-    /// `history[turn]` carries the same pre-clue game state as in `matches_clue`.  Use it to
-    /// reconstruct the giver's POV at the time of the clue so that chop and focus are computed
-    /// against the hand state *before* the clue touched any cards.
+    /// - **Clue receiver**: return an unconditional hypothesis with a `NarrowPossibilities`
+    ///   on the focus card. If the tech is provisional (e.g. finesse waiting for a
+    ///   blind-play), return a [`Hypothesis::provisional`] with a [`PendingTrigger`].
+    /// - **Third party** (prompted or finessed player): return an unconditional
+    ///   hypothesis with `NarrowPossibilities` and/or `AddSignal` updates on the
+    ///   targeted card in the third party's own hand.
     fn clue_knowledge_updates(
         &self,
         player_index: PlayerIndex,
@@ -101,7 +107,7 @@ pub trait ClueTech: Sync {
         turn: usize,
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
-    ) -> Vec<KnowledgeUpdate>;
+    ) -> Hypothesis;
 }
 
 /// Internal macro: expands to the `matches_action` and `knowledge_updates` method bodies shared
@@ -142,7 +148,7 @@ macro_rules! __impl_clue_tech_matches_and_updates {
             action: &$crate::game::action::game_action::GameAction,
             history: &[$crate::engine::game_state_snapshot::GameStateSnapshot],
             observer_pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV,
-        ) -> Vec<$crate::engine::knowledge::knowledge_update::KnowledgeUpdate> {
+        ) -> $crate::engine::knowledge::knowledge_update::Hypothesis {
             if let $crate::game::action::game_action::GameAction::Clue {
                 player_index,
                 touched_card_deck_indexes,
@@ -160,7 +166,7 @@ macro_rules! __impl_clue_tech_matches_and_updates {
                     observer_pov,
                 )
             } else {
-                vec![]
+                $crate::engine::knowledge::knowledge_update::Hypothesis::empty()
             }
         }
     };
@@ -211,7 +217,7 @@ pub trait PlayTech: Sync {
         turn: usize,
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
-    ) -> Vec<KnowledgeUpdate>;
+    ) -> Hypothesis;
 }
 
 #[macro_export]
@@ -265,7 +271,7 @@ macro_rules! impl_convention_tech_for_play_tech {
                 action: &$crate::game::action::game_action::GameAction,
                 history: &[$crate::engine::game_state_snapshot::GameStateSnapshot],
                 observer_pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV,
-            ) -> Vec<$crate::engine::knowledge::knowledge_update::KnowledgeUpdate> {
+            ) -> $crate::engine::knowledge::knowledge_update::Hypothesis {
                 if let GameAction::Play {
                     player_index,
                     card_deck_index,
@@ -281,7 +287,7 @@ macro_rules! impl_convention_tech_for_play_tech {
                         observer_pov,
                     )
                 } else {
-                    vec![]
+                    $crate::engine::knowledge::knowledge_update::Hypothesis::empty()
                 }
             }
         }
@@ -307,7 +313,7 @@ pub trait DiscardTech: Sync {
         turn: usize,
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
-    ) -> Vec<KnowledgeUpdate>;
+    ) -> Hypothesis;
 }
 
 #[macro_export]
@@ -329,11 +335,11 @@ macro_rules! impl_convention_tech_for_discard_tech {
                 }
             }
 
-            fn knowledge_updates(&self, action: &$crate::game::action::game_action::GameAction, history: &[$crate::engine::game_state_snapshot::GameStateSnapshot], observer_pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV) -> Vec<$crate::engine::knowledge::knowledge_update::KnowledgeUpdate> {
+            fn knowledge_updates(&self, action: &$crate::game::action::game_action::GameAction, history: &[$crate::engine::game_state_snapshot::GameStateSnapshot], observer_pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV) -> $crate::engine::knowledge::knowledge_update::Hypothesis {
                 if let GameAction::Discard { player_index, card_deck_index, turn } = action {
                     $crate::engine::convention::convention_tech::DiscardTech::discard_knowledge_updates(self, *player_index, *card_deck_index, *turn, history, observer_pov)
                 } else {
-                    vec![]
+                    $crate::engine::knowledge::knowledge_update::Hypothesis::empty()
                 }
             }
         }

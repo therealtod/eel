@@ -1,16 +1,22 @@
-use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
 use crate::game::SlotIndex;
-use crate::game::card::CardDeckIndex;
+use crate::game::card::{CardDeckIndex, VariantCardId};
 
+/// Convention-generated annotations attached to specific cards in a player's hand.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Signal {
+    /// The holder is committed to playing this card.
+    ///
+    /// `committed_identity` is the identity the convention says this card has — the holder
+    /// can use it to resolve their own empathy. `deadline_turn` records the turn by which
+    /// the play is expected (e.g. the holder's next turn for a finesse).
+    Play {
+        card_deck_index: CardDeckIndex,
+        committed_identity: VariantCardId,
+        deadline_turn: usize,
+    },
     Discard {
         slot_index: SlotIndex,
         turn: usize,
-    },
-    Play {
-        card_deck_index: CardDeckIndex,
-        knowledge_updates: Vec<KnowledgeUpdate>,
     },
     Save {
         slot_index: SlotIndex,

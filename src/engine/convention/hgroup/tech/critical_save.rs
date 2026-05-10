@@ -2,7 +2,7 @@ use crate::engine::convention::convention_tech::ClueTech;
 use crate::engine::convention::hgroup::h_group_core::{get_chop_index, touched_cards_for_clue};
 use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, SaveClueTech, priority};
 use crate::engine::game_state_snapshot::GameStateSnapshot;
-use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
+use crate::engine::knowledge::knowledge_update::{Hypothesis, KnowledgeUpdate};
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::CardDeckIndex;
@@ -81,13 +81,13 @@ fn critical_save_knowledge_updates(
     turn: usize,
     history: &[GameStateSnapshot],
     observer_pov: &dyn PlayerPOV,
-) -> Vec<KnowledgeUpdate> {
+) -> Hypothesis {
     let snap = history.get(turn).unwrap();
     let giver = snap.table_state.active_player_index;
     let giver_pov = snap.player_pov(giver, observer_pov.static_data());
     let chop = match get_chop_index(receiver, &giver_pov) {
         Some(c) if touched_card_deck_indexes.contains(&c) => c,
-        _ => return vec![],
+        _ => return Hypothesis::empty(),
     };
     let static_data = giver_pov.static_data();
     let stacks_size = static_data.variant.stacks_size as usize;
@@ -105,12 +105,12 @@ fn critical_save_knowledge_updates(
         })
         .fold(0u64, |acc, id| acc | (1 << id));
     if mask == 0 {
-        return vec![];
+        return Hypothesis::empty();
     }
-    vec![KnowledgeUpdate::NarrowPossibilities {
+    Hypothesis::unconditional(vec![KnowledgeUpdate::NarrowPossibilities {
         card_deck_index: chop,
         mask,
-    }]
+    }])
 }
 
 fn critical_save_matches(
@@ -175,7 +175,7 @@ impl ClueTech for ColorCriticalSave {
         turn: usize,
         history: &[GameStateSnapshot],
         player_pov: &dyn PlayerPOV,
-    ) -> Vec<KnowledgeUpdate> {
+    ) -> Hypothesis {
         critical_save_knowledge_updates(player_index, touched, clue, turn, history, player_pov)
     }
 }
@@ -223,7 +223,7 @@ impl ClueTech for RankCriticalSave {
         turn: usize,
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
-    ) -> Vec<KnowledgeUpdate> {
+    ) -> Hypothesis {
         critical_save_knowledge_updates(player_index, touched, clue, turn, history, observer_pov)
     }
 }

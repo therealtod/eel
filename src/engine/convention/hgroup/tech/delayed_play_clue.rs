@@ -4,7 +4,7 @@ use crate::engine::convention::hgroup::h_group_core::{
 };
 use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, PlayClueTech, priority};
 use crate::engine::game_state_snapshot::GameStateSnapshot;
-use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
+use crate::engine::knowledge::knowledge_update::{Hypothesis, KnowledgeUpdate};
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, VariantCardId};
@@ -97,15 +97,15 @@ impl ClueTech for DelayedPlayClue {
         turn: usize,
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
-    ) -> Vec<KnowledgeUpdate> {
+    ) -> Hypothesis {
         let Some(snap) = history.get(turn) else {
-            return vec![];
+            return Hypothesis::empty();
         };
         let giver = snap.table_state.active_player_index;
         let giver_pov = snap.player_pov(giver, observer_pov.static_data());
         let focus = match get_clue_focus(player_index, touched, &giver_pov) {
             Some(f) => f,
-            None => return vec![],
+            None => return Hypothesis::empty(),
         };
         let static_data = giver_pov.static_data();
         let total_ids =
@@ -123,12 +123,12 @@ impl ClueTech for DelayedPlayClue {
             })
             .fold(0u64, |acc, id| acc | (1 << id));
         if mask == 0 {
-            return vec![];
+            return Hypothesis::empty();
         }
-        vec![KnowledgeUpdate::NarrowPossibilities {
+        Hypothesis::unconditional(vec![KnowledgeUpdate::NarrowPossibilities {
             card_deck_index: focus,
             mask,
-        }]
+        }])
     }
 }
 
@@ -450,11 +450,12 @@ mod tests {
             &pov,
         );
 
-        assert_eq!(updates.len(), 1);
+        assert_eq!(updates.immediate.len(), 1);
+        assert!(updates.trigger.is_none());
         if let KnowledgeUpdate::NarrowPossibilities {
             card_deck_index,
             mask,
-        } = &updates[0]
+        } = &updates.immediate[0]
         {
             assert_eq!(*card_deck_index, 10);
             // R3 (id=2) must be in the mask; R1 (id=0, away=0) and R2 (id=1, away=0 after R1 played)

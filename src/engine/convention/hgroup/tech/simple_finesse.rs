@@ -1,11 +1,11 @@
 use crate::engine::convention::convention_tech::ClueTech;
 use crate::engine::convention::hgroup::h_group_core::{
-    clues_for_player_with_focus, get_clue_focus, get_finesse_position, has_on_finesse_position
+    clues_for_player_with_focus, get_clue_focus, get_finesse_position, has_on_finesse_position,
 };
 use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, PlayClueTech, priority};
 use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::game_state_snapshot::GameStateSnapshot;
-use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
+use crate::engine::knowledge::knowledge_update::{Hypothesis, KnowledgeUpdate, PendingTrigger};
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, VariantCardId};
@@ -16,6 +16,13 @@ use crate::impl_convention_tech_for_hgroup_clue_tech;
 /// Give a clue whose focus card is exactly 1 step away from playable, where the connecting card
 /// sits on the finesse position (first unclued slot) of a teammate who plays before the target.
 /// See https://hanabi.github.io/level-1#the-finesse and https://hanabi.github.io/beginner/finesse
+///
+/// **From the receiver's POV** the finesse is one of several possible interpretations of the
+/// clue (it can also be a direct play, a critical save, etc). This tech contributes a single
+/// provisional hypothesis pinning the focus to the 1-away identity, with a [`PendingTrigger`]
+/// that confirms when the would-be finessed teammate blind-plays. The dispatcher composes
+/// this with hypotheses from sibling techs (DelayedPlayClue, CriticalSave, …); the receiver's
+/// effective focus mask is their union, and confirmation prunes the siblings.
 pub struct SimpleFinesse;
 
 impl SimpleFinesse {
@@ -120,35 +127,83 @@ impl ClueTech for SimpleFinesse {
         &self,
         clue_receiver_index: PlayerIndex,
         touched: &[CardDeckIndex],
-        _clue: &Clue,
+        clue: &Clue,
         turn: usize,
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
-    ) -> Vec<KnowledgeUpdate> {
+    ) -> Hypothesis {
         let Some(snap) = history.get(turn) else {
-            return vec![];
+            return Hypothesis::empty();
         };
         let giver = snap.table_state.active_player_index;
         let giver_pov = snap.player_pov(giver, observer_pov.static_data());
+        let observer = observer_pov.active_player_index();
 
         let focus = match get_clue_focus(clue_receiver_index, touched, &giver_pov) {
             Some(f) => f,
-            None => return vec![],
+            None => return Hypothesis::empty(),
         };
+
+        // ── Receiver branch ────────────────────────────────────────────────────
+        // The receiver contributes a single provisional hypothesis: the focus is the 1-away id.
+        // Other interpretations (direct play, critical save) come from sibling techs and the
+        // dispatcher unions all the hypotheses' focus masks. On Bob's blind-play the trigger
+        // confirms (siblings are pruned, focus pinned to one_away_id); otherwise the trigger
+        // rejects and this hypothesis is dropped (siblings remain).
+        if observer == clue_receiver_index {
+            let num_players = giver_pov.static_data().number_of_players as usize;
+            let static_data = giver_pov.static_data();
+            let total_ids = static_data.variant.number_of_suits as usize
+                * static_data.variant.stacks_size as usize;
+            let clue_mask = static_data.variant.empathy_for_clue(clue).as_bits();
+
+            let finessed_player = (0..num_players)
+                .filter(|&p| p != giver && p != clue_receiver_index)
+                .find(|&p| {
+                    static_data.plays_before(p, clue_receiver_index, giver)
+                        && get_finesse_position(p, &giver_pov).is_some_and(|finesse_idx| {
+                            giver_pov.is_playable(finesse_idx)
+                                && giver_pov.card_identity(finesse_idx).is_some_and(
+                                    |connecting_id| {
+                                        let focus_id = connecting_id + 1;
+                                        focus_id < total_ids && (1u64 << focus_id) & clue_mask != 0
+                                    },
+                                )
+                        })
+                });
+
+            let Some(finessed_player) = finessed_player else {
+                return Hypothesis::empty();
+            };
+            let Some(finesse_position) = get_finesse_position(finessed_player, &giver_pov) else {
+                return Hypothesis::empty();
+            };
+            let Some(connecting_id) = giver_pov.card_identity(finesse_position) else {
+                return Hypothesis::empty();
+            };
+            let one_away_id = connecting_id + 1;
+
+            return Hypothesis::provisional(
+                vec![KnowledgeUpdate::NarrowPossibilities {
+                    card_deck_index: focus,
+                    mask: 1u64 << one_away_id,
+                }],
+                PendingTrigger::BlindPlay {
+                    player: finessed_player,
+                    expected_card: finesse_position,
+                    deadline_turn: snap.table_state.current_turn + num_players,
+                },
+            );
+        }
+
+        // ── Third-party branch (finessed player + spectators) ─────────────────
+        // Resolve the finessed player from the giver's POV (which sees all hands).
         let focus_id = match giver_pov.card_identity(focus) {
             Some(id) if giver_pov.away_value(id) == Some(1) => id,
-            _ => return vec![],
+            _ => return Hypothesis::empty(),
         };
         let connecting_id = focus_id - 1;
 
-        // The clue receiver should never match
-        if observer_pov.player_index() == clue_receiver_index {
-            return vec![];
-        }
-
-        // Find the finessed player using the giver's POV: it has full visibility of all hands,
-        // so `card_identity` returns the actual identity for every player's card, including
-        // the observer's own cards which are invisible to themselves.
         let num_players = observer_pov.static_data().number_of_players as usize;
         let Some(finessed_player_index) = (0..num_players)
             .filter(|&p| p != clue_receiver_index && p != giver)
@@ -159,30 +214,30 @@ impl ClueTech for SimpleFinesse {
                     && has_on_finesse_position(connecting_id, p, &giver_pov)
             })
         else {
-            return vec![];
+            return Hypothesis::empty();
         };
 
-        let Some(finesse_position) = get_finesse_position(finessed_player_index, observer_pov)
-        else {
-            return vec![];
+        let Some(finesse_position) = get_finesse_position(finessed_player_index, &giver_pov) else {
+            return Hypothesis::empty();
         };
 
-        vec![
-            KnowledgeUpdate::AddSignal {
-                card_deck_index: finesse_position,
-                signal: Signal::Play {
-                    card_deck_index: finesse_position,
-                    knowledge_updates: vec![KnowledgeUpdate::NarrowPossibilities {
-                        card_deck_index: focus,
-                        mask: 1 << (connecting_id + 1),
-                    }],
-                },
-            },
+        // The finessed player learns their finesse slot is the connecting card and gets a
+        // Signal::Play. The dispatcher's own_hand filter keeps this update only for the
+        // finessed player; spectators see the connecting card directly via visible_cards.
+        Hypothesis::unconditional(vec![
             KnowledgeUpdate::NarrowPossibilities {
                 card_deck_index: finesse_position,
                 mask: 1 << connecting_id,
             },
-        ]
+            KnowledgeUpdate::AddSignal {
+                card_deck_index: finesse_position,
+                signal: Signal::Play {
+                    card_deck_index: finesse_position,
+                    committed_identity: connecting_id,
+                    deadline_turn: snap.table_state.current_turn + num_players,
+                },
+            },
+        ])
     }
 }
 
@@ -262,8 +317,18 @@ mod tests {
             &pov,
         );
 
+        // Expect a NarrowPossibilities + AddSignal::Play on Bob's finesse position (deck 10).
+        assert_eq!(updates.immediate.len(), 2);
+        assert!(updates.trigger.is_none());
         assert!(matches!(
-            &updates[0],
+            &updates.immediate[0],
+            KnowledgeUpdate::NarrowPossibilities {
+                card_deck_index: 10,
+                ..
+            }
+        ));
+        assert!(matches!(
+            &updates.immediate[1],
             KnowledgeUpdate::AddSignal {
                 card_deck_index: 10,
                 signal: Signal::Play { .. }
@@ -387,5 +452,83 @@ mod tests {
                 )
                 .is_empty()
         );
+    }
+
+    /// Receiver branch: Cathy's hypothesis pins the focus to the 1-away id (R3) and is
+    /// provisional on Bob blind-playing his finesse slot.
+    #[test]
+    fn knowledge_updates_receiver_returns_provisional_hypothesis() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            R1.as_variant_card_id(),
+            &static_data,
+        );
+
+        // Bob (player 1) has R2 (deck 10) — finesse position.
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10);
+        // Cathy (player 2) has R3 (deck 20) — focus.
+        table_state.active_player_index = 2;
+        table_state.update_with_draw_action(20);
+
+        // Alice (player 0) is the giver.
+        table_state.active_player_index = 0;
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        // Alice's POV: she sees R2 in Bob's hand, R3 in Cathy's hand.
+        team_knowledge.player_mut(0).inferred_identities[10] =
+            Some(CardIdentityMask::from_bits(R2_MASK));
+        team_knowledge.player_mut(0).visible_cards |= 1u64 << 10;
+        team_knowledge.player_mut(0).inferred_identities[20] =
+            Some(CardIdentityMask::from_bits(R3_MASK));
+        team_knowledge.player_mut(0).visible_cards |= 1u64 << 20;
+        team_knowledge.player_mut(2).own_hand |= 1u64 << 20;
+        let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
+
+        // Observer is Cathy (the receiver).
+        table_state.active_player_index = 2;
+        let knowledge = knowledge_with_visible(2, &[(10, R2_MASK)]);
+        let pov =
+            LightweightPlayerPOV::new(2, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let updates = SimpleFinesse.knowledge_updates(
+            &GameAction::Clue {
+                player_index: 2,
+                touched_card_deck_indexes: smallvec::smallvec![20],
+                clue: Clue {
+                    clue_type: ClueType::Color,
+                    clue_value: 0,
+                },
+                turn: 0,
+            },
+            &[snapshot],
+            &pov,
+        );
+
+        // Hypothesis: pin focus to R3, with a BlindPlay trigger on Bob.
+        assert_eq!(updates.immediate.len(), 1);
+        if let KnowledgeUpdate::NarrowPossibilities {
+            card_deck_index,
+            mask,
+        } = &updates.immediate[0]
+        {
+            assert_eq!(*card_deck_index, 20);
+            assert_eq!(*mask, R3_MASK, "hypothesis pins focus to R3");
+        } else {
+            panic!("expected NarrowPossibilities");
+        }
+
+        match updates.trigger {
+            Some(PendingTrigger::BlindPlay {
+                player,
+                expected_card,
+                ..
+            }) => {
+                assert_eq!(player, 1);
+                assert_eq!(expected_card, 10);
+            }
+            _ => panic!("expected BlindPlay trigger"),
+        }
     }
 }

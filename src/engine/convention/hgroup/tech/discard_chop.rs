@@ -1,7 +1,7 @@
 use crate::engine::convention::convention_tech::DiscardTech;
 use crate::engine::convention::hgroup::h_group_core::get_chop_index;
 use crate::engine::game_state_snapshot::GameStateSnapshot;
-use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
+use crate::engine::knowledge::knowledge_update::Hypothesis;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::CardDeckIndex;
@@ -49,8 +49,8 @@ impl DiscardTech for DiscardChop {
         _turn: usize,
         _history: &[GameStateSnapshot],
         _observer_pov: &dyn PlayerPOV,
-    ) -> Vec<KnowledgeUpdate> {
-        vec![]
+    ) -> Hypothesis {
+        Hypothesis::empty()
     }
 }
 
