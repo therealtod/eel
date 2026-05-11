@@ -6,6 +6,7 @@ use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
 #[cfg(test)]
 use mockall::automock;
+use crate::game::action::game_action::GameAction;
 
 /// Read-only view of the knowledge that a specific player has on the state of the game.
 ///
@@ -68,4 +69,7 @@ pub trait PlayerPOV {
 
     /// Get the empathy that this player has for the given card.
     fn empathy(&self, card_deck_index: CardDeckIndex) -> CardIdentityMask;
+
+    #[must_use]
+    fn valid_actions(&self) -> Vec<GameAction>;
 }

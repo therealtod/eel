@@ -1,8 +1,11 @@
+use crate::engine::convention::hgroup::h_group_core::clues_for_player_with_focus;
 use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::knowledge::player_knowledge::PlayerKnowledge;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
+use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, CardIdentityMask, DeckCardsBitField, VariantCardId};
+use crate::game::MAX_CLUE_TOKEN_COUNT;
 use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
@@ -209,6 +212,44 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
             self.table_state,
             &self.static_data.variant,
         )
+    }
+
+    fn valid_actions(&self) -> Vec<GameAction> {
+        let player_index = self.player_index;
+        let clue_tokens = self.table_state.clue_token_bank.whole_clue_tokens_count();
+        let num_players = self.static_data.number_of_players as usize;
+        let mut actions = Vec::new();
+
+        let mut hand_mask = self.knowledge.own_hand;
+        while hand_mask != 0 {
+            let card_deck_index = hand_mask.trailing_zeros() as CardDeckIndex;
+            actions.push(GameAction::Play {
+                player_index,
+                card_deck_index,
+                turn: self.table_state.current_turn
+            });
+            if clue_tokens < MAX_CLUE_TOKEN_COUNT {
+                actions.push(GameAction::Discard {
+                    player_index,
+                    card_deck_index,
+                    turn: self.table_state.current_turn
+                });
+            }
+            hand_mask &= hand_mask - 1;
+        }
+
+        if clue_tokens > 0 {
+            for target in 0..num_players {
+                if target == player_index {
+                    continue;
+                }
+                for (clue_action, _focus) in clues_for_player_with_focus(target, self) {
+                    actions.push(clue_action);
+                }
+            }
+        }
+
+        actions
     }
 }
 
