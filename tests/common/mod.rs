@@ -31,20 +31,21 @@ pub fn init_tracing() {
 }
 
 #[allow(dead_code)]
-pub fn load_scenario(n: u32) -> (TableState, StaticGameData) {
+pub fn load_scenario(tech: &str, scenario: u32) -> (TableState, StaticGameData) {
     init_tracing();
     let path: PathBuf = [
         env!("CARGO_MANIFEST_DIR"),
         "tests",
         "scenarios",
-        &format!("scenario{n}"),
+        tech,
+        &format!("{scenario}"),
         "table_state.json",
     ]
     .iter()
     .collect();
 
     let json = std::fs::read_to_string(&path)
-        .unwrap_or_else(|e| panic!("failed to read scenario {n}: {e}"));
+        .unwrap_or_else(|e| panic!("failed to read {tech} scenario {scenario}: {e}"));
     let scenario = parse_scenario(&json);
     build_from_scenario(&scenario, NO_VARIANT)
 }
@@ -189,7 +190,8 @@ fn apply_action_for_history(ts: &mut TableState, action: &GameAction, static_dat
 /// manually fabricate history or hardcode action structs.
 #[allow(dead_code)]
 pub fn load_scenario_with_knowledge(
-    n: u32,
+    tech: &str,
+    scenario: u32,
 ) -> (
     TableState,
     StaticGameData,
@@ -202,14 +204,15 @@ pub fn load_scenario_with_knowledge(
         env!("CARGO_MANIFEST_DIR"),
         "tests",
         "scenarios",
-        &format!("scenario{n}"),
+        tech,
+        &format!("{scenario}"),
         "table_state.json",
     ]
     .iter()
     .collect();
 
     let json = std::fs::read_to_string(&path)
-        .unwrap_or_else(|e| panic!("failed to read scenario {n}: {e}"));
+        .unwrap_or_else(|e| panic!("failed to read {tech} scenario {scenario}: {e}"));
     let scenario = parse_scenario(&json);
     let (table_state, static_data) = build_from_scenario(&scenario, NO_VARIANT);
     let team_knowledge = team_knowledge_from_scenario(&scenario, &static_data.variant);

@@ -25,7 +25,7 @@ const P4_MASK: u64 = 1u64 << 23; // P4: purple offset 20, rank 4, id 23
 #[test]
 fn all_players_understand_simple_prompt_semantics() {
     let (table_state, static_data, team_knowledge, history, actions) =
-        common::load_scenario_with_knowledge(3);
+        common::load_scenario_with_knowledge("simple_prompt", 1);
     let clue_action = &actions[0];
 
     // ── Part 1: Alice generates the rank-4 prompt clue to Cathy ──────────────────

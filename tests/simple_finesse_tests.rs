@@ -18,7 +18,7 @@ use eel::game::action::game_action::GameAction;
 #[test]
 fn all_players_understand_simple_finesse_semantics() {
     let (table_state, static_data, team_knowledge, history, actions) =
-        common::load_scenario_with_knowledge(1);
+        common::load_scenario_with_knowledge("simple_finesse", 1);
     // history[0] = pre-clue snapshot; actions[0] = Alice's rank-3 clue to Cathy (deck 13)
     let finesse_action = &actions[0];
 
@@ -147,7 +147,7 @@ const B3_MASK: u64 = 1u64 << 17; // B3 = blue offset 15, rank 3, id = 17
 fn cathy_knowledge_after_finesse_clue()
 -> (PlayerKnowledge, eel::game::static_game_data::StaticGameData) {
     let (table_state, static_data, team_knowledge, history, actions) =
-        common::load_scenario_with_knowledge(1);
+        common::load_scenario_with_knowledge("simple_finesse", 1);
     let finesse_action = &actions[0];
 
     let mut cathy_table_state = table_state.clone();
@@ -265,7 +265,7 @@ fn rank_3_clue_on_chop_three_interpretations_finesse_excluded_by_critical_save()
     const G3_MASK: u64 = 1u64 << 12; // G3 = green offset 10, rank 3, id = 12
 
     let (table_state, static_data, team_knowledge, history, actions) =
-        common::load_scenario_with_knowledge(2);
+        common::load_scenario_with_knowledge("simple_finesse", 2);
     let clue_action = &actions[0];
 
     // ── Part 1: Alice generates a rank-3 critical save, not a finesse ─────────────────────────
