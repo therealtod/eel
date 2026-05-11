@@ -1,5 +1,4 @@
 use crate::engine::convention::hgroup::signal::Signal;
-use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, VariantCardId, VariantCardsBitField};
@@ -9,18 +8,6 @@ use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
 use crate::game::{MAX_CLUE_VALUES_PER_TYPE, MAX_HAND_SIZE};
 use smallvec::SmallVec;
-
-/// Reconstruct the POV of `pov.active_player_index()` using that player's own
-/// `team_knowledge` entry.
-///
-/// In `matches_clue` and `clue_game_actions`, `pov.active_player_index()` is the clue giver,
-/// so this gives the giver's perspective. In `clue_knowledge_updates` the runtime sets
-/// `active_player_index` to the current observer before calling, so this yields the observer's
-/// own team-knowledge view. The name reflects that it always reconstructs the POV of whoever
-/// is the current actor (giver or observer), not a fixed role.
-pub fn actor_pov(pov: &dyn PlayerPOV) -> LightweightPlayerPOV<'_> {
-    pov.as_player_pov(pov.active_player_index())
-}
 
 /// Returns the deck indices of cards in `player_index`'s hand that are touched by `clue`.
 pub fn touched_cards_for_clue(
@@ -296,35 +283,6 @@ mod tests {
     use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
         NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
     };
-
-    // ── actor_pov ──────────────────────────────────────────────────────
-
-    #[test]
-    fn actor_pov_returns_pov_of_active_player() {
-        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
-        let table_state = initial_five_players_table_state();
-        let knowledge = knowledge_for_hand(&[10, 20, 30]);
-        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov =
-            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
-
-        let g = actor_pov(&pov);
-        assert_eq!(g.active_player_index(), 0);
-    }
-
-    #[test]
-    fn actor_pov_respects_different_turn_index() {
-        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
-        let mut table_state = initial_five_players_table_state();
-        table_state.active_player_index = 2;
-        let knowledge = knowledge_with_visible(0, &[]);
-        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov =
-            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
-
-        let g = actor_pov(&pov);
-        assert_eq!(g.active_player_index(), 2);
-    }
 
     // ── get_chop_index ──────────────────────────────────────────────────────
 
