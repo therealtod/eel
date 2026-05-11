@@ -32,17 +32,18 @@ cargo bench --features test-support
 useful as a blank canvas. `empty_stacks_table_state` and `stacked_table_state` return 3-player
 states; the latter has B1–B4 already on the playing stacks.
 
-**Scenario tests**: Game positions are stored as JSON files at `tests/scenarios/scenario{n}/table_state.json`.
+**Scenario tests**: Game positions are stored as JSON files at `tests/scenarios/{tech}/{n}/table_state.json`.
+Each tech folder can contain multiple numbered scenarios.
 
 Load helpers (in `tests/common/mod.rs`):
 
 ```rust
 // Board state only
-let (table_state, static_data) = common::load_scenario(n);
+let (table_state, static_data) = common::load_scenario("simple_finesse", 1);
 
 // Board state + team knowledge + history + parsed actions
 let (table_state, static_data, team_knowledge, history, actions) =
-    common::load_scenario_with_knowledge(n);
+    common::load_scenario_with_knowledge("simple_finesse", 2);
 ```
 
 `history[i]` is the `GameStateSnapshot` before `actions[i]`, so tests can call
