@@ -89,6 +89,7 @@ A different convention system (e.g. Referential Sieve) would define its own prio
 | `FiveSave`                               | Save a 5 on chop with a rank-5 clue                            |
 | `TwoSave`                                | Save a 2 on chop with a rank-2 clue                            |
 | `DiscardChop`                            | Discard the oldest unclued card when no better action exists   |
+| `BlindPlay`                              | Play an untouched card that carries a convention-issued `Signal::Play` |
 
 
 ## Building
@@ -207,6 +208,6 @@ parsed `Vec<GameAction>`, so neither needs to be constructed in test code.
 
 | Term           | Meaning                                                                                  |
 |----------------|------------------------------------------------------------------------------------------|
-| **Chop**       | The oldest unclued card in a player's hand — most at risk of discard                     |
+| **Chop**       | The oldest **unclued** card — more precise than the general Hanabi sense above           |
 | **Clue focus** | The card a clue is "about": the chop if touched, otherwise the newest newly-touched card |
 
