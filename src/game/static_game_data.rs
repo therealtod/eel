@@ -13,6 +13,7 @@ pub struct StaticGameData {
 impl StaticGameData {
     /// Returns true if `player_a_index` takes their turn before `player_b_index` in the circular
     /// order starting after the active player.
+    #[must_use]
     pub fn plays_before(
         &self,
         player_a_index: PlayerIndex,

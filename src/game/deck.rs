@@ -16,6 +16,7 @@ pub struct Deck {
 }
 
 impl Deck {
+    #[must_use]
     pub fn new(variant: &Variant) -> Self {
         let unknown = CardIdentityMask::all(variant);
         Deck {
@@ -49,6 +50,7 @@ impl Deck {
         self.current_size -= amount;
     }
 
+    #[must_use]
     pub fn get_global_empathy(&self, deck_card_index: CardDeckIndex) -> CardIdentityMask {
         self.empathy_by_index[deck_card_index as usize]
     }

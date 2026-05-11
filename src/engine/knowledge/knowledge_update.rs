@@ -24,6 +24,7 @@ pub enum KnowledgeUpdate {
 
 impl KnowledgeUpdate {
     /// Returns the deck index targeted by this update.
+    #[must_use]
     pub fn card_deck_index(&self) -> CardDeckIndex {
         match self {
             KnowledgeUpdate::NarrowPossibilities {
@@ -58,10 +59,12 @@ pub struct Hypothesis {
 }
 
 impl Hypothesis {
+    #[must_use]
     pub fn empty() -> Self {
         Self::default()
     }
 
+    #[must_use]
     pub fn unconditional(immediate: Vec<KnowledgeUpdate>) -> Self {
         Self {
             immediate,
@@ -69,6 +72,7 @@ impl Hypothesis {
         }
     }
 
+    #[must_use]
     pub fn provisional(immediate: Vec<KnowledgeUpdate>, trigger: PendingTrigger) -> Self {
         Self {
             immediate,
@@ -76,6 +80,7 @@ impl Hypothesis {
         }
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.immediate.is_empty() && self.trigger.is_none()
     }

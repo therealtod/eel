@@ -21,6 +21,7 @@ pub struct LightweightPlayerPOV<'a> {
 }
 
 impl<'a> LightweightPlayerPOV<'a> {
+    #[must_use]
     pub fn new(
         player_index: usize,
         knowledge: &'a PlayerKnowledge,

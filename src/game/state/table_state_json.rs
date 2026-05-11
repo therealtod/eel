@@ -52,6 +52,7 @@ pub struct SlotJsonFull {
 }
 
 impl SlotJson {
+    #[must_use]
     pub fn id(&self) -> &str {
         match self {
             SlotJson::Simple(s) => s,
@@ -59,6 +60,7 @@ impl SlotJson {
         }
     }
 
+    #[must_use]
     pub fn positive(&self) -> &[String] {
         match self {
             SlotJson::Simple(_) => &[],
@@ -66,6 +68,7 @@ impl SlotJson {
         }
     }
 
+    #[must_use]
     pub fn negative(&self) -> &[String] {
         match self {
             SlotJson::Simple(_) => &[],
@@ -73,6 +76,7 @@ impl SlotJson {
         }
     }
 
+    #[must_use]
     pub fn inferred(&self) -> Option<&str> {
         match self {
             SlotJson::Simple(_) => None,
@@ -153,6 +157,7 @@ pub struct ScenarioJson {
 ///   G1=10, G2=11, G3=12, G4=13, G5=14
 ///   B1=15, B2=16, B3=17, B4=18, B5=19
 ///   P1=20, P2=21, P3=22, P4=23, P5=24
+#[must_use]
 pub fn parse_card(s: &str) -> usize {
     let s = s.to_lowercase();
     let suit_offset = match s.chars().next().expect("empty card string") {
@@ -170,6 +175,7 @@ pub fn parse_card(s: &str) -> usize {
 /// Parse a concatenated empathy string like `"b3b4"` into a bitmask of possible card identities.
 ///
 /// The string is split greedily: each card is one letter (suit) followed by one digit (rank).
+#[must_use]
 pub fn parse_empathy_mask(s: &str) -> u64 {
     let s = s.to_lowercase();
     let bytes = s.as_bytes();
@@ -188,6 +194,7 @@ pub fn parse_empathy_mask(s: &str) -> u64 {
 /// Rank clues: `"1"`–`"5"` → `(Rank, rank)`.
 /// Colour clues: `"red"` / `"r"`, `"yellow"` / `"y"`, `"green"` / `"g"`,
 /// `"blue"` / `"b"`, `"purple"` / `"pink"` / `"p"` → `(Color, suit_index)`.
+#[must_use]
 pub fn parse_clue_string(s: &str) -> (ClueType, u8) {
     match s.to_lowercase().as_str() {
         "red" | "r" => (ClueType::Color, 0),
@@ -293,6 +300,7 @@ fn apply_slot_clues(
 /// clue's empathy mask. `"x"` (unknown) cards are skipped. The `turn` field on each action
 /// matches its index in `prior_actions`, so `actions[i]` has `turn = i` and the loader can
 /// record `history[i]` as the snapshot taken before that action.
+#[must_use]
 pub fn build_game_actions(scenario: &ScenarioJson, variant: &Variant) -> Vec<GameAction> {
     let player_bases: Vec<u8> = {
         let mut base = 0u8;
@@ -375,6 +383,7 @@ pub fn build_game_actions(scenario: &ScenarioJson, variant: &Variant) -> Vec<Gam
 }
 
 /// Build a `(TableState, StaticGameData)` pair from a `ScenarioJson` and a `Variant`.
+#[must_use]
 pub fn build_from_scenario(
     scenario: &ScenarioJson,
     variant: Variant,
@@ -419,6 +428,7 @@ pub fn build_from_scenario(
 }
 
 /// Load a `ScenarioJson` from a JSON string.
+#[must_use]
 pub fn parse_scenario(json: &str) -> ScenarioJson {
     serde_json::from_str(json).expect("failed to parse scenario JSON")
 }

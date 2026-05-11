@@ -15,6 +15,7 @@ pub struct GameStateSnapshot {
 }
 
 impl GameStateSnapshot {
+    #[must_use]
     pub fn new(table_state: TableState, team_knowledge: TeamKnowledge) -> Self {
         GameStateSnapshot {
             table_state,
@@ -22,6 +23,7 @@ impl GameStateSnapshot {
         }
     }
 
+    #[must_use]
     pub fn player_pov<'a>(
         &'a self,
         player_index: usize,

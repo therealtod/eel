@@ -40,6 +40,7 @@ impl TableState {
     /// Construct a `TableState` from all its constituent parts.
     ///
     /// Intended for use in tests and scenario loading.
+    #[must_use]
     pub fn from_parts(
         clue_token_bank: ClueTokenBank,
         deck: Deck,
@@ -65,6 +66,7 @@ impl TableState {
         }
     }
 
+    #[must_use]
     pub fn new(static_game_data: &StaticGameData) -> Self {
         Self::from_parts(
             ClueTokenBank::default(),
@@ -80,6 +82,7 @@ impl TableState {
 
     /// Returns the index of the player whose turn it is.
     #[inline]
+    #[must_use]
     pub fn active_player_index(&self) -> usize {
         self.active_player_index
     }
@@ -192,10 +195,12 @@ impl TableState {
 
     /// Return a [VariantCardsBitField] of the cards that can be played successfully in the current
     /// game state
+    #[must_use]
     pub fn playable_cards(&self, static_game_data: &StaticGameData) -> VariantCardsBitField {
         self.playing_stacks.next_cards(&static_game_data.variant)
     }
 
+    #[must_use]
     pub fn score(&self, variant: &Variant) -> u8 {
         self.playing_stacks.total_size(variant)
     }
@@ -203,6 +208,7 @@ impl TableState {
     /// Returns true when the game has ended:
     /// - 3 strikes (team lost), or
     /// - score equals theScoremum possible score (team won).
+    #[must_use]
     pub fn is_terminal(&self, static_data: &StaticGameData) -> bool {
         let max_score = static_data.variant.number_of_suits * static_data.variant.stacks_size;
         self.strike_tokens >= 3 || self.score(&static_data.variant) >= max_score
@@ -210,6 +216,7 @@ impl TableState {
 
     /// Pace = score + cards_in_deck + num_players - max_theoretical_score.
     /// Positive pace means the team has "breathing room"; negative means they're behind.
+    #[must_use]
     pub fn pace(&self, static_game_data: &StaticGameData) -> i32 {
         let max_score = (static_game_data.variant.number_of_suits
             * static_game_data.variant.stacks_size) as i32;
@@ -226,6 +233,7 @@ impl TableState {
     ///
     /// Returns 0.0 when the game is already won; f32::INFINITY when no spare turns remain, but
     /// cards are still needed.
+    #[must_use]
     pub fn required_efficiency(&self, static_game_data: &StaticGameData) -> f32 {
         let max_score = (static_game_data.variant.number_of_suits
             * static_game_data.variant.stacks_size) as i32;

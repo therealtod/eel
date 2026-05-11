@@ -14,6 +14,7 @@ pub struct PlayerPOVSnapshot {
 }
 
 impl PlayerPOVSnapshot {
+    #[must_use]
     pub fn new(player_index: usize, snapshot: GameStateSnapshot) -> Self {
         PlayerPOVSnapshot {
             player_index,
@@ -22,10 +23,12 @@ impl PlayerPOVSnapshot {
     }
 
     /// Reconstruct the player's POV for this snapshot, borrowing `static_data` from the caller.
+    #[must_use]
     pub fn as_pov<'a>(&'a self, static_data: &'a StaticGameData) -> LightweightPlayerPOV<'a> {
         self.snapshot.player_pov(self.player_index, static_data)
     }
 
+    #[must_use]
     pub fn player_index(&self) -> usize {
         self.player_index
     }

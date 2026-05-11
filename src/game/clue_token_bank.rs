@@ -7,21 +7,25 @@ pub struct ClueTokenBank {
 }
 
 impl ClueTokenBank {
+    #[must_use]
     pub const fn new(half_clue_tokens: u8) -> Self {
         ClueTokenBank {
             half_tokens_count: half_clue_tokens,
         }
     }
 
+    #[must_use]
     pub const fn new_from_whole_tokens(clue_tokens: u8) -> Self {
         ClueTokenBank {
             half_tokens_count: clue_tokens * 2,
         }
     }
+    #[must_use]
     pub fn whole_clue_tokens_count(&self) -> u8 {
         self.half_tokens_count / 2
     }
 
+    #[must_use]
     pub fn half_tokens_count(&self) -> u8 {
         self.half_tokens_count
     }

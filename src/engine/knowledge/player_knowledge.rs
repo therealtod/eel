@@ -53,6 +53,7 @@ pub struct PlayerKnowledge {
 
 impl PlayerKnowledge {
     /// Create a new `PlayerKnowledgeState` with no knowledge.
+    #[must_use]
     pub fn new(player_index: usize) -> Self {
         PlayerKnowledge {
             player_index,
@@ -65,6 +66,7 @@ impl PlayerKnowledge {
     }
 
     /// Create a default (empty) state, used for padding fixed-size arrays.
+    #[must_use]
     pub fn empty() -> Self {
         Self::new(0)
     }
@@ -227,6 +229,7 @@ impl PlayerKnowledge {
     /// For each cohort that touches this card, the contributions are *unioned*
     /// (the card could be any of the hypothesis interpretations). Across cohorts
     /// (and against baseline), masks are *intersected*.
+    #[must_use]
     pub fn effective_inferred_mask(
         &self,
         card_deck_index: CardDeckIndex,
@@ -271,6 +274,7 @@ impl PlayerKnowledge {
     }
 
     /// True if any baseline OR live hypothesis attaches a [`Signal::Play`] to the card.
+    #[must_use]
     pub fn has_play_signal(&self, card_deck_index: CardDeckIndex) -> bool {
         if self.signals[card_deck_index as usize]
             .iter()
@@ -294,6 +298,7 @@ impl PlayerKnowledge {
     /// Get the possible identities for a card from baseline only (does not include
     /// live hypothesis contributions). For effective state combining baseline with
     /// hypotheses, use [`effective_inferred_mask`](Self::effective_inferred_mask).
+    #[must_use]
     pub fn possible_identities(&self, card_deck_index: CardDeckIndex) -> Option<CardIdentityMask> {
         self.inferred_identities[card_deck_index as usize]
     }
@@ -305,6 +310,7 @@ impl PlayerKnowledge {
     /// convention (i.e. not in `visible_cards`), only convention-inferred knowledge
     /// is returned. The player cannot see their own cards, so the omniscient deck
     /// empathy must not leak into their decision-making during search.
+    #[must_use]
     pub fn combined_possible_identities(
         &self,
         card_deck_index: CardDeckIndex,

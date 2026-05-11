@@ -58,6 +58,7 @@ pub struct KnowledgeAwareGameState {
 }
 
 impl KnowledgeAwareGameState {
+    #[must_use]
     pub fn new(static_data: StaticGameData) -> Self {
         let table_state = TableState::new(&static_data);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -72,6 +73,7 @@ impl KnowledgeAwareGameState {
     }
 
     /// Construct from an existing table state and team knowledge (e.g. for search).
+    #[must_use]
     pub fn from_parts(
         static_data: StaticGameData,
         table_state: TableState,
@@ -89,11 +91,13 @@ impl KnowledgeAwareGameState {
     }
 
     /// Get the current turn number (sequential turn counter from table state).
+    #[must_use]
     pub fn current_turn(&self) -> usize {
         self.table_state.current_turn
     }
 
     /// Get a read-only view of the game from the specified player's perspective.
+    #[must_use]
     pub fn player_pov(&self, player_index: usize) -> LightweightPlayerPOV<'_> {
         LightweightPlayerPOV::new(
             player_index,
@@ -489,19 +493,23 @@ impl KnowledgeAwareGameState {
 
     // ── Accessors ─────────────────────────────────────────────────────────────
 
+    #[must_use]
     pub fn table_state(&self) -> &TableState {
         &self.table_state
     }
 
+    #[must_use]
     pub fn static_data(&self) -> &StaticGameData {
         &self.static_data
     }
 
+    #[must_use]
     pub fn team_knowledge(&self) -> &TeamKnowledge {
         &self.team_knowledge
     }
 
     /// Capture the current board state and team knowledge as an owned snapshot.
+    #[must_use]
     pub fn snapshot(&self) -> GameStateSnapshot {
         GameStateSnapshot::new(self.table_state.clone(), self.team_knowledge.clone())
     }
@@ -521,6 +529,7 @@ impl KnowledgeAwareGameState {
     ///
     /// Call [`PlayerPOVSnapshot::as_pov`] with [`Self::static_data`] to materialise a
     /// [`LightweightPlayerPOV`] from the returned snapshot.
+    #[must_use]
     pub fn pov_at_turn(&self, turn: usize, player_index: usize) -> Option<PlayerPOVSnapshot> {
         let snapshot = self.history.get(turn)?.clone();
         if player_index >= self.static_data.number_of_players as usize {
@@ -530,6 +539,7 @@ impl KnowledgeAwareGameState {
     }
 
     /// The number of snapshots recorded so far.
+    #[must_use]
     pub fn history_len(&self) -> usize {
         self.history.len()
     }

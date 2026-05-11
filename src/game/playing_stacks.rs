@@ -36,6 +36,7 @@ pub struct PlayingStacks {
 }
 
 impl PlayingStacks {
+    #[must_use]
     pub fn empty() -> PlayingStacks {
         PlayingStacks {
             cards: 0,
@@ -50,6 +51,7 @@ impl PlayingStacks {
         }
     }
 
+    #[must_use]
     pub fn new(played_cards: Vec<VariantCardId>, variant: &Variant) -> PlayingStacks {
         let mut playing_stacks = PlayingStacks::empty();
         for card_id in played_cards {
@@ -69,11 +71,13 @@ impl PlayingStacks {
     }
 
     /// Return how many cards of the given suit have been played.
+    #[must_use]
     pub fn stack_size(&self, suit_index: usize) -> u8 {
         self.stacks[suit_index].played_cards_count
     }
 
     /// Get a bitfield of cards that can be successfully played in the current state.
+    #[must_use]
     pub fn next_cards(&self, variant: &Variant) -> VariantCardsBitField {
         let mut next_cards = 0;
         let stacks_size = variant.stacks_size as usize;
@@ -97,6 +101,7 @@ impl PlayingStacks {
         next_cards
     }
 
+    #[must_use]
     pub fn total_size(&self, variant: &Variant) -> u8 {
         self.stacks
             .iter()
@@ -105,10 +110,12 @@ impl PlayingStacks {
             .sum()
     }
 
+    #[must_use]
     pub fn contains_card_with_id(&self, card_id: VariantCardId) -> bool {
         (self.cards & (1u64 << card_id)) != 0
     }
 
+    #[must_use]
     pub fn as_bitfield(&self) -> VariantCardsBitField {
         self.cards
     }

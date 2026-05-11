@@ -13,6 +13,7 @@ pub struct TeamKnowledge {
 }
 
 impl TeamKnowledge {
+    #[must_use]
     pub fn new(num_players: usize) -> Self {
         let mut player_knowledge = std::array::from_fn(|_| PlayerKnowledge::empty());
         for i in 0..num_players {
@@ -25,6 +26,7 @@ impl TeamKnowledge {
     }
 
     /// Get a reference to a specific player's knowledge.
+    #[must_use]
     pub fn player(&self, player_index: usize) -> &PlayerKnowledge {
         debug_assert!(player_index < self.num_players);
         &self.player_knowledge[player_index]
@@ -56,6 +58,7 @@ impl TeamKnowledge {
     }
 
     /// Number of active players.
+    #[must_use]
     pub fn num_players(&self) -> usize {
         self.num_players
     }

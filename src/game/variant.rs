@@ -33,10 +33,12 @@ pub struct Variant {
 
 impl Variant {
     /// Bitmask covering exactly the valid card IDs for this variant.
+    #[must_use]
     pub const fn all_cards_mask(&self) -> VariantCardsBitField {
         (1 << (self.number_of_suits as u32 * self.stacks_size as u32)) - 1
     }
 
+    #[must_use]
     pub fn get_card_suit_index(&self, variant_card_id: VariantCardId) -> usize {
         variant_card_id / self.stacks_size as usize
     }
@@ -45,22 +47,26 @@ impl Variant {
     ///
     /// Rank clue values are **1-based** (pass `5` for a rank-5 clue).
     /// Color clue values are **0-based** suit indices (pass `0` for Red, `1` for Yellow, …).
+    #[must_use]
     pub fn empathy_by_clue(&self, clue_type: ClueType, clue_value: usize) -> CardIdentityMask {
         CardIdentityMask::from_bits(self.empathy_by_clue[clue_type as usize][clue_value])
     }
 
     /// Returns the empathy for a [`Clue`]. Panics if the clue maps to an empty mask.
+    #[must_use]
     pub fn empathy_for_clue(&self, clue: &Clue) -> CardIdentityMask {
         self.empathy_by_clue(clue.clue_type, clue.clue_value as usize)
     }
 
     /// Returns the rank associated with the given `variant_card_id` in this variant
+    #[must_use]
     pub fn rank_of(&self, variant_card_id: VariantCardId) -> u8 {
         self.rank_by_id[variant_card_id]
     }
 
     /// Returns the identity (if any) of the card that needs to be played before the given
     /// `variant_card_id`
+    #[must_use]
     pub fn prerequisite(&self, variant_card_id: VariantCardId) -> Option<VariantCardId> {
         if 1 << variant_card_id & self.stack_starting_cards != 0 {
             None
@@ -69,6 +75,7 @@ impl Variant {
         }
     }
 
+    #[must_use]
     pub fn is_stack_ending_card(&self, variant_card_id: VariantCardId) -> bool {
         1 << variant_card_id & self.stack_ending_cards != 0
     }

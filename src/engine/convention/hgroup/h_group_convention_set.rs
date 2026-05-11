@@ -7,6 +7,7 @@ pub struct HGroupConventionSet {
 }
 
 impl HGroupConventionSet {
+    #[must_use]
     pub fn new(mut techs: Vec<Box<dyn ConventionTech>>) -> Self {
         techs.sort_by_key(|t| t.interpretation_priority());
         HGroupConventionSet { techs }

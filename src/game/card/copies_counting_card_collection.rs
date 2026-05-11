@@ -9,6 +9,7 @@ pub struct CopiesCountingCardCollection {
 }
 
 impl CopiesCountingCardCollection {
+    #[must_use]
     pub fn empty() -> Self {
         CopiesCountingCardCollection {
             card_copies_count: [0; MAX_UNIQUE_CARDS_IN_DECK],
@@ -29,14 +30,17 @@ impl CopiesCountingCardCollection {
         self.size += 1;
     }
 
+    #[must_use]
     pub fn contains_card_with_id(&self, card_id: VariantCardId) -> bool {
         self.card_copies_count[card_id] > 0
     }
 
+    #[must_use]
     pub fn copies_of(&self, card_id: VariantCardId) -> u8 {
         self.card_copies_count[card_id]
     }
 
+    #[must_use]
     pub fn size(&self) -> u8 {
         self.size
     }
