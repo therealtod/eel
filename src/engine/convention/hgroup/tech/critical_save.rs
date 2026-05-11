@@ -136,15 +136,29 @@ fn critical_save_matches(
     }
 }
 
-/// Save a critical card on chop by cluing its color (suit).
-pub struct ColorCriticalSave;
+/// Save a critical card on chop by cluing its color (suit) or rank.
+#[derive(Clone, Copy)]
+pub struct CriticalSave(pub ClueType);
 
-impl ClueTech for ColorCriticalSave {
-    fn clue_game_actions(&self, active_player_pov: &dyn PlayerPOV) -> Vec<GameAction> {
-        let stacks_size = active_player_pov.static_data().variant.stacks_size as usize;
-        critical_save_actions(active_player_pov, ClueType::Color, |card_id| {
-            (card_id / stacks_size) as u8
-        })
+#[allow(non_upper_case_globals)]
+pub const ColorCriticalSave: CriticalSave = CriticalSave(ClueType::Color);
+#[allow(non_upper_case_globals)]
+pub const RankCriticalSave: CriticalSave = CriticalSave(ClueType::Rank);
+
+impl ClueTech for CriticalSave {
+    fn clue_game_actions(&self, pov: &dyn PlayerPOV) -> Vec<GameAction> {
+        match self.0 {
+            ClueType::Color => {
+                let stacks_size = pov.static_data().variant.stacks_size as usize;
+                critical_save_actions(pov, ClueType::Color, move |card_id| {
+                    (card_id / stacks_size) as u8
+                })
+            }
+            ClueType::Rank => {
+                let variant = &pov.static_data().variant;
+                critical_save_actions(pov, ClueType::Rank, |card_id| variant.rank_of(card_id))
+            }
+        }
     }
 
     fn matches_clue(
@@ -156,15 +170,7 @@ impl ClueTech for ColorCriticalSave {
         history: &[GameStateSnapshot],
         pov: &dyn PlayerPOV,
     ) -> bool {
-        critical_save_matches(
-            player_index,
-            touched,
-            clue,
-            turn,
-            history,
-            pov,
-            ClueType::Color,
-        )
+        critical_save_matches(player_index, touched, clue, turn, history, pov, self.0)
     }
 
     fn clue_knowledge_updates(
@@ -180,57 +186,9 @@ impl ClueTech for ColorCriticalSave {
     }
 }
 
-impl SaveClueTech for ColorCriticalSave {}
-impl HGroupClueTech for ColorCriticalSave {}
-impl_convention_tech_for_hgroup_clue_tech!(ColorCriticalSave, priority::SAVE);
-
-/// Save a critical card on chop by cluing its rank.
-pub struct RankCriticalSave;
-
-impl ClueTech for RankCriticalSave {
-    fn clue_game_actions(&self, active_player_pov: &dyn PlayerPOV) -> Vec<GameAction> {
-        let variant = &active_player_pov.static_data().variant;
-        critical_save_actions(active_player_pov, ClueType::Rank, |card_id| {
-            variant.rank_of(card_id)
-        })
-    }
-
-    fn matches_clue(
-        &self,
-        player_index: PlayerIndex,
-        touched: &[CardDeckIndex],
-        clue: &Clue,
-        turn: usize,
-        history: &[GameStateSnapshot],
-        observer_pov: &dyn PlayerPOV,
-    ) -> bool {
-        critical_save_matches(
-            player_index,
-            touched,
-            clue,
-            turn,
-            history,
-            observer_pov,
-            ClueType::Rank,
-        )
-    }
-
-    fn clue_knowledge_updates(
-        &self,
-        player_index: PlayerIndex,
-        touched: &[CardDeckIndex],
-        clue: &Clue,
-        turn: usize,
-        history: &[GameStateSnapshot],
-        observer_pov: &dyn PlayerPOV,
-    ) -> Hypothesis {
-        critical_save_knowledge_updates(player_index, touched, clue, turn, history, observer_pov)
-    }
-}
-
-impl SaveClueTech for RankCriticalSave {}
-impl HGroupClueTech for RankCriticalSave {}
-impl_convention_tech_for_hgroup_clue_tech!(RankCriticalSave, priority::SAVE);
+impl SaveClueTech for CriticalSave {}
+impl HGroupClueTech for CriticalSave {}
+impl_convention_tech_for_hgroup_clue_tech!(CriticalSave, priority::SAVE);
 
 #[cfg(test)]
 mod tests {
