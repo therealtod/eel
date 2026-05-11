@@ -32,12 +32,11 @@ impl DelayedPlayClue {
         away_value: u8,
         pov: &dyn PlayerPOV,
     ) -> bool {
-        let active = pov.active_player_index();
         let num_players = pov.static_data().number_of_players as usize;
 
         (1..=away_value as usize).all(|offset| {
             let connecting_id = card_id - offset;
-            (0..num_players).filter(|&p| p != active).any(|p| {
+            (0..num_players).any(|p| {
                 pov.table_state().hands[p].cards().iter().any(|&idx| {
                     pov.card_identity(idx) == Some(connecting_id)
                         && pov.is_touched(idx)

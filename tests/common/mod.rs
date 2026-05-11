@@ -5,11 +5,12 @@ use eel::game::action::game_action::GameAction;
 use eel::game::card::CardIdentityMask;
 use eel::game::state::table_state::TableState;
 use eel::game::state::table_state_json::{
-    ScenarioJson, build_from_scenario, build_game_actions, parse_card, parse_empathy_mask,
-    parse_scenario,
+    ScenarioJson, build_from_scenario, build_game_actions, parse_card, parse_clue_string,
+    parse_empathy_mask, parse_scenario,
 };
 use eel::game::static_game_data::StaticGameData;
 use eel::game::variant::test_variants::NO_VARIANT;
+use eel::game::variant::Variant;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
@@ -49,7 +50,7 @@ pub fn load_scenario(n: u32) -> (TableState, StaticGameData) {
 }
 
 #[allow(dead_code)]
-pub fn team_knowledge_from_scenario(scenario: &ScenarioJson) -> TeamKnowledge {
+pub fn team_knowledge_from_scenario(scenario: &ScenarioJson, variant: &Variant) -> TeamKnowledge {
     let num_players = scenario.hands.len();
     let mut team_knowledge = TeamKnowledge::new(num_players);
 
@@ -112,6 +113,33 @@ pub fn team_knowledge_from_scenario(scenario: &ScenarioJson) -> TeamKnowledge {
                         team_knowledge.player_mut(p).visible_cards |= 1u64 << deck_idx;
                     }
                 }
+            }
+        }
+    }
+
+    // Apply positive/negative clue marks to each card holder's own inferred empathy.
+    // This reflects what the holder knows about their own card from the clues they received.
+    for (p, player_hand) in scenario.hands.iter().enumerate() {
+        if p >= num_players {
+            break;
+        }
+        let indices = &player_indices[p];
+        let hand_size = player_hand.len();
+        for (slot_pos, slot) in player_hand.iter().enumerate() {
+            let deck_idx = indices[hand_size - 1 - slot_pos] as usize;
+            for clue_str in slot.positive() {
+                let (ct, cv) = parse_clue_string(clue_str);
+                let clue_mask = variant.empathy_by_clue(ct, cv as usize).as_bits();
+                team_knowledge
+                    .player_mut(p)
+                    .narrow_inferred(deck_idx as u8, clue_mask, variant);
+            }
+            for clue_str in slot.negative() {
+                let (ct, cv) = parse_clue_string(clue_str);
+                let clue_mask = variant.empathy_by_clue(ct, cv as usize).as_bits();
+                team_knowledge
+                    .player_mut(p)
+                    .narrow_inferred(deck_idx as u8, !clue_mask, variant);
             }
         }
     }
@@ -183,8 +211,8 @@ pub fn load_scenario_with_knowledge(
     let json = std::fs::read_to_string(&path)
         .unwrap_or_else(|e| panic!("failed to read scenario {n}: {e}"));
     let scenario = parse_scenario(&json);
-    let team_knowledge = team_knowledge_from_scenario(&scenario);
     let (table_state, static_data) = build_from_scenario(&scenario, NO_VARIANT);
+    let team_knowledge = team_knowledge_from_scenario(&scenario, &static_data.variant);
 
     let actions = build_game_actions(&scenario, &static_data.variant);
 

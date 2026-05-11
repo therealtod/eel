@@ -29,10 +29,11 @@ pub struct SimplePrompt;
 impl SimplePrompt {
     /// Validates whether `connecting_id` can be prompted in `target_player`'s hand.
     ///
-    /// Validity requires:
-    /// 1. The card is touched and its identity is unknown to its holder.
-    /// 2. All touched cards in that player's hand that are to the left of (and including) the
-    ///    connecting card are playable — so the player will naturally play through to it.
+    /// Validity requires the connecting card to be touched and unknown to its holder, plus one of:
+    /// 1. Chain: every touched card from slot 1 up to and including the connecting card is playable.
+    /// 2. Skip: the first touched card whose holder empathy admits `connecting_id` IS the
+    ///    connecting card — the player will skip over any preceding cards whose clue empathy
+    ///    excludes the connecting identity.
     fn is_valid_prompt_situation(
         connecting_id: VariantCardId,
         target_player: PlayerIndex,
@@ -50,10 +51,27 @@ impl SimplePrompt {
             pov.card_identity(idx) == Some(connecting_id) && !pov.is_identity_known_to_holder(idx)
         });
 
-        match pos {
-            None => false,
-            Some(p) => touched[..=p].iter().all(|&idx| pov.is_playable(idx)),
+        let Some(p) = pos else { return false; };
+
+        // Chain: all cards from leftmost touched up to and including the connecting card are playable.
+        if touched[..=p].iter().all(|&idx| pov.is_playable(idx)) {
+            return true;
         }
+
+        // Skip: the first touched card whose holder empathy admits connecting_id IS the connecting card.
+        let holder_knowledge = pov.team_knowledge().player(target_player);
+        for &idx in &touched[..=p] {
+            let holder_empathy = holder_knowledge.combined_possible_identities(
+                idx,
+                pov.table_state(),
+                &pov.static_data().variant,
+            );
+            if holder_empathy.as_bits() & (1u64 << connecting_id) != 0 {
+                return pov.card_identity(idx) == Some(connecting_id)
+                    && !pov.is_identity_known_to_holder(idx);
+            }
+        }
+        false
     }
 }
 
@@ -132,36 +150,36 @@ impl ClueTech for SimplePrompt {
 
         // ── Case 1: current player is the prompted player ─────────────────────
         if current != clue_receiver_index {
-            let focus = get_clue_focus(clue_receiver_index, &touched, &giver_pov);
+            let focus = get_clue_focus(clue_receiver_index, touched, &giver_pov);
             if let Some(focus) = focus {
                 let focus_id = match giver_pov.card_identity(focus) {
                     Some(id) if giver_pov.away_value(id) == Some(1) => id,
                     _ => return Hypothesis::empty(),
                 };
                 let connecting_id = focus_id - 1;
-                let hand = giver_pov.table_state().hands[current].cards();
-                let touched_in_hand: Vec<CardDeckIndex> = hand
-                    .iter()
-                    .copied()
-                    .filter(|&idx| giver_pov.is_touched(idx))
-                    .collect();
-                let pos = touched_in_hand.iter().position(|&idx| {
-                    giver_pov.card_identity(idx) == Some(connecting_id)
-                        && !giver_pov.is_identity_known_to_holder(idx)
-                });
-                if let Some(p) = pos {
-                    if touched_in_hand[..=p]
+                if Self::is_valid_prompt_situation(connecting_id, current, &giver_pov) {
+                    let hand = giver_pov.table_state().hands[current].cards();
+                    let touched_in_hand: Vec<CardDeckIndex> = hand
                         .iter()
-                        .all(|&idx| giver_pov.is_playable(idx))
-                    {
-                        if let Some(card) = touched_in_hand.first().copied() {
-                            return Hypothesis::unconditional(vec![
-                                KnowledgeUpdate::NarrowPossibilities {
-                                    card_deck_index: card,
-                                    mask: 1 << connecting_id,
-                                },
-                            ]);
-                        }
+                        .copied()
+                        .filter(|&idx| giver_pov.is_touched(idx))
+                        .collect();
+                    let holder_knowledge = giver_pov.team_knowledge().player(current);
+                    let card = touched_in_hand.iter().copied().find(|&idx| {
+                        let emp = holder_knowledge.combined_possible_identities(
+                            idx,
+                            giver_pov.table_state(),
+                            &giver_pov.static_data().variant,
+                        );
+                        emp.as_bits() & (1u64 << connecting_id) != 0
+                    });
+                    if let Some(card) = card {
+                        return Hypothesis::unconditional(vec![
+                            KnowledgeUpdate::NarrowPossibilities {
+                                card_deck_index: card,
+                                mask: 1 << connecting_id,
+                            },
+                        ]);
                     }
                 }
             }
