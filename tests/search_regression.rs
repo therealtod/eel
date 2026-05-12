@@ -126,3 +126,29 @@ fn does_not_steal_a_finesse_that_bob_could_give() {
         _ => panic!("expected to play a known playable g2 in slot 2, got: {action:?}"),
     }
 }
+
+#[test]
+fn defers_playing_a_known_playable_to_save_a_critical_card() {
+    let action = search_best_action("defer_play_to_save_critical");
+    match action {
+        GameAction::Clue {
+            player_index: 1,
+            clue: Clue{clue_type: ClueType::Rank, clue_value: 3},
+            ..
+        } => {}
+        _ => panic!("expected a CriticalSave to Bob, got: {action:?}"),
+    }
+}
+
+#[test]
+fn does_not_defer_play_to_save_cathy_when_bob_could_save() {
+    let action = search_best_action("avoid_deferring_play_to_save");
+    match action {
+        GameAction::Play {
+            player_index: 0,
+            card_deck_index: 3,
+            ..
+        } => {}
+        _ => panic!("expected to play a known playable g2 in slot 2, got: {action:?}"),
+    }
+}
