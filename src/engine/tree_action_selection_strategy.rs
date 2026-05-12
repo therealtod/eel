@@ -2,8 +2,8 @@ use rayon::prelude::*;
 
 use crate::engine::action_selection_strategy::ActionSelectionStrategy;
 use crate::engine::convention::convention_set::ConventionSet;
-use crate::engine::decision_tree::{Score, ScoredNode};
-use crate::engine::evaluator::{DefaultEvaluator, Evaluator};
+use crate::engine::decision_tree::{LineStep, Score, ScoredNode};
+use crate::engine::evaluator::{DefaultEvaluator, Evaluator, ScoreBreakdown};
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
 use crate::game::action::game_action::GameAction;
@@ -79,12 +79,41 @@ impl TreeActionSelectionStrategy {
         proposed
     }
 
-    fn node_score(evaluator: &dyn Evaluator, state: &KnowledgeAwareGameState) -> Score {
-        evaluator.score(
+    fn leaf_breakdown(
+        evaluator: &dyn Evaluator,
+        state: &KnowledgeAwareGameState,
+    ) -> ScoreBreakdown {
+        evaluator.score_breakdown(
             &state.table_state,
             &state.static_data(),
             &state.team_knowledge,
         )
+    }
+
+    /// Per-action bonus applied along the search path. Currently only clue actions
+    /// produce a non-zero value (good-touch penalty and clue precision reward).
+    fn immediate_action_bonus(
+        action: &GameAction,
+        evaluator: &dyn Evaluator,
+        state_after: &KnowledgeAwareGameState,
+        static_data: &StaticGameData,
+    ) -> Score {
+        if let GameAction::Clue {
+            touched_card_deck_indexes,
+            player_index,
+            ..
+        } = action
+        {
+            evaluator.clue_precision_bonus(
+                touched_card_deck_indexes,
+                *player_index,
+                static_data,
+                &state_after.team_knowledge,
+                state_after.table_state(),
+            )
+        } else {
+            0.0
+        }
     }
 
     /// Recursively compute the best leaf score reachable from `state` within `depth` more turns.
@@ -92,6 +121,10 @@ impl TreeActionSelectionStrategy {
     /// Returns `(score, pv)` where `pv` is the **principal variation** — the sequence of actions
     /// taken at each ply from the current node down to the leaf that produced `score`. Callers
     /// prepend their own action to build the full line stored in [`ScoredNode::line`].
+    ///
+    /// The returned score is the leaf evaluation **plus** the sum of per-action immediate bonuses
+    /// (currently `clue_precision_bonus`) accumulated along the chosen line, so that good-touch
+    /// violations and clue precision are visible at every ply, not just at the root.
     ///
     /// # Search model
     ///
@@ -110,51 +143,85 @@ impl TreeActionSelectionStrategy {
     /// The question being answered is therefore: *"how good does the game get if everyone plays
     /// optimally after I do this?"* — not a subjective per-player utility.
     ///
-    /// `alpha` is the best score the parent has already found; subtrees that cannot beat it are pruned.
+    /// No alpha-beta pruning is performed: every ply maximises, so there is no min-parent that
+    /// would reject a value ≥ alpha — truncating a subtree's value would silently change which
+    /// root candidate wins. A real prune would require a state-derived upper bound on the
+    /// subtree, which we don't currently compute.
     fn best_score_at_depth(
         state: &KnowledgeAwareGameState,
         static_data: &StaticGameData,
         convention_set: &dyn ConventionSet,
         evaluator: &dyn Evaluator,
         depth: usize,
-        alpha: Score,
-    ) -> (Score, Vec<GameAction>) {
+    ) -> (Score, Vec<LineStep>, ScoreBreakdown) {
         if depth == 0 || state.table_state.is_terminal(static_data) {
-            return (Self::node_score(evaluator, state), vec![]);
+            let breakdown = Self::leaf_breakdown(evaluator, state);
+            tracing::trace!(
+                target: "eel::search",
+                depth = 0,
+                terminal = state.table_state.is_terminal(static_data),
+                leaf = %breakdown,
+                "leaf_reached",
+            );
+            return (breakdown.total, vec![], breakdown);
         }
 
-        let pov = state.player_pov(state.table_state.active_player_index);
-        let candidates = Self::candidate_actions_with_provenance(&pov, convention_set)
-            .into_iter()
-            .map(|p| p.action);
+        let active = state.table_state.active_player_index;
+        let pov = state.player_pov(active);
+        let candidates = Self::candidate_actions_with_provenance(&pov, convention_set);
+        let span = tracing::trace_span!(
+            target: "eel::search",
+            "search_ply",
+            depth,
+            player = active,
+            candidates = candidates.len(),
+        );
+        let _guard = span.enter();
         let mut best = f64::NEG_INFINITY;
-        let mut best_pv: Vec<GameAction> = vec![];
-        for action in candidates {
+        let mut best_pv: Vec<LineStep> = vec![];
+        let mut best_breakdown: Option<ScoreBreakdown> = None;
+        for proposed in candidates {
             let mut next = state.clone();
-            next.apply(&action, convention_set);
+            next.apply(&proposed.action, convention_set);
             next.advance_turn();
-            let (score, rest) = Self::best_score_at_depth(
+            let immediate =
+                Self::immediate_action_bonus(&proposed.action, evaluator, &next, static_data);
+            let (subtree_score, rest, leaf_bd) = Self::best_score_at_depth(
                 &next,
                 static_data,
                 convention_set,
                 evaluator,
                 depth - 1,
-                best,
             );
-            if score > best {
+            let score = subtree_score + immediate;
+            let improved = score > best;
+            tracing::trace!(
+                target: "eel::search",
+                action = ?proposed.action,
+                tech = proposed.tech_name,
+                immediate,
+                subtree_score,
+                score,
+                improved,
+                "candidate_evaluated",
+            );
+            if improved {
                 best = score;
                 best_pv = Vec::with_capacity(rest.len() + 1);
-                best_pv.push(action);
+                best_pv.push(LineStep {
+                    action: proposed.action,
+                    tech_name: proposed.tech_name,
+                    immediate_bonus: immediate,
+                });
                 best_pv.extend(rest);
-            }
-            // Cooperative Hanabi has no adversary, so a single alpha cutoff suffices:
-            // if we've found something at least as good as what the parent already has,
-            // the parent won't choose this subtree regardless of remaining siblings.
-            if best >= alpha {
-                return (best, best_pv);
+                best_breakdown = Some(leaf_bd);
             }
         }
-        (best, best_pv)
+        // `best_breakdown` is set whenever the candidate loop ran. If no candidates were
+        // produced (extremely rare — the fallback in `candidate_actions_with_provenance`
+        // makes this near-impossible), score the current state as the leaf.
+        let breakdown = best_breakdown.unwrap_or_else(|| Self::leaf_breakdown(evaluator, state));
+        (best, best_pv, breakdown)
     }
 }
 
@@ -212,33 +279,22 @@ impl TreeActionSelectionStrategy {
                 let mut next = root_state.clone();
                 next.apply(&proposed.action, convention_set);
                 next.advance_turn();
-                let (leaf_score, pv) = Self::best_score_at_depth(
+                let immediate_bonus =
+                    Self::immediate_action_bonus(&proposed.action, evaluator, &next, static_data);
+                let (leaf_score, pv, leaf_breakdown) = Self::best_score_at_depth(
                     &next,
                     static_data,
                     convention_set,
                     evaluator,
                     depth - 1,
-                    f64::NEG_INFINITY,
                 );
-                let empathy_bonus: Score = if let GameAction::Clue {
-                    touched_card_deck_indexes,
-                    player_index,
-                    ..
-                } = &proposed.action
-                {
-                    evaluator.clue_precision_bonus(
-                        touched_card_deck_indexes,
-                        *player_index,
-                        static_data,
-                        &next.team_knowledge,
-                        next.table_state(),
-                    )
-                } else {
-                    0.0
-                };
-                let total = leaf_score + empathy_bonus;
+                let total = leaf_score + immediate_bonus;
                 let mut line = Vec::with_capacity(pv.len() + 1);
-                line.push(proposed.action.clone());
+                line.push(LineStep {
+                    action: proposed.action.clone(),
+                    tech_name: proposed.tech_name,
+                    immediate_bonus,
+                });
                 line.extend(pv);
                 tracing::debug!(
                     target: "eel::search",
@@ -246,12 +302,13 @@ impl TreeActionSelectionStrategy {
                     tech = proposed.tech_name,
                     priority = proposed.priority,
                     leaf_score,
-                    empathy_bonus,
+                    immediate_bonus,
                     total,
+                    leaf = %leaf_breakdown,
                     line = ?line,
                     "candidate_scored",
                 );
-                ScoredNode::leaf(proposed.action, total, proposed.tech_name, line)
+                ScoredNode::leaf(proposed.action, total, proposed.tech_name, line, leaf_breakdown)
             })
             .collect();
         nodes.sort_by(|a, b| b.total_score.total_cmp(&a.total_score));

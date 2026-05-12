@@ -117,7 +117,7 @@ pub trait Evaluator: Send + Sync {
 /// - `-lost_score_ceiling_weight * lost_score_ceiling`  — penalise any reduction in max achievable score
 /// - `empathy_weight * empathy_precision`               — reward narrower inferred identity ranges on clued cards
 ///
-/// Per-clue immediate adjustments (applied at the root, not propagated through the tree):
+/// Per-clue immediate adjustments (applied to every clue action along the search line):
 /// - `empathy_weight * resolved_touched_cards`          — precision bonus for clues that fully resolve touched cards
 /// - `-good_touch_penalty * bad_touch_count`            — penalty for each touched card with no overlap with still-needed
 ///                                                        cards (good-touch principle violation)
@@ -148,8 +148,8 @@ pub struct DefaultEvaluator {
     pub clue_token_weight: f64,
     /// Immediate reward per touched card that is fully resolved to a single identity
     /// after the clue is applied (good-touch precision bonus). Distinct from
-    /// `empathy_weight`, which applies to the leaf evaluation; this one fires only
-    /// at the root for clue actions.
+    /// `empathy_weight`, which applies to the leaf evaluation; this one fires once
+    /// per clue action along the search line.
     pub clue_precision_weight: f64,
     /// Reward per card in any player's own hand where the entire empathy set is a subset
     /// of the currently playable cards (or the card carries a `Signal::Play`). Captures
