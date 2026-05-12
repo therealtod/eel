@@ -91,9 +91,25 @@ fn prefers_blue_clue_to_cathy_over_rank1_clue_to_bob() {
             player_index: 2,
             clue: Clue{clue_type: ClueType::Color, clue_value: 3},
             ..
-        } => {
-
-        }
+        } => { }
         _ => panic!("expected a blue clue to Cathy, got: {action:?}"),
+    }
+}
+
+#[test]
+fn understands_that_the_efficient_clue_loses_max_score() {
+    let action = search_best_action("avoid_killing_critical");
+    match action {
+        GameAction::Clue {
+            player_index: 1,
+            clue: Clue{clue_type: ClueType::Color, clue_value: 2},
+            ..
+        } => {}
+        GameAction::Clue {
+            player_index: 1,
+            clue: Clue{clue_type: ClueType::Rank, clue_value: 3},
+            ..
+        } => {}
+        _ => panic!("expected a Critical save to Bob, got: {action:?}"),
     }
 }

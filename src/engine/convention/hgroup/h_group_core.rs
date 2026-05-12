@@ -223,6 +223,29 @@ fn already_clued_ids_mask(
     mask
 }
 
+/// Good-touch baseline mask the receiver should apply to a touched card.
+///
+/// Under H-Group's good-touch principle, a touched card is assumed to be eventually useful:
+/// trash and identities already clued in another hand are filtered out. The returned mask
+/// is the intersection of the clue's empathy with the still-needed set, minus identities
+/// already clued elsewhere.
+///
+/// Returns `None` when the intersection is empty — in that case GTP would say the touched
+/// card has no plausible useful identity (a bad-touch on every alternative), so no narrowing
+/// is applied (the receiver cannot honestly conclude anything from GTP alone).
+pub fn good_touch_baseline_mask(
+    clue: &Clue,
+    receiver: PlayerIndex,
+    table_state: &TableState,
+    static_data: &StaticGameData,
+) -> Option<VariantCardsBitField> {
+    let clue_mask = static_data.variant.empathy_for_clue(clue).as_bits();
+    let still_needed = still_needed_cards_mask(table_state, static_data);
+    let already_clued = already_clued_ids_mask(receiver, table_state, static_data);
+    let mask = clue_mask & still_needed & !already_clued;
+    if mask == 0 { None } else { Some(mask) }
+}
+
 /// Counts cards in `touched` that violate the good-touch principle.
 ///
 /// A card is a bad touch if:

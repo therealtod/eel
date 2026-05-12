@@ -405,6 +405,23 @@ impl KnowledgeAwareGameState {
             &self.static_data,
         );
 
+        // Convention-wide baseline narrowings on the receiver (e.g. H-Group good-touch
+        // principle: every touched card is assumed eventually useful). Applied as
+        // unconditional baseline so it intersects with per-tech cohort hypotheses.
+        for (idx, mask) in convention_set.clue_receiver_baseline(
+            clue,
+            touched_card_deck_indexes,
+            receiver,
+            &self.table_state,
+            &self.static_data,
+        ) {
+            self.team_knowledge.player_mut(receiver).narrow_inferred(
+                idx,
+                mask,
+                &self.static_data.variant,
+            );
+        }
+
         let cohort_id = self.next_hypothesis_id;
         self.next_hypothesis_id += 1;
         let num_players = self.static_data.number_of_players as usize;
