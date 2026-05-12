@@ -113,3 +113,16 @@ fn understands_that_the_efficient_clue_loses_max_score() {
         _ => panic!("expected a Critical save to Bob, got: {action:?}"),
     }
 }
+
+#[test]
+fn does_not_steal_a_finesse_that_bob_could_give() {
+    let action = search_best_action("avoid_stealing_finesse");
+    match action {
+        GameAction::Play {
+            player_index: 0,
+            card_deck_index: 2,
+            ..
+        } => {}
+        _ => panic!("expected to play a known playable g2 in slot 2, got: {action:?}"),
+    }
+}
