@@ -74,53 +74,44 @@ impl ClueTech for SimpleFinesse {
         &self,
         target_player_index: PlayerIndex,
         touched: &[CardDeckIndex],
-        _clue: &Clue,
+        clue: &Clue,
         turn: usize,
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
     ) -> bool {
-        let Some(game_state_snapshot) = history.get(turn) else {
+        let Some(snap) = history.get(turn) else {
             return false;
         };
-        let giver = game_state_snapshot.table_state.active_player_index;
-        let giver_pov = game_state_snapshot.player_pov(giver, observer_pov.static_data());
-        let clue_focus = get_clue_focus(target_player_index, touched, &giver_pov);
-
-        // The clue receiver spots a potential finesse setup when there is a playable card on
-        // someone's finesse position (except for the clue giver), and such card is compatible
-        // with the given clue
-        if observer_pov.player_index() == target_player_index {
-            let num_players = observer_pov.static_data().number_of_players as usize;
+        let giver = snap.table_state.active_player_index;
+        let giver_pov = snap.player_pov(giver, observer_pov.static_data());
+        let Some(focus) = get_clue_focus(target_player_index, touched, &giver_pov) else {
+            return false;
+        };
+        // Match if any focus identity consistent with the observer's empathy and the clue mask
+        // would have constituted a finesse setup from the giver's POV. For non-receiver observers
+        // the empathy collapses to a singleton (they see the focus); for the receiver it is wider
+        // and the existential captures her ambiguity over her own card.
+        let static_data = observer_pov.static_data();
+        let total_ids = static_data.variant.number_of_suits as usize
+            * static_data.variant.stacks_size as usize;
+        let clue_mask = static_data.variant.empathy_for_clue(clue).as_bits();
+        let candidates = observer_pov.empathy(focus).as_bits() & clue_mask;
+        let num_players = static_data.number_of_players as usize;
+        (0..total_ids).any(|focus_id| {
+            if (candidates & (1u64 << focus_id)) == 0 {
+                return false;
+            }
+            if giver_pov.away_value(focus_id) != Some(1) {
+                return false;
+            }
+            let connecting_id = focus_id - 1;
             (0..num_players)
-                .filter(|&player_index| {
-                    player_index != giver && player_index != target_player_index
+                .filter(|&p| p != giver && p != target_player_index)
+                .any(|p| {
+                    static_data.plays_before(p, target_player_index, giver)
+                        && has_on_finesse_position(connecting_id, p, &giver_pov)
                 })
-                .any(|player_index| {
-                    giver_pov
-                        .static_data()
-                        .plays_before(player_index, target_player_index, giver)
-                        && get_finesse_position(player_index, &giver_pov).is_some_and(
-                            |finesse_position_card_index| {
-                                giver_pov.is_playable(finesse_position_card_index)
-                                    && giver_pov
-                                        .card_identity(finesse_position_card_index)
-                                        .is_some_and(|card_id| {
-                                            observer_pov
-                                                .empathy(finesse_position_card_index)
-                                                .contains(card_id + 1)
-                                        })
-                            },
-                        )
-                })
-        }
-        // Anyone else can see that the focused card is 1 away from playable, which signals a finesse
-        else {
-            clue_focus.is_some_and(|focus_idx| {
-                giver_pov
-                    .card_identity(focus_idx)
-                    .is_some_and(|variant_card_id| giver_pov.away_value(variant_card_id) == Some(1))
-            })
-        }
+        })
     }
 
     fn clue_knowledge_updates(

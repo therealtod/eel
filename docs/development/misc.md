@@ -4,19 +4,40 @@
 
 ## Convention Tech Implementation
 
-### `matches_clue` — use the giver's POV
+### `matches_clue` — existential over observer-empathy
 
-When implementing `matches_clue`, reconstruct the clue giver's POV at the time the clue was given:
+`matches_clue` must answer "from the observer's POV, is there any focus/chop identity consistent
+with what *they* know that would have constituted this tech from the actor's POV?". Reading
+`giver_pov.card_identity(focus)` is wrong from the receiver's perspective: the receiver cannot
+see her own focus card, so the actor's identification of it is information she does not have.
+
+The idiom used uniformly across techs:
 
 ```rust
 fn matches_clue(&self, player_index: PlayerIndex, touched: &[CardDeckIndex], clue: &Clue,
                 turn: usize, history: &[GameStateSnapshot], observer_pov: &dyn PlayerPOV) -> bool {
-    let giver_pov = history[turn].player_pov(observer_pov.active_player_index(), observer_pov.static_data());
-    // use giver_pov for chop/focus/empathy checks
+    let Some(snap) = history.get(turn) else { return false; };
+    let giver = snap.table_state.active_player_index;
+    let giver_pov = snap.player_pov(giver, observer_pov.static_data());
+    let Some(focus) = get_clue_focus(player_index, touched, &giver_pov) else { return false; };
+
+    let static_data = observer_pov.static_data();
+    let total_ids = static_data.variant.number_of_suits as usize * static_data.variant.stacks_size as usize;
+    let clue_mask = static_data.variant.empathy_for_clue(clue).as_bits();
+    let candidates = observer_pov.empathy(focus).as_bits() & clue_mask;
+    (0..total_ids).any(|id| (candidates & (1u64 << id)) != 0 && tech_predicate(id, &giver_pov))
 }
 ```
 
-The observer's current knowledge may differ from what the giver knew when they acted. Tests must set up `team_knowledge` to reflect the giver's view.
+- For non-receiver observers `observer_pov.empathy(focus)` is a singleton, so the existential
+  collapses to the actor's direct check — identical to the old behaviour.
+- For the receiver, `observer_pov.empathy(focus)` is wide; the existential captures her genuine
+  ambiguity. `tech_predicate(id, &giver_pov)` evaluates the structural conditions (away_value,
+  finesse position of a teammate, criticality, …) over teammates' hands, which both observer
+  and giver can see, so reading from `giver_pov` does not leak information.
+
+Save techs use the same shape but iterate over the chop card and check against
+`empathy_for_clue` of the actual clue given.
 
 ### `clue_knowledge_updates` — called once per observer
 

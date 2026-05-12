@@ -4,8 +4,9 @@ use eel::engine::convention::convention_tech::ConventionTech;
 use eel::engine::convention::hgroup::signal::Signal;
 use eel::engine::convention::hgroup::tech::critical_save::RankCriticalSave;
 use eel::engine::convention::hgroup::tech::play_known_playable::PlayKnownPlayable;
+use eel::engine::convention::hgroup::tech::direct_play_clue::DirectPlayClue;
 use eel::engine::convention::hgroup::tech::simple_finesse::SimpleFinesse;
-use eel::engine::knowledge::knowledge_update::{Hypothesis, KnowledgeUpdate, PendingTrigger};
+use eel::engine::knowledge::knowledge_update::{KnowledgeUpdate, PendingTrigger};
 use eel::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 use eel::engine::knowledge::player_knowledge::PlayerKnowledge;
 use eel::game::action::game_action::GameAction;
@@ -83,7 +84,8 @@ fn all_players_understand_simple_finesse_semantics() {
     // ── Part 3: Cathy (player 2) holds two competing interpretations of the rank-3 clue ─────────
     // From Cathy's POV the clue is ambiguous:
     //   a) Direct play clue → focused card is b3 (blue 3, directly playable since blue stack = b2)
-    //      (contributed by DelayedPlayClue / other tech, not tested here)
+    //      (contributed by DirectPlayClue: Cathy's empathy for deck 13 is wide, so rank-3 ∩
+    //       playable = {b3} → matches_action returns true for Cathy, false for Alice/Bob)
     //   b) Finesse → focused card is r3 (red 3, 1-away), confirmed only if Bob blind-plays r2
     //      (contributed by SimpleFinesse as a *provisional* hypothesis)
     // The ambiguity resolves on Bob's next turn: blind-play of deck 9 confirms (b) and prunes (a);
@@ -114,7 +116,28 @@ fn all_players_understand_simple_finesse_semantics() {
         "Cathy's finesse hypothesis should pin deck 13 to r3 (the 1-away identity)"
     );
 
-    // The hypothesis is provisional: it resolves when Bob takes his next action.
+    // DirectPlayClue matches for Cathy but not for Alice/Bob: Cathy cannot see her own card so
+    // her empathy for deck 13 is wide; rank-3 ∩ playable = {b3} (blue stack = b2) → matches.
+    // Alice and Bob see deck 13 = r3 (not playable), so their empathy narrows the intersection
+    // to ∅ → they do not match and will not incorrectly infer a direct play.
+    assert!(
+        DirectPlayClue.matches_action(finesse_action, &history, &cathy_pov),
+        "DirectPlayClue should match for Cathy: her deck-13 empathy allows b3 (playable)"
+    );
+    let cathy_direct_play_updates = DirectPlayClue.knowledge_updates(finesse_action, &history, &cathy_pov);
+    assert!(
+        cathy_direct_play_updates.immediate.iter().any(|u| matches!(u,
+            KnowledgeUpdate::NarrowPossibilities { card_deck_index: 13, mask }
+            if *mask == B3_MASK
+        )),
+        "DirectPlayClue should narrow deck 13 to b3 (immediately playable rank-3 card, blue stack = b2)"
+    );
+    assert!(
+        cathy_direct_play_updates.trigger.is_none(),
+        "DirectPlayClue produces an unconditional hypothesis"
+    );
+
+    // The finesse hypothesis is provisional: it resolves when Bob takes his next action.
     match &cathy_updates.trigger {
         Some(PendingTrigger::BlindPlay {
             player,
@@ -141,7 +164,7 @@ const B3_MASK: u64 = 1u64 << 17; // B3 = blue offset 15, rank 3, id = 17
 ///
 /// Returns a knowledge state with two live hypotheses in cohort 0:
 ///   - finesse (r3, provisional on Bob blind-playing deck 9): from `SimpleFinesse`
-///   - direct play (b3, unconditional): stand-in for what `DelayedPlayClue` would contribute
+///   - direct play (b3, unconditional): from `DirectPlayClue`
 ///
 /// While both are live the effective mask for deck 13 is r3 | b3.
 fn cathy_knowledge_after_finesse_clue()
@@ -163,16 +186,14 @@ fn cathy_knowledge_after_finesse_clue()
 
     let finesse_hypothesis =
         SimpleFinesse.knowledge_updates(finesse_action, &history, &cathy_pov);
-    let b3_direct_play = Hypothesis::unconditional(vec![KnowledgeUpdate::NarrowPossibilities {
-        card_deck_index: 13,
-        mask: B3_MASK,
-    }]);
+    let direct_play_hypothesis =
+        DirectPlayClue.knowledge_updates(finesse_action, &history, &cathy_pov);
 
     let mut knowledge_live = cathy_knowledge.clone();
     let mut next_id = 0u32;
     knowledge_live.apply_cohort(
         0,
-        vec![finesse_hypothesis, b3_direct_play],
+        vec![finesse_hypothesis, direct_play_hypothesis],
         &mut next_id,
         &static_data.variant,
     );
@@ -321,10 +342,8 @@ fn rank_3_clue_on_chop_three_interpretations_finesse_excluded_by_critical_save()
     let finesse_hypothesis = SimpleFinesse.knowledge_updates(clue_action, &history, &cathy_pov);
     let critical_save_hypothesis =
         RankCriticalSave.knowledge_updates(clue_action, &history, &cathy_pov);
-    let direct_play_b3 = Hypothesis::unconditional(vec![KnowledgeUpdate::NarrowPossibilities {
-        card_deck_index: 10,
-        mask: B3_MASK,
-    }]);
+    let direct_play_hypothesis =
+        DirectPlayClue.knowledge_updates(clue_action, &history, &cathy_pov);
 
     assert!(
         finesse_hypothesis.trigger.is_some(),
@@ -339,7 +358,7 @@ fn rank_3_clue_on_chop_three_interpretations_finesse_excluded_by_critical_save()
     let mut next_id = 0u32;
     cathy_live.apply_cohort(
         0,
-        vec![finesse_hypothesis, critical_save_hypothesis, direct_play_b3],
+        vec![finesse_hypothesis, critical_save_hypothesis, direct_play_hypothesis],
         &mut next_id,
         &static_data.variant,
     );

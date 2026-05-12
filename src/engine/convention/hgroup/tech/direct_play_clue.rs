@@ -63,7 +63,7 @@ impl ClueTech for DirectPlayClue {
         &self,
         player_index: PlayerIndex,
         touched: &[CardDeckIndex],
-        _clue: &Clue,
+        clue: &Clue,
         turn: usize,
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
@@ -73,9 +73,16 @@ impl ClueTech for DirectPlayClue {
         };
         let giver = game_state_snapshot.table_state.active_player_index;
         let giver_pov = game_state_snapshot.player_pov(giver, observer_pov.static_data());
-        get_clue_focus(player_index, touched, &giver_pov)
-            .map(|focus_idx| Self::is_direct_play_situation(focus_idx, &giver_pov))
-            .unwrap_or(false)
+        let Some(focus_idx) = get_clue_focus(player_index, touched, &giver_pov) else {
+            return false;
+        };
+        // An observer matches this tech if, from their POV, the focus card could be
+        // immediately playable. Observers who see the card (Alice, Bob) have a singleton
+        // empathy; the receiver (Cathy) has a wide empathy narrowed only by the clue.
+        let static_data = observer_pov.static_data();
+        let clue_mask = static_data.variant.empathy_for_clue(clue).as_bits();
+        let playable = observer_pov.table_state().playable_cards(static_data);
+        (observer_pov.empathy(focus_idx).as_bits() & clue_mask & playable) != 0
     }
 
     fn clue_knowledge_updates(

@@ -5,38 +5,30 @@ use crate::engine::game_state_snapshot::GameStateSnapshot;
 use crate::engine::knowledge::knowledge_update::{Hypothesis, KnowledgeUpdate};
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
-use crate::game::card::CardDeckIndex;
+use crate::game::card::{CardDeckIndex, VariantCardId};
 use crate::game::clue::Clue;
 use crate::game::clue_type::ClueType;
 use crate::game::state::PlayerIndex;
 use crate::impl_convention_tech_for_hgroup_clue_tech;
 
+/// Predicate on a known card identity: would saving a card of this identity on chop be a valid
+/// critical save from `pov`'s perspective?
+fn is_critical_save_id(card_id: VariantCardId, pov: &dyn PlayerPOV) -> bool {
+    let variant = &pov.static_data().variant;
+    pov.is_critical_card_id(card_id)
+        && variant.rank_of(card_id) != 5
+        && !variant.is_stack_ending_card(card_id)
+        && pov.away_value(card_id).is_some_and(|a| a > 0)
+}
+
 fn can_be_critical_saved(target_player_index: PlayerIndex, observer_pov: &dyn PlayerPOV) -> bool {
-    let chop_card = match get_chop_index(target_player_index, observer_pov) {
-        Some(c) => c,
-        None => return false,
-    };
-    let card_id = match observer_pov.card_identity(chop_card) {
-        Some(id) => id,
-        None => return false,
-    };
-    if !observer_pov.is_critical_card_id(card_id)
-        || observer_pov.static_data().variant.rank_of(card_id) == 5
-    {
+    let Some(chop_card) = get_chop_index(target_player_index, observer_pov) else {
         return false;
-    }
-    if observer_pov
-        .static_data()
-        .variant
-        .is_stack_ending_card(card_id)
-    {
+    };
+    let Some(card_id) = observer_pov.card_identity(chop_card) else {
         return false;
-    }
-    if let Some(away_value) = observer_pov.away_value(card_id) {
-        away_value > 0
-    } else {
-        false
-    }
+    };
+    is_critical_save_id(card_id, observer_pov)
 }
 
 fn critical_save_actions(
@@ -82,7 +74,9 @@ fn critical_save_knowledge_updates(
     history: &[GameStateSnapshot],
     observer_pov: &dyn PlayerPOV,
 ) -> Hypothesis {
-    let snap = history.get(turn).unwrap();
+    let Some(snap) = history.get(turn) else {
+        return Hypothesis::empty();
+    };
     let giver = snap.table_state.active_player_index;
     let giver_pov = snap.player_pov(giver, observer_pov.static_data());
     let chop = match get_chop_index(receiver, &giver_pov) {
@@ -125,15 +119,27 @@ fn critical_save_matches(
     if clue.clue_type != clue_type {
         return false;
     }
-    if let Some(game_state_snapshot) = history.get(turn) {
-        let giver = game_state_snapshot.table_state.active_player_index;
-        let giver_pov = game_state_snapshot.player_pov(giver, observer_pov.static_data());
-        can_be_critical_saved(player_index, &giver_pov)
-            && get_chop_index(player_index, &giver_pov)
-                .is_some_and(|chop| touched_card_deck_indexes.contains(&chop))
-    } else {
-        false
+    let Some(snap) = history.get(turn) else {
+        return false;
+    };
+    let giver = snap.table_state.active_player_index;
+    let giver_pov = snap.player_pov(giver, observer_pov.static_data());
+    let Some(chop) = get_chop_index(player_index, &giver_pov) else {
+        return false;
+    };
+    if !touched_card_deck_indexes.contains(&chop) {
+        return false;
     }
+    // Match if any chop identity consistent with the observer's empathy and the clue mask would
+    // have constituted a critical save from the giver's view. Receiver: wide empathy → genuine
+    // existential. Others: singleton empathy → collapses to the previous direct check.
+    let static_data = observer_pov.static_data();
+    let total_ids = static_data.variant.number_of_suits as usize
+        * static_data.variant.stacks_size as usize;
+    let clue_mask = static_data.variant.empathy_for_clue(clue).as_bits();
+    let candidates = observer_pov.empathy(chop).as_bits() & clue_mask;
+    (0..total_ids)
+        .any(|id| (candidates & (1u64 << id)) != 0 && is_critical_save_id(id, &giver_pov))
 }
 
 /// Save a critical card on chop by cluing its color (suit) or rank.
@@ -368,10 +374,8 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn color_critical_save_knowledge_updates_panics_when_history_is_empty() {
-        // clue_knowledge_updates requires history to reconstruct the chop at decision time.
-        // Calling it with &[] panics — callers must always pass real history.
+    fn color_critical_save_knowledge_updates_returns_empty_when_history_is_empty() {
+        // With no history we cannot reconstruct the giver's POV; the tech yields no claim.
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let table_state = initial_five_players_table_state();
         let knowledge = knowledge_with_visible(0, &[]);
@@ -379,7 +383,7 @@ mod tests {
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
-        ColorCriticalSave.knowledge_updates(
+        let updates = ColorCriticalSave.knowledge_updates(
             &GameAction::Clue {
                 player_index: 1,
                 touched_card_deck_indexes: smallvec::smallvec![10],
@@ -392,6 +396,7 @@ mod tests {
             &[],
             &pov,
         );
+        assert!(updates.is_empty());
     }
 
     #[test]

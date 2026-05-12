@@ -83,9 +83,21 @@ impl ClueTech for DelayedPlayClue {
         };
         let giver = game_state_snapshot.table_state.active_player_index;
         let giver_pov = game_state_snapshot.player_pov(giver, observer_pov.static_data());
-        get_clue_focus(player_index, touched, &giver_pov)
-            .and_then(|focus| giver_pov.card_identity(focus))
-            .is_some_and(|card_id| Self::is_delayed_play_situation(card_id, &giver_pov))
+        let Some(focus) = get_clue_focus(player_index, touched, &giver_pov) else {
+            return false;
+        };
+        // Match if any focus identity consistent with the observer's empathy and the clue mask
+        // would have constituted a delayed play from the giver's POV. For non-receiver observers
+        // the empathy is a singleton (they see the focus); for the receiver it is wider, and the
+        // existential captures her ambiguity over her own card.
+        let static_data = observer_pov.static_data();
+        let total_ids = static_data.variant.number_of_suits as usize
+            * static_data.variant.stacks_size as usize;
+        let clue_mask = static_data.variant.empathy_for_clue(clue).as_bits();
+        let candidates = observer_pov.empathy(focus).as_bits() & clue_mask;
+        (0..total_ids).any(|id| {
+            (candidates & (1u64 << id)) != 0 && Self::is_delayed_play_situation(id, &giver_pov)
+        })
     }
 
     fn clue_knowledge_updates(

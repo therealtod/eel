@@ -94,13 +94,22 @@ impl ClueTech for TwoSave {
         if *clue != RANK_2_CLUE {
             return false;
         }
-        if let Some(game_state_snapshot) = history.get(turn) {
-            let giver = game_state_snapshot.table_state.active_player_index;
-            let giver_pov = game_state_snapshot.player_pov(giver, pov.static_data());
-            Self::is_two_saveable_for_target(player_index, &giver_pov)
-        } else {
-            false
-        }
+        let Some(snap) = history.get(turn) else {
+            return false;
+        };
+        let giver = snap.table_state.active_player_index;
+        let giver_pov = snap.player_pov(giver, pov.static_data());
+        let Some(chop) = get_chop_index(player_index, &giver_pov) else {
+            return false;
+        };
+        let static_data = pov.static_data();
+        let total_ids = static_data.variant.number_of_suits as usize
+            * static_data.variant.stacks_size as usize;
+        let rank2_mask = static_data.variant.empathy_for_clue(&RANK_2_CLUE).as_bits();
+        let candidates = pov.empathy(chop).as_bits() & rank2_mask;
+        (0..total_ids).any(|id| {
+            (candidates & (1u64 << id)) != 0 && Self::is_two_saveable(id, player_index, &giver_pov)
+        })
     }
 
     fn clue_knowledge_updates(
@@ -112,7 +121,9 @@ impl ClueTech for TwoSave {
         history: &[GameStateSnapshot],
         player_pov: &dyn PlayerPOV,
     ) -> Hypothesis {
-        let snap = history.get(turn).unwrap();
+        let Some(snap) = history.get(turn) else {
+            return Hypothesis::empty();
+        };
         let giver = snap.table_state.active_player_index;
         let giver_pov = snap.player_pov(giver, player_pov.static_data());
         let receiver = player_index;
@@ -500,10 +511,8 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn knowledge_updates_panics_when_history_is_empty() {
-        // knowledge_updates requires history to reconstruct the clue giver's POV.
-        // Calling it with &[] panics — document this so callers never omit history here.
+    fn knowledge_updates_returns_empty_when_history_is_empty() {
+        // With no history we cannot reconstruct the giver's POV, so the tech yields no claim.
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let table_state = initial_five_players_table_state();
         let knowledge = PlayerKnowledge::new(0);
@@ -511,7 +520,7 @@ mod tests {
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
-        TwoSave.knowledge_updates(
+        let updates = TwoSave.knowledge_updates(
             &GameAction::Clue {
                 player_index: 1,
                 touched_card_deck_indexes: smallvec![10],
@@ -524,6 +533,7 @@ mod tests {
             &[],
             &pov,
         );
+        assert!(updates.is_empty());
     }
 
     #[test]

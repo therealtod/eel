@@ -64,13 +64,20 @@ impl ClueTech for FiveSave {
         if *clue != RANK_5_CLUE {
             return false;
         }
-        if let Some(game_state_snapshot) = history.get(turn) {
-            let giver = game_state_snapshot.table_state.active_player_index;
-            let giver_pov = game_state_snapshot.player_pov(giver, observer_pov.static_data());
-            is_five_saveable(player_index, &giver_pov)
-        } else {
-            false
-        }
+        let Some(snap) = history.get(turn) else {
+            return false;
+        };
+        let giver = snap.table_state.active_player_index;
+        let giver_pov = snap.player_pov(giver, observer_pov.static_data());
+        let Some(chop) = get_chop_index(player_index, &giver_pov) else {
+            return false;
+        };
+        // The clue is rank-5. We match if the receiver's chop could be a rank-5 card from the
+        // observer's view: empathy(chop) ∩ rank-5-mask must be non-empty. For non-receivers the
+        // empathy is a singleton (they see the chop); for the receiver it's wider.
+        let static_data = observer_pov.static_data();
+        let rank5_mask = static_data.variant.empathy_for_clue(&RANK_5_CLUE).as_bits();
+        (observer_pov.empathy(chop).as_bits() & rank5_mask) != 0
     }
 
     fn clue_knowledge_updates(

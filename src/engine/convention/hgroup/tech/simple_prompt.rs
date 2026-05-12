@@ -118,15 +118,27 @@ impl ClueTech for SimplePrompt {
         };
         let giver = game_state_snapshot.table_state.active_player_index;
         let giver_pov = game_state_snapshot.player_pov(giver, observer_pov.static_data());
-        get_clue_focus(target_player_index, touched, &giver_pov)
-            .and_then(|focus| giver_pov.card_identity(focus))
-            .filter(|&card_id| giver_pov.away_value(card_id) == Some(1))
-            .is_some_and(|card_id| {
-                let connecting_id = card_id - 1;
-                (0..giver_pov.static_data().number_of_players as usize)
-                    .filter(|&p| p != giver_pov.active_player_index())
-                    .any(|p| Self::is_valid_prompt_situation(connecting_id, p, &giver_pov))
-            })
+        let Some(focus) = get_clue_focus(target_player_index, touched, &giver_pov) else {
+            return false;
+        };
+        let static_data = observer_pov.static_data();
+        let total_ids = static_data.variant.number_of_suits as usize
+            * static_data.variant.stacks_size as usize;
+        let clue_mask = static_data.variant.empathy_for_clue(clue).as_bits();
+        let candidates = observer_pov.empathy(focus).as_bits() & clue_mask;
+        let num_players = static_data.number_of_players as usize;
+        (0..total_ids).any(|focus_id| {
+            if (candidates & (1u64 << focus_id)) == 0 {
+                return false;
+            }
+            if giver_pov.away_value(focus_id) != Some(1) {
+                return false;
+            }
+            let connecting_id = focus_id - 1;
+            (0..num_players)
+                .filter(|&p| p != giver)
+                .any(|p| Self::is_valid_prompt_situation(connecting_id, p, &giver_pov))
+        })
     }
 
     fn clue_knowledge_updates(
