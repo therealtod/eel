@@ -7,3 +7,4 @@ pub mod play_known_playable;
 pub mod simple_finesse;
 pub mod simple_prompt;
 pub mod two_save;
+pub mod direct_play_clue;
