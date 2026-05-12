@@ -1,0 +1,15 @@
+{
+  "scenario_description": "3p, empty stacks, player 0 on turn. Player 0 slot 1 (deck 4) is R1, inferred by convention. No immediately clue-able play targets exist for other players. Expected best action: play R1 (deck 4).",
+  "suits": ["red", "yellow", "green", "blue", "purple"],
+  "playing_stacks": [[], [], [], [], []],
+  "discard_pile": [],
+  "clue_tokens": 4,
+  "strikes": 0,
+  "active_player": 0,
+  "hands": [
+    [{"id": "r1", "inferred": "r1"}, "x", "x", "x", "x"],
+    ["r2", "y3", "g4", "b5", "p4"],
+    ["y2", "g3", "b4", "p3", "r4"]
+  ],
+  "prior_actions": []
+}

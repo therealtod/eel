@@ -1,5 +1,28 @@
 Integration tests live in `tests/`, inline unit tests use `#[cfg(test)]` blocks within source files.
 
+## Test organisation
+
+| File | Purpose |
+|------|---------|
+| `tests/simple_finesse_tests.rs` | Per-tech tests for `SimpleFinesse` — generation, knowledge updates, hypothesis resolution |
+| `tests/simple_prompt_tests.rs` | Per-tech tests for `SimplePrompt` — generation and knowledge-update semantics |
+| `tests/search_regression.rs` | Engine non-regression suite — verifies the full search stack selects the correct best action on known positions |
+
+### Per-tech tests
+
+Each file exercises one convention tech in isolation: `game_actions` generation, `knowledge_updates`, and hypothesis resolution. Scenarios live under `tests/scenarios/{tech}/{n}/table_state.json` (numeric IDs).
+
+### Search regression suite
+
+`tests/search_regression.rs` holds positions where the correct best action is known in advance. The test runs the full `TreeActionSelectionStrategy` (minimax search + `DefaultEvaluator`) with the complete `HGroupConventionSet` and asserts the top-ranked action. Scenarios live under `tests/scenarios/search/{name}/table_state.json` (semantic folder names).
+
+Each scenario JSON needs only a board position (`playing_stacks`, `hands`, `clue_tokens`, etc.) — no `prior_actions` are required unless history is needed. The expected action is declared as a Rust pattern-match assertion in the test function.
+
+**Adding a new search regression scenario:**
+1. Create `tests/scenarios/search/{descriptive_name}/table_state.json` describing the position.
+2. Add a `#[test]` function in `tests/search_regression.rs` that calls `search_best_action("{descriptive_name}")` and pattern-matches the result.
+3. Choose positions where the correct action is unambiguous enough that any correct implementation of the full convention set must agree.
+
 Player name conventions (Alice = 0, Bob = 1, etc.) are defined in `docs/domain/hgroup.md`.
 
 ## `test-support` Feature
@@ -38,12 +61,19 @@ Each tech folder can contain multiple numbered scenarios.
 Load helpers (in `tests/common/mod.rs`):
 
 ```rust
-// Board state only
+// Board state only (numeric scenario)
 let (table_state, static_data) = common::load_scenario("simple_finesse", 1);
 
-// Board state + team knowledge + history + parsed actions
+// Board state + team knowledge + history + parsed actions (numeric scenario)
 let (table_state, static_data, team_knowledge, history, actions) =
     common::load_scenario_with_knowledge("simple_finesse", 2);
+
+// Board state only (semantic path — used by search_regression.rs)
+let (table_state, static_data) = common::load_scenario_by_name("search/play_known_playable");
+
+// Board state + team knowledge (semantic path)
+let (table_state, static_data, team_knowledge, history, actions) =
+    common::load_scenario_by_name_with_knowledge("search/direct_play_clue_is_top_choice");
 ```
 
 `history[i]` is the `GameStateSnapshot` before `actions[i]`, so tests can call

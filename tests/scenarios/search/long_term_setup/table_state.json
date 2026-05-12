@@ -1,0 +1,26 @@
+{
+  "scenario_description": "Alice can clue rank 1 to Bob as a 1-for-1 play clue (touching y1 only). But thinking ahead, she could clue blue to Cathy, which sets up Bob to clue yellow to Cathy — a DirectPlayClue for y1 that also touches y2 and y3 as good-touch clues. The blue-to-Cathy line achieves more plays within the search horizon and should be preferred. Bob has no blue card, so blue→Bob is not a valid DirectPlayClue.",
+  "active_player": 0,
+  "suits": [
+    "red",
+    "yellow",
+    "green",
+    "blue",
+    "purple"
+  ],
+  "playing_stacks": [
+    [], [], [], [], []
+  ],
+  "discard_pile": [
+    "r1"
+  ],
+  "clue_tokens": 5,
+  "strikes": 0,
+  "player_on_turn": 0,
+  "hands": [
+    ["x", "x", "x", "x"],
+    ["g4", "r3", "y1", "y4"],
+    ["y2", "y3", "y1", "b1"],
+    ["y4", "y5", "p1", "b4"]
+  ]
+}

@@ -254,7 +254,7 @@ impl TreeActionSelectionStrategy {
         convention_set: &dyn ConventionSet,
     ) -> Vec<ScoredNode> {
         let static_data = player_pov.static_data();
-        let depth = static_data.number_of_players as usize;
+        let depth = (static_data.number_of_players * 2) as usize;
         let table_state = player_pov.table_state().clone();
         let next_deck_index =
             (crate::game::MAX_CARDS_IN_DECK as u8) - table_state.deck.current_size;

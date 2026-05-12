@@ -1,0 +1,15 @@
+{
+  "scenario_description": "3p, empty stacks, player 0 on turn. Player 0 has no known playable cards. Player 1 slot 1 (deck 9) is R1 — directly playable and visible to player 0. No save obligations exist. Expected best action: direct-play clue to player 1 touching R1 (deck 9).",
+  "suits": ["red", "yellow", "green", "blue", "purple"],
+  "playing_stacks": [[], [], [], [], []],
+  "discard_pile": [],
+  "clue_tokens": 5,
+  "strikes": 0,
+  "active_player": 0,
+  "hands": [
+    ["x", "x", "x", "x", "x"],
+    ["r1", "y3", "g4", "b5", "p4"],
+    ["y2", "g3", "b4", "p5", "r4"]
+  ],
+  "prior_actions": []
+}

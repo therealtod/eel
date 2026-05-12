@@ -180,6 +180,55 @@ fn apply_action_for_history(ts: &mut TableState, action: &GameAction, static_dat
     }
 }
 
+/// Load a scenario by a semantic name (e.g. `"search/play_known_playable"`).
+///
+/// Constructs the path as `tests/scenarios/{name}/table_state.json`. Otherwise identical
+/// to [`load_scenario_with_knowledge`].
+#[allow(dead_code)]
+pub fn load_scenario_by_name_with_knowledge(
+    name: &str,
+) -> (
+    TableState,
+    StaticGameData,
+    TeamKnowledge,
+    Vec<GameStateSnapshot>,
+    Vec<GameAction>,
+) {
+    init_tracing();
+    let path: PathBuf = {
+        let mut p: PathBuf =
+            [env!("CARGO_MANIFEST_DIR"), "tests", "scenarios"].iter().collect();
+        for component in name.split('/') {
+            p.push(component);
+        }
+        p.push("table_state.json");
+        p
+    };
+
+    let json = std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("failed to read scenario '{name}': {e}"));
+    let scenario = parse_scenario(&json);
+    let (table_state, static_data) = build_from_scenario(&scenario, NO_VARIANT);
+    let team_knowledge = team_knowledge_from_scenario(&scenario, &static_data.variant);
+    let actions = build_game_actions(&scenario, &static_data.variant);
+
+    let mut history = Vec::with_capacity(actions.len());
+    let mut running_ts = table_state.clone();
+    for action in &actions {
+        history.push(GameStateSnapshot::new(running_ts.clone(), team_knowledge.clone()));
+        apply_action_for_history(&mut running_ts, action, &static_data);
+    }
+
+    (table_state, static_data, team_knowledge, history, actions)
+}
+
+/// Load a scenario by a semantic name, returning only board state and static data.
+#[allow(dead_code)]
+pub fn load_scenario_by_name(name: &str) -> (TableState, StaticGameData) {
+    let (ts, sd, _, _, _) = load_scenario_by_name_with_knowledge(name);
+    (ts, sd)
+}
+
 /// Load a scenario with team knowledge, history, and parsed actions.
 ///
 /// Returns the base scenario state (before `prior_actions` are applied), the team knowledge

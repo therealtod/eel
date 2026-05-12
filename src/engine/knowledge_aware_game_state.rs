@@ -410,9 +410,21 @@ impl KnowledgeAwareGameState {
         let num_players = self.static_data.number_of_players as usize;
         let techs = convention_set.techs();
 
+        // In normal gameplay `record_snapshot` is called before each action, so
+        // `self.history[turn]` holds the pre-clue state that `knowledge_updates` need.
+        // In search no history is recorded; synthesise a single-entry slice so
+        // `history.get(action.turn)` resolves correctly (search actions always have turn = 0).
+        let local_history;
+        let knowledge_history: &[GameStateSnapshot] = if !self.history.is_empty() {
+            &self.history
+        } else {
+            local_history = vec![pre_clue_snapshot.clone()];
+            &local_history
+        };
+
         // Receiver: collect all matching techs' hypotheses from the receiver's own POV.
         let receiver_pov = pre_clue_snapshot.player_pov(receiver, &self.static_data);
-        let receiver_hypotheses = collect_hypotheses(techs, action, &self.history, &receiver_pov);
+        let receiver_hypotheses = collect_hypotheses(techs, action, knowledge_history, &receiver_pov);
         if !receiver_hypotheses.is_empty() {
             tracing::debug!(target: "eel::apply", giver, action = ?action, hypotheses = receiver_hypotheses.len(), "receiver_hypotheses");
         }
@@ -436,7 +448,7 @@ impl KnowledgeAwareGameState {
                 &target_table_state,
                 &self.static_data,
             );
-            let raw = collect_hypotheses(techs, action, &self.history, &target_pov);
+            let raw = collect_hypotheses(techs, action, knowledge_history, &target_pov);
             let own_hand = self.team_knowledge.player(target).own_hand;
             let filtered: Vec<Hypothesis> = raw
                 .into_iter()

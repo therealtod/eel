@@ -99,6 +99,24 @@ cargo build                         # debug
 cargo build --release               # optimised
 ```
 
+## Debugging the decision tree
+
+`TreeActionSelectionStrategy::scored_actions()` returns `Vec<ScoredNode>` sorted best-first. Each `ScoredNode` implements `Display` and shows the total score, principal variation (the full action line), and the leaf-state breakdown:
+
+```rust
+let nodes = strategy.scored_actions(&pov, &conventions);
+for (i, node) in nodes.iter().enumerate() {
+    println!("=== Candidate {} ===\n{}", i + 1, node);
+}
+```
+
+You can also emit structured logs via the `eel::search` tracing target:
+
+```bash
+RUST_LOG=eel::search=debug cargo test <name> -- --nocapture  # per-candidate summaries
+RUST_LOG=eel::search=trace cargo test <name> -- --nocapture  # also per-ply detail
+```
+
 ## Development commands
 
 ```bash
@@ -111,16 +129,22 @@ cargo fmt                  # format
 
 ## Test scenarios
 
-Game positions are stored as JSON files under `tests/scenarios/scenario{n}/table_state.json`.
-Load them in integration tests via helpers in `tests/common/mod.rs`:
+Game positions are stored as JSON files under `tests/scenarios/`. Load them via helpers in `tests/common/mod.rs`:
 
 ```rust
-// Board state only
-let (table_state, static_data) = common::load_scenario(n);
+// Board state only (numeric scenario)
+let (table_state, static_data) = common::load_scenario("simple_finesse", 1);
 
-// Board state + team knowledge + history + parsed actions
+// Board state only (semantic path — used by search_regression.rs)
+let (table_state, static_data) = common::load_scenario_by_name("search/my_scenario");
+
+// Board state + team knowledge + history + parsed actions (numeric scenario)
 let (table_state, static_data, team_knowledge, history, actions) =
-    common::load_scenario_with_knowledge(n);
+    common::load_scenario_with_knowledge("simple_finesse", 2);
+
+// Board state + team knowledge (semantic path)
+let (table_state, static_data, team_knowledge, history, actions) =
+    common::load_scenario_by_name_with_knowledge("search/my_scenario");
 ```
 
 `history[i]` is the `GameStateSnapshot` taken before `actions[i]`, so tests can call
