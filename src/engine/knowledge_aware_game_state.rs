@@ -14,20 +14,35 @@ use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
 use smallvec::SmallVec;
 
-/// Collect every tech's hypothesis for `action` from `observer_pov`. Empty hypotheses
-/// (techs that do not match) are dropped.
+/// Collect hypotheses for `action` from `observer_pov`, respecting interpretation priority.
+///
+/// Only techs at the highest-priority (lowest numeric value) tier that produces at least one
+/// match contribute. Techs must be pre-sorted by `interpretation_priority` (ascending) —
+/// `HGroupConventionSet::new` guarantees this. Empty hypotheses are dropped.
 fn collect_hypotheses(
     techs: &[Box<dyn ConventionTech>],
     action: &GameAction,
     history: &[GameStateSnapshot],
     observer_pov: &dyn PlayerPOV,
 ) -> Vec<Hypothesis> {
-    techs
-        .iter()
-        .filter(|t| t.matches_action(action, history, observer_pov))
-        .map(|t| t.knowledge_updates(action, history, observer_pov))
-        .filter(|h| !h.is_empty())
-        .collect()
+    let mut best_priority: Option<u8> = None;
+    let mut result = Vec::new();
+    for tech in techs {
+        let priority = tech.interpretation_priority();
+        if best_priority.is_some_and(|bp| priority > bp) {
+            break;
+        }
+        if !tech.matches_action(action, history, observer_pov) {
+            continue;
+        }
+        let hyp = tech.knowledge_updates(action, history, observer_pov);
+        if hyp.is_empty() {
+            continue;
+        }
+        best_priority = Some(priority);
+        result.push(hyp);
+    }
+    result
 }
 
 /// A [TableState] with associated player knowledge and convention awareness.
