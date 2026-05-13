@@ -25,6 +25,7 @@ pub fn init_tracing() {
                     tracing_subscriber::EnvFilter::new("eel::search=debug,eel::apply=debug")
                 }),
             )
+            .with_ansi(false)
             .with_test_writer()
             .init();
     });
