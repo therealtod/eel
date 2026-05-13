@@ -36,6 +36,9 @@ pub struct ScoreBreakdown {
     pub team_empathy: f64,
     /// `resolved_cards_weight * resolved_count` — reward for cards fully resolved to a single identity.
     pub resolved_cards: f64,
+    /// `misinformation_weight * misinformed_card_count` — penalty for own-hand cards whose effective
+    /// inferred mask excludes the card's true identity (convention breakdown / misinformation).
+    pub misinformation_penalty: f64,
     /// Sum of all terms above.
     pub total: f64,
 }
@@ -44,7 +47,7 @@ impl std::fmt::Display for ScoreBreakdown {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "total={:.2} [score={:.1} -strike={:.1} +pace={:.1} -eff={:.1} +crit={:.1} -ceil={:.1} +emp={:.1} +clue={:.1} +play={:.1} +team_emp={:.1} +res={:.1}]",
+            "total={:.2} [score={:.1} -strike={:.1} +pace={:.1} -eff={:.1} +crit={:.1} -ceil={:.1} +emp={:.1} +clue={:.1} +play={:.1} +team_emp={:.1} +res={:.1} -misinfo={:.1}]",
             self.total,
             self.game_score,
             self.strike_penalty,
@@ -57,6 +60,7 @@ impl std::fmt::Display for ScoreBreakdown {
             self.known_playable,
             self.team_empathy,
             self.resolved_cards,
+            self.misinformation_penalty,
         )
     }
 }
@@ -90,6 +94,7 @@ pub trait Evaluator: Send + Sync {
             known_playable: 0.0,
             team_empathy: 0.0,
             resolved_cards: 0.0,
+            misinformation_penalty: 0.0,
             total: self.score(table_state, static_data, team_knowledge),
         }
     }
@@ -189,6 +194,15 @@ pub struct DefaultEvaluator {
     ///
     /// Set to 0 to disable.
     pub signal_ignored_penalty_weight: f64,
+    /// Penalty per own-hand card whose effective inferred mask **excludes** the card's true
+    /// identity (as seen by another player). Models the cost of a convention breakdown where
+    /// a player is committed to a wrong reading — they will bomb or play incorrectly.
+    ///
+    /// Only fires when the truth is known to some other player (`visible_cards` bit set).
+    /// Cards whose identity is unknown to all observers (freshly drawn in search) contribute 0.
+    ///
+    /// Set to 0 to disable. Suggested default: 3.0.
+    pub misinformation_weight: f64,
 }
 
 impl Default for DefaultEvaluator {
@@ -208,6 +222,7 @@ impl Default for DefaultEvaluator {
             team_empathy_weight: 0.0_f64,
             resolved_cards_weight: 0.0_f64,
             signal_ignored_penalty_weight: 5.0_f64,
+            misinformation_weight: 3.0_f64,
         }
     }
 }
@@ -389,6 +404,58 @@ impl DefaultEvaluator {
         total
     }
 
+    /// Misinformation score per plan §4.3 — three-case formula summed over all own-hand cards.
+    ///
+    /// For each card whose truth is known (singleton in the omniscient deck):
+    /// - `+0`               if `effective_mask` is a singleton equal to truth (exact knowledge).
+    /// - `+w`               if `effective_mask` excludes truth entirely (committed to wrong id).
+    /// - `+w * (n-1) / n`   if truth is present in the mask but `n > 1` (partial uncertainty).
+    ///
+    /// The formula unifies all three: when truth is in the mask, contribution = `w * (n-1)/n`,
+    /// which is 0 for `n=1` and approaches `w` as `n` grows. When truth is excluded, `n=0`
+    /// overlap → the hard `+w` branch fires instead.
+    ///
+    /// Truth is read from the omniscient deck (`table_state.deck`). Cards whose entry is not yet
+    /// a singleton (freshly-drawn search cards) contribute 0.
+    fn misinformation_score(
+        static_data: &StaticGameData,
+        team_knowledge: &TeamKnowledge,
+        table_state: &TableState,
+    ) -> f64 {
+        let num_players = static_data.number_of_players as usize;
+        let variant = &static_data.variant;
+        let mut total = 0.0f64;
+        for p in 0..num_players {
+            let pk = team_knowledge.player(p);
+            let mut hand = pk.own_hand;
+            while hand != 0 {
+                let idx = hand.trailing_zeros() as usize;
+                hand &= hand - 1;
+                let card_deck_index = idx as CardDeckIndex;
+                // Pull truth directly from the omniscient deck: singleton iff the card has been
+                // revealed to spectators; multi-bit (freshly-drawn search card) means unknown.
+                let truth = table_state.deck.get_global_empathy(card_deck_index);
+                if !truth.is_exactly_known() {
+                    continue;
+                }
+                let effective = pk.effective_inferred_mask(card_deck_index, variant);
+                if effective.as_bits() & truth.as_bits() == 0 {
+                    // Truth fully excluded: full penalty.
+                    total += 1.0;
+                } else {
+                    // Truth present: partial penalty proportional to how many wrong identities
+                    // the player also entertains.  (n-1)/n → 0 for exact knowledge, ~1 for wide
+                    // uncertainty.
+                    let n = effective.count_possibilities();
+                    if n > 1 {
+                        total += (n - 1) as f64 / n as f64;
+                    }
+                }
+            }
+        }
+        total
+    }
+
     /// Count of own-hand cards fully resolved to a single identity (`popcount == 1`).
     ///
     /// A sharper reward than `team_empathy_score`: fires only when a player knows exactly
@@ -464,13 +531,20 @@ impl Evaluator for DefaultEvaluator {
         } else {
             0.0
         };
+        let misinformation_penalty = if self.misinformation_weight != 0.0 {
+            self.misinformation_weight
+                * Self::misinformation_score(static_data, team_knowledge, table_state)
+        } else {
+            0.0
+        };
         let total = game_score - strike_penalty + pace - efficiency_penalty + critical_in_hand
             - lost_ceiling_penalty
             + empathy_bonus
             + clue_tokens
             + known_playable
             + team_empathy
-            + resolved_cards;
+            + resolved_cards
+            - misinformation_penalty;
         ScoreBreakdown {
             game_score,
             strike_penalty,
@@ -483,6 +557,7 @@ impl Evaluator for DefaultEvaluator {
             known_playable,
             team_empathy,
             resolved_cards,
+            misinformation_penalty,
             total,
         }
     }
@@ -686,5 +761,60 @@ mod tests {
         };
         let pen = evaluator.signal_ignored_penalty(&discard, 0, &static_data, &tk, &table_state);
         assert_eq!(pen, 0.0);
+    }
+
+    /// §6.3 — misinformation term fires when effective mask excludes the true identity.
+    ///
+    /// Setup: 3-player game.  Card at deck-index 5 is in player-0's hand.  The omniscient
+    /// deck says it is card-id 7 (singleton via `reveal_card`).  Player-0's knowledge says
+    /// the card must be card-id 3 (disjoint from the truth).
+    ///
+    /// Expected: `misinformation_score` > 0.  When the knowledge is corrected to include
+    /// the truth, the score drops.
+    #[test]
+    fn misinformation_term_fires_on_excluded_truth() {
+        use crate::engine::knowledge::player_knowledge::knowledge_for_hand;
+
+        let static_data = StaticGameData {
+            number_of_players: 3,
+            variant: NO_VARIANT,
+        };
+
+        // Build a table state whose deck reveals card-id 7 at deck-index 5.
+        let mut deck = Deck::new(&NO_VARIANT);
+        deck.reveal_card(5, 7); // truth = card 7 at position 5
+
+        let state = TableState::from_parts(
+            ClueTokenBank::new(10),
+            deck,
+            Hand::empty_array(),
+            0,
+            0,
+            PlayingStacks::empty(),
+            0,
+            CopiesCountingCardCollection::empty(),
+        );
+
+        // Player-0's knowledge: card 5 must be card-id 3 (mask = 1<<3), which excludes truth (1<<7).
+        let mut tk = TeamKnowledge::new(3);
+        let mut pk0 = knowledge_for_hand(&[5]);
+        pk0.inferred_identities[5] = Some(crate::game::card::CardIdentityMask::from_bits(1 << 3));
+        *tk.player_mut(0) = pk0;
+
+        let score_misinformed =
+            DefaultEvaluator::misinformation_score(&static_data, &tk, &state);
+        assert!(
+            score_misinformed > 0.0,
+            "misinformation_score should be positive when effective mask excludes truth (got {score_misinformed})"
+        );
+
+        // Correct the knowledge: effective mask now includes the truth.
+        tk.player_mut(0).inferred_identities[5] =
+            Some(crate::game::card::CardIdentityMask::from_bits(1 << 7));
+        let score_correct = DefaultEvaluator::misinformation_score(&static_data, &tk, &state);
+        assert_eq!(
+            score_correct, 0.0,
+            "misinformation_score should be 0 when knowledge exactly matches truth"
+        );
     }
 }

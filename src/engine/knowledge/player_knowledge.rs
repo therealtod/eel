@@ -130,34 +130,56 @@ impl PlayerKnowledge {
     /// dispatcher-supplied counter used to assign each hypothesis a unique
     /// `HypothesisId`; it is incremented as hypotheses are stored.
     ///
+    /// Each entry is `(tier, hypothesis)`:
+    /// - tier `0` = primary (active immediately).
+    /// - tier `1` = fallback (dormant; promoted to 0 when all tier-0 siblings are rejected).
+    ///
     /// **Single-hypothesis-without-trigger optimization**: if `hypotheses` contains
-    /// exactly one hypothesis with no trigger, it is baked directly into baseline
+    /// exactly one entry with tier 0 and no trigger, it is baked directly into baseline
     /// rather than stored as a cohort entry. This preserves prior behavior for the
     /// common case of an unambiguous interpretation.
     pub fn apply_cohort(
         &mut self,
         cohort_id: HypothesisId,
-        hypotheses: Vec<Hypothesis>,
+        hypotheses: Vec<(u8, Hypothesis)>,
         next_id: &mut HypothesisId,
         variant: &Variant,
     ) {
-        let non_empty: Vec<_> = hypotheses.into_iter().filter(|h| !h.is_empty()).collect();
+        let non_empty: Vec<_> = hypotheses
+            .into_iter()
+            .filter(|(_, h)| !h.is_empty())
+            .collect();
         if non_empty.is_empty() {
             return;
         }
-        // Bake unambiguous unconditional hypotheses into baseline.
-        if non_empty.len() == 1 && non_empty[0].trigger.is_none() {
-            for u in &non_empty[0].immediate {
-                self.apply_baseline_update(u, variant);
-            }
+        // Drop tier-1 entries that have no tier-0 sibling: they can never be promoted
+        // (no trigger to reject) and would stay dormant forever.  This can happen after
+        // per-target hand filtering removes all tier-0 updates for a given target while
+        // leaving tier-1 updates intact.
+        let has_tier0 = non_empty.iter().any(|(t, _)| *t == 0);
+        let non_empty: Vec<_> = if has_tier0 {
+            non_empty
+        } else {
             return;
+        };
+
+        // Bake a sole unconditional tier-0 hypothesis into baseline directly.
+        if non_empty.len() == 1 {
+            let (tier, ref h) = non_empty[0];
+            if tier == 0 && h.trigger.is_none() {
+                for u in &h.immediate {
+                    self.apply_baseline_update(u, variant);
+                }
+                return;
+            }
         }
-        for h in non_empty {
+        for (tier, h) in non_empty {
             let id = *next_id;
             *next_id += 1;
             self.hypotheses.push(TrackedHypothesis {
                 id,
                 cohort_id,
+                tier,
                 immediate: h.immediate,
                 trigger: h.trigger,
             });
@@ -214,10 +236,48 @@ impl PlayerKnowledge {
                 _ => {}
             }
         }
+        // Identify cohorts where all tier-0 hypotheses were just rejected —
+        // these need their tier-1 fallbacks promoted to tier-0.
+        // Exclude ALL rejected ids (not just the current one) so that two simultaneous
+        // tier-0 rejections in the same cohort both trigger promotion correctly.
+        let rejected_set: std::collections::HashSet<HypothesisId> =
+            rejected_ids.iter().copied().collect();
+        let mut promote_cohorts: Vec<HypothesisId> = Vec::new();
+        for &rid in &rejected_ids {
+            let cohort_id = self
+                .hypotheses
+                .iter()
+                .find(|h| h.id == rid)
+                .map(|h| h.cohort_id);
+            if let Some(cid) = cohort_id {
+                if promote_cohorts.contains(&cid) {
+                    continue;
+                }
+                let remaining_tier0 = self
+                    .hypotheses
+                    .iter()
+                    .filter(|h| h.cohort_id == cid && h.tier == 0 && !rejected_set.contains(&h.id))
+                    .count();
+                if remaining_tier0 == 0 {
+                    promote_cohorts.push(cid);
+                }
+            }
+        }
+
         if !confirmed_cohorts.is_empty() || !rejected_ids.is_empty() {
             self.hypotheses.retain(|h| {
                 !confirmed_cohorts.contains(&h.cohort_id) && !rejected_ids.contains(&h.id)
             });
+        }
+
+        // Promote fallback (tier-1) hypotheses to primary (tier-0) for cohorts whose
+        // entire primary tier was just rejected.
+        if !promote_cohorts.is_empty() {
+            for h in &mut self.hypotheses {
+                if h.tier == 1 && promote_cohorts.contains(&h.cohort_id) {
+                    h.tier = 0;
+                }
+            }
         }
     }
 
@@ -240,8 +300,13 @@ impl PlayerKnowledge {
             .as_bits();
         let mut mask = baseline;
         // Group hypotheses by cohort, union per cohort, intersect across cohorts.
+        // Only tier-0 (active primary) hypotheses contribute; tier-1 (dormant fallback)
+        // are ignored until promoted.
         let mut visited_cohorts: Vec<HypothesisId> = Vec::new();
         for h in &self.hypotheses {
+            if h.tier != 0 {
+                continue;
+            }
             if visited_cohorts.contains(&h.cohort_id) {
                 continue;
             }
@@ -251,7 +316,7 @@ impl PlayerKnowledge {
             for sibling in self
                 .hypotheses
                 .iter()
-                .filter(|s| s.cohort_id == h.cohort_id)
+                .filter(|s| s.cohort_id == h.cohort_id && s.tier == 0)
             {
                 for u in &sibling.immediate {
                     if let KnowledgeUpdate::NarrowPossibilities {
@@ -283,15 +348,16 @@ impl PlayerKnowledge {
             return true;
         }
         self.hypotheses.iter().any(|h| {
-            h.immediate.iter().any(|u| {
-                matches!(
-                    u,
-                    KnowledgeUpdate::AddSignal {
-                        card_deck_index: idx,
-                        signal: Signal::Play { .. },
-                    } if *idx == card_deck_index
-                )
-            })
+            h.tier == 0
+                && h.immediate.iter().any(|u| {
+                    matches!(
+                        u,
+                        KnowledgeUpdate::AddSignal {
+                            card_deck_index: idx,
+                            signal: Signal::Play { .. },
+                        } if *idx == card_deck_index
+                    )
+                })
         })
     }
 
@@ -364,4 +430,69 @@ pub fn knowledge_with_empathy(
         Some(CardIdentityMask::from_bits(possible_identities));
     k.own_hand = 1 << card_deck_index;
     k
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::game::variant::test_variants::NO_VARIANT;
+
+    /// §6.2 — rejecting the sole tier-0 hypothesis promotes the tier-1 fallback.
+    ///
+    /// Setup: card 5 has two hypotheses in cohort 0:
+    ///   tier-0: narrows to mask_a, triggered by player 1 blind-playing card 3
+    ///   tier-1: narrows to mask_b, unconditional (fallback)
+    ///
+    /// After player 1 plays card 7 (not card 3) the trigger is rejected.  The tier-0
+    /// hypothesis must be removed and the tier-1 fallback promoted to tier-0, so that
+    /// effective_inferred_mask reflects mask_b rather than the unnarrowed baseline.
+    #[test]
+    fn rejection_promotes_tier1_fallback() {
+        let variant = &NO_VARIANT;
+        let mask_a: u64 = 1 << 1; // arbitrary identity A
+        let mask_b: u64 = 1 << 2; // arbitrary identity B (the fallback)
+        let card: CardDeckIndex = 5;
+
+        let mut pk = PlayerKnowledge::new(0);
+        pk.own_hand = 1 << card;
+        let mut next_id: HypothesisId = 0;
+
+        // Tier-0 primary: provisional on player-1 blind-playing card 3.
+        let primary = Hypothesis::provisional(
+            vec![KnowledgeUpdate::NarrowPossibilities {
+                card_deck_index: card,
+                mask: mask_a,
+            }],
+            PendingTrigger::BlindPlay {
+                player: 1,
+                expected_card: 3,
+                deadline_turn: 99,
+            },
+        );
+        // Tier-1 fallback: unconditional (would apply if finesse is rejected).
+        let fallback = Hypothesis::unconditional(vec![KnowledgeUpdate::NarrowPossibilities {
+            card_deck_index: card,
+            mask: mask_b,
+        }]);
+
+        pk.apply_cohort(0, vec![(0, primary), (1, fallback)], &mut next_id, variant);
+
+        // Before resolution: effective mask is unioned tier-0 only → mask_a.
+        let before = pk.effective_inferred_mask(card, variant).as_bits();
+        assert_ne!(before & mask_a, 0, "tier-0 should be active before rejection");
+        assert_eq!(before & mask_b, 0, "tier-1 should be dormant before rejection");
+
+        // Player 1 plays card 7 (not card 3) → trigger rejected.
+        let wrong_play = GameAction::Play {
+            player_index: 1,
+            card_deck_index: 7,
+            turn: 1,
+        };
+        pk.resolve_pending(1, &wrong_play, variant);
+
+        // After rejection: tier-0 removed, tier-1 promoted → effective mask is mask_b.
+        let after = pk.effective_inferred_mask(card, variant).as_bits();
+        assert_eq!(after & mask_a, 0, "tier-0 should be gone after rejection");
+        assert_ne!(after & mask_b, 0, "tier-1 fallback should be active after promotion");
+    }
 }

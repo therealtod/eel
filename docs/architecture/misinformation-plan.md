@@ -111,7 +111,7 @@ If a player's effective inferred mask collapses to a single identity that is in 
 | `src/engine/knowledge_aware_game_state.rs::apply_clue` | Pass tier info through `apply_cohort`. |
 | `src/engine/knowledge/player_knowledge.rs` | `effective_inferred_mask` / `has_play_signal` / `apply_baseline_update` must ignore `tier > 0` entries until promotion. `resolve_pending` promotes tier-1 to tier-0 on rejection (instead of just dropping). |
 | `src/engine/evaluator.rs` | Add `misinformation_weight` field, `misinformation_score()` helper, breakdown wiring. |
-| `src/engine/decision_tree.rs` (or wherever `ScoreBreakdown` lives) | New field + display formatting. |
+| `src/engine/evaluator.rs` (`ScoreBreakdown`, lines 36–65) | New field + display formatting. |
 | `tests/scenarios/search/avoid_stealing_finesse` | Test should now pass — the TwoSave-first line is no longer the only path with 5 plays, and the play-g2-then-Bob-finesse line is shielded from "Cathy could stall" because both the urgency penalty (existing) and the misinformation cost (new) close that escape hatch. |
 
 ## 6. Test Plan

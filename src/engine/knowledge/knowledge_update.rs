@@ -92,10 +92,19 @@ impl Hypothesis {
 /// `cohort_id` is shared across all hypotheses produced by interpreting the *same*
 /// observed action. When one hypothesis in a cohort confirms, its siblings are
 /// pruned. Rejection drops only the rejected hypothesis.
+///
+/// `tier` identifies the hypothesis's priority rank within its cohort:
+/// - `0` = primary (highest-priority matching tier; active immediately).
+/// - `1` = fallback (next-highest matching tier; dormant until all tier-0 siblings
+///   in the cohort are rejected, at which point they are promoted to tier 0).
+///
+/// Only tier-0 hypotheses contribute to `effective_inferred_mask` and `has_play_signal`.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TrackedHypothesis {
     pub id: HypothesisId,
     pub cohort_id: HypothesisId,
+    /// Priority tier within the cohort. `0` = active primary, `1` = dormant fallback.
+    pub tier: u8,
     pub immediate: Vec<KnowledgeUpdate>,
     pub trigger: Option<PendingTrigger>,
 }

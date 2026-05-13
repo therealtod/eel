@@ -116,7 +116,7 @@ fn all_players_understand_simple_prompt_semantics() {
     let mut next_id = 0u32;
     cathy_live.apply_cohort(
         0,
-        vec![prompt_hypothesis, delayed_hypothesis, direct_play_r4],
+        vec![(0, prompt_hypothesis), (0, delayed_hypothesis), (0, direct_play_r4)],
         &mut next_id,
         &static_data.variant,
     );

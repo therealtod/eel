@@ -193,7 +193,7 @@ fn cathy_knowledge_after_finesse_clue()
     let mut next_id = 0u32;
     knowledge_live.apply_cohort(
         0,
-        vec![finesse_hypothesis, direct_play_hypothesis],
+        vec![(0, finesse_hypothesis), (0, direct_play_hypothesis)],
         &mut next_id,
         &static_data.variant,
     );
@@ -358,7 +358,7 @@ fn rank_3_clue_on_chop_three_interpretations_finesse_excluded_by_critical_save()
     let mut next_id = 0u32;
     cathy_live.apply_cohort(
         0,
-        vec![finesse_hypothesis, critical_save_hypothesis, direct_play_hypothesis],
+        vec![(0, finesse_hypothesis), (0, critical_save_hypothesis), (0, direct_play_hypothesis)],
         &mut next_id,
         &static_data.variant,
     );

@@ -16,20 +16,23 @@ use smallvec::SmallVec;
 
 /// Collect hypotheses for `action` from `observer_pov`, respecting interpretation priority.
 ///
-/// Only techs at the highest-priority (lowest numeric value) tier that produces at least one
-/// match contribute. Techs must be pre-sorted by `interpretation_priority` (ascending) —
+/// Collects up to two priority tiers (primary = highest matching, fallback = next highest).
+/// Each returned entry is `(tier, hypothesis)` where `tier 0` = primary and `tier 1` = fallback.
+/// Techs must be pre-sorted by `interpretation_priority` (ascending) —
 /// `HGroupConventionSet::new` guarantees this. Empty hypotheses are dropped.
-fn collect_hypotheses(
+pub fn collect_hypotheses(
     techs: &[Box<dyn ConventionTech>],
     action: &GameAction,
     history: &[GameStateSnapshot],
     observer_pov: &dyn PlayerPOV,
-) -> Vec<Hypothesis> {
-    let mut best_priority: Option<u8> = None;
+) -> Vec<(u8, Hypothesis)> {
+    let mut primary_priority: Option<u8> = None;
+    let mut fallback_priority: Option<u8> = None;
     let mut result = Vec::new();
     for tech in techs {
         let priority = tech.interpretation_priority();
-        if best_priority.is_some_and(|bp| priority > bp) {
+        // Stop once we've filled two tiers and this tech would start a third.
+        if fallback_priority.is_some_and(|fp| priority > fp) {
             break;
         }
         if !tech.matches_action(action, history, observer_pov) {
@@ -39,8 +42,20 @@ fn collect_hypotheses(
         if hyp.is_empty() {
             continue;
         }
-        best_priority = Some(priority);
-        result.push(hyp);
+        let tier = match primary_priority {
+            None => {
+                primary_priority = Some(priority);
+                0
+            }
+            Some(pp) if priority == pp => 0,
+            Some(_) => {
+                if fallback_priority.is_none() {
+                    fallback_priority = Some(priority);
+                }
+                1
+            }
+        };
+        result.push((tier, hyp));
     }
     result
 }
@@ -339,21 +354,26 @@ impl KnowledgeAwareGameState {
         self.next_hypothesis_id += 1;
         for target in (0..num_players).filter(|&t| t != p) {
             let own_hand = self.team_knowledge.player(target).own_hand;
-            let filtered: Vec<Hypothesis> = actor_hypotheses
+            let filtered: Vec<(u8, Hypothesis)> = actor_hypotheses
                 .iter()
-                .map(|h| Hypothesis {
-                    immediate: h
-                        .immediate
-                        .iter()
-                        .filter(|u| own_hand & (1 << u.card_deck_index()) != 0)
-                        .cloned()
-                        .collect(),
-                    trigger: h.trigger.clone(),
+                .map(|(tier, h)| {
+                    (
+                        *tier,
+                        Hypothesis {
+                            immediate: h
+                                .immediate
+                                .iter()
+                                .filter(|u| own_hand & (1 << u.card_deck_index()) != 0)
+                                .cloned()
+                                .collect(),
+                            trigger: h.trigger.clone(),
+                        },
+                    )
                 })
-                .filter(|h| !h.is_empty())
+                .filter(|(_, h)| !h.is_empty())
                 .collect();
             if !filtered.is_empty() {
-                tracing::debug!(target: "eel::apply", target, hypotheses = ?filtered, "knowledge_updated");
+                tracing::debug!(target: "eel::apply", target, hypotheses = filtered.len(), "knowledge_updated");
             }
             self.team_knowledge.player_mut(target).apply_cohort(
                 cohort_id,
@@ -482,17 +502,22 @@ impl KnowledgeAwareGameState {
             );
             let raw = collect_hypotheses(techs, action, knowledge_history, &target_pov);
             let own_hand = self.team_knowledge.player(target).own_hand;
-            let filtered: Vec<Hypothesis> = raw
+            let filtered: Vec<(u8, Hypothesis)> = raw
                 .into_iter()
-                .map(|h| Hypothesis {
-                    immediate: h
-                        .immediate
-                        .into_iter()
-                        .filter(|u| own_hand & (1 << u.card_deck_index()) != 0)
-                        .collect(),
-                    trigger: h.trigger,
+                .map(|(tier, h)| {
+                    (
+                        tier,
+                        Hypothesis {
+                            immediate: h
+                                .immediate
+                                .into_iter()
+                                .filter(|u| own_hand & (1 << u.card_deck_index()) != 0)
+                                .collect(),
+                            trigger: h.trigger,
+                        },
+                    )
                 })
-                .filter(|h| !h.is_empty())
+                .filter(|(_, h)| !h.is_empty())
                 .collect();
             if !filtered.is_empty() {
                 tracing::debug!(target: "eel::apply", target, hypotheses = filtered.len(), "knowledge_updated");

@@ -29,7 +29,7 @@ use eel::engine::convention::hgroup::tech::simple_finesse::SimpleFinesse;
 use eel::engine::convention::hgroup::tech::simple_prompt::SimplePrompt;
 use eel::engine::convention::hgroup::tech::two_save::TwoSave;
 use eel::engine::knowledge::knowledge_update::Hypothesis;
-use eel::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
+use eel::engine::knowledge_aware_game_state::{KnowledgeAwareGameState, collect_hypotheses};
 use eel::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
 use eel::game::action::game_action::GameAction;
 use eel::game::card::{CardDeckIndex, VariantCardId};
@@ -141,16 +141,10 @@ fn apply_play_spectator(
     let actual_id = actual_deck[card_deck_index as usize];
     let action = GameAction::Play { player_index: p, card_deck_index, turn: game.table_state.current_turn };
 
-    // Capture all matching techs' hypotheses BEFORE mutating state.
-    let actor_hypotheses: Vec<Hypothesis> = {
+    // Capture all matching techs' hypotheses (with correct tier assignment) BEFORE mutating state.
+    let actor_hypotheses: Vec<(u8, Hypothesis)> = {
         let pov = game.player_pov(p);
-        convention_set
-            .techs()
-            .iter()
-            .filter(|tech| tech.matches_action(&action, &[], &pov))
-            .map(|tech| tech.knowledge_updates(&action, &[], &pov))
-            .filter(|h| !h.is_empty())
-            .collect()
+        collect_hypotheses(convention_set.techs(), &action, &[], &pov)
     };
 
     // Apply game mechanics with the actual card identity (correctly updates playing stacks
@@ -166,18 +160,23 @@ fn apply_play_spectator(
     *next_hypothesis_id += 1;
     for target in (0..num_players).filter(|&t| t != p) {
         let own_hand = game.team_knowledge.player(target).own_hand;
-        let filtered: Vec<Hypothesis> = actor_hypotheses
+        let filtered: Vec<(u8, Hypothesis)> = actor_hypotheses
             .iter()
-            .map(|h| Hypothesis {
-                immediate: h
-                    .immediate
-                    .iter()
-                    .filter(|u| own_hand & (1 << u.card_deck_index()) != 0)
-                    .cloned()
-                    .collect(),
-                trigger: h.trigger.clone(),
+            .map(|(tier, h)| {
+                (
+                    *tier,
+                    Hypothesis {
+                        immediate: h
+                            .immediate
+                            .iter()
+                            .filter(|u| own_hand & (1 << u.card_deck_index()) != 0)
+                            .cloned()
+                            .collect(),
+                        trigger: h.trigger.clone(),
+                    },
+                )
             })
-            .filter(|h| !h.is_empty())
+            .filter(|(_, h)| !h.is_empty())
             .collect();
         game.team_knowledge.player_mut(target).apply_cohort(
             cohort_id,
