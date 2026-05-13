@@ -2,7 +2,9 @@ use crate::engine::convention::hgroup::h_group_core::count_bad_touches;
 use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::decision_tree::Score;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
+use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, VariantCardId, VariantCardsBitField};
+use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
 
@@ -104,6 +106,24 @@ pub trait Evaluator: Send + Sync {
     ) -> Score {
         0.0
     }
+
+    /// Penalty assessed when `actor` takes an action that ignores an active
+    /// `Signal::Play` on one of their own untouched cards.
+    ///
+    /// Models the H-Group rule that a finessed (or otherwise blind-play-signalled)
+    /// player must resolve the signal on their very next turn — delaying breaks
+    /// the convention and corrupts downstream interpretations. State is the
+    /// pre-action team knowledge / table state.
+    fn signal_ignored_penalty(
+        &self,
+        _action: &GameAction,
+        _actor: PlayerIndex,
+        _static_data: &StaticGameData,
+        _team_knowledge: &TeamKnowledge,
+        _table_state: &TableState,
+    ) -> Score {
+        0.0
+    }
 }
 
 /// Default heuristic evaluator.
@@ -162,6 +182,13 @@ pub struct DefaultEvaluator {
     /// Reward per card in any player's own hand that is fully resolved to a single identity
     /// (`popcount == 1`). Sharper signal than `team_empathy_weight`; rewards complete certainty.
     pub resolved_cards_weight: f64,
+    /// Penalty applied to a non-Play action (or a Play of the wrong card) taken by an actor who
+    /// holds an active `Signal::Play` on at least one untouched own-hand card. Captures the
+    /// H-Group urgency rule: a finessed/blind-play-signalled card must be played on the very
+    /// next turn, and stalling corrupts the convention.
+    ///
+    /// Set to 0 to disable.
+    pub signal_ignored_penalty_weight: f64,
 }
 
 impl Default for DefaultEvaluator {
@@ -180,6 +207,7 @@ impl Default for DefaultEvaluator {
             known_playable_weight: 0.0_f64,
             team_empathy_weight: 0.0_f64,
             resolved_cards_weight: 0.0_f64,
+            signal_ignored_penalty_weight: 5.0_f64,
         }
     }
 }
@@ -485,6 +513,47 @@ impl Evaluator for DefaultEvaluator {
 
         precision_bonus - bad_touch_count as f64 * self.good_touch_penalty
     }
+
+    fn signal_ignored_penalty(
+        &self,
+        action: &GameAction,
+        actor: PlayerIndex,
+        _static_data: &StaticGameData,
+        team_knowledge: &TeamKnowledge,
+        table_state: &TableState,
+    ) -> Score {
+        if self.signal_ignored_penalty_weight == 0.0 {
+            return 0.0;
+        }
+        let pk = team_knowledge.player(actor);
+        let played_card: Option<CardDeckIndex> = match action {
+            GameAction::Play { card_deck_index, .. } => Some(*card_deck_index),
+            _ => None,
+        };
+        let mut any_signal = false;
+        let mut hand_mask = pk.own_hand;
+        while hand_mask != 0 {
+            let idx = hand_mask.trailing_zeros() as CardDeckIndex;
+            hand_mask &= hand_mask - 1;
+            // Touched signalled cards are clued plays handled by PlayKnownPlayable; the
+            // urgency rule applies only to untouched blind-play signals.
+            if (table_state.clue_touched_cards >> idx) & 1 != 0 {
+                continue;
+            }
+            if !pk.has_play_signal(idx) {
+                continue;
+            }
+            any_signal = true;
+            if played_card == Some(idx) {
+                return 0.0; // signal honoured
+            }
+        }
+        if any_signal {
+            -self.signal_ignored_penalty_weight
+        } else {
+            0.0
+        }
+    }
 }
 
 #[cfg(test)]
@@ -527,5 +596,95 @@ mod tests {
         let tk = TeamKnowledge::new(3);
         assert!(evaluator.score(&s0, &sd, &tk) > evaluator.score(&s1, &sd, &tk));
         assert!(evaluator.score(&s1, &sd, &tk) > evaluator.score(&s2, &sd, &tk));
+    }
+
+    #[test]
+    fn signal_ignored_penalty_fires_when_actor_skips_signalled_card() {
+        use crate::engine::convention::hgroup::signal::Signal;
+        let evaluator = DefaultEvaluator::default();
+        let (mut table_state, static_data) = make_state(0);
+        // Put a single card (deck index 5) in player 0's hand, untouched, with a Signal::Play.
+        table_state.hands[0] = Hand::new(&[5]);
+        let mut tk = TeamKnowledge::new(3);
+        tk.player_mut(0).own_hand = 1 << 5;
+        tk.player_mut(0).signals[5].push(Signal::Play {
+            card_deck_index: 5,
+            committed_identity: 0,
+            deadline_turn: 10,
+        });
+
+        // Discarding while signalled → full penalty.
+        let discard = GameAction::Discard {
+            player_index: 0,
+            card_deck_index: 5,
+            turn: 0,
+        };
+        let pen = evaluator.signal_ignored_penalty(&discard, 0, &static_data, &tk, &table_state);
+        assert_eq!(pen, -evaluator.signal_ignored_penalty_weight);
+
+        // A clue (different card / no play of the signalled card) also triggers the penalty.
+        let clue = GameAction::Clue {
+            player_index: 1,
+            touched_card_deck_indexes: smallvec::smallvec![],
+            clue: crate::game::clue::Clue {
+                clue_type: crate::game::clue_type::ClueType::Rank,
+                clue_value: 1,
+            },
+            turn: 0,
+        };
+        let pen = evaluator.signal_ignored_penalty(&clue, 0, &static_data, &tk, &table_state);
+        assert_eq!(pen, -evaluator.signal_ignored_penalty_weight);
+
+        // Playing the signalled card → no penalty.
+        let play = GameAction::Play {
+            player_index: 0,
+            card_deck_index: 5,
+            turn: 0,
+        };
+        let pen = evaluator.signal_ignored_penalty(&play, 0, &static_data, &tk, &table_state);
+        assert_eq!(pen, 0.0);
+    }
+
+    #[test]
+    fn signal_ignored_penalty_zero_when_no_active_signal() {
+        let evaluator = DefaultEvaluator::default();
+        let (mut table_state, static_data) = make_state(0);
+        table_state.hands[0] = Hand::new(&[5]);
+        let mut tk = TeamKnowledge::new(3);
+        tk.player_mut(0).own_hand = 1 << 5;
+
+        let discard = GameAction::Discard {
+            player_index: 0,
+            card_deck_index: 5,
+            turn: 0,
+        };
+        let pen = evaluator.signal_ignored_penalty(&discard, 0, &static_data, &tk, &table_state);
+        assert_eq!(pen, 0.0);
+    }
+
+    #[test]
+    fn signal_ignored_penalty_ignores_touched_signalled_cards() {
+        use crate::engine::convention::hgroup::signal::Signal;
+        // A touched card with a Signal::Play is a clued play (PlayKnownPlayable territory),
+        // not the H-Group "must blind-play next turn" rule. The urgency penalty must skip it.
+        let evaluator = DefaultEvaluator::default();
+        let (mut table_state, static_data) = make_state(0);
+        table_state.hands[0] = Hand::new(&[5]);
+        table_state.clue_touched_cards = 1 << 5;
+        let mut tk = TeamKnowledge::new(3);
+        tk.player_mut(0).own_hand = 1 << 5;
+        tk.player_mut(0).signals[5].push(Signal::Play {
+            card_deck_index: 5,
+            committed_identity: 0,
+            deadline_turn: 10,
+        });
+
+        let discard = GameAction::Discard {
+            player_index: 0,
+            card_deck_index: 5,
+            turn: 0,
+        };
+        let pen = evaluator.signal_ignored_penalty(&discard, 0, &static_data, &tk, &table_state);
+        assert_eq!(pen, 0.0);
     }
 }

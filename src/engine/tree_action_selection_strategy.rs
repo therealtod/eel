@@ -90,15 +90,31 @@ impl TreeActionSelectionStrategy {
         )
     }
 
-    /// Per-action bonus applied along the search path. Currently only clue actions
-    /// produce a non-zero value (good-touch penalty and clue precision reward).
+    /// Per-action bonus applied along the search path.
+    ///
+    /// Sums two terms:
+    /// - `clue_precision_bonus` for clue actions (good-touch penalty + precision reward),
+    ///   evaluated from the post-action state.
+    /// - `signal_ignored_penalty` charged when the actor took a non-Play (or wrong-Play)
+    ///   action while holding an active `Signal::Play` on an untouched own-hand card.
+    ///   Evaluated from the pre-action state, where the actor is the player who chose
+    ///   the action (i.e. `state_before.active_player_index`).
     fn immediate_action_bonus(
         action: &GameAction,
         evaluator: &dyn Evaluator,
+        state_before: &KnowledgeAwareGameState,
         state_after: &KnowledgeAwareGameState,
         static_data: &StaticGameData,
     ) -> Score {
-        if let GameAction::Clue {
+        let actor = state_before.table_state().active_player_index;
+        let signal_penalty = evaluator.signal_ignored_penalty(
+            action,
+            actor,
+            static_data,
+            &state_before.team_knowledge,
+            state_before.table_state(),
+        );
+        let clue_bonus = if let GameAction::Clue {
             touched_card_deck_indexes,
             player_index,
             ..
@@ -113,7 +129,8 @@ impl TreeActionSelectionStrategy {
             )
         } else {
             0.0
-        }
+        };
+        clue_bonus + signal_penalty
     }
 
     /// Recursively compute the best leaf score reachable from `state` within `depth` more turns.
@@ -185,7 +202,7 @@ impl TreeActionSelectionStrategy {
             next.apply(&proposed.action, convention_set);
             next.advance_turn();
             let immediate =
-                Self::immediate_action_bonus(&proposed.action, evaluator, &next, static_data);
+                Self::immediate_action_bonus(&proposed.action, evaluator, state, &next, static_data);
             let (subtree_score, rest, leaf_bd) = Self::best_score_at_depth(
                 &next,
                 static_data,
@@ -279,8 +296,13 @@ impl TreeActionSelectionStrategy {
                 let mut next = root_state.clone();
                 next.apply(&proposed.action, convention_set);
                 next.advance_turn();
-                let immediate_bonus =
-                    Self::immediate_action_bonus(&proposed.action, evaluator, &next, static_data);
+                let immediate_bonus = Self::immediate_action_bonus(
+                    &proposed.action,
+                    evaluator,
+                    &root_state,
+                    &next,
+                    static_data,
+                );
                 let (leaf_score, pv, leaf_breakdown) = Self::best_score_at_depth(
                     &next,
                     static_data,
