@@ -128,7 +128,7 @@ impl ClueTech for SimpleFinesse {
         };
         let giver = snap.table_state.active_player_index;
         let giver_pov = snap.player_pov(giver, observer_pov.static_data());
-        let observer = observer_pov.active_player_index();
+        let observer = observer_pov.player_index();
 
         let focus = match get_clue_focus(clue_receiver_index, touched, &giver_pov) {
             Some(f) => f,

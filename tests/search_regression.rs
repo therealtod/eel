@@ -152,3 +152,21 @@ fn does_not_defer_play_to_save_cathy_when_bob_could_save() {
         _ => panic!("expected to play a known playable g2 in slot 2, got: {action:?}"),
     }
 }
+
+#[test]
+fn prefers_more_efficient_finesse_over_direct_play_clue() {
+    let action = search_best_action("prefer_finesse_over_direct_play_clue_when_more_efficient");
+    match action {
+        GameAction::Clue {
+            player_index: 2,
+            clue: Clue{clue_type: ClueType::Rank, clue_value: 3},
+            ..
+        } => {}
+        GameAction::Clue {
+            player_index: 2,
+            clue: Clue{clue_type: ClueType::Color, clue_value: 0},
+            ..
+        } => {}
+        _ => panic!("expected to clue r3 in Cathy's hand as a finesse, got: {action:?}"),
+    }
+}

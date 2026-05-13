@@ -155,7 +155,7 @@ impl ClueTech for SimplePrompt {
         };
         let giver = snap.table_state.active_player_index;
         let giver_pov = snap.player_pov(giver, observer_pov.static_data());
-        let current = observer_pov.active_player_index();
+        let current = observer_pov.player_index();
         let static_data = giver_pov.static_data();
         let total_ids =
             static_data.variant.number_of_suits as usize * static_data.variant.stacks_size as usize;

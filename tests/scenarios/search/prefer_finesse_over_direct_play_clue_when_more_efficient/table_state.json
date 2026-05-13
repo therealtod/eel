@@ -1,0 +1,23 @@
+{
+  "scenario_description": "Alice could get the r2 by a direct play clue, but cluing rank 3 to Cathy, as a finesse, is more efficient, since it gets two cards for the cost of one clue",
+  "suits": [
+    "red",
+    "yellow",
+    "green",
+    "blue",
+    "purple"
+  ],
+  "active_player": 0,
+  "playing_stacks": [
+    ["r1"], ["y1"], ["g1"], ["b1"], ["p1"]
+  ],
+  "discard_pile": [],
+  "clue_tokens": 6,
+  "strikes": 0,
+  "player_on_turn": 0,
+  "hands": [
+    ["x", "x", "x", "x", "x"],
+    ["r2", "g4", "b1", "b1", "p3"],
+    ["b4", "r3", "r1", "p1", "b4"]
+  ]
+}
