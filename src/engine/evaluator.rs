@@ -28,7 +28,7 @@ pub struct ScoreBreakdown {
     pub lost_ceiling_penalty: f64,
     /// `empathy_weight * empathy_precision` — reward for narrower identity ranges (disabled by default).
     pub empathy_bonus: f64,
-    /// `clue_token_weight * whole_clue_tokens` — reward for clue tokens remaining.
+    /// `clue_token_weight * harmonic(count) * (1 + clue_demand_weight * demand)` — scarcity-weighted reward for clue tokens.
     pub clue_tokens: f64,
     /// `known_playable_weight * known_playable_in_hands` — reward for cards known (by their owner) to be playable.
     pub known_playable: f64,
@@ -152,6 +152,7 @@ pub trait Evaluator: Send + Sync {
 /// - `critical_in_hand_weight * critical_in_hand`       — reward keeping critical cards safe
 /// - `-lost_score_ceiling_weight * lost_score_ceiling`  — penalise any reduction in max achievable score
 /// - `empathy_weight * empathy_precision`               — reward narrower inferred identity ranges on clued cards
+/// - `clue_token_weight * harmonic(n) * (1 + clue_demand_weight * demand)` — scarcity-weighted token value
 ///
 /// Per-clue immediate adjustments (applied to every clue action along the search line):
 /// - `empathy_weight * resolved_touched_cards`          — precision bonus for clues that fully resolve touched cards
@@ -179,9 +180,26 @@ pub struct DefaultEvaluator {
     /// (good-touch principle violation). Should be lower than `lost_score_ceiling_weight`
     /// so that ceiling preservation takes precedence.
     pub good_touch_penalty: f64,
-    /// Reward per whole clue token remaining. Preserving clue tokens is valuable
-    /// because they enable future saves and plays.
+    /// Base multiplier for the clue-token term. Value is `clue_token_weight * harmonic(n)`,
+    /// where `harmonic(n) = Σ_{i=1}^{n} 1/i`. The 0→1 jump is the largest; each additional
+    /// token adds diminishing value, reflecting that scarcity matters most at very low counts.
+    /// If `clue_demand_weight > 0`, the result is further scaled by a demand factor.
+    ///
+    /// Note: `harmonic(n)` grows without bound (slowly), so the term keeps rising past 8 tokens.
+    /// We don't model the negative marginal value of being *forced* to clue near the cap; in
+    /// practice the team rarely sits at max for long, so the simplification is acceptable.
+    ///
+    /// Scale reference for tuning: with `clue_token_weight = 1.0`, the term contributes ~1.0 at
+    /// 1 token, ~2.08 at 4 tokens, ~2.72 at 8 tokens (before any demand multiplier). Picking a
+    /// value requires re-balancing against `pace_weight`, `efficiency_weight`, etc., since the
+    /// substitution from linear `n` to `H(n)` is *not* a simple scalar rescale.
     pub clue_token_weight: f64,
+    /// Scales the demand factor that amplifies clue-token value when there are many unclued
+    /// critical or playable cards in hands. Demand is the sum over all unclued hand cards of
+    /// `P(card is critical) + P(card is playable)`. The final token value is
+    /// `clue_token_weight * harmonic(n) * (1 + clue_demand_weight * demand)`.
+    /// Set to 0 to disable.
+    pub clue_demand_weight: f64,
     /// Immediate reward per touched card that is fully resolved to a single identity
     /// after the clue is applied (good-touch precision bonus). Distinct from
     /// `empathy_weight`, which applies to the leaf evaluation; this one fires once
@@ -233,6 +251,7 @@ impl Default for DefaultEvaluator {
             empathy_weight: 0.0_f64,
             good_touch_penalty: 4.0_f64,
             clue_token_weight: 0.6_f64,
+            clue_demand_weight: 0.0_f64,
             clue_precision_weight: 0.0_f64,
             known_playable_weight: 0.0_f64,
             team_empathy_weight: 0.0_f64,
@@ -244,20 +263,16 @@ impl Default for DefaultEvaluator {
 }
 
 impl DefaultEvaluator {
-    /// Weighted count of critical cards (last remaining copy of a still-needed card) in all hands.
-    ///
-    /// Each card contributes `overlap_bits / total_possibilities` where `overlap_bits` is the
-    /// number of critical identities in its empathy set. This captures partially-identified
-    /// critical cards (e.g. a card narrowed to [R5, B5] when both are critical contributes 1.0)
-    /// rather than only fully-resolved ones.
-    fn critical_cards_in_hand(table_state: &TableState, static_data: &StaticGameData) -> f64 {
+    /// Bitmask of card identities that are critical: exactly one copy remains outside the
+    /// discard pile and the card is still needed (not yet on the play stacks).
+    fn critical_mask(
+        table_state: &TableState,
+        static_data: &StaticGameData,
+    ) -> VariantCardsBitField {
         let variant = &static_data.variant;
-        let num_players = static_data.number_of_players as usize;
         let stacks_size = variant.stacks_size as usize;
 
-        // Build a bitmask of all critical card IDs.
-        // A card is critical if exactly one copy remains outside the discard pile and it is still needed.
-        let mut critical_mask: VariantCardsBitField = 0;
+        let mut mask: VariantCardsBitField = 0;
         for card_id in 0..variant.number_of_suits as usize * stacks_size {
             let total = variant.card_copies_count_by_id[card_id];
             if total == 0 {
@@ -273,9 +288,20 @@ impl DefaultEvaluator {
             if table_state.playing_stacks.stack_size(suit) as usize > rank_idx {
                 continue;
             }
-            critical_mask |= 1 << card_id;
+            mask |= 1 << card_id;
         }
+        mask
+    }
 
+    /// Weighted count of critical cards (last remaining copy of a still-needed card) in all hands.
+    ///
+    /// Each card contributes `overlap_bits / total_possibilities` where `overlap_bits` is the
+    /// number of critical identities in its empathy set. This captures partially-identified
+    /// critical cards (e.g. a card narrowed to [R5, B5] when both are critical contributes 1.0)
+    /// rather than only fully-resolved ones.
+    fn critical_cards_in_hand(table_state: &TableState, static_data: &StaticGameData) -> f64 {
+        let num_players = static_data.number_of_players as usize;
+        let critical_mask = Self::critical_mask(table_state, static_data);
         if critical_mask == 0 {
             return 0.0;
         }
@@ -420,6 +446,47 @@ impl DefaultEvaluator {
         total
     }
 
+    /// Harmonic sum H(n) = 1 + 1/2 + 1/3 + … + 1/n.
+    ///
+    /// Models the scarcity value of a clue bank with `n` whole tokens: the first token is worth
+    /// 1.0, the second 0.5, the third 0.33, etc. Going from 0 → 1 is the largest jump; going
+    /// from 7 → 8 adds only 0.125.
+    fn harmonic(n: u8) -> f64 {
+        (1..=n).map(|i| 1.0 / i as f64).sum()
+    }
+
+    /// Fractional count of unclued cards in hands that "need" a clue — either potentially
+    /// playable or potentially critical.
+    ///
+    /// For each card not yet clue-touched, the contribution is
+    /// `max(P(playable), P(critical))` based on its empathy set. We take the max rather than
+    /// the sum so cards that are *both* (e.g. a 5 atop a 4-stack) don't double-count.
+    ///
+    /// Note: this only excludes already-touched cards. A touched card that still needs further
+    /// disambiguation (e.g. clued by color but not rank) is treated as zero demand — an
+    /// approximation. The signal is meant to capture broad pressure, not exact token need.
+    fn clue_demand(table_state: &TableState, static_data: &StaticGameData) -> f64 {
+        let num_players = static_data.number_of_players as usize;
+        let playable_mask = table_state.playable_cards(static_data);
+        let critical_mask = Self::critical_mask(table_state, static_data);
+
+        let mut demand = 0.0f64;
+        for hand in table_state.hands[..num_players].iter() {
+            for &deck_idx in hand.cards() {
+                if (table_state.clue_touched_cards >> deck_idx) & 1 != 0 {
+                    continue;
+                }
+                let empathy = table_state.deck.get_global_empathy(deck_idx);
+                let bits = empathy.as_bits();
+                let possibilities = empathy.count_possibilities() as f64;
+                let playable_overlap = (bits & playable_mask).count_ones() as f64;
+                let critical_overlap = (bits & critical_mask).count_ones() as f64;
+                demand += playable_overlap.max(critical_overlap) / possibilities;
+            }
+        }
+        demand
+    }
+
     /// Misinformation score per plan §4.3 — three-case formula summed over all own-hand cards.
     ///
     /// For each card whose truth is known (singleton in the omniscient deck):
@@ -529,8 +596,13 @@ impl Evaluator for DefaultEvaluator {
         } else {
             0.0
         };
-        let clue_tokens =
-            self.clue_token_weight * table_state.clue_token_bank.whole_clue_tokens_count() as f64;
+        let harmonic_value = Self::harmonic(table_state.clue_token_bank.whole_clue_tokens_count());
+        let demand_factor = if self.clue_demand_weight != 0.0 {
+            1.0 + self.clue_demand_weight * Self::clue_demand(table_state, static_data)
+        } else {
+            1.0
+        };
+        let clue_tokens = self.clue_token_weight * harmonic_value * demand_factor;
         let known_playable = if self.known_playable_weight != 0.0 {
             self.known_playable_weight
                 * Self::known_playable_in_hands(table_state, static_data, team_knowledge)
