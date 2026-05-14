@@ -162,11 +162,6 @@ fn prefers_more_efficient_finesse_over_direct_play_clue() {
             clue: Clue{clue_type: ClueType::Rank, clue_value: 3},
             ..
         } => {}
-        GameAction::Clue {
-            player_index: 2,
-            clue: Clue{clue_type: ClueType::Color, clue_value: 0},
-            ..
-        } => {}
         _ => panic!("expected to clue r3 in Cathy's hand as a finesse, got: {action:?}"),
     }
 }
