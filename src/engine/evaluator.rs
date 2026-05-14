@@ -129,6 +129,21 @@ pub trait Evaluator: Send + Sync {
     ) -> Score {
         0.0
     }
+
+    /// Immediate bonus for a play action that successfully advances a stack.
+    ///
+    /// Models the value of forward progress within the search horizon, separate from the leaf
+    /// `game_score` term (which is symmetric for lines that reach the same total). Misplays
+    /// (strikes) get 0 here; the strike penalty in the leaf already handles them.
+    fn play_progress_bonus(
+        &self,
+        _action: &GameAction,
+        _pre_action_state: &TableState,
+        _post_action_state: &TableState,
+        _static_data: &StaticGameData,
+    ) -> Score {
+        0.0
+    }
 }
 
 /// Default heuristic evaluator.
@@ -203,6 +218,14 @@ pub struct DefaultEvaluator {
     ///
     /// Set to 0 to disable. Suggested default: 3.0.
     pub misinformation_weight: f64,
+    /// Reward per card successfully played to the stacks within the search horizon.
+    ///
+    /// Counteracts the structural bias where lines that play more cards lose ~1 pace point per
+    /// extra draw at the leaf. Setting this to 1.0 exactly counteracts the drag, leaving
+    /// the choice to the leaf's substantive signals (score, ceiling, misinformation).
+    ///
+    /// Set to 0 to disable.
+    pub play_progress_weight: f64,
 }
 
 impl Default for DefaultEvaluator {
@@ -223,6 +246,7 @@ impl Default for DefaultEvaluator {
             resolved_cards_weight: 0.0_f64,
             signal_ignored_penalty_weight: 5.0_f64,
             misinformation_weight: 3.0_f64,
+            play_progress_weight: 1.0_f64,
         }
     }
 }
@@ -625,6 +649,24 @@ impl Evaluator for DefaultEvaluator {
         }
         if any_signal {
             -self.signal_ignored_penalty_weight
+        } else {
+            0.0
+        }
+    }
+
+    fn play_progress_bonus(
+        &self,
+        action: &GameAction,
+        pre: &TableState,
+        post: &TableState,
+        static_data: &StaticGameData,
+    ) -> Score {
+        if self.play_progress_weight == 0.0 {
+            return 0.0;
+        }
+        let GameAction::Play { .. } = action else { return 0.0; };
+        if post.score(&static_data.variant) > pre.score(&static_data.variant) {
+            self.play_progress_weight
         } else {
             0.0
         }
