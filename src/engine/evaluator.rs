@@ -34,8 +34,6 @@ pub struct ScoreBreakdown {
     pub known_playable: f64,
     /// `team_empathy_weight * team_empathy_score` — reward for fraction of identity uncertainty eliminated across all own-hand cards.
     pub team_empathy: f64,
-    /// `resolved_cards_weight * resolved_count` — reward for cards fully resolved to a single identity.
-    pub resolved_cards: f64,
     /// `misinformation_weight * misinformed_card_count` — penalty for own-hand cards whose effective
     /// inferred mask excludes the card's true identity (convention breakdown / misinformation).
     pub misinformation_penalty: f64,
@@ -47,7 +45,7 @@ impl std::fmt::Display for ScoreBreakdown {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "total={:.2} [score={:.1} -strike={:.1} +pace={:.1} -eff={:.1} +crit={:.1} -ceil={:.1} +emp={:.1} +clue={:.1} +play={:.1} +team_emp={:.1} +res={:.1} -misinfo={:.1}]",
+            "total={:.2} [score={:.1} -strike={:.1} +pace={:.1} -eff={:.1} +crit={:.1} -ceil={:.1} +emp={:.1} +clue={:.1} +play={:.1} +team_emp={:.1} -misinfo={:.1}]",
             self.total,
             self.game_score,
             self.strike_penalty,
@@ -59,7 +57,6 @@ impl std::fmt::Display for ScoreBreakdown {
             self.clue_tokens,
             self.known_playable,
             self.team_empathy,
-            self.resolved_cards,
             self.misinformation_penalty,
         )
     }
@@ -93,7 +90,6 @@ pub trait Evaluator: Send + Sync {
             clue_tokens: 0.0,
             known_playable: 0.0,
             team_empathy: 0.0,
-            resolved_cards: 0.0,
             misinformation_penalty: 0.0,
             total: self.score(table_state, static_data, team_knowledge),
         }
@@ -199,9 +195,6 @@ pub struct DefaultEvaluator {
     /// all own-hand cards for all players: `Σ (max_ids − popcount) / max_ids`.
     /// Encourages states where the team knows more about every card, not just clued ones.
     pub team_empathy_weight: f64,
-    /// Reward per card in any player's own hand that is fully resolved to a single identity
-    /// (`popcount == 1`). Sharper signal than `team_empathy_weight`; rewards complete certainty.
-    pub resolved_cards_weight: f64,
     /// Penalty applied to a non-Play action (or a Play of the wrong card) taken by an actor who
     /// holds an active `Signal::Play` on at least one untouched own-hand card. Captures the
     /// H-Group urgency rule: a finessed/blind-play-signalled card must be played on the very
@@ -243,7 +236,6 @@ impl Default for DefaultEvaluator {
             clue_precision_weight: 0.0_f64,
             known_playable_weight: 0.0_f64,
             team_empathy_weight: 0.0_f64,
-            resolved_cards_weight: 0.0_f64,
             signal_ignored_penalty_weight: 5.0_f64,
             misinformation_weight: 3.0_f64,
             play_progress_weight: 1.0_f64,
@@ -550,11 +542,6 @@ impl Evaluator for DefaultEvaluator {
         } else {
             0.0
         };
-        let resolved_cards = if self.resolved_cards_weight != 0.0 {
-            self.resolved_cards_weight * Self::resolved_card_count(static_data, team_knowledge, table_state)
-        } else {
-            0.0
-        };
         let misinformation_penalty = if self.misinformation_weight != 0.0 {
             self.misinformation_weight
                 * Self::misinformation_score(static_data, team_knowledge, table_state)
@@ -567,7 +554,6 @@ impl Evaluator for DefaultEvaluator {
             + clue_tokens
             + known_playable
             + team_empathy
-            + resolved_cards
             - misinformation_penalty;
         ScoreBreakdown {
             game_score,
@@ -580,7 +566,6 @@ impl Evaluator for DefaultEvaluator {
             clue_tokens,
             known_playable,
             team_empathy,
-            resolved_cards,
             misinformation_penalty,
             total,
         }
