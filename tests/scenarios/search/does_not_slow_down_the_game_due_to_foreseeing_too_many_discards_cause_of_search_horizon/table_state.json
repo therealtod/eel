@@ -1,0 +1,23 @@
+{
+  "scenario_description": "Alice should clue 1s to Cathy, which is much more efficient that picking up the 1s one by one with color clues",
+  "suits": [
+    "red",
+    "yellow",
+    "green",
+    "blue",
+    "purple"
+  ],
+  "active_player": 0,
+  "playing_stacks": [
+    [], [], [], [], []
+  ],
+  "discard_pile": [],
+  "clue_tokens": 8,
+  "strikes": 0,
+  "player_on_turn": 0,
+  "hands": [
+    ["x", "x", "x", "x", "x"],
+    [{"id": "p1", "positive":  ["purple"], "inferred": "p1"}, "g4", {"id":  "p4", "positive": ["purple"], "inferred": "p2p3p4p5"}, "y5", "g4"],
+    ["y1", "r1", "p3", "b5", "g1"]
+  ]
+}
