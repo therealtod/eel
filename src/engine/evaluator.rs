@@ -156,6 +156,32 @@ pub trait Evaluator: Send + Sync {
     }
 }
 
+const fn build_reciprocal_lut() -> [f64; 65] {
+    let mut arr = [0.0f64; 65];
+    let mut i = 1usize;
+    while i <= 64 {
+        arr[i] = 1.0 / i as f64;
+        i += 1;
+    }
+    arr
+}
+
+/// Precomputed 1/n for n = 0..=64. Index 0 maps to 0.0 (sentinel for zero-possibility cards).
+const RECIPROCAL_LUT: [f64; 65] = build_reciprocal_lut();
+
+const fn build_harmonic_lut() -> [f64; 9] {
+    let mut arr = [0.0f64; 9];
+    let mut i = 1usize;
+    while i <= 8 {
+        arr[i] = arr[i - 1] + 1.0 / i as f64;
+        i += 1;
+    }
+    arr
+}
+
+/// Precomputed harmonic numbers H(n) = 1 + 1/2 + … + 1/n for n = 0..=8.
+const HARMONIC_LUT: [f64; 9] = build_harmonic_lut();
+
 /// Default heuristic evaluator.
 ///
 /// Scoring terms:
@@ -326,10 +352,8 @@ impl DefaultEvaluator {
                 let empathy = table_state.deck.get_global_empathy(deck_idx);
                 let overlap = empathy.as_bits() & critical_mask;
                 if overlap != 0 {
-                    let possibilities = empathy.count_possibilities();
-                    if possibilities > 0 {
-                        total += overlap.count_ones() as f64 / possibilities as f64;
-                    }
+                    let possibilities = empathy.count_possibilities() as usize;
+                    total += overlap.count_ones() as f64 * RECIPROCAL_LUT[possibilities];
                 }
             }
         }
@@ -443,7 +467,7 @@ impl DefaultEvaluator {
         let num_players = static_data.number_of_players as usize;
         let max_identities =
             (static_data.variant.number_of_suits as u32) * (static_data.variant.stacks_size as u32);
-        let max_f = max_identities as f64;
+        let inv_max = 1.0 / max_identities as f64;
         let mut total = 0.0f64;
         for p in 0..num_players {
             let pk = team_knowledge.player(p);
@@ -454,7 +478,7 @@ impl DefaultEvaluator {
                 let card_deck_index = idx as CardDeckIndex;
                 let combined = pk.combined_possible_identities(card_deck_index, table_state, &static_data.variant);
                 let popcount = combined.count_possibilities();
-                total += (max_identities.saturating_sub(popcount.min(max_identities))) as f64 / max_f;
+                total += (max_identities.saturating_sub(popcount.min(max_identities))) as f64 * inv_max;
             }
         }
         total
@@ -466,7 +490,7 @@ impl DefaultEvaluator {
     /// 1.0, the second 0.5, the third 0.33, etc. Going from 0 → 1 is the largest jump; going
     /// from 7 → 8 adds only 0.125.
     fn harmonic(n: u8) -> f64 {
-        (1..=n).map(|i| 1.0 / i as f64).sum()
+        HARMONIC_LUT[n as usize]
     }
 
     /// Fractional count of unclued cards in hands that "need" a clue — either potentially
@@ -492,10 +516,10 @@ impl DefaultEvaluator {
                 }
                 let empathy = table_state.deck.get_global_empathy(deck_idx);
                 let bits = empathy.as_bits();
-                let possibilities = empathy.count_possibilities() as f64;
-                let playable_overlap = (bits & playable_mask).count_ones() as f64;
-                let critical_overlap = (bits & critical_mask).count_ones() as f64;
-                demand += playable_overlap.max(critical_overlap) / possibilities;
+                let possibilities = empathy.count_possibilities() as usize;
+                let playable_overlap = (bits & playable_mask).count_ones();
+                let critical_overlap = (bits & critical_mask).count_ones();
+                demand += playable_overlap.max(critical_overlap) as f64 * RECIPROCAL_LUT[possibilities];
             }
         }
         demand
@@ -543,9 +567,9 @@ impl DefaultEvaluator {
                     // Truth present: partial penalty proportional to how many wrong identities
                     // the player also entertains.  (n-1)/n → 0 for exact knowledge, ~1 for wide
                     // uncertainty.
-                    let n = effective.count_possibilities();
+                    let n = effective.count_possibilities() as usize;
                     if n > 1 {
-                        total += (n - 1) as f64 / n as f64;
+                        total += 1.0 - RECIPROCAL_LUT[n];
                     }
                 }
             }

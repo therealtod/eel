@@ -33,9 +33,6 @@ The current search implementation heap-allocates heavily at every node in the se
 - At the start of `best_score_at_depth`, check the TT. If a valid entry with `entry.depth >= current_depth` is found, return `entry.score` and prune the search.
 - Even if the depth is insufficient for a hard cutoff, the TT provides the best move from previous visits, allowing us to evaluate the best move first (which maximizes the effectiveness of Branch and Bound pruning).
 
-## 5. Floating Point Arithmetic in Evaluator
+## 5. Floating Point Arithmetic in Evaluator ✅ DONE
 
-**Current state:** `DefaultEvaluator` uses `f64` heavily, including floating point divisions in tight loops (e.g., `critical_cards_in_hand` and `misinformation_score`).
-**Improvement:** 
-- Convert the evaluator to use integer arithmetic (e.g., scaled integers like `i32` where 1 unit = 0.01 score) to avoid floating-point latency.
-- Alternatively, pre-calculate fractional penalties/bonuses into look-up tables based on popcounts.
+**What was done:** Added two module-level lookup tables built by `const fn`: `RECIPROCAL_LUT: [f64; 65]` (1/n for n=0..=64, with index 0 = 0.0) and `HARMONIC_LUT: [f64; 9]` (H(n) for n=0..=8). Replaced the per-card `f64` divisions in `critical_cards_in_hand`, `misinformation_score`, and `clue_demand` with `* RECIPROCAL_LUT[popcount]` table lookups. Replaced the `harmonic` loop (`Σ 1/i`) with a direct `HARMONIC_LUT[n]` index. In `team_empathy_score`, hoisted the division `1.0 / max_identities` out of the inner loop as `inv_max` and replaced `/ max_f` with `* inv_max`.
