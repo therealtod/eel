@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize, Serializer};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ActionType {
@@ -7,6 +7,18 @@ pub enum ActionType {
     ColorClue,
     RankClue,
     EndGame,
+}
+
+impl ActionType {
+    fn as_u8(self) -> u8 {
+        match self {
+            ActionType::Play => 0,
+            ActionType::Discard => 1,
+            ActionType::ColorClue => 2,
+            ActionType::RankClue => 3,
+            ActionType::EndGame => 4,
+        }
+    }
 }
 
 impl<'de> serde::Deserialize<'de> for ActionType {
@@ -29,7 +41,13 @@ impl<'de> serde::Deserialize<'de> for ActionType {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+impl Serialize for ActionType {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_u8(self.as_u8())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Action {
     #[serde(rename = "type")]

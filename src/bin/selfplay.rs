@@ -5,15 +5,27 @@
 /// player only knows what their conventions tell them). Game mechanics (stacks, strikes, draws)
 /// are tracked with full card-identity knowledge, so scores are exact.
 ///
+/// When `--log-failures-below` is set every game whose score falls strictly below the threshold
+/// is written as a hanab.live-compatible JSON replay to:
+///
+///   logs/<score>/game_<N>.json
+///
+/// (the `logs/` directory tree is created automatically if it does not already exist.)
+///
+/// The JSON can be pasted into hanab.live → "Watch Specific Replay" to step through the game.
+///
 /// Usage:
 ///   cargo run --release --bin selfplay -- --games 200 --players 3
 ///   cargo run --release --bin selfplay -- --games 200 --seed 42 --verbose
+///   cargo run --release --bin selfplay -- --games 200 --log-failures-below 20
+use std::fs;
+use std::path::PathBuf;
 use std::time::SystemTime;
 
 use clap::Parser;
-use rand::seq::SliceRandom;
-use rand::rngs::SmallRng;
 use rand::SeedableRng;
+use rand::rngs::SmallRng;
+use rand::seq::SliceRandom;
 
 use eel::engine::action_selection_strategy::ActionSelectionStrategy;
 use eel::engine::convention::convention_set::ConventionSet;
@@ -31,8 +43,10 @@ use eel::engine::convention::hgroup::tech::two_save::TwoSave;
 use eel::engine::knowledge::knowledge_update::Hypothesis;
 use eel::engine::knowledge_aware_game_state::{KnowledgeAwareGameState, collect_hypotheses};
 use eel::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
+use eel::external::hanablive::{Card, GameBuilder, GameOptions};
 use eel::game::action::game_action::GameAction;
 use eel::game::card::{CardDeckIndex, VariantCardId};
+use eel::game::clue_type::ClueType;
 use eel::game::static_game_data::StaticGameData;
 use eel::game::variant::test_variants::NO_VARIANT;
 
@@ -54,6 +68,11 @@ struct Args {
     /// Print each game's score as it completes.
     #[arg(long, default_value_t = false)]
     verbose: bool,
+
+    /// Write a hanab.live replay JSON for every game that scores strictly below this value.
+    /// Files are written to logs/<score>/game_<N>.json.
+    #[arg(long)]
+    log_failures_below: Option<u8>,
 }
 
 fn hand_size(players: u8) -> usize {
@@ -86,6 +105,13 @@ fn shuffled_deck(rng: &mut SmallRng) -> Vec<VariantCardId> {
         .collect();
     deck.shuffle(rng);
     deck
+}
+
+/// Convert an internal `VariantCardId` to the hanab.live `Card` representation.
+fn variant_card_id_to_hanablive(id: VariantCardId, static_data: &StaticGameData) -> Card {
+    let suit_index = id / static_data.variant.stacks_size as usize;
+    let rank = static_data.variant.rank_of(id);
+    Card { suit_index, rank }
 }
 
 /// Deal the initial hands. Each player gets `hand_size` cards, oldest card drawn first.
@@ -139,7 +165,11 @@ fn apply_play_spectator(
 ) {
     let p = game.table_state.active_player_index;
     let actual_id = actual_deck[card_deck_index as usize];
-    let action = GameAction::Play { player_index: p, card_deck_index, turn: game.table_state.current_turn };
+    let action = GameAction::Play {
+        player_index: p,
+        card_deck_index,
+        turn: game.table_state.current_turn,
+    };
 
     // Capture all matching techs' hypotheses (with correct tier assignment) BEFORE mutating state.
     let actor_hypotheses: Vec<(u8, Hypothesis)> = {
@@ -203,11 +233,16 @@ fn apply_discard_spectator(
 }
 
 /// Run one complete game and return the final score (0–25).
+///
+/// When `log_failures_below` is `Some(t)` and the final score < `t`, the game is serialised
+/// to `logs/<score>/game_<game_num>.json` in hanab.live replay format.
 fn run_game(
     static_data: &StaticGameData,
     convention_set: &dyn ConventionSet,
     strategy: &TreeActionSelectionStrategy,
     rng: &mut SmallRng,
+    log_failures_below: Option<u8>,
+    game_num: u32,
 ) -> u8 {
     let actual_deck = shuffled_deck(rng);
     let num_players = static_data.number_of_players as usize;
@@ -215,6 +250,25 @@ fn run_game(
 
     let mut game = KnowledgeAwareGameState::new(static_data.clone());
     deal_initial_hands(&mut game, &actual_deck, num_players, hs);
+
+    // Build the hanab.live deck (same order as actual_deck).
+    let hanablive_deck: Vec<Card> = actual_deck
+        .iter()
+        .map(|&id| variant_card_id_to_hanablive(id, static_data))
+        .collect();
+
+    let player_names: Vec<String> = (0..num_players).map(|i| format!("Bot{i}")).collect();
+
+    let logging_enabled = log_failures_below.is_some();
+    let mut builder = if logging_enabled {
+        Some(GameBuilder::new(player_names, hanablive_deck).with_options({
+            let mut opts = GameOptions::default();
+            opts.variant = Some("No Variant".to_string());
+            opts
+        }))
+    } else {
+        None
+    };
 
     // None = deck not yet empty; Some(n) = n turns remaining in the final round.
     let mut final_round: Option<usize> = None;
@@ -231,11 +285,39 @@ fn run_game(
             strategy.select_active_player_action(&pov, convention_set)
         };
 
-        match &action {
-            GameAction::Play { card_deck_index, .. } => {
-                apply_play_spectator(&mut game, *card_deck_index, &actual_deck, convention_set, static_data, &mut next_hypothesis_id);
+        // Record the action in hanab.live format before we mutate state.
+        if let Some(ref mut b) = builder {
+            match &action {
+                GameAction::Play { card_deck_index, .. } => {
+                    b.push_play(*card_deck_index as usize);
+                }
+                GameAction::Discard { card_deck_index, .. } => {
+                    b.push_discard(*card_deck_index as usize);
+                }
+                GameAction::Clue { clue, player_index, .. } => match clue.clue_type {
+                    ClueType::Color => b.push_color_clue(*player_index, clue.clue_value as usize),
+                    ClueType::Rank => b.push_rank_clue(*player_index, clue.clue_value as usize),
+                },
+                GameAction::Draw { .. } => {}
             }
-            GameAction::Discard { card_deck_index, .. } => {
+        }
+
+        match &action {
+            GameAction::Play {
+                card_deck_index, ..
+            } => {
+                apply_play_spectator(
+                    &mut game,
+                    *card_deck_index,
+                    &actual_deck,
+                    convention_set,
+                    static_data,
+                    &mut next_hypothesis_id,
+                );
+            }
+            GameAction::Discard {
+                card_deck_index, ..
+            } => {
                 apply_discard_spectator(&mut game, *card_deck_index, &actual_deck);
             }
             GameAction::Clue { .. } => {
@@ -263,7 +345,31 @@ fn run_game(
         }
     }
 
-    game.table_state.score(&static_data.variant)
+    let score = game.table_state.score(&static_data.variant);
+
+    if let Some(threshold) = log_failures_below {
+        if score < threshold {
+            if let Some(b) = builder {
+                let replay = b.finish();
+                let dir = PathBuf::from("logs").join(score.to_string());
+                if let Err(e) = fs::create_dir_all(&dir) {
+                    eprintln!("warn: could not create log directory {dir:?}: {e}");
+                } else {
+                    let path = dir.join(format!("game_{game_num}.json"));
+                    match replay.to_json_pretty() {
+                        Ok(json) => {
+                            if let Err(e) = fs::write(&path, &json) {
+                                eprintln!("warn: could not write replay to {path:?}: {e}");
+                            }
+                        }
+                        Err(e) => eprintln!("warn: could not serialise replay: {e}"),
+                    }
+                }
+            }
+        }
+    }
+
+    score
 }
 
 fn main() {
@@ -276,10 +382,16 @@ fn main() {
             .as_nanos() as u64
     });
 
-    eprintln!("seed: {seed}  players: {}  games: {}", args.players, args.games);
+    eprintln!(
+        "seed: {seed}  players: {}  games: {}",
+        args.players, args.games
+    );
 
     let mut rng = SmallRng::seed_from_u64(seed);
-    let static_data = StaticGameData { number_of_players: args.players, variant: NO_VARIANT };
+    let static_data = StaticGameData {
+        number_of_players: args.players,
+        variant: NO_VARIANT,
+    };
     let convention_set = build_convention_set();
     let strategy = TreeActionSelectionStrategy::default();
 
@@ -287,7 +399,14 @@ fn main() {
     let progress_every = (args.games / 10).max(1);
 
     for game_num in 1..=args.games {
-        let score = run_game(&static_data, &convention_set, &strategy, &mut rng);
+        let score = run_game(
+            &static_data,
+            &convention_set,
+            &strategy,
+            &mut rng,
+            args.log_failures_below,
+            game_num,
+        );
         scores.push(score);
 
         if args.verbose {
@@ -305,7 +424,10 @@ fn main() {
     let mean = scores.iter().map(|&s| s as f64).sum::<f64>() / n;
     let variance = scores
         .iter()
-        .map(|&s| { let d = s as f64 - mean; d * d })
+        .map(|&s| {
+            let d = s as f64 - mean;
+            d * d
+        })
         .sum::<f64>()
         / n;
     let std_dev = variance.sqrt();
@@ -330,5 +452,9 @@ fn main() {
         let pct = count as f64 / n * 100.0;
         let bar = "#".repeat((pct / 2.0).round() as usize);
         println!("{score:>2}: {bar:<50} {count:>4} ({pct:4.1}%)");
+    }
+
+    if args.log_failures_below.is_some() {
+        eprintln!("\nReplays written to logs/<score>/game_<N>.json");
     }
 }
