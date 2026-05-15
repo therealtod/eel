@@ -136,11 +136,7 @@ impl TreeActionSelectionStrategy {
         evaluator: &dyn Evaluator,
         state: &KnowledgeAwareGameState,
     ) -> ScoreBreakdown {
-        evaluator.score_breakdown(
-            &state.table_state,
-            &state.static_data(),
-            &state.team_knowledge,
-        )
+        evaluator.score_breakdown(state)
     }
 
     /// Per-action bonus applied along the search path.
@@ -183,12 +179,7 @@ impl TreeActionSelectionStrategy {
         } else {
             0.0
         };
-        let play_bonus = evaluator.play_progress_bonus(
-            action,
-            state_before.table_state(),
-            state_after.table_state(),
-            static_data,
-        );
+        let play_bonus = evaluator.play_progress_bonus(action, state_before, state_after);
         clue_bonus + signal_penalty + play_bonus
     }
 

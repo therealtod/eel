@@ -2,6 +2,7 @@ use crate::engine::convention::hgroup::h_group_core::count_bad_touches;
 use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::decision_tree::Score;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
+use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, VariantCardId, VariantCardsBitField};
 use crate::game::state::PlayerIndex;
@@ -64,21 +65,14 @@ impl std::fmt::Display for ScoreBreakdown {
 
 /// Trait for scoring a leaf game state during search.
 pub trait Evaluator: Send + Sync {
-    fn score(
-        &self,
-        table_state: &TableState,
-        static_data: &StaticGameData,
-        team_knowledge: &TeamKnowledge,
-    ) -> Score;
+    /// Score the leaf state. Receives a full [`KnowledgeAwareGameState`] so the evaluator
+    /// can consult engine-only signals like phantom plays (successful plays whose stack
+    /// assignment was deferred).
+    fn score(&self, state: &KnowledgeAwareGameState) -> Score;
 
     /// Per-term breakdown of the score. The default implementation returns only the total;
     /// override this to expose individual contributions for debugging.
-    fn score_breakdown(
-        &self,
-        table_state: &TableState,
-        static_data: &StaticGameData,
-        team_knowledge: &TeamKnowledge,
-    ) -> ScoreBreakdown {
+    fn score_breakdown(&self, state: &KnowledgeAwareGameState) -> ScoreBreakdown {
         ScoreBreakdown {
             game_score: 0.0,
             strike_penalty: 0.0,
@@ -91,7 +85,7 @@ pub trait Evaluator: Send + Sync {
             known_playable: 0.0,
             team_empathy: 0.0,
             misinformation_penalty: 0.0,
-            total: self.score(table_state, static_data, team_knowledge),
+            total: self.score(state),
         }
     }
 
@@ -126,7 +120,8 @@ pub trait Evaluator: Send + Sync {
         0.0
     }
 
-    /// Immediate bonus for a play action that successfully advances a stack.
+    /// Immediate bonus for a play action that successfully advances the engine's effective
+    /// score (real stack progress *or* a phantom play).
     ///
     /// Models the value of forward progress within the search horizon, separate from the leaf
     /// `game_score` term (which is symmetric for lines that reach the same total). Misplays
@@ -134,9 +129,8 @@ pub trait Evaluator: Send + Sync {
     fn play_progress_bonus(
         &self,
         _action: &GameAction,
-        _pre_action_state: &TableState,
-        _post_action_state: &TableState,
-        _static_data: &StaticGameData,
+        _pre_action_state: &KnowledgeAwareGameState,
+        _post_action_state: &KnowledgeAwareGameState,
     ) -> Score {
         0.0
     }
@@ -285,7 +279,7 @@ impl Default for DefaultEvaluator {
             score_weight: 10.0_f64,
             strike_penalties: [0.0_f64, 8.0_f64, 25.0_f64],
             pace_weight: 1.0_f64,
-            efficiency_weight: 1.2_f64,
+            efficiency_weight: 1.9_f64,
             critical_in_hand_weight: 1.5_f64,
             lost_score_ceiling_weight: 8.0_f64,
             empathy_weight: 0.0_f64,
@@ -630,30 +624,21 @@ impl DefaultEvaluator {
 }
 
 impl Evaluator for DefaultEvaluator {
-    fn score(
-        &self,
-        table_state: &TableState,
-        static_data: &StaticGameData,
-        team_knowledge: &TeamKnowledge,
-    ) -> Score {
-        self.score_breakdown(table_state, static_data, team_knowledge)
-            .total
+    fn score(&self, state: &KnowledgeAwareGameState) -> Score {
+        self.score_breakdown(state).total
     }
 
-    fn score_breakdown(
-        &self,
-        table_state: &TableState,
-        static_data: &StaticGameData,
-        team_knowledge: &TeamKnowledge,
-    ) -> ScoreBreakdown {
-        let game_score = self.score_weight * table_state.score(&static_data.variant) as f64;
+    fn score_breakdown(&self, state: &KnowledgeAwareGameState) -> ScoreBreakdown {
+        let table_state = state.table_state();
+        let static_data = state.static_data();
+        let team_knowledge = state.team_knowledge();
+        let game_score = self.score_weight * state.score(&static_data.variant) as f64;
         let strikes = table_state.strike_tokens as usize;
         let strike_penalty = self.strike_penalties.get(strikes).copied().unwrap_or(0.0);
         let pace = self.pace_weight
-            * (table_state.pace(static_data)).clamp(-10, static_data.number_of_players as i32)
-                as f64;
+            * (state.pace()).clamp(-10, static_data.number_of_players as i32) as f64;
         let efficiency_penalty =
-            self.efficiency_weight * f64::from(table_state.required_efficiency(static_data));
+            self.efficiency_weight * f64::from(state.required_efficiency());
         let critical_in_hand =
             self.critical_in_hand_weight * Self::critical_cards_in_hand(table_state, static_data);
         let theoretical_max =
@@ -792,9 +777,8 @@ impl Evaluator for DefaultEvaluator {
     fn play_progress_bonus(
         &self,
         action: &GameAction,
-        pre: &TableState,
-        post: &TableState,
-        static_data: &StaticGameData,
+        pre: &KnowledgeAwareGameState,
+        post: &KnowledgeAwareGameState,
     ) -> Score {
         if self.play_progress_weight == 0.0 {
             return 0.0;
@@ -802,7 +786,8 @@ impl Evaluator for DefaultEvaluator {
         let GameAction::Play { .. } = action else {
             return 0.0;
         };
-        if post.score(&static_data.variant) > pre.score(&static_data.variant) {
+        let variant = &pre.static_data().variant;
+        if post.score(variant) > pre.score(variant) {
             self.play_progress_weight
         } else {
             0.0
@@ -886,15 +871,20 @@ mod tests {
         (state, static_data)
     }
 
+    fn make_kags(strikes: u8) -> KnowledgeAwareGameState {
+        let (table_state, static_data) = make_state(strikes);
+        let tk = TeamKnowledge::new(static_data.number_of_players as usize);
+        KnowledgeAwareGameState::from_parts(static_data, table_state, tk, 0)
+    }
+
     #[test]
     fn higher_strikes_produce_lower_score() {
         let evaluator = DefaultEvaluator::default();
-        let (s0, sd) = make_state(0);
-        let (s1, _) = make_state(1);
-        let (s2, _) = make_state(2);
-        let tk = TeamKnowledge::new(3);
-        assert!(evaluator.score(&s0, &sd, &tk) > evaluator.score(&s1, &sd, &tk));
-        assert!(evaluator.score(&s1, &sd, &tk) > evaluator.score(&s2, &sd, &tk));
+        let s0 = make_kags(0);
+        let s1 = make_kags(1);
+        let s2 = make_kags(2);
+        assert!(evaluator.score(&s0) > evaluator.score(&s1));
+        assert!(evaluator.score(&s1) > evaluator.score(&s2));
     }
 
     #[test]
