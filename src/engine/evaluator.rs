@@ -140,6 +140,20 @@ pub trait Evaluator: Send + Sync {
     ) -> Score {
         0.0
     }
+
+    /// Optimistic upper bound on the best score reachable from `table_state` with `depth`
+    /// more plies of search remaining (including accumulated immediate bonuses).
+    ///
+    /// The default returns `f64::INFINITY` (no pruning). Implementations that return a
+    /// finite bound enable Branch-and-Bound pruning in `best_score_at_depth`.
+    fn upper_bound(
+        &self,
+        _table_state: &TableState,
+        _static_data: &StaticGameData,
+        _depth: usize,
+    ) -> Score {
+        f64::INFINITY
+    }
 }
 
 /// Default heuristic evaluator.
@@ -727,6 +741,45 @@ impl Evaluator for DefaultEvaluator {
         } else {
             0.0
         }
+    }
+
+    fn upper_bound(&self, table_state: &TableState, static_data: &StaticGameData, depth: usize) -> Score {
+        let max_game_score =
+            self.score_weight * Self::max_achievable_score(table_state, static_data) as f64;
+        // Optimistic: no new strikes from here; penalty is already locked in at current level.
+        let min_strike_penalty = self
+            .strike_penalties
+            .get(table_state.strike_tokens as usize)
+            .copied()
+            .unwrap_or(0.0);
+        let max_pace = self.pace_weight * static_data.number_of_players as f64;
+        let num_players = static_data.number_of_players as usize;
+        let total_cards: usize =
+            table_state.hands[..num_players].iter().map(|h| h.cards().len()).sum();
+        // Optimistic: every card could be critical and held safely.
+        let max_critical = self.critical_in_hand_weight * total_cards as f64;
+        // Optimistic: max clue tokens with max demand factor.
+        let max_demand = if self.clue_demand_weight > 0.0 {
+            1.0 + self.clue_demand_weight * total_cards as f64
+        } else {
+            1.0
+        };
+        let max_clue_tokens = self.clue_token_weight
+            * Self::harmonic(crate::game::MAX_CLUE_TOKEN_COUNT)
+            * max_demand;
+        let max_known_playable = self.known_playable_weight * total_cards as f64;
+        let max_team_empathy = self.team_empathy_weight * total_cards as f64;
+        // Optimistic: efficiency_penalty = 0, lost_ceiling_penalty = 0, misinformation = 0.
+        let max_leaf = max_game_score - min_strike_penalty
+            + max_pace
+            + max_critical
+            + max_clue_tokens
+            + max_known_playable
+            + max_team_empathy;
+        // Immediate bonuses: per-ply max = play_progress + clue precision across all cards.
+        let max_immediate_per_ply =
+            self.play_progress_weight + self.clue_precision_weight * total_cards as f64;
+        max_leaf + max_immediate_per_ply * depth as f64
     }
 }
 

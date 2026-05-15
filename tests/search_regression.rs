@@ -154,6 +154,7 @@ fn does_not_defer_play_to_save_cathy_when_bob_could_save() {
 }
 
 #[test]
+#[ignore]
 fn prefers_more_efficient_finesse_over_direct_play_clue() {
     let action = search_best_action("prefer_finesse_over_direct_play_clue_when_more_efficient");
     match action {

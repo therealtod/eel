@@ -20,14 +20,9 @@ The current search implementation heap-allocates heavily at every node in the se
 - Instead of cloning the entire state, mutate it in place and then use the `UndoToken` to restore it after the recursive call returns.
 - *Alternative:* If full unmake is too complex due to convention resolution, implement Copy-on-Write (CoW) or ensure that `TeamKnowledge` is 100% stack-allocated (by using static arrays instead of `Vec<TrackedHypothesis>`).
 
-## 3. Branch and Bound / Upper Bound Pruning
+## 3. Branch and Bound / Upper Bound Pruning ✅ DONE
 
-**Current state:** The comments in `best_score_at_depth` state that "No alpha-beta pruning is performed" because it's a cooperative maximizing search and lacks an upper bound. 
-**Improvement:** While there are no min-nodes, we can still prune using Branch and Bound.
-- We can construct a strict upper bound heuristic: `upper_bound(state) = current_score + (depth * max_immediate_bonus) + bounds_on_future_gains`. 
-- `DefaultEvaluator::max_achievable_score` already calculates the theoretical maximum game score achievable from a given discard pile. We can formulate a max possible `ScoreBreakdown` (max pace, max clue tokens, zero penalties).
-- If `upper_bound(state) <= best_score_so_far`, we can immediately prune the subtree, knowing it can never surpass our already-found principal variation.
-- **Early Exit:** If the search finds a line that achieves the absolute maximum theoretical score of the game, it can immediately short-circuit.
+**What was done:** Added `upper_bound` to the `Evaluator` trait (default: `f64::INFINITY`, so existing implementations are unaffected). `DefaultEvaluator::upper_bound` computes an optimistic ceiling using `max_achievable_score` (max game score), zero penalties (efficiency, ceiling loss, misinformation), max pace clamped at `number_of_players`, max clue tokens at `harmonic(8)`, and max immediate bonuses of `(play_progress_weight + clue_precision_weight * total_cards) * depth`. Inside `best_score_at_depth`, two pruning checks are applied to each candidate: (1) **per-candidate pruning** — before recursing, if `evaluator.upper_bound(next_state, depth-1) + immediate <= best`, the candidate is skipped entirely; (2) **early exit** — after updating `best`, if `best >= node_ceiling` (the upper bound for the current node), the candidate loop breaks immediately. A `candidate_pruned` trace event is emitted for pruned candidates.
 
 ## 4. Transposition Table (TT)
 

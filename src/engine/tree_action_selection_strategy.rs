@@ -210,10 +210,10 @@ impl TreeActionSelectionStrategy {
     /// The question being answered is therefore: *"how good does the game get if everyone plays
     /// optimally after I do this?"* — not a subjective per-player utility.
     ///
-    /// No alpha-beta pruning is performed: every ply maximises, so there is no min-parent that
-    /// would reject a value ≥ alpha — truncating a subtree's value would silently change which
-    /// root candidate wins. A real prune would require a state-derived upper bound on the
-    /// subtree, which we don't currently compute.
+    /// Branch-and-bound pruning is applied: before recursing into each candidate, the evaluator's
+    /// `upper_bound` is queried for the post-action state at the remaining depth. If that ceiling
+    /// cannot beat the best score already secured at this node, the candidate is skipped. Once
+    /// `best` reaches the node's own ceiling, the loop exits early.
     fn best_score_at_depth(
         state: &KnowledgeAwareGameState,
         static_data: &StaticGameData,
@@ -249,12 +249,30 @@ impl TreeActionSelectionStrategy {
         let _guard = span.enter();
         let mut best = f64::NEG_INFINITY;
         let mut best_breakdown: Option<ScoreBreakdown> = None;
+        // Precompute the theoretical ceiling for this node so we can exit early once
+        // we've already found a line that cannot be improved upon.
+        let node_ceiling = evaluator.upper_bound(state.table_state(), static_data, depth);
         for proposed in candidates {
             let mut next = state.clone();
             next.apply(&proposed.action, convention_set);
             next.advance_turn();
             let immediate =
                 Self::immediate_action_bonus(&proposed.action, evaluator, state, &next, static_data);
+            // Branch-and-bound: skip this candidate if its optimistic upper bound cannot
+            // beat the best score we have already secured at this node.
+            let candidate_ceiling =
+                evaluator.upper_bound(next.table_state(), static_data, depth - 1) + immediate;
+            if candidate_ceiling <= best {
+                tracing::trace!(
+                    target: "eel::search",
+                    action = ?proposed.action,
+                    tech = proposed.tech_name,
+                    candidate_ceiling,
+                    best,
+                    "candidate_pruned",
+                );
+                continue;
+            }
             let (subtree_score, leaf_bd) = Self::best_score_at_depth(
                 &next,
                 static_data,
@@ -283,6 +301,10 @@ impl TreeActionSelectionStrategy {
                     immediate_bonus: immediate,
                 });
                 best_breakdown = Some(leaf_bd);
+                // Early exit: already reached the theoretical ceiling for this node.
+                if best >= node_ceiling {
+                    break;
+                }
             }
         }
         // `best_breakdown` is set whenever the candidate loop ran. If no candidates were
