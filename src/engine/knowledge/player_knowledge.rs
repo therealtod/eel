@@ -479,8 +479,16 @@ mod tests {
 
         // Before resolution: effective mask is unioned tier-0 only → mask_a.
         let before = pk.effective_inferred_mask(card, variant).as_bits();
-        assert_ne!(before & mask_a, 0, "tier-0 should be active before rejection");
-        assert_eq!(before & mask_b, 0, "tier-1 should be dormant before rejection");
+        assert_ne!(
+            before & mask_a,
+            0,
+            "tier-0 should be active before rejection"
+        );
+        assert_eq!(
+            before & mask_b,
+            0,
+            "tier-1 should be dormant before rejection"
+        );
 
         // Player 1 plays card 7 (not card 3) → trigger rejected.
         let wrong_play = GameAction::Play {
@@ -493,6 +501,10 @@ mod tests {
         // After rejection: tier-0 removed, tier-1 promoted → effective mask is mask_b.
         let after = pk.effective_inferred_mask(card, variant).as_bits();
         assert_eq!(after & mask_a, 0, "tier-0 should be gone after rejection");
-        assert_ne!(after & mask_b, 0, "tier-1 fallback should be active after promotion");
+        assert_ne!(
+            after & mask_b,
+            0,
+            "tier-1 fallback should be active after promotion"
+        );
     }
 }

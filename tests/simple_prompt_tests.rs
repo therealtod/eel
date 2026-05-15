@@ -19,7 +19,7 @@ use eel::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 
 const B3_MASK: u64 = 1u64 << 17; // B3: blue offset 15, rank 3, id 17
 const B4_MASK: u64 = 1u64 << 18; // B4: blue offset 15, rank 4, id 18
-const R4_MASK: u64 = 1u64 << 3;  // R4: red offset 0,  rank 4, id  3
+const R4_MASK: u64 = 1u64 << 3; // R4: red offset 0,  rank 4, id  3
 const P4_MASK: u64 = 1u64 << 23; // P4: purple offset 20, rank 4, id 23
 
 #[test]
@@ -116,7 +116,11 @@ fn all_players_understand_simple_prompt_semantics() {
     let mut next_id = 0u32;
     cathy_live.apply_cohort(
         0,
-        vec![(0, prompt_hypothesis), (0, delayed_hypothesis), (0, direct_play_r4)],
+        vec![
+            (0, prompt_hypothesis),
+            (0, delayed_hypothesis),
+            (0, direct_play_r4),
+        ],
         &mut next_id,
         &static_data.variant,
     );

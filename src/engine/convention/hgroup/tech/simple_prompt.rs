@@ -51,7 +51,9 @@ impl SimplePrompt {
             pov.card_identity(idx) == Some(connecting_id) && !pov.is_identity_known_to_holder(idx)
         });
 
-        let Some(p) = pos else { return false; };
+        let Some(p) = pos else {
+            return false;
+        };
 
         // Chain: all cards from leftmost touched up to and including the connecting card are playable.
         if touched[..=p].iter().all(|&idx| pov.is_playable(idx)) {
@@ -122,8 +124,8 @@ impl ClueTech for SimplePrompt {
             return false;
         };
         let static_data = observer_pov.static_data();
-        let total_ids = static_data.variant.number_of_suits as usize
-            * static_data.variant.stacks_size as usize;
+        let total_ids =
+            static_data.variant.number_of_suits as usize * static_data.variant.stacks_size as usize;
         let clue_mask = static_data.variant.empathy_for_clue(clue).as_bits();
         let candidates = observer_pov.empathy(focus).as_bits() & clue_mask;
         let num_players = static_data.number_of_players as usize;

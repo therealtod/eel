@@ -2,7 +2,7 @@ use crate::engine::convention::convention_tech::ClueTech;
 use crate::engine::convention::hgroup::h_group_core::{
     clues_for_player_with_focus, get_clue_focus, has_pending_play_signal,
 };
-use crate::engine::convention::hgroup::h_group_tech::{priority, HGroupClueTech, PlayClueTech};
+use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, PlayClueTech, priority};
 use crate::engine::game_state_snapshot::GameStateSnapshot;
 use crate::engine::knowledge::knowledge_update::{Hypothesis, KnowledgeUpdate};
 use crate::engine::knowledge::player_pov::PlayerPOV;
@@ -110,8 +110,7 @@ impl ClueTech for DirectPlayClue {
         let mask: u64 = (0..total_ids)
             .filter(|&id| {
                 if let Some(away_value) = giver_pov.away_value(id) {
-                    (1u64 << id) & clue_mask != 0
-                        && away_value == 0
+                    (1u64 << id) & clue_mask != 0 && away_value == 0
                 } else {
                     false
                 }
@@ -136,10 +135,8 @@ mod tests {
     use super::*;
     use crate::engine::convention::convention_tech::ConventionTech;
     use crate::engine::game_state_snapshot::GameStateSnapshot;
-    use crate::engine::knowledge::player_knowledge::{
-        PlayerKnowledge, knowledge_with_visible,
-    };
     use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
+    use crate::engine::knowledge::player_knowledge::{PlayerKnowledge, knowledge_with_visible};
     use crate::engine::knowledge::team_knowledge::TeamKnowledge;
     use crate::game::action::game_action::GameAction;
     use crate::game::card::{CardDeckIndex, CardIdentityMask};
@@ -164,7 +161,8 @@ mod tests {
 
         let knowledge = knowledge_with_visible(0, &[(10, R2_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         assert!(DirectPlayClue.game_actions(&pov).is_empty());
     }
@@ -181,7 +179,8 @@ mod tests {
 
         let knowledge = knowledge_with_visible(0, &[(10, R1_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let actions = DirectPlayClue.game_actions(&pov);
 
@@ -224,7 +223,8 @@ mod tests {
 
         let knowledge = knowledge_with_visible(0, &[(10, R2_MASK), (20, R1_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let actions = DirectPlayClue.game_actions(&pov);
 
@@ -256,7 +256,8 @@ mod tests {
 
         let knowledge = knowledge_with_visible(0, &[(10, R1_MASK), (20, Y1_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let actions = DirectPlayClue.game_actions(&pov);
 
@@ -324,16 +325,21 @@ mod tests {
 
         let knowledge = knowledge_with_visible(0, &[(10, R1_MASK)]);
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        team_knowledge.player_mut(0).inferred_identities[10] = Some(CardIdentityMask::from_bits(R1_MASK));
+        team_knowledge.player_mut(0).inferred_identities[10] =
+            Some(CardIdentityMask::from_bits(R1_MASK));
         team_knowledge.player_mut(0).visible_cards |= 1 << 10;
 
         let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let clue = GameAction::Clue {
             player_index: 1,
             touched_card_deck_indexes: smallvec::smallvec![10],
-            clue: Clue { clue_type: ClueType::Color, clue_value: 0 },
+            clue: Clue {
+                clue_type: ClueType::Color,
+                clue_value: 0,
+            },
             turn: 0,
         };
         assert!(DirectPlayClue.matches_action(&clue, &[snapshot], &pov));
@@ -350,16 +356,21 @@ mod tests {
 
         let knowledge = knowledge_with_visible(0, &[(10, R2_MASK)]);
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        team_knowledge.player_mut(0).inferred_identities[10] = Some(CardIdentityMask::from_bits(R2_MASK));
+        team_knowledge.player_mut(0).inferred_identities[10] =
+            Some(CardIdentityMask::from_bits(R2_MASK));
         team_knowledge.player_mut(0).visible_cards |= 1 << 10;
 
         let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let clue = GameAction::Clue {
             player_index: 1,
             touched_card_deck_indexes: smallvec::smallvec![10],
-            clue: Clue { clue_type: ClueType::Color, clue_value: 0 },
+            clue: Clue {
+                clue_type: ClueType::Color,
+                clue_value: 0,
+            },
             turn: 0,
         };
         assert!(!DirectPlayClue.matches_action(&clue, &[snapshot], &pov));
@@ -371,9 +382,14 @@ mod tests {
         let table_state = initial_five_players_table_state();
         let knowledge = PlayerKnowledge::new(0);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
-        let play = GameAction::Play { player_index: 0, card_deck_index: 5, turn: 0 };
+        let play = GameAction::Play {
+            player_index: 0,
+            card_deck_index: 5,
+            turn: 0,
+        };
         assert!(!DirectPlayClue.matches_action(&play, &[], &pov));
     }
 
@@ -386,12 +402,16 @@ mod tests {
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
 
         let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let clue = GameAction::Clue {
             player_index: 1,
             touched_card_deck_indexes: smallvec::smallvec![],
-            clue: Clue { clue_type: ClueType::Color, clue_value: 0 },
+            clue: Clue {
+                clue_type: ClueType::Color,
+                clue_value: 0,
+            },
             turn: 0,
         };
         assert!(!DirectPlayClue.matches_action(&clue, &[snapshot], &pov));
@@ -411,17 +431,22 @@ mod tests {
 
         let knowledge = knowledge_with_visible(0, &[(10, R1_MASK)]);
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        team_knowledge.player_mut(0).inferred_identities[10] = Some(CardIdentityMask::from_bits(R1_MASK));
+        team_knowledge.player_mut(0).inferred_identities[10] =
+            Some(CardIdentityMask::from_bits(R1_MASK));
         team_knowledge.player_mut(0).visible_cards |= 1 << 10;
 
         let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let updates = DirectPlayClue.knowledge_updates(
             &GameAction::Clue {
                 player_index: 1,
                 touched_card_deck_indexes: smallvec::smallvec![10],
-                clue: Clue { clue_type: ClueType::Color, clue_value: 0 },
+                clue: Clue {
+                    clue_type: ClueType::Color,
+                    clue_value: 0,
+                },
                 turn: 0,
             },
             &[snapshot],
@@ -430,10 +455,18 @@ mod tests {
 
         assert_eq!(updates.immediate.len(), 1);
         assert!(updates.trigger.is_none());
-        if let KnowledgeUpdate::NarrowPossibilities { card_deck_index, mask } = &updates.immediate[0] {
+        if let KnowledgeUpdate::NarrowPossibilities {
+            card_deck_index,
+            mask,
+        } = &updates.immediate[0]
+        {
             assert_eq!(*card_deck_index, 10);
             assert_ne!(mask & R1_MASK, 0, "R1 should be in the mask");
-            assert_eq!(mask & R2_MASK, 0, "R2 (not yet playable) should not be in the mask");
+            assert_eq!(
+                mask & R2_MASK,
+                0,
+                "R2 (not yet playable) should not be in the mask"
+            );
         } else {
             panic!("expected NarrowPossibilities");
         }
@@ -450,19 +483,25 @@ mod tests {
         let knowledge = knowledge_with_visible(0, &[(10, R1_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
-        assert!(DirectPlayClue
-            .knowledge_updates(
-                &GameAction::Clue {
-                    player_index: 0,
-                    touched_card_deck_indexes: smallvec::smallvec![],
-                    clue: Clue { clue_type: ClueType::Color, clue_value: 0 },
-                    turn: 0,
-                },
-                &[snapshot],
-                &pov,
-            )
-            .is_empty());
+        assert!(
+            DirectPlayClue
+                .knowledge_updates(
+                    &GameAction::Clue {
+                        player_index: 0,
+                        touched_card_deck_indexes: smallvec::smallvec![],
+                        clue: Clue {
+                            clue_type: ClueType::Color,
+                            clue_value: 0
+                        },
+                        turn: 0,
+                    },
+                    &[snapshot],
+                    &pov,
+                )
+                .is_empty()
+        );
     }
 }

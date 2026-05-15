@@ -9,8 +9,8 @@ use eel::game::state::table_state_json::{
     parse_empathy_mask, parse_scenario,
 };
 use eel::game::static_game_data::StaticGameData;
-use eel::game::variant::test_variants::NO_VARIANT;
 use eel::game::variant::Variant;
+use eel::game::variant::test_variants::NO_VARIANT;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
@@ -109,8 +109,7 @@ pub fn team_knowledge_from_scenario(scenario: &ScenarioJson, variant: &Variant) 
                     let deck_idx = indices[hand_size - 1 - slot_pos];
                     let mask = parse_empathy_mask(inferred_str);
                     let emp = CardIdentityMask::from_bits(mask);
-                    team_knowledge.player_mut(p).inferred_identities[deck_idx as usize] =
-                        Some(emp);
+                    team_knowledge.player_mut(p).inferred_identities[deck_idx as usize] = Some(emp);
                     if emp.is_exactly_known() {
                         team_knowledge.player_mut(p).visible_cards |= 1u64 << deck_idx;
                     }
@@ -152,7 +151,11 @@ pub fn team_knowledge_from_scenario(scenario: &ScenarioJson, variant: &Variant) 
 /// Apply a `GameAction` to a `TableState` at the table-state level only (no convention
 /// knowledge propagation). Used to build intermediate history snapshots when replaying
 /// `prior_actions`.
-fn apply_action_for_history(ts: &mut TableState, action: &GameAction, static_data: &StaticGameData) {
+fn apply_action_for_history(
+    ts: &mut TableState,
+    action: &GameAction,
+    static_data: &StaticGameData,
+) {
     match action {
         GameAction::Clue {
             player_index,
@@ -197,8 +200,9 @@ pub fn load_scenario_by_name_with_knowledge(
 ) {
     init_tracing();
     let path: PathBuf = {
-        let mut p: PathBuf =
-            [env!("CARGO_MANIFEST_DIR"), "tests", "scenarios"].iter().collect();
+        let mut p: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "scenarios"]
+            .iter()
+            .collect();
         for component in name.split('/') {
             p.push(component);
         }
@@ -216,7 +220,10 @@ pub fn load_scenario_by_name_with_knowledge(
     let mut history = Vec::with_capacity(actions.len());
     let mut running_ts = table_state.clone();
     for action in &actions {
-        history.push(GameStateSnapshot::new(running_ts.clone(), team_knowledge.clone()));
+        history.push(GameStateSnapshot::new(
+            running_ts.clone(),
+            team_knowledge.clone(),
+        ));
         apply_action_for_history(&mut running_ts, action, &static_data);
     }
 

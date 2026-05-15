@@ -134,12 +134,11 @@ fn critical_save_matches(
     // have constituted a critical save from the giver's view. Receiver: wide empathy → genuine
     // existential. Others: singleton empathy → collapses to the previous direct check.
     let static_data = observer_pov.static_data();
-    let total_ids = static_data.variant.number_of_suits as usize
-        * static_data.variant.stacks_size as usize;
+    let total_ids =
+        static_data.variant.number_of_suits as usize * static_data.variant.stacks_size as usize;
     let clue_mask = static_data.variant.empathy_for_clue(clue).as_bits();
     let candidates = observer_pov.empathy(chop).as_bits() & clue_mask;
-    (0..total_ids)
-        .any(|id| (candidates & (1u64 << id)) != 0 && is_critical_save_id(id, &giver_pov))
+    (0..total_ids).any(|id| (candidates & (1u64 << id)) != 0 && is_critical_save_id(id, &giver_pov))
 }
 
 /// Save a critical card on chop by cluing its color (suit) or rank.

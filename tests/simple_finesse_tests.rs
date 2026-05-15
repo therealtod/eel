@@ -3,8 +3,8 @@ mod common;
 use eel::engine::convention::convention_tech::ConventionTech;
 use eel::engine::convention::hgroup::signal::Signal;
 use eel::engine::convention::hgroup::tech::critical_save::RankCriticalSave;
-use eel::engine::convention::hgroup::tech::play_known_playable::PlayKnownPlayable;
 use eel::engine::convention::hgroup::tech::direct_play_clue::DirectPlayClue;
+use eel::engine::convention::hgroup::tech::play_known_playable::PlayKnownPlayable;
 use eel::engine::convention::hgroup::tech::simple_finesse::SimpleFinesse;
 use eel::engine::knowledge::knowledge_update::{KnowledgeUpdate, PendingTrigger};
 use eel::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
@@ -124,12 +124,16 @@ fn all_players_understand_simple_finesse_semantics() {
         DirectPlayClue.matches_action(finesse_action, &history, &cathy_pov),
         "DirectPlayClue should match for Cathy: her deck-13 empathy allows b3 (playable)"
     );
-    let cathy_direct_play_updates = DirectPlayClue.knowledge_updates(finesse_action, &history, &cathy_pov);
+    let cathy_direct_play_updates =
+        DirectPlayClue.knowledge_updates(finesse_action, &history, &cathy_pov);
     assert!(
-        cathy_direct_play_updates.immediate.iter().any(|u| matches!(u,
-            KnowledgeUpdate::NarrowPossibilities { card_deck_index: 13, mask }
-            if *mask == B3_MASK
-        )),
+        cathy_direct_play_updates
+            .immediate
+            .iter()
+            .any(|u| matches!(u,
+                KnowledgeUpdate::NarrowPossibilities { card_deck_index: 13, mask }
+                if *mask == B3_MASK
+            )),
         "DirectPlayClue should narrow deck 13 to b3 (immediately playable rank-3 card, blue stack = b2)"
     );
     assert!(
@@ -184,8 +188,7 @@ fn cathy_knowledge_after_finesse_clue()
         &static_data,
     );
 
-    let finesse_hypothesis =
-        SimpleFinesse.knowledge_updates(finesse_action, &history, &cathy_pov);
+    let finesse_hypothesis = SimpleFinesse.knowledge_updates(finesse_action, &history, &cathy_pov);
     let direct_play_hypothesis =
         DirectPlayClue.knowledge_updates(finesse_action, &history, &cathy_pov);
 
@@ -299,7 +302,9 @@ fn rank_3_clue_on_chop_three_interpretations_finesse_excluded_by_critical_save()
         &static_data,
     );
     assert!(
-        RankCriticalSave.game_actions(&alice_pov).contains(clue_action),
+        RankCriticalSave
+            .game_actions(&alice_pov)
+            .contains(clue_action),
         "Alice should generate a rank-3 critical save to Cathy (deck 10 = g3, critical chop)"
     );
     assert!(
@@ -358,7 +363,11 @@ fn rank_3_clue_on_chop_three_interpretations_finesse_excluded_by_critical_save()
     let mut next_id = 0u32;
     cathy_live.apply_cohort(
         0,
-        vec![(0, finesse_hypothesis), (0, critical_save_hypothesis), (0, direct_play_hypothesis)],
+        vec![
+            (0, finesse_hypothesis),
+            (0, critical_save_hypothesis),
+            (0, direct_play_hypothesis),
+        ],
         &mut next_id,
         &static_data.variant,
     );
@@ -413,7 +422,13 @@ fn rank_3_clue_on_chop_three_interpretations_finesse_excluded_by_critical_save()
         !PlayKnownPlayable
             .game_actions(&cathy_post_pov)
             .iter()
-            .any(|a| matches!(a, GameAction::Play { card_deck_index: 10, .. })),
+            .any(|a| matches!(
+                a,
+                GameAction::Play {
+                    card_deck_index: 10,
+                    ..
+                }
+            )),
         "Cathy should not play deck 10: it could be g3 (not playable), making the play unsafe"
     );
 }

@@ -405,7 +405,11 @@ impl DefaultEvaluator {
                 let lsb = bits.trailing_zeros() as usize;
                 bits &= bits - 1;
                 let card_deck_index = lsb as CardDeckIndex;
-                let combined = pk.combined_possible_identities(card_deck_index, table_state, &static_data.variant);
+                let combined = pk.combined_possible_identities(
+                    card_deck_index,
+                    table_state,
+                    &static_data.variant,
+                );
                 let popcount = combined.count_possibilities();
                 total += (max_identities - popcount.min(max_identities)) as f64;
             }
@@ -435,7 +439,10 @@ impl DefaultEvaluator {
                 let idx = hand.trailing_zeros() as usize;
                 hand &= hand - 1;
                 // Priority 1: convention signal
-                if pk.signals[idx].iter().any(|s| matches!(s, Signal::Play { .. })) {
+                if pk.signals[idx]
+                    .iter()
+                    .any(|s| matches!(s, Signal::Play { .. }))
+                {
                     total += 1.0;
                     continue;
                 }
@@ -448,7 +455,10 @@ impl DefaultEvaluator {
                     }
                 }
                 // Priority 3: game-rule empathy from Deck (global)
-                let bits = table_state.deck.get_global_empathy(idx as CardDeckIndex).as_bits();
+                let bits = table_state
+                    .deck
+                    .get_global_empathy(idx as CardDeckIndex)
+                    .as_bits();
                 if bits != 0 && (bits & playable_mask) == bits {
                     total += 1.0;
                 }
@@ -463,7 +473,11 @@ impl DefaultEvaluator {
     /// A fully-unknown card contributes 0; a fully-resolved card contributes near 1.
     /// Uses game-rule empathy from Deck — convention signals and inferred identities are captured
     /// separately by `known_playable_in_hands` and `resolved_card_count`.
-    fn team_empathy_score(static_data: &StaticGameData, team_knowledge: &TeamKnowledge, table_state: &TableState) -> f64 {
+    fn team_empathy_score(
+        static_data: &StaticGameData,
+        team_knowledge: &TeamKnowledge,
+        table_state: &TableState,
+    ) -> f64 {
         let num_players = static_data.number_of_players as usize;
         let max_identities =
             (static_data.variant.number_of_suits as u32) * (static_data.variant.stacks_size as u32);
@@ -476,9 +490,14 @@ impl DefaultEvaluator {
                 let idx = hand.trailing_zeros() as usize;
                 hand &= hand - 1;
                 let card_deck_index = idx as CardDeckIndex;
-                let combined = pk.combined_possible_identities(card_deck_index, table_state, &static_data.variant);
+                let combined = pk.combined_possible_identities(
+                    card_deck_index,
+                    table_state,
+                    &static_data.variant,
+                );
                 let popcount = combined.count_possibilities();
-                total += (max_identities.saturating_sub(popcount.min(max_identities))) as f64 * inv_max;
+                total +=
+                    (max_identities.saturating_sub(popcount.min(max_identities))) as f64 * inv_max;
             }
         }
         total
@@ -519,7 +538,8 @@ impl DefaultEvaluator {
                 let possibilities = empathy.count_possibilities() as usize;
                 let playable_overlap = (bits & playable_mask).count_ones();
                 let critical_overlap = (bits & critical_mask).count_ones();
-                demand += playable_overlap.max(critical_overlap) as f64 * RECIPROCAL_LUT[possibilities];
+                demand +=
+                    playable_overlap.max(critical_overlap) as f64 * RECIPROCAL_LUT[possibilities];
             }
         }
         demand
@@ -581,7 +601,11 @@ impl DefaultEvaluator {
     ///
     /// A sharper reward than `team_empathy_score`: fires only when a player knows exactly
     /// what a card is, enabling confident play or discard decisions.
-    fn resolved_card_count(static_data: &StaticGameData, team_knowledge: &TeamKnowledge, table_state: &TableState) -> f64 {
+    fn resolved_card_count(
+        static_data: &StaticGameData,
+        team_knowledge: &TeamKnowledge,
+        table_state: &TableState,
+    ) -> f64 {
         let num_players = static_data.number_of_players as usize;
         let mut total = 0.0f64;
         for p in 0..num_players {
@@ -591,7 +615,11 @@ impl DefaultEvaluator {
                 let idx = hand.trailing_zeros() as usize;
                 hand &= hand - 1;
                 let card_deck_index = idx as CardDeckIndex;
-                let combined = pk.combined_possible_identities(card_deck_index, table_state, &static_data.variant);
+                let combined = pk.combined_possible_identities(
+                    card_deck_index,
+                    table_state,
+                    &static_data.variant,
+                );
                 if combined.is_exactly_known() {
                     total += 1.0;
                 }
@@ -608,7 +636,8 @@ impl Evaluator for DefaultEvaluator {
         static_data: &StaticGameData,
         team_knowledge: &TeamKnowledge,
     ) -> Score {
-        self.score_breakdown(table_state, static_data, team_knowledge).total
+        self.score_breakdown(table_state, static_data, team_knowledge)
+            .total
     }
 
     fn score_breakdown(
@@ -620,7 +649,9 @@ impl Evaluator for DefaultEvaluator {
         let game_score = self.score_weight * table_state.score(&static_data.variant) as f64;
         let strikes = table_state.strike_tokens as usize;
         let strike_penalty = self.strike_penalties.get(strikes).copied().unwrap_or(0.0);
-        let pace = self.pace_weight * (table_state.pace(static_data)).clamp(-10, static_data.number_of_players as i32) as f64;
+        let pace = self.pace_weight
+            * (table_state.pace(static_data)).clamp(-10, static_data.number_of_players as i32)
+                as f64;
         let efficiency_penalty =
             self.efficiency_weight * f64::from(table_state.required_efficiency(static_data));
         let critical_in_hand =
@@ -648,7 +679,8 @@ impl Evaluator for DefaultEvaluator {
             0.0
         };
         let team_empathy = if self.team_empathy_weight != 0.0 {
-            self.team_empathy_weight * Self::team_empathy_score(static_data, team_knowledge, table_state)
+            self.team_empathy_weight
+                * Self::team_empathy_score(static_data, team_knowledge, table_state)
         } else {
             0.0
         };
@@ -694,7 +726,13 @@ impl Evaluator for DefaultEvaluator {
                 .iter()
                 .filter(|&&idx| {
                     let card_deck_index = idx as CardDeckIndex;
-                    let combined = team_knowledge.player(receiver).combined_possible_identities(card_deck_index, table_state, &static_data.variant);
+                    let combined = team_knowledge
+                        .player(receiver)
+                        .combined_possible_identities(
+                            card_deck_index,
+                            table_state,
+                            &static_data.variant,
+                        );
                     combined.is_exactly_known()
                 })
                 .count() as f64
@@ -721,7 +759,9 @@ impl Evaluator for DefaultEvaluator {
         }
         let pk = team_knowledge.player(actor);
         let played_card: Option<CardDeckIndex> = match action {
-            GameAction::Play { card_deck_index, .. } => Some(*card_deck_index),
+            GameAction::Play {
+                card_deck_index, ..
+            } => Some(*card_deck_index),
             _ => None,
         };
         let mut any_signal = false;
@@ -759,7 +799,9 @@ impl Evaluator for DefaultEvaluator {
         if self.play_progress_weight == 0.0 {
             return 0.0;
         }
-        let GameAction::Play { .. } = action else { return 0.0; };
+        let GameAction::Play { .. } = action else {
+            return 0.0;
+        };
         if post.score(&static_data.variant) > pre.score(&static_data.variant) {
             self.play_progress_weight
         } else {
@@ -767,7 +809,12 @@ impl Evaluator for DefaultEvaluator {
         }
     }
 
-    fn upper_bound(&self, table_state: &TableState, static_data: &StaticGameData, depth: usize) -> Score {
+    fn upper_bound(
+        &self,
+        table_state: &TableState,
+        static_data: &StaticGameData,
+        depth: usize,
+    ) -> Score {
         let max_game_score =
             self.score_weight * Self::max_achievable_score(table_state, static_data) as f64;
         // Optimistic: no new strikes from here; penalty is already locked in at current level.
@@ -778,8 +825,10 @@ impl Evaluator for DefaultEvaluator {
             .unwrap_or(0.0);
         let max_pace = self.pace_weight * static_data.number_of_players as f64;
         let num_players = static_data.number_of_players as usize;
-        let total_cards: usize =
-            table_state.hands[..num_players].iter().map(|h| h.cards().len()).sum();
+        let total_cards: usize = table_state.hands[..num_players]
+            .iter()
+            .map(|h| h.cards().len())
+            .sum();
         // Optimistic: every card could be critical and held safely.
         let max_critical = self.critical_in_hand_weight * total_cards as f64;
         // Optimistic: max clue tokens with max demand factor.
@@ -788,9 +837,8 @@ impl Evaluator for DefaultEvaluator {
         } else {
             1.0
         };
-        let max_clue_tokens = self.clue_token_weight
-            * Self::harmonic(crate::game::MAX_CLUE_TOKEN_COUNT)
-            * max_demand;
+        let max_clue_tokens =
+            self.clue_token_weight * Self::harmonic(crate::game::MAX_CLUE_TOKEN_COUNT) * max_demand;
         let max_known_playable = self.known_playable_weight * total_cards as f64;
         let max_team_empathy = self.team_empathy_weight * total_cards as f64;
         // Optimistic: efficiency_penalty = 0, lost_ceiling_penalty = 0, misinformation = 0.
@@ -977,8 +1025,7 @@ mod tests {
         pk0.inferred_identities[5] = Some(crate::game::card::CardIdentityMask::from_bits(1 << 3));
         *tk.player_mut(0) = pk0;
 
-        let score_misinformed =
-            DefaultEvaluator::misinformation_score(&static_data, &tk, &state);
+        let score_misinformed = DefaultEvaluator::misinformation_score(&static_data, &tk, &state);
         assert!(
             score_misinformed > 0.0,
             "misinformation_score should be positive when effective mask excludes truth (got {score_misinformed})"

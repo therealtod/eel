@@ -58,7 +58,13 @@ fn search_best_action(name: &str) -> GameAction {
 fn play_known_playable() {
     let action = search_best_action("play_known_playable");
     assert!(
-        matches!(action, GameAction::Play { card_deck_index: 4, .. }),
+        matches!(
+            action,
+            GameAction::Play {
+                card_deck_index: 4,
+                ..
+            }
+        ),
         "expected play of known R1 (deck 4), got: {action:?}"
     );
 }
@@ -89,9 +95,13 @@ fn prefers_blue_clue_to_cathy_over_rank1_clue_to_bob() {
     match action {
         GameAction::Clue {
             player_index: 2,
-            clue: Clue{clue_type: ClueType::Color, clue_value: 3},
+            clue:
+                Clue {
+                    clue_type: ClueType::Color,
+                    clue_value: 3,
+                },
             ..
-        } => { }
+        } => {}
         _ => panic!("expected a blue clue to Cathy, got: {action:?}"),
     }
 }
@@ -102,12 +112,20 @@ fn understands_that_the_efficient_clue_loses_max_score() {
     match action {
         GameAction::Clue {
             player_index: 1,
-            clue: Clue{clue_type: ClueType::Color, clue_value: 2},
+            clue:
+                Clue {
+                    clue_type: ClueType::Color,
+                    clue_value: 2,
+                },
             ..
         } => {}
         GameAction::Clue {
             player_index: 1,
-            clue: Clue{clue_type: ClueType::Rank, clue_value: 3},
+            clue:
+                Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 3,
+                },
             ..
         } => {}
         _ => panic!("expected a Critical save to Bob, got: {action:?}"),
@@ -133,7 +151,11 @@ fn defers_playing_a_known_playable_to_save_a_critical_card() {
     match action {
         GameAction::Clue {
             player_index: 1,
-            clue: Clue{clue_type: ClueType::Rank, clue_value: 3},
+            clue:
+                Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 3,
+                },
             ..
         } => {}
         _ => panic!("expected a CriticalSave to Bob, got: {action:?}"),
@@ -160,7 +182,11 @@ fn prefers_more_efficient_finesse_over_direct_play_clue() {
     match action {
         GameAction::Clue {
             player_index: 2,
-            clue: Clue{clue_type: ClueType::Rank, clue_value: 3},
+            clue:
+                Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 3,
+                },
             ..
         } => {}
         _ => panic!("expected to clue r3 in Cathy's hand as a finesse, got: {action:?}"),

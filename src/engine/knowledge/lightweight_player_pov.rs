@@ -3,9 +3,9 @@ use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::knowledge::player_knowledge::PlayerKnowledge;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
+use crate::game::MAX_CLUE_TOKEN_COUNT;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, CardIdentityMask, DeckCardsBitField, VariantCardId};
-use crate::game::MAX_CLUE_TOKEN_COUNT;
 use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
@@ -226,13 +226,13 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
             actions.push(GameAction::Play {
                 player_index,
                 card_deck_index,
-                turn: self.table_state.current_turn
+                turn: self.table_state.current_turn,
             });
             if clue_tokens < MAX_CLUE_TOKEN_COUNT {
                 actions.push(GameAction::Discard {
                     player_index,
                     card_deck_index,
-                    turn: self.table_state.current_turn
+                    turn: self.table_state.current_turn,
                 });
             }
             hand_mask &= hand_mask - 1;

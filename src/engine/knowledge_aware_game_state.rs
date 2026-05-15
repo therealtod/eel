@@ -476,7 +476,8 @@ impl KnowledgeAwareGameState {
 
         // Receiver: collect all matching techs' hypotheses from the receiver's own POV.
         let receiver_pov = pre_clue_snapshot.player_pov(receiver, &self.static_data);
-        let receiver_hypotheses = collect_hypotheses(techs, action, knowledge_history, &receiver_pov);
+        let receiver_hypotheses =
+            collect_hypotheses(techs, action, knowledge_history, &receiver_pov);
         if !receiver_hypotheses.is_empty() {
             tracing::debug!(target: "eel::apply", giver, action = ?action, hypotheses = receiver_hypotheses.len(), "receiver_hypotheses");
         }

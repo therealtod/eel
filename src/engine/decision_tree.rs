@@ -71,7 +71,10 @@ fn fmt_action(action: &GameAction, f: &mut std::fmt::Formatter<'_>) -> std::fmt:
         } => write!(f, "P{} Discard deck#{}", player_index, card_deck_index),
         GameAction::Clue {
             player_index,
-            clue: Clue { clue_type, clue_value },
+            clue: Clue {
+                clue_type,
+                clue_value,
+            },
             touched_card_deck_indexes,
             ..
         } => {

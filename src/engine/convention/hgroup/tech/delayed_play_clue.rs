@@ -91,8 +91,8 @@ impl ClueTech for DelayedPlayClue {
         // the empathy is a singleton (they see the focus); for the receiver it is wider, and the
         // existential captures her ambiguity over her own card.
         let static_data = observer_pov.static_data();
-        let total_ids = static_data.variant.number_of_suits as usize
-            * static_data.variant.stacks_size as usize;
+        let total_ids =
+            static_data.variant.number_of_suits as usize * static_data.variant.stacks_size as usize;
         let clue_mask = static_data.variant.empathy_for_clue(clue).as_bits();
         let candidates = observer_pov.empathy(focus).as_bits() & clue_mask;
         (0..total_ids).any(|id| {

@@ -1,8 +1,8 @@
 use crate::game::MAX_HAND_SIZE;
 use crate::game::MAX_PLAYERS_IN_GAME;
 use crate::game::action::game_action::GameAction;
-use crate::game::card::copies_counting_card_collection::CopiesCountingCardCollection;
 use crate::game::card::CardDeckIndex;
+use crate::game::card::copies_counting_card_collection::CopiesCountingCardCollection;
 use crate::game::clue::Clue;
 use crate::game::clue_token_bank::ClueTokenBank;
 use crate::game::clue_type::ClueType;
@@ -104,8 +104,14 @@ pub enum PriorActionJson {
         /// `"blue"`, `"purple"`).
         clue: String,
     },
-    Play { player: usize, slot: usize },
-    Discard { player: usize, slot: usize },
+    Play {
+        player: usize,
+        slot: usize,
+    },
+    Discard {
+        player: usize,
+        slot: usize,
+    },
 }
 
 /// JSON representation of a scenario.

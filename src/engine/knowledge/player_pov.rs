@@ -1,12 +1,12 @@
 use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
+use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, CardIdentityMask, DeckCardsBitField, VariantCardId};
 use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
 #[cfg(test)]
 use mockall::automock;
-use crate::game::action::game_action::GameAction;
 
 /// Read-only view of the knowledge that a specific player has on the state of the game.
 ///

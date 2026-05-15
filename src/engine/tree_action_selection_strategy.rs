@@ -90,7 +90,11 @@ impl TreeActionSelectionStrategy {
                 tech.game_actions(pov)
                     .into_iter()
                     .filter(move |a| has_clue_tokens || !matches!(a, GameAction::Clue { .. }))
-                    .map(move |action| ProposedAction { action, tech_name, priority })
+                    .map(move |action| ProposedAction {
+                        action,
+                        tech_name,
+                        priority,
+                    })
             })
             .collect();
 
@@ -98,7 +102,11 @@ impl TreeActionSelectionStrategy {
             proposed = pov
                 .valid_actions()
                 .into_iter()
-                .map(|action| ProposedAction { action, tech_name: "fallback", priority: u8::MAX })
+                .map(|action| ProposedAction {
+                    action,
+                    tech_name: "fallback",
+                    priority: u8::MAX,
+                })
                 .collect();
         }
 
@@ -256,8 +264,13 @@ impl TreeActionSelectionStrategy {
             let mut next = state.clone();
             next.apply(&proposed.action, convention_set);
             next.advance_turn();
-            let immediate =
-                Self::immediate_action_bonus(&proposed.action, evaluator, state, &next, static_data);
+            let immediate = Self::immediate_action_bonus(
+                &proposed.action,
+                evaluator,
+                state,
+                &next,
+                static_data,
+            );
             // Branch-and-bound: skip this candidate if its optimistic upper bound cannot
             // beat the best score we have already secured at this node.
             let candidate_ceiling =
@@ -295,11 +308,14 @@ impl TreeActionSelectionStrategy {
             );
             if improved {
                 best = score;
-                pv_table.set_pv(depth, LineStep {
-                    action: proposed.action,
-                    tech_name: proposed.tech_name,
-                    immediate_bonus: immediate,
-                });
+                pv_table.set_pv(
+                    depth,
+                    LineStep {
+                        action: proposed.action,
+                        tech_name: proposed.tech_name,
+                        immediate_bonus: immediate,
+                    },
+                );
                 best_breakdown = Some(leaf_bd);
                 // Early exit: already reached the theoretical ceiling for this node.
                 if best >= node_ceiling {
@@ -409,7 +425,13 @@ impl TreeActionSelectionStrategy {
                     line = ?line,
                     "candidate_scored",
                 );
-                ScoredNode::leaf(proposed.action, total, proposed.tech_name, line, leaf_breakdown)
+                ScoredNode::leaf(
+                    proposed.action,
+                    total,
+                    proposed.tech_name,
+                    line,
+                    leaf_breakdown,
+                )
             })
             .collect();
         nodes.sort_by(|a, b| b.total_score.total_cmp(&a.total_score));
