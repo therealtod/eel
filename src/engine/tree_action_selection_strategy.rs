@@ -1,4 +1,5 @@
 use rayon::prelude::*;
+use smallvec::SmallVec;
 
 use crate::engine::action_selection_strategy::ActionSelectionStrategy;
 use crate::engine::convention::convention_set::ConventionSet;
@@ -8,6 +9,11 @@ use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
 use crate::game::action::game_action::GameAction;
 use crate::game::static_game_data::StaticGameData;
+
+/// Inline capacity for candidate action lists. 20 covers all realistic Hanabi scenarios
+/// (5-card hands × play+discard + a handful of convention-proposed clues) without spilling
+/// to the heap on the hot recursive path.
+const CANDIDATE_INLINE_CAP: usize = 20;
 
 /// Pre-allocated triangular PV table used to record the principal variation without
 /// heap-allocating inside the search hot path.
@@ -67,12 +73,15 @@ impl Default for TreeActionSelectionStrategy {
 
 impl TreeActionSelectionStrategy {
     /// Returns proposed actions with tech provenance, for use by `scored_actions` and debugging.
+    ///
+    /// Returns a `SmallVec` with inline storage for up to `CANDIDATE_INLINE_CAP` entries so
+    /// the typical case never touches the heap on the recursive hot path.
     pub fn candidate_actions_with_provenance(
         pov: &dyn PlayerPOV,
         convention_set: &dyn ConventionSet,
-    ) -> Vec<ProposedAction> {
+    ) -> SmallVec<[ProposedAction; CANDIDATE_INLINE_CAP]> {
         let has_clue_tokens = pov.table_state().clue_token_bank.whole_clue_tokens_count() > 0;
-        let mut proposed: Vec<ProposedAction> = convention_set
+        let mut proposed: SmallVec<[ProposedAction; CANDIDATE_INLINE_CAP]> = convention_set
             .techs()
             .iter()
             .flat_map(|tech| {
@@ -94,8 +103,8 @@ impl TreeActionSelectionStrategy {
         }
 
         // Dedup by action, keeping the first (highest-priority) tech that proposed it.
-        // Vec scan is faster than HashSet for the small candidate counts seen in practice.
-        let mut seen: Vec<GameAction> = Vec::with_capacity(proposed.len());
+        // Linear scan is faster than HashSet for the small candidate counts seen in practice.
+        let mut seen: SmallVec<[GameAction; CANDIDATE_INLINE_CAP]> = SmallVec::new();
         proposed.retain(|p| {
             if seen.contains(&p.action) {
                 false
@@ -333,6 +342,7 @@ impl TreeActionSelectionStrategy {
         );
         let subtree_depth = depth - 1;
         let mut nodes: Vec<ScoredNode> = candidates
+            .into_vec()
             .into_par_iter()
             .map(|proposed| {
                 let _guard = span.clone().entered();

@@ -9,9 +9,8 @@ The current search implementation heap-allocates heavily at every node in the se
 ### 1.1 Pre-allocated Triangular PV Table ✅ DONE
 **What was done:** Introduced `PvTable` in `tree_action_selection_strategy.rs`. It holds a `Vec<Vec<LineStep>>` where row `d` is pre-allocated to capacity `d`. `best_score_at_depth` now takes `&mut PvTable` instead of returning `Vec<LineStep>`; on improvement it calls `set_pv(depth, step)` which uses `split_at_mut` to copy the child row without re-allocating. One `PvTable` is allocated per root candidate in `scored_actions` (outside the hot path).
 
-### 1.2 Candidate Generation Allocations
-**Current state:** `candidate_actions_with_provenance` builds a `Vec<ProposedAction>` using `flat_map` and `.collect()`, then deduplicates it using `Vec::retain` and another `Vec<GameAction>`.
-**Improvement:** Replace `Vec` with `smallvec::SmallVec` or `arrayvec::ArrayVec`. The number of candidate actions in Hanabi is typically small (< 20). Generating and deduplicating actions entirely on the stack will bypass the memory allocator.
+### 1.2 Candidate Generation Allocations ✅ DONE
+**What was done:** Changed `candidate_actions_with_provenance` to return `SmallVec<[ProposedAction; 20]>` (inline capacity 20, matching the `CANDIDATE_INLINE_CAP` constant). The internal `proposed` accumulator and the dedup `seen` vec are both `SmallVec<[_; 20]>` as well, so the typical path avoids the heap entirely on every recursive call. The one rayon call-site in `scored_actions` (not on the hot path) calls `.into_vec().into_par_iter()` since `SmallVec` does not implement rayon's `IntoParallelIterator`.
 
 ## 2. Make/Unmake vs. Clone-and-Apply
 
