@@ -6,9 +6,8 @@ This document outlines several architectural and performance improvements for th
 
 The current search implementation heap-allocates heavily at every node in the search tree. Eliminating these allocations is the single most impactful way to increase nodes-per-second (NPS).
 
-### 1.1 Pre-allocated Triangular PV Table
-**Current state:** In `best_score_at_depth`, every time a better score is found, a new `Vec<LineStep>` is allocated to store the principal variation: `best_pv = Vec::with_capacity(rest.len() + 1); best_pv.extend(rest);`.
-**Improvement:** Pass a mutable reference to a pre-allocated triangular PV array down the search tree (e.g., `pv: &mut [[LineStep; MAX_DEPTH]; MAX_DEPTH]`). When an action improves the score, copy the child's PV line into the current depth's row without heap allocations.
+### 1.1 Pre-allocated Triangular PV Table ✅ DONE
+**What was done:** Introduced `PvTable` in `tree_action_selection_strategy.rs`. It holds a `Vec<Vec<LineStep>>` where row `d` is pre-allocated to capacity `d`. `best_score_at_depth` now takes `&mut PvTable` instead of returning `Vec<LineStep>`; on improvement it calls `set_pv(depth, step)` which uses `split_at_mut` to copy the child row without re-allocating. One `PvTable` is allocated per root candidate in `scored_actions` (outside the hot path).
 
 ### 1.2 Candidate Generation Allocations
 **Current state:** `candidate_actions_with_provenance` builds a `Vec<ProposedAction>` using `flat_map` and `.collect()`, then deduplicates it using `Vec::retain` and another `Vec<GameAction>`.

@@ -9,6 +9,42 @@ use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
 use crate::game::action::game_action::GameAction;
 use crate::game::static_game_data::StaticGameData;
 
+/// Pre-allocated triangular PV table used to record the principal variation without
+/// heap-allocating inside the search hot path.
+///
+/// Row `d` holds the PV for the call at remaining depth `d` (up to `d` steps).
+/// All rows are pre-allocated to their maximum capacity at construction time, so
+/// `push` and `extend` during search never trigger a reallocation.
+struct PvTable {
+    rows: Vec<Vec<LineStep>>,
+}
+
+impl PvTable {
+    fn new(max_depth: usize) -> Self {
+        let rows = (0..=max_depth).map(|d| Vec::with_capacity(d)).collect();
+        PvTable { rows }
+    }
+
+    /// Write the PV for `depth` by prepending `step` to the child PV at `depth - 1`.
+    ///
+    /// Uses `split_at_mut` to hold simultaneous borrows of two rows.
+    fn set_pv(&mut self, depth: usize, step: LineStep) {
+        debug_assert!(depth > 0 && depth < self.rows.len());
+        let (lower, upper) = self.rows.split_at_mut(depth);
+        let child = &lower[depth - 1];
+        let current = &mut upper[0];
+        current.clear();
+        current.push(step);
+        for s in child {
+            current.push(s.clone());
+        }
+    }
+
+    fn pv_at(&self, depth: usize) -> &[LineStep] {
+        &self.rows[depth]
+    }
+}
+
 /// An action together with the tech that proposed it.
 #[derive(Debug, Clone)]
 pub struct ProposedAction {
@@ -141,9 +177,8 @@ impl TreeActionSelectionStrategy {
 
     /// Recursively compute the best leaf score reachable from `state` within `depth` more turns.
     ///
-    /// Returns `(score, pv)` where `pv` is the **principal variation** — the sequence of actions
-    /// taken at each ply from the current node down to the leaf that produced `score`. Callers
-    /// prepend their own action to build the full line stored in [`ScoredNode::line`].
+    /// The principal variation is written into `pv_table` at row `depth`; callers read it via
+    /// [`PvTable::pv_at`] after this function returns and prepend their own action.
     ///
     /// The returned score is the leaf evaluation **plus** the sum of per-action immediate bonuses
     /// (currently `clue_precision_bonus`) accumulated along the chosen line, so that good-touch
@@ -176,7 +211,8 @@ impl TreeActionSelectionStrategy {
         convention_set: &dyn ConventionSet,
         evaluator: &dyn Evaluator,
         depth: usize,
-    ) -> (Score, Vec<LineStep>, ScoreBreakdown) {
+        pv_table: &mut PvTable,
+    ) -> (Score, ScoreBreakdown) {
         if depth == 0 || state.table_state.is_terminal(static_data) {
             let breakdown = Self::leaf_breakdown(evaluator, state);
             tracing::trace!(
@@ -186,7 +222,9 @@ impl TreeActionSelectionStrategy {
                 leaf = %breakdown,
                 "leaf_reached",
             );
-            return (breakdown.total, vec![], breakdown);
+            // Clear so the parent sees an empty child PV when calling set_pv.
+            pv_table.rows[depth].clear();
+            return (breakdown.total, breakdown);
         }
 
         let active = state.table_state.active_player_index;
@@ -201,7 +239,6 @@ impl TreeActionSelectionStrategy {
         );
         let _guard = span.enter();
         let mut best = f64::NEG_INFINITY;
-        let mut best_pv: Vec<LineStep> = vec![];
         let mut best_breakdown: Option<ScoreBreakdown> = None;
         for proposed in candidates {
             let mut next = state.clone();
@@ -209,12 +246,13 @@ impl TreeActionSelectionStrategy {
             next.advance_turn();
             let immediate =
                 Self::immediate_action_bonus(&proposed.action, evaluator, state, &next, static_data);
-            let (subtree_score, rest, leaf_bd) = Self::best_score_at_depth(
+            let (subtree_score, leaf_bd) = Self::best_score_at_depth(
                 &next,
                 static_data,
                 convention_set,
                 evaluator,
                 depth - 1,
+                pv_table,
             );
             let score = subtree_score + immediate;
             let improved = score > best;
@@ -230,13 +268,11 @@ impl TreeActionSelectionStrategy {
             );
             if improved {
                 best = score;
-                best_pv = Vec::with_capacity(rest.len() + 1);
-                best_pv.push(LineStep {
+                pv_table.set_pv(depth, LineStep {
                     action: proposed.action,
                     tech_name: proposed.tech_name,
                     immediate_bonus: immediate,
                 });
-                best_pv.extend(rest);
                 best_breakdown = Some(leaf_bd);
             }
         }
@@ -244,7 +280,7 @@ impl TreeActionSelectionStrategy {
         // produced (extremely rare — the fallback in `candidate_actions_with_provenance`
         // makes this near-impossible), score the current state as the leaf.
         let breakdown = best_breakdown.unwrap_or_else(|| Self::leaf_breakdown(evaluator, state));
-        (best, best_pv, breakdown)
+        (best, breakdown)
     }
 }
 
@@ -295,6 +331,7 @@ impl TreeActionSelectionStrategy {
             player = player_pov.table_state().active_player_index,
             candidates = candidates.len(),
         );
+        let subtree_depth = depth - 1;
         let mut nodes: Vec<ScoredNode> = candidates
             .into_par_iter()
             .map(|proposed| {
@@ -309,21 +346,25 @@ impl TreeActionSelectionStrategy {
                     &next,
                     static_data,
                 );
-                let (leaf_score, pv, leaf_breakdown) = Self::best_score_at_depth(
+                // Allocate once per root candidate (outside the recursive hot path).
+                let mut pv_table = PvTable::new(subtree_depth);
+                let (leaf_score, leaf_breakdown) = Self::best_score_at_depth(
                     &next,
                     static_data,
                     convention_set,
                     evaluator,
-                    depth - 1,
+                    subtree_depth,
+                    &mut pv_table,
                 );
                 let total = leaf_score + immediate_bonus;
+                let pv = pv_table.pv_at(subtree_depth);
                 let mut line = Vec::with_capacity(pv.len() + 1);
                 line.push(LineStep {
                     action: proposed.action.clone(),
                     tech_name: proposed.tech_name,
                     immediate_bonus,
                 });
-                line.extend(pv);
+                line.extend_from_slice(pv);
                 tracing::debug!(
                     target: "eel::search",
                     action = ?proposed.action,
