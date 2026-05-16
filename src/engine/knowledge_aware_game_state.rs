@@ -481,13 +481,19 @@ impl KnowledgeAwareGameState {
 
         // In normal gameplay `record_snapshot` is called before each action, so
         // `self.history[turn]` holds the pre-clue state that `knowledge_updates` need.
-        // In search no history is recorded; synthesise a single-entry slice so
-        // `history.get(action.turn)` resolves correctly (search actions always have turn = 0).
+        // In search no history is recorded; synthesise a slice padded up to `action.turn`
+        // so `history.get(action.turn)` resolves to `pre_clue_snapshot`. Padding (rather
+        // than a single-entry slice) is required because search advances `current_turn`,
+        // so simulated actions past the first ply carry `turn > 0`.
         let local_history;
         let knowledge_history: &[GameStateSnapshot] = if !self.history.is_empty() {
             &self.history
         } else {
-            local_history = vec![pre_clue_snapshot.clone()];
+            let action_turn = match action {
+                GameAction::Clue { turn, .. } => *turn,
+                _ => 0,
+            };
+            local_history = vec![pre_clue_snapshot.clone(); action_turn + 1];
             &local_history
         };
 
