@@ -268,6 +268,10 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
         }
         CardIdentityMask::from_bits(bits)
     }
+
+    fn is_gotten(&self, variant_card_id: VariantCardId) -> bool {
+        self.gotten_cards().contains(variant_card_id)
+    }
 }
 
 #[cfg(test)]

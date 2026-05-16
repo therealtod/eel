@@ -84,23 +84,27 @@ impl ClueTech for SimplePrompt {
 
         (0..num_players)
             .filter(|&p| p != active)
-            .flat_map(|target| {
-                clues_for_player_with_focus(target, pov)
+            .flat_map(|target_player_index| {
+                clues_for_player_with_focus(target_player_index, pov)
                     .into_iter()
                     .filter_map(move |(action, focus_idx)| {
-                        let card_id = pov.card_identity(focus_idx)?;
-                        if pov.away_value(card_id) != Some(1) {
-                            return None;
-                        }
-                        let connecting_id = card_id - 1;
-                        if (0..num_players)
-                            .filter(|&p| p != active)
-                            .any(|p| Self::is_valid_prompt_situation(connecting_id, p, pov))
-                        {
-                            Some(action)
+                        if let Some(card_id) = pov.card_identity(focus_idx) {
+                            if pov.away_value(card_id) != Some(1) || pov.is_gotten(card_id) {
+                                return None;
+                            }
+                            let connecting_id = card_id - 1;
+                            if (0..num_players)
+                                .filter(|&p| p != active)
+                                .any(|p| Self::is_valid_prompt_situation(connecting_id, p, pov))
+                            {
+                                Some(action)
+                            } else {
+                                None
+                            }
                         } else {
                             None
                         }
+
                     })
             })
             .collect()
@@ -133,7 +137,7 @@ impl ClueTech for SimplePrompt {
             if (candidates & (1u64 << focus_id)) == 0 {
                 return false;
             }
-            if giver_pov.away_value(focus_id) != Some(1) {
+            if giver_pov.away_value(focus_id) != Some(1) || giver_pov.is_gotten(focus_id) {
                 return false;
             }
             let connecting_id = focus_id - 1;
@@ -167,7 +171,7 @@ impl ClueTech for SimplePrompt {
             let focus = get_clue_focus(clue_receiver_index, touched, &giver_pov);
             if let Some(focus) = focus {
                 let focus_id = match giver_pov.card_identity(focus) {
-                    Some(id) if giver_pov.away_value(id) == Some(1) => id,
+                    Some(id) if giver_pov.away_value(id) == Some(1) && !giver_pov.is_gotten(id) => id,
                     _ => return Hypothesis::empty(),
                 };
                 let connecting_id = focus_id - 1;
@@ -213,6 +217,7 @@ impl ClueTech for SimplePrompt {
                 .filter(|&id| {
                     (1u64 << id) & clue_mask != 0
                         && giver_pov.away_value(id) == Some(1)
+                        && !giver_pov.is_gotten(id)
                         && (0..num_players)
                             .filter(|&p| p != giver_idx)
                             .any(|p| Self::is_valid_prompt_situation(id - 1, p, &giver_pov))
@@ -480,11 +485,13 @@ mod tests {
     /// knowledge_updates should narrow the focus card to all 1-away IDs with a valid prompted player.
     #[test]
     fn knowledge_updates_receiver_narrows_focus_to_1_away_ids_with_prompted_player() {
-        // Stack: R1 played. Player 0 (receiver) has R3 (card 10, touched, focus).
-        // Player 1 has R2 (card 20, touched, unknown to holder) — valid prompt.
-        let (table_state, knowledge, team_knowledge, static_data) =
-            setup(&[(0, 10, R3_MASK), (1, 20, R2_MASK)], &[10, 20], &[R1]);
+        // Stack: R1 played. Player 0 (receiver) has R3 (card 10, focus — touched by this clue).
+        // Player 1 has R2 (card 20, touched before this clue, unknown to holder) — valid prompt.
+        // Snapshot is pre-clue (deck[10] not yet touched); pov is post-clue.
+        let (mut table_state, knowledge, team_knowledge, static_data) =
+            setup(&[(0, 10, R3_MASK), (1, 20, R2_MASK)], &[20], &[R1]);
         let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
+        table_state.clue_touched_cards |= 1u64 << 10;
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
         let updates = SimplePrompt.knowledge_updates(
@@ -527,8 +534,8 @@ mod tests {
     /// Clue receiver gets a NarrowPossibilities update when given a play clue on a 1-away card.
     #[test]
     fn knowledge_updates_prompted_player_narrows_leftmost_touched_to_connecting_card() {
-        let (table_state, knowledge, mut team_knowledge, static_data) =
-            setup(&[(0, 10, R3_MASK), (1, 20, R2_MASK)], &[10, 20], &[R1]);
+        let (mut table_state, knowledge, mut team_knowledge, static_data) =
+            setup(&[(0, 10, R3_MASK), (1, 20, R2_MASK)], &[20], &[R1]);
         team_knowledge.player_mut(0).inferred_identities[10] =
             Some(CardIdentityMask::from_bits(R3_MASK));
         team_knowledge.player_mut(0).visible_cards |= 1u64 << 10;
@@ -536,6 +543,7 @@ mod tests {
             Some(CardIdentityMask::from_bits(R2_MASK));
         team_knowledge.player_mut(0).visible_cards |= 1u64 << 20;
         let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
+        table_state.clue_touched_cards |= 1u64 << 10;
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 

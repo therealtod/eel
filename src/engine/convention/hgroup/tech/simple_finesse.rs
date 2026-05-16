@@ -34,11 +34,18 @@ impl SimpleFinesse {
     fn is_finesse_setup(focus_card: VariantCardId, target: usize, pov: &dyn PlayerPOV) -> bool {
         let active = pov.active_player_index();
         let num_players = pov.static_data().number_of_players as usize;
+        if pov.is_gotten(focus_card){
+            return false;
+        }
 
         if pov.away_value(focus_card) != Some(1) {
             return false;
         }
         let prerequisite = focus_card - 1;
+        if pov.is_gotten(prerequisite) {
+            return false;
+        }
+
         (0..num_players)
             .filter(|&p| p != active && p != target)
             .any(|p| {

@@ -75,4 +75,7 @@ pub trait PlayerPOV {
     
     #[must_use]
     fn gotten_cards(&self) -> CardIdentityMask;
+    
+    #[must_use]
+    fn is_gotten(&self, variant_card_id: VariantCardId) -> bool;
 }

@@ -31,25 +31,22 @@ impl DirectPlayClue {
     /// Core direct play detection: checks if the focus card is currently playable on the stacks.
     fn is_direct_play_situation(focus_idx: CardDeckIndex, pov: &dyn PlayerPOV) -> bool {
         pov.card_identity(focus_idx)
-            .map(|id| (pov.table_state().playable_cards(pov.static_data()) >> id) & 1 != 0)
-            .unwrap_or(false)
+            .is_some_and(|card_id| {  (pov.table_state().playable_cards(pov.static_data()) >> card_id) & 1 != 0 && !pov.is_gotten(card_id)})
     }
 }
 
 impl ClueTech for DirectPlayClue {
-    fn clue_game_actions(&self, player_on_turn_pov: &dyn PlayerPOV) -> Vec<GameAction> {
-        let active_player_index = player_on_turn_pov.active_player_index();
-        let num_players = player_on_turn_pov.static_data().number_of_players as usize;
+    fn clue_game_actions(&self, active_player_pov: &dyn PlayerPOV) -> Vec<GameAction> {
+        let active_player_index = active_player_pov.active_player_index();
+        let num_players = active_player_pov.static_data().number_of_players as usize;
 
         (0..num_players)
             .filter(|&x| x != active_player_index)
             .flat_map(|target| {
-                clues_for_player_with_focus(target, player_on_turn_pov)
+                clues_for_player_with_focus(target, active_player_pov)
                     .into_iter()
                     .filter_map(move |(action, focus_idx)| {
-                        if Self::is_direct_play_situation(focus_idx, player_on_turn_pov)
-                            && !player_on_turn_pov.is_identity_known_to_holder(focus_idx)
-                            && !has_pending_play_signal(target, focus_idx, player_on_turn_pov)
+                        if Self::is_direct_play_situation(focus_idx, active_player_pov)
                         {
                             Some(action)
                         } else {
