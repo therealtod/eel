@@ -552,8 +552,7 @@ impl KnowledgeAwareGameState {
     /// Advance `active_player_index` to the next player.
     pub fn advance_turn(&mut self) {
         let num_players = self.static_data.number_of_players as usize;
-        self.table_state.active_player_index =
-            (self.table_state.active_player_index + 1) % num_players;
+        self.table_state.advance_turn(num_players);
     }
 
     /// If the deck is non-empty, deal the next unknown card to `player_index`.

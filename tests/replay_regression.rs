@@ -109,3 +109,17 @@ fn engine_plays_r1_after_receiving_rank1_clue() {
 //         "expected rank-5 save clue to Bob, got: {action:?}"
 //     );
 // }
+
+#[test]
+fn the_engine_should_not_play_clue_trash_cards() {
+    let action = engine_action_at_turn("play_clues_trash_1.json", 2);
+    assert!(
+        matches!(
+            action,
+            GameAction::Discard {
+                ..
+            },
+        ),
+        "expected Cathy (player 12) to discard, got: {action:?}"
+    )
+}
