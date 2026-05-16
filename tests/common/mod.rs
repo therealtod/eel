@@ -1,12 +1,11 @@
 use eel::engine::game_state_snapshot::GameStateSnapshot;
 use eel::engine::knowledge::player_knowledge::PlayerKnowledge;
 use eel::engine::knowledge::team_knowledge::TeamKnowledge;
+use eel::engine::replay::from_scenario::team_knowledge_from_scenario as lib_team_knowledge_from_scenario;
 use eel::game::action::game_action::GameAction;
-use eel::game::card::CardIdentityMask;
 use eel::game::state::table_state::TableState;
 use eel::game::state::table_state_json::{
-    ScenarioJson, build_from_scenario, build_game_actions, parse_card, parse_clue_string,
-    parse_empathy_mask, parse_scenario,
+    ScenarioJson, build_from_scenario, build_game_actions, parse_scenario,
 };
 use eel::game::static_game_data::StaticGameData;
 use eel::game::variant::Variant;
@@ -53,99 +52,7 @@ pub fn load_scenario(tech: &str, scenario: u32) -> (TableState, StaticGameData) 
 
 #[allow(dead_code)]
 pub fn team_knowledge_from_scenario(scenario: &ScenarioJson, variant: &Variant) -> TeamKnowledge {
-    let num_players = scenario.hands.len();
-    let mut team_knowledge = TeamKnowledge::new(num_players);
-
-    let player_indices: Vec<Vec<u8>> = {
-        let mut next: u8 = 0;
-        scenario
-            .hands
-            .iter()
-            .map(|hand| {
-                let hand_size = hand.len() as u8;
-                let range: Vec<u8> = (next..next + hand_size).collect();
-                next += hand_size;
-                range
-            })
-            .collect()
-    };
-
-    for (p, indices) in player_indices.iter().enumerate() {
-        let own_hand: u64 = indices.iter().fold(0u64, |acc, &i| acc | (1 << i));
-        team_knowledge.player_mut(p).own_hand = own_hand;
-    }
-
-    for p in 0..num_players {
-        for (other, (hand, indices)) in scenario.hands.iter().zip(player_indices.iter()).enumerate()
-        {
-            if other == p {
-                continue;
-            }
-            let hand_size = hand.len();
-            for (slot_pos, slot) in hand.iter().enumerate() {
-                let deck_idx = indices[hand_size - 1 - slot_pos];
-                let id = slot.id();
-                if id != "x" {
-                    team_knowledge
-                        .player_mut(p)
-                        .update_with_revealed_card(deck_idx, parse_card(id));
-                }
-            }
-        }
-    }
-
-    for (p, player_hand) in scenario.hands.iter().enumerate() {
-        if p >= num_players {
-            break;
-        }
-        let indices = &player_indices[p];
-        let hand_size = player_hand.len();
-        for (slot_pos, slot) in player_hand.iter().enumerate() {
-            if slot_pos >= hand_size {
-                break;
-            }
-            if let Some(inferred_str) = slot.inferred() {
-                if inferred_str != "x" {
-                    let deck_idx = indices[hand_size - 1 - slot_pos];
-                    let mask = parse_empathy_mask(inferred_str);
-                    let emp = CardIdentityMask::from_bits(mask);
-                    team_knowledge.player_mut(p).inferred_identities[deck_idx as usize] = Some(emp);
-                    if emp.is_exactly_known() {
-                        team_knowledge.player_mut(p).visible_cards |= 1u64 << deck_idx;
-                    }
-                }
-            }
-        }
-    }
-
-    // Apply positive/negative clue marks to each card holder's own inferred empathy.
-    // This reflects what the holder knows about their own card from the clues they received.
-    for (p, player_hand) in scenario.hands.iter().enumerate() {
-        if p >= num_players {
-            break;
-        }
-        let indices = &player_indices[p];
-        let hand_size = player_hand.len();
-        for (slot_pos, slot) in player_hand.iter().enumerate() {
-            let deck_idx = indices[hand_size - 1 - slot_pos] as usize;
-            for clue_str in slot.positive() {
-                let (ct, cv) = parse_clue_string(clue_str);
-                let clue_mask = variant.empathy_by_clue(ct, cv as usize).as_bits();
-                team_knowledge
-                    .player_mut(p)
-                    .narrow_inferred(deck_idx as u8, clue_mask, variant);
-            }
-            for clue_str in slot.negative() {
-                let (ct, cv) = parse_clue_string(clue_str);
-                let clue_mask = variant.empathy_by_clue(ct, cv as usize).as_bits();
-                team_knowledge
-                    .player_mut(p)
-                    .narrow_inferred(deck_idx as u8, !clue_mask, variant);
-            }
-        }
-    }
-
-    team_knowledge
+    lib_team_knowledge_from_scenario(scenario, variant)
 }
 
 /// Apply a `GameAction` to a `TableState` at the table-state level only (no convention

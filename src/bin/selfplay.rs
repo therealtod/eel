@@ -40,12 +40,11 @@ use eel::engine::convention::hgroup::tech::play_known_playable::PlayKnownPlayabl
 use eel::engine::convention::hgroup::tech::simple_finesse::SimpleFinesse;
 use eel::engine::convention::hgroup::tech::simple_prompt::SimplePrompt;
 use eel::engine::convention::hgroup::tech::two_save::TwoSave;
-use eel::engine::knowledge::knowledge_update::Hypothesis;
-use eel::engine::knowledge_aware_game_state::{KnowledgeAwareGameState, collect_hypotheses};
+use eel::engine::replay::reconstruct::{ReplayRunner, variant_card_id_to_hanablive};
 use eel::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
-use eel::external::hanablive::{Card, GameBuilder, GameOptions};
+use eel::external::hanablive::{GameBuilder, GameOptions};
 use eel::game::action::game_action::GameAction;
-use eel::game::card::{CardDeckIndex, VariantCardId};
+use eel::game::card::VariantCardId;
 use eel::game::clue_type::ClueType;
 use eel::game::static_game_data::StaticGameData;
 use eel::game::variant::test_variants::NO_VARIANT;
@@ -73,10 +72,6 @@ struct Args {
     /// Files are written to logs/<score>/game_<N>.json.
     #[arg(long)]
     log_failures_below: Option<u8>,
-}
-
-fn hand_size(players: u8) -> usize {
-    if players <= 3 { 5 } else { 4 }
 }
 
 fn build_convention_set() -> HGroupConventionSet {
@@ -107,131 +102,6 @@ fn shuffled_deck(rng: &mut SmallRng) -> Vec<VariantCardId> {
     deck
 }
 
-/// Convert an internal `VariantCardId` to the hanab.live `Card` representation.
-fn variant_card_id_to_hanablive(id: VariantCardId, static_data: &StaticGameData) -> Card {
-    let suit_index = id / static_data.variant.stacks_size as usize;
-    let rank = static_data.variant.rank_of(id);
-    Card { suit_index, rank }
-}
-
-/// Deal the initial hands. Each player gets `hand_size` cards, oldest card drawn first.
-/// After dealing, `game.next_deck_index` points to the next undealt card.
-fn deal_initial_hands(
-    game: &mut KnowledgeAwareGameState,
-    actual_deck: &[VariantCardId],
-    num_players: usize,
-    hand_size: usize,
-) {
-    for player in 0..num_players {
-        // update_with_draw_action (inside update_with_draw_action_of_specific_card) uses
-        // player_on_turn_index to add the card to the correct hand.
-        game.table_state.active_player_index = player;
-        for slot in 0..hand_size {
-            let deck_idx = (player * hand_size + slot) as CardDeckIndex;
-            let card_id = actual_deck[deck_idx as usize];
-            game.update_with_draw_action_of_specific_card(player, deck_idx, card_id);
-        }
-    }
-    game.table_state.active_player_index = 0;
-    game.next_deck_index = (num_players * hand_size) as u8;
-}
-
-/// Draw the next card from the actual deck for `player`, if the deck is non-empty.
-fn draw_next_card(
-    game: &mut KnowledgeAwareGameState,
-    player: usize,
-    actual_deck: &[VariantCardId],
-) {
-    if game.table_state.deck.current_size == 0 {
-        return;
-    }
-    // player_on_turn_index must equal `player` so the card lands in the right hand.
-    debug_assert_eq!(game.table_state.active_player_index, player);
-    let deck_idx = game.next_deck_index;
-    game.next_deck_index += 1;
-    let card_id = actual_deck[deck_idx as usize];
-    game.update_with_draw_action_of_specific_card(player, deck_idx, card_id);
-}
-
-/// Apply a play action in spectator mode: update stacks/strikes with the actual card identity,
-/// propagate convention knowledge to teammates, then draw a replacement card.
-fn apply_play_spectator(
-    game: &mut KnowledgeAwareGameState,
-    card_deck_index: CardDeckIndex,
-    actual_deck: &[VariantCardId],
-    convention_set: &dyn ConventionSet,
-    static_data: &StaticGameData,
-    next_hypothesis_id: &mut u32,
-) {
-    let p = game.table_state.active_player_index;
-    let actual_id = actual_deck[card_deck_index as usize];
-    let action = GameAction::Play {
-        player_index: p,
-        card_deck_index,
-        turn: game.table_state.current_turn,
-    };
-
-    // Capture all matching techs' hypotheses (with correct tier assignment) BEFORE mutating state.
-    let actor_hypotheses: Vec<(u8, Hypothesis)> = {
-        let pov = game.player_pov(p);
-        collect_hypotheses(convention_set.techs(), &action, &[], &pov)
-    };
-
-    // Apply game mechanics with the actual card identity (correctly updates playing stacks
-    // and strike_tokens, and removes the card from own_hand).
-    game.update_with_play_action_of_specific_card(card_deck_index, actual_id);
-
-    // Draw a replacement card with its true identity revealed to all non-drawing players.
-    draw_next_card(game, p, actual_deck);
-
-    // Propagate convention knowledge to teammates (e.g. finesse / prompt signals).
-    let num_players = static_data.number_of_players as usize;
-    let cohort_id = *next_hypothesis_id;
-    *next_hypothesis_id += 1;
-    for target in (0..num_players).filter(|&t| t != p) {
-        let own_hand = game.team_knowledge.player(target).own_hand;
-        let filtered: Vec<(u8, Hypothesis)> = actor_hypotheses
-            .iter()
-            .map(|(tier, h)| {
-                (
-                    *tier,
-                    Hypothesis {
-                        immediate: h
-                            .immediate
-                            .iter()
-                            .filter(|u| own_hand & (1 << u.card_deck_index()) != 0)
-                            .cloned()
-                            .collect(),
-                        trigger: h.trigger.clone(),
-                    },
-                )
-            })
-            .filter(|(_, h)| !h.is_empty())
-            .collect();
-        game.team_knowledge.player_mut(target).apply_cohort(
-            cohort_id,
-            filtered,
-            next_hypothesis_id,
-            &static_data.variant,
-        );
-    }
-}
-
-/// Apply a discard action in spectator mode: record the actual card in the discard pile,
-/// return the clue token, then draw a replacement card.
-///
-/// Discards carry no convention knowledge updates in H-Group, so no propagation step needed.
-fn apply_discard_spectator(
-    game: &mut KnowledgeAwareGameState,
-    card_deck_index: CardDeckIndex,
-    actual_deck: &[VariantCardId],
-) {
-    let p = game.table_state.active_player_index;
-    let actual_id = actual_deck[card_deck_index as usize];
-    game.update_with_discard_action_of_specific_card(card_deck_index, actual_id);
-    draw_next_card(game, p, actual_deck);
-}
-
 /// Run one complete game and return the final score (0–25).
 ///
 /// When `log_failures_below` is `Some(t)` and the final score < `t`, the game is serialised
@@ -246,13 +116,9 @@ fn run_game(
 ) -> u8 {
     let actual_deck = shuffled_deck(rng);
     let num_players = static_data.number_of_players as usize;
-    let hs = hand_size(static_data.number_of_players);
-
-    let mut game = KnowledgeAwareGameState::new(static_data.clone());
-    deal_initial_hands(&mut game, &actual_deck, num_players, hs);
 
     // Build the hanab.live deck (same order as actual_deck).
-    let hanablive_deck: Vec<Card> = actual_deck
+    let hanablive_deck = actual_deck
         .iter()
         .map(|&id| variant_card_id_to_hanablive(id, static_data))
         .collect();
@@ -270,18 +136,19 @@ fn run_game(
         None
     };
 
+    let mut runner = ReplayRunner::from_deck(actual_deck, static_data.clone(), convention_set);
+
     // None = deck not yet empty; Some(n) = n turns remaining in the final round.
     let mut final_round: Option<usize> = None;
-    let mut next_hypothesis_id: u32 = 0;
 
     loop {
-        if game.table_state.is_terminal(static_data) {
+        if runner.game.table_state.is_terminal(static_data) {
             break;
         }
 
-        let current = game.table_state.active_player_index;
+        let current = runner.game.table_state.active_player_index;
         let action = {
-            let pov = game.player_pov(current);
+            let pov = runner.game.player_pov(current);
             strategy.select_active_player_action(&pov, convention_set)
         };
 
@@ -302,35 +169,11 @@ fn run_game(
             }
         }
 
-        match &action {
-            GameAction::Play {
-                card_deck_index, ..
-            } => {
-                apply_play_spectator(
-                    &mut game,
-                    *card_deck_index,
-                    &actual_deck,
-                    convention_set,
-                    static_data,
-                    &mut next_hypothesis_id,
-                );
-            }
-            GameAction::Discard {
-                card_deck_index, ..
-            } => {
-                apply_discard_spectator(&mut game, *card_deck_index, &actual_deck);
-            }
-            GameAction::Clue { .. } => {
-                // Clues don't draw cards, so apply() handles everything correctly.
-                game.apply(&action, convention_set);
-            }
-            GameAction::Draw { .. } => {}
-        }
-
-        game.advance_turn();
+        runner.apply_strategy_action(&action);
+        runner.game.advance_turn();
 
         // Detect the start of the final round (deck just became empty after a draw).
-        if final_round.is_none() && game.table_state.deck.current_size == 0 {
+        if final_round.is_none() && runner.game.table_state.deck.current_size == 0 {
             // The player who just went already took their last turn; num_players-1 remain.
             final_round = Some(num_players - 1);
         }
@@ -345,7 +188,7 @@ fn run_game(
         }
     }
 
-    let score = game.table_state.score(&static_data.variant);
+    let score = runner.game.table_state.score(&static_data.variant);
 
     if let Some(threshold) = log_failures_below {
         if score < threshold {

@@ -7,6 +7,13 @@ Integration tests live in `tests/`, inline unit tests use `#[cfg(test)]` blocks 
 | `tests/simple_finesse_tests.rs` | Per-tech tests for `SimpleFinesse` — generation, knowledge updates, hypothesis resolution |
 | `tests/simple_prompt_tests.rs` | Per-tech tests for `SimplePrompt` — generation and knowledge-update semantics |
 | `tests/search_regression.rs` | Engine non-regression suite — verifies the full search stack selects the correct best action on known positions |
+| `tests/replay_regression.rs` | Replay-based regression suite — steps a hanab.live JSON replay to a specific turn and asserts the engine's recommendation. See `tests/replays/` for the corpus. |
+
+### When to use a replay test vs. a search-regression scenario
+
+Use a **replay test** when the correct action at turn N depends on decisions that happened in earlier turns (e.g. which clue was given three turns ago changes what the engine should do now). The replay runner reconstructs the full game history, so convention state accumulated over prior actions is preserved.
+
+Use a **search-regression scenario** (JSON in `tests/scenarios/search/`) when the position itself is sufficient to determine the correct action. Scenarios are self-contained and fast to create; they are the preferred format whenever history is not load-bearing.
 
 ### Per-tech tests
 
@@ -24,6 +31,20 @@ Each scenario JSON needs only a board position (`playing_stacks`, `hands`, `clue
 3. Choose positions where the correct action is unambiguous enough that any correct implementation of the full convention set must agree.
 
 Player name conventions (Alice = 0, Bob = 1, etc.) are defined in `docs/domain/hgroup.md`.
+
+### Snapshot extractor
+
+`src/bin/snapshot.rs` extracts a self-contained scenario JSON from a hanab.live replay at a given turn:
+
+```bash
+cargo run --release --bin snapshot -- \
+    --replay logs/14/game_0042.json \
+    --turn 22 \
+    --out tests/scenarios/search/slowplay_at_22/table_state.json \
+    --description "Bot slowplayed g3 instead of saving b5 on chop"
+```
+
+The tool prints the engine recommendation at that turn and a suggested test stub for `search_regression.rs`. It also compares the engine recommendation before and after serialisation — if they differ, the scenario format cannot faithfully represent the convention state accumulated over prior turns, and the tool warns you to use a replay regression test instead.
 
 ## `test-support` Feature
 
