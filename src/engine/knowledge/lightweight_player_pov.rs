@@ -257,13 +257,19 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
         let mut bits: u64 = 0;
         for player_index in 0..num_players {
             let player_hand = &self.table_state.hands[player_index];
+            // Play signals on a card live in that card holder's own knowledge: the
+            // third-party apply_clue filter only keeps AddSignal updates targeting the
+            // observer's own hand, so the observer's own `self.knowledge` does not
+            // carry play signals for other players' cards.
+            let holder_knowledge = self.team_knowledge.player(player_index);
             for &card_deck_index in player_hand.cards() {
                 if let Some(card_identity) = self.card_identity(card_deck_index) {
-                    if self.is_touched(card_deck_index) || self.knowledge.has_play_signal(card_deck_index){
+                    if self.is_touched(card_deck_index)
+                        || holder_knowledge.has_play_signal(card_deck_index)
+                    {
                         bits |= 1 << card_identity
                     }
                 }
-
             }
         }
         CardIdentityMask::from_bits(bits)
@@ -619,7 +625,13 @@ mod tests {
             committed_identity: R1.as_variant_card_id(),
             deadline_turn: 1,
         });
-        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(0).own_hand |= 1 << 0;
+        team_knowledge.player_mut(0).signals[0].push(Signal::Play {
+            card_deck_index: 0,
+            committed_identity: R1.as_variant_card_id(),
+            deadline_turn: 1,
+        });
 
         let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
