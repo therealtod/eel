@@ -457,6 +457,26 @@ impl KnowledgeAwareGameState {
             &self.static_data,
         );
 
+        // Raw clue narrowing on the receiver's hand: touched cards must match the clue mask,
+        // untouched cards must not. These are hard facts derived purely from the public clue;
+        // applying them first ensures that softer convention inferences (good-touch, tech
+        // hypotheses) can never widen empathy past what the literal clue establishes.
+        let clue_mask = self.static_data.variant.empathy_for_clue(clue).as_bits();
+        let hand_slots: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = self.table_state.hands
+            [receiver]
+            .cards()
+            .iter()
+            .copied()
+            .collect();
+        let receiver_knowledge = self.team_knowledge.player_mut(receiver);
+        for slot in &hand_slots {
+            if touched_card_deck_indexes.contains(slot) {
+                receiver_knowledge.narrow_inferred(*slot, clue_mask, &self.static_data.variant);
+            } else {
+                receiver_knowledge.exclude_inferred(*slot, clue_mask, &self.static_data.variant);
+            }
+        }
+
         // Convention-wide baseline narrowings on the receiver (e.g. H-Group good-touch
         // principle: every touched card is assumed eventually useful). Applied as
         // unconditional baseline so it intersects with per-tech cohort hypotheses.

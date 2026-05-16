@@ -102,6 +102,29 @@ impl PlayerKnowledge {
         }
     }
 
+    /// Symmetric to [`narrow_inferred`](Self::narrow_inferred): remove identities
+    /// present in `mask` from a card's baseline empathy (negative clue elimination).
+    ///
+    /// If the exclusion would empty the mask, the field is left unchanged — same
+    /// conservative policy as `narrow_inferred`, so a convention layer with a too-narrow
+    /// view cannot fully erase prior information.
+    pub fn exclude_inferred(
+        &mut self,
+        card_deck_index: CardDeckIndex,
+        mask: VariantCardsBitField,
+        variant: &Variant,
+    ) {
+        let idx = card_deck_index as usize;
+        let current =
+            self.inferred_identities[idx].unwrap_or_else(|| CardIdentityMask::all(variant));
+        if let Some(new_empathy) = current.exclude(mask) {
+            self.inferred_identities[idx] = Some(new_empathy);
+            if new_empathy.is_exactly_known() {
+                self.visible_cards |= 1 << card_deck_index;
+            }
+        }
+    }
+
     /// Attach a baseline signal to a card.
     pub fn add_signal(&mut self, card_deck_index: CardDeckIndex, signal: Signal) {
         self.signals[card_deck_index as usize].push(signal);

@@ -103,3 +103,16 @@ fn the_engine_should_not_play_clue_second_copy_of_b1() {
         );
     }
 }
+
+#[test]
+fn should_not_play_known_trash() {
+    let action = engine_action_at_turn("plays_known_trash.json", 18);
+    if let GameAction::Play {
+        card_deck_index: 2,
+        ..
+    } = &action
+    {
+        panic!("engine played known trash: {action:?}");
+    }
+}
+
