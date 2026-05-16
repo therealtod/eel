@@ -251,6 +251,23 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
 
         actions
     }
+
+    fn gotten_cards(&self) -> CardIdentityMask {
+        let num_players = self.static_data().number_of_players as usize;
+        let mut bits: u64 = 0;
+        for player_index in 0..num_players {
+            let player_hand = &self.table_state.hands[player_index];
+            for &card_deck_index in player_hand.cards() {
+                if let Some(card_identity) = self.card_identity(card_deck_index) {
+                    if self.is_touched(card_deck_index) || self.knowledge.has_play_signal(card_deck_index){
+                        bits |= 1 << card_identity
+                    }
+                }
+
+            }
+        }
+        CardIdentityMask::from_bits(bits)
+    }
 }
 
 #[cfg(test)]
@@ -563,5 +580,102 @@ mod tests {
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         assert!(!pov.is_known_trash(42));
+    }
+
+    #[test]
+    fn gotten_cards_includes_touched_card_with_known_identity() {
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards::*;
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_draw_action(0);
+        table_state.clue_touched_cards |= 1 << 0;
+
+        let mut knowledge = knowledge_with_empathy(0, R1_MASK);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(0).own_hand |= 1 << 0;
+
+        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let gotten = pov.gotten_cards();
+        assert!(gotten.contains(R1.as_variant_card_id()));
+    }
+
+    #[test]
+    fn gotten_cards_includes_card_with_play_signal() {
+        use crate::engine::convention::hgroup::signal::Signal;
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_draw_action(0);
+
+        let mut knowledge = knowledge_with_empathy(0, R1_MASK);
+        knowledge.signals[0].push(Signal::Play {
+            card_deck_index: 0,
+            committed_identity: R1.as_variant_card_id(),
+            deadline_turn: 1,
+        });
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+
+        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let gotten = pov.gotten_cards();
+        assert!(gotten.contains(R1.as_variant_card_id()));
+    }
+
+    #[test]
+    fn gotten_cards_excludes_untouched_card_without_signal() {
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards::*;
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_draw_action(0);
+
+        let knowledge = knowledge_with_empathy(0, R1_MASK);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+
+        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let gotten = pov.gotten_cards();
+        assert!(!gotten.contains(R1.as_variant_card_id()));
+    }
+
+    #[test]
+    fn gotten_cards_excludes_card_with_unknown_identity() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_draw_action(0);
+        table_state.clue_touched_cards |= 1 << 0;
+
+        let knowledge = knowledge_with_empathy(0, R1_MASK | B1_MASK);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(0).own_hand |= 1 << 0;
+
+        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let gotten = pov.gotten_cards();
+        assert_eq!(gotten.as_bits(), 0);
+    }
+
+    #[test]
+    fn gotten_cards_includes_cards_from_other_players() {
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards::*;
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_draw_action(0);
+        table_state.update_with_draw_action(1);
+        table_state.clue_touched_cards |= 1 << 1;
+
+        let mut knowledge = knowledge_with_empathy(0, R1_MASK);
+        knowledge.update_with_revealed_card(1, R2.as_variant_card_id());
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(0).own_hand |= 1 << 0;
+        team_knowledge.player_mut(1).own_hand |= 1 << 1;
+
+        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let gotten = pov.gotten_cards();
+        assert!(gotten.contains(R2.as_variant_card_id()));
     }
 }
