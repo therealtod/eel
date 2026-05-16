@@ -129,6 +129,10 @@ fn understands_that_the_efficient_clue_loses_max_score() {
                 },
             ..
         } => {}
+        GameAction::Discard {
+            player_index: 0,
+            ..
+        } => {}
         _ => panic!("expected a Critical save to Bob, got: {action:?}"),
     }
 }

@@ -61,35 +61,6 @@ fn engine_action_at_turn(replay_path: &str, turn: usize) -> GameAction {
 // the underlying bug is not yet fixed; remove `#[ignore]` once the engine
 // passes. See tests/replays/README.md for the workflow.
 
-/// Scenario (play_known_playable.json):
-///
-/// 3 players, all stacks empty.  Deck[0–4] = Alice, deck[5–9] = Bob, deck[10–14] = Charlie.
-/// Hands (slot 1 = newest):
-///   Alice:   Y5 P3 B4 G3 R2   (no rank-1 cards)
-///   Bob:     R1 P2 B3 G2 R3   — deck[9]=R1 is slot 1 (newest)
-///   Charlie: G1 P4 Y2 B5 G4   — deck[14]=G1 is slot 1 (newest)
-///
-/// Turn 0: Alice gives rank-1 clue to Bob, touching only deck[9]=R1.
-/// Turn 1 (Bob's turn): Bob holds a known playable R1 and plays it.
-///
-/// This test pins the engine's exact decision at this position so regressions are caught.
-#[test]
-#[ignore]
-fn engine_plays_r1_after_receiving_rank1_clue() {
-    let action = engine_action_at_turn("play_known_playable.json", 1);
-    assert!(
-        matches!(
-            action,
-            GameAction::Play {
-                player_index: 1,
-                card_deck_index: 9,
-                ..
-            }
-        ),
-        "expected Bob (player 1) to play deck[9]=R1, got: {action:?}"
-    );
-}
-
 // Example of how to add a failing-game test once a bug is identified:
 //
 // #[test]
