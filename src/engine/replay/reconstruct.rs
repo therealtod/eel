@@ -465,37 +465,7 @@ pub fn variant_card_id_to_hanablive(id: VariantCardId, static_data: &StaticGameD
 mod tests {
     use super::*;
     use crate::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet;
-    use crate::engine::convention::hgroup::tech::blind_play::BlindPlay;
-    use crate::engine::convention::hgroup::tech::critical_save::{
-        ColorCriticalSave, RankCriticalSave,
-    };
-    use crate::engine::convention::hgroup::tech::delayed_play_clue::DelayedPlayClue;
-    use crate::engine::convention::hgroup::tech::direct_play_clue::DirectPlayClue;
-    use crate::engine::convention::hgroup::tech::discard_chop::DiscardChop;
-    use crate::engine::convention::hgroup::tech::discard_known_trash::DiscardKnownTrash;
-    use crate::engine::convention::hgroup::tech::five_save::FiveSave;
-    use crate::engine::convention::hgroup::tech::play_known_playable::PlayKnownPlayable;
-    use crate::engine::convention::hgroup::tech::simple_finesse::SimpleFinesse;
-    use crate::engine::convention::hgroup::tech::simple_prompt::SimplePrompt;
-    use crate::engine::convention::hgroup::tech::two_save::TwoSave;
     use crate::external::hanablive::{Game, GameBuilder, GameOptions};
-
-    fn full_convention_set() -> HGroupConventionSet {
-        HGroupConventionSet::new(vec![
-            Box::new(PlayKnownPlayable),
-            Box::new(BlindPlay),
-            Box::new(DirectPlayClue),
-            Box::new(DelayedPlayClue),
-            Box::new(SimplePrompt),
-            Box::new(SimpleFinesse),
-            Box::new(ColorCriticalSave),
-            Box::new(RankCriticalSave),
-            Box::new(FiveSave),
-            Box::new(TwoSave),
-            Box::new(DiscardKnownTrash),
-            Box::new(DiscardChop),
-        ])
-    }
 
     /// Build a minimal 3-player hanab.live Game from a deck + action list.
     fn make_game(deck: Vec<(usize, u8)>, actions: Vec<(ActionType, usize, Option<usize>)>) -> Game {
@@ -592,7 +562,7 @@ mod tests {
             o.variant = Some("6 Suits".to_string());
             o
         });
-        let conv = full_convention_set();
+        let conv = HGroupConventionSet::default();
         assert!(matches!(
             ReplayRunner::from_hanablive(&game, &conv),
             Err(ReplayError::UnsupportedVariant(_))
@@ -613,7 +583,7 @@ mod tests {
                 (ActionType::Discard, 5, None), // Bob discards deck[5] = Y1
             ],
         );
-        let conv = full_convention_set();
+        let conv = HGroupConventionSet::default();
         let mut runner = ReplayRunner::from_hanablive(&game, &conv).unwrap();
 
         assert_eq!(runner.current_turn(), 0);
@@ -638,7 +608,7 @@ mod tests {
                 (ActionType::RankClue, 2, Some(1)), // Clue rank-1 to Charlie
             ],
         );
-        let conv = full_convention_set();
+        let conv = HGroupConventionSet::default();
 
         let mut runner_a = ReplayRunner::from_hanablive(&game, &conv).unwrap();
         let mut runner_b = ReplayRunner::from_hanablive(&game, &conv).unwrap();
@@ -679,7 +649,7 @@ mod tests {
                 (ActionType::Play, 5, None), // Bob plays deck[5] = Y1
             ],
         );
-        let conv = full_convention_set();
+        let conv = HGroupConventionSet::default();
 
         // from_hanablive path
         let mut runner_hl = ReplayRunner::from_hanablive(&game, &conv).unwrap();

@@ -1,6 +1,17 @@
 use crate::engine::convention::convention_set::ConventionSet;
 use crate::engine::convention::convention_tech::ConventionTech;
 use crate::engine::convention::hgroup::h_group_core::good_touch_baseline_mask;
+use crate::engine::convention::hgroup::tech::blind_play::BlindPlay;
+use crate::engine::convention::hgroup::tech::critical_save::{ColorCriticalSave, RankCriticalSave};
+use crate::engine::convention::hgroup::tech::delayed_play_clue::DelayedPlayClue;
+use crate::engine::convention::hgroup::tech::direct_play_clue::DirectPlayClue;
+use crate::engine::convention::hgroup::tech::discard_chop::DiscardChop;
+use crate::engine::convention::hgroup::tech::discard_known_trash::DiscardKnownTrash;
+use crate::engine::convention::hgroup::tech::five_save::FiveSave;
+use crate::engine::convention::hgroup::tech::play_known_playable::PlayKnownPlayable;
+use crate::engine::convention::hgroup::tech::simple_finesse::SimpleFinesse;
+use crate::engine::convention::hgroup::tech::simple_prompt::SimplePrompt;
+use crate::engine::convention::hgroup::tech::two_save::TwoSave;
 use crate::game::card::{CardDeckIndex, VariantCardsBitField};
 use crate::game::clue::Clue;
 use crate::game::state::PlayerIndex;
@@ -17,6 +28,25 @@ impl HGroupConventionSet {
     pub fn new(mut techs: Vec<Box<dyn ConventionTech>>) -> Self {
         techs.sort_by_key(|t| t.interpretation_priority());
         HGroupConventionSet { techs }
+    }
+}
+
+impl Default for HGroupConventionSet {
+    fn default() -> Self {
+        HGroupConventionSet::new(vec![
+            Box::new(PlayKnownPlayable),
+            Box::new(BlindPlay),
+            Box::new(DirectPlayClue),
+            Box::new(DelayedPlayClue),
+            Box::new(SimplePrompt),
+            Box::new(SimpleFinesse),
+            Box::new(ColorCriticalSave),
+            Box::new(RankCriticalSave),
+            Box::new(FiveSave),
+            Box::new(TwoSave),
+            Box::new(DiscardKnownTrash),
+            Box::new(DiscardChop),
+        ])
     }
 }
 

@@ -18,17 +18,6 @@ use clap::Parser;
 
 use eel::engine::action_selection_strategy::ActionSelectionStrategy;
 use eel::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet;
-use eel::engine::convention::hgroup::tech::blind_play::BlindPlay;
-use eel::engine::convention::hgroup::tech::critical_save::{ColorCriticalSave, RankCriticalSave};
-use eel::engine::convention::hgroup::tech::delayed_play_clue::DelayedPlayClue;
-use eel::engine::convention::hgroup::tech::direct_play_clue::DirectPlayClue;
-use eel::engine::convention::hgroup::tech::discard_chop::DiscardChop;
-use eel::engine::convention::hgroup::tech::discard_known_trash::DiscardKnownTrash;
-use eel::engine::convention::hgroup::tech::five_save::FiveSave;
-use eel::engine::convention::hgroup::tech::play_known_playable::PlayKnownPlayable;
-use eel::engine::convention::hgroup::tech::simple_finesse::SimpleFinesse;
-use eel::engine::convention::hgroup::tech::simple_prompt::SimplePrompt;
-use eel::engine::convention::hgroup::tech::two_save::TwoSave;
 use eel::engine::replay::from_scenario::knowledge_aware_from_scenario;
 use eel::engine::replay::reconstruct::ReplayRunner;
 use eel::engine::replay::snapshot::to_scenario_json;
@@ -58,23 +47,6 @@ struct Args {
     description: String,
 }
 
-fn build_convention_set() -> HGroupConventionSet {
-    HGroupConventionSet::new(vec![
-        Box::new(PlayKnownPlayable),
-        Box::new(BlindPlay),
-        Box::new(DirectPlayClue),
-        Box::new(DelayedPlayClue),
-        Box::new(SimplePrompt),
-        Box::new(SimpleFinesse),
-        Box::new(ColorCriticalSave),
-        Box::new(RankCriticalSave),
-        Box::new(FiveSave),
-        Box::new(TwoSave),
-        Box::new(DiscardKnownTrash),
-        Box::new(DiscardChop),
-    ])
-}
-
 fn main() {
     let args = Args::parse();
 
@@ -83,7 +55,7 @@ fn main() {
     let game = Game::from_json(&json)
         .unwrap_or_else(|e| panic!("could not parse {}: {e}", args.replay.display()));
 
-    let conv = build_convention_set();
+    let conv = HGroupConventionSet::default();
     let mut runner = ReplayRunner::from_hanablive(&game, &conv)
         .unwrap_or_else(|e| panic!("could not build runner: {e}"));
     runner

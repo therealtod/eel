@@ -201,41 +201,11 @@ pub fn to_scenario_json(game: &KnowledgeAwareGameState) -> Value {
 mod tests {
     use super::*;
     use crate::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet;
-    use crate::engine::convention::hgroup::tech::blind_play::BlindPlay;
-    use crate::engine::convention::hgroup::tech::critical_save::{
-        ColorCriticalSave, RankCriticalSave,
-    };
-    use crate::engine::convention::hgroup::tech::delayed_play_clue::DelayedPlayClue;
-    use crate::engine::convention::hgroup::tech::direct_play_clue::DirectPlayClue;
-    use crate::engine::convention::hgroup::tech::discard_chop::DiscardChop;
-    use crate::engine::convention::hgroup::tech::discard_known_trash::DiscardKnownTrash;
-    use crate::engine::convention::hgroup::tech::five_save::FiveSave;
-    use crate::engine::convention::hgroup::tech::play_known_playable::PlayKnownPlayable;
-    use crate::engine::convention::hgroup::tech::simple_finesse::SimpleFinesse;
-    use crate::engine::convention::hgroup::tech::simple_prompt::SimplePrompt;
-    use crate::engine::convention::hgroup::tech::two_save::TwoSave;
     use crate::engine::replay::reconstruct::{ReplayRunner, hand_size_for};
     use crate::external::hanablive::{Card, GameBuilder, GameOptions};
     use crate::game::state::table_state_json::{build_from_scenario, parse_scenario};
     use crate::game::static_game_data::StaticGameData;
     use crate::game::variant::test_variants::NO_VARIANT;
-
-    fn full_convention_set() -> HGroupConventionSet {
-        HGroupConventionSet::new(vec![
-            Box::new(PlayKnownPlayable),
-            Box::new(BlindPlay),
-            Box::new(DirectPlayClue),
-            Box::new(DelayedPlayClue),
-            Box::new(SimplePrompt),
-            Box::new(SimpleFinesse),
-            Box::new(ColorCriticalSave),
-            Box::new(RankCriticalSave),
-            Box::new(FiveSave),
-            Box::new(TwoSave),
-            Box::new(DiscardKnownTrash),
-            Box::new(DiscardChop),
-        ])
-    }
 
     fn ordered_deck() -> Vec<(usize, u8)> {
         let mut deck = Vec::new();
@@ -302,7 +272,7 @@ mod tests {
         use crate::external::hanablive::ActionType;
 
         let deck = ordered_deck();
-        let conv = full_convention_set();
+        let conv = HGroupConventionSet::default();
         // Deck[0] = R1 → Alice plays it; deck[5] = Y1 → Bob discards it.
         let runner = runner_after_actions(
             &deck,
@@ -356,7 +326,7 @@ mod tests {
         use crate::external::hanablive::ActionType;
 
         let deck = ordered_deck();
-        let conv = full_convention_set();
+        let conv = HGroupConventionSet::default();
         // hand_size=5 for 3 players:
         //   Alice:   deck[0..4]  = R1 R1 R1 R2 R2 (oldest→newest)
         //   Bob:     deck[5..9]  = R3 R3 R4 R4 R5
@@ -464,7 +434,7 @@ mod tests {
             variant: NO_VARIANT,
         };
         let hand_size = hand_size_for(3);
-        let conv = full_convention_set();
+        let conv = HGroupConventionSet::default();
         let deck_ids: Vec<usize> = ordered_deck()
             .iter()
             .map(|&(s, r)| s * 5 + (r as usize - 1))
