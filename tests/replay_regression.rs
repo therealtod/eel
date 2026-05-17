@@ -69,16 +69,12 @@ fn engine_action_at_turn(replay_path: &str, turn: usize) -> GameAction {
 // }
 
 #[test]
-fn should_not_start_game_with_bad_touch_for_no_reason() {
-    let action = engine_action_at_turn("starts_with_bad_touch.json", 0);
-    if let GameAction::Clue {
-        player_index: 1,
-        clue: Clue {
-            clue_type: ClueType::Color,
-            clue_value: 0,
-        },
+fn should_not_discard_for_no_good_reason() {
+    let action = engine_action_at_turn("discards_for_no_good_reason.json", 9);
+    if let GameAction::Discard {
+        player_index: 0,
         ..
     } = action {
-        panic!("expected a clue that does not bad touch, got: {action:?}");
+        panic!("expected to do something useful such as playing a known playable or play cluing r2, got: {action:?}");
     }
 }

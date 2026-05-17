@@ -386,20 +386,40 @@ impl KnowledgeAwareGameState {
             };
             (id, has_play_signal)
         };
+        let stack_advanced;
         if let Some(card_id) = known_id {
+            let pre = self.table_state.playing_stacks.stack_size(
+                (card_id as usize) / self.static_data.variant.stacks_size as usize,
+            );
             self.table_state.update_with_play_action_of_specific_card(
                 card_deck_index,
                 card_id,
                 &self.static_data,
             );
+            let post = self.table_state.playing_stacks.stack_size(
+                (card_id as usize) / self.static_data.variant.stacks_size as usize,
+            );
+            stack_advanced = post > pre;
         } else if self.is_known_playable_play(p, card_deck_index, has_play_signal) {
             self.table_state.update_with_play_action(card_deck_index);
             self.add_phantom_play();
+            stack_advanced = false;
         } else {
             self.table_state.update_with_play_action(card_deck_index);
+            stack_advanced = false;
         }
         self.remove_card_from_own_hand(p, card_deck_index);
         self.update_with_unkown_card_draw(p);
+
+        // Aggressive Good-Touch reinterpretation: when a play resolves to a specific
+        // identity and advances a stack, that identity is now trash (further copies
+        // are duplicates). Re-narrow every clue-touched, not-already-known-trash card
+        // in every player's hand against the updated `still_needed` mask, so a
+        // possibly-playable touched card can collapse to a known playable once one of
+        // its candidates becomes played-and-thus-trash.
+        if stack_advanced {
+            self.reapply_good_touch_after_state_change();
+        }
 
         let num_players = self.static_data.number_of_players as usize;
         let cohort_id = self.next_hypothesis_id;
@@ -651,6 +671,46 @@ impl KnowledgeAwareGameState {
     /// Remove a card from a player's own-hand bitmask.
     fn remove_card_from_own_hand(&mut self, player_index: usize, card_deck_index: CardDeckIndex) {
         self.team_knowledge.player_mut(player_index).own_hand &= !(1u64 << card_deck_index);
+    }
+
+    /// Re-apply the good-touch baseline to every clue-touched card in every hand.
+    ///
+    /// Called after an event that shrinks `still_needed_cards_mask` (currently: a play
+    /// that advances a stack). Each touched card whose inferred mask still overlaps
+    /// `still_needed` is narrowed to that mask, removing newly-played identities from
+    /// its empathy under GTP ("touched cards are eventually useful, so they are not
+    /// duplicates of cards already on the stacks"). Cards that are already fully
+    /// known-trash are left alone — same conservative skip as the clue-time GTP path.
+    fn reapply_good_touch_after_state_change(&mut self) {
+        let still_needed = crate::engine::convention::hgroup::h_group_core::still_needed_cards_mask(
+            &self.table_state,
+            &self.static_data,
+        );
+        let num_players = self.static_data.number_of_players as usize;
+        let touched = self.table_state.clue_touched_cards;
+        for p in 0..num_players {
+            let slots: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = self.table_state.hands[p]
+                .cards()
+                .iter()
+                .copied()
+                .collect();
+            for idx in slots {
+                if touched & (1u64 << idx) == 0 {
+                    continue;
+                }
+                let current = self.team_knowledge.player(p).inferred_identities[idx as usize]
+                    .map(|m| m.as_bits())
+                    .unwrap_or(u64::MAX);
+                if current & still_needed == 0 {
+                    continue;
+                }
+                self.team_knowledge.player_mut(p).narrow_inferred(
+                    idx,
+                    still_needed,
+                    &self.static_data.variant,
+                );
+            }
+        }
     }
 
     // ── Accessors ─────────────────────────────────────────────────────────────
