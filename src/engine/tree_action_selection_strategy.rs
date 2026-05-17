@@ -5,6 +5,7 @@ use crate::engine::action_selection_strategy::ActionSelectionStrategy;
 use crate::engine::convention::convention_set::ConventionSet;
 use crate::engine::decision_tree::{LineStep, Score, ScoredNode};
 use crate::engine::evaluator::{DefaultEvaluator, Evaluator, ScoreBreakdown};
+use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
 use crate::game::action::game_action::GameAction;
@@ -220,6 +221,7 @@ impl TreeActionSelectionStrategy {
         evaluator: &dyn Evaluator,
         depth: usize,
         pv_table: &mut PvTable,
+        truth: &dyn PlayerPOV,
     ) -> (Score, ScoreBreakdown) {
         if depth == 0 || state.table_state.is_terminal(static_data) {
             let breakdown = Self::leaf_breakdown(evaluator, state);
@@ -253,7 +255,7 @@ impl TreeActionSelectionStrategy {
         let node_ceiling = evaluator.upper_bound(state.table_state(), static_data, depth);
         for proposed in candidates {
             let mut next = state.clone();
-            next.apply(&proposed.action, convention_set);
+            next.apply(&proposed.action, convention_set, truth);
             next.advance_turn();
             let immediate = Self::immediate_action_bonus(
                 &proposed.action,
@@ -284,6 +286,7 @@ impl TreeActionSelectionStrategy {
                 evaluator,
                 depth - 1,
                 pv_table,
+                truth,
             );
             let score = subtree_score + immediate;
             let improved = score > best;
@@ -363,6 +366,7 @@ impl TreeActionSelectionStrategy {
         );
         let candidates = Self::candidate_actions_with_provenance(player_pov, convention_set);
         let evaluator = self.evaluator.as_ref();
+        let root_player = player_pov.active_player_index();
         let span = tracing::debug_span!(
             target: "eel::search",
             "scored_actions",
@@ -375,8 +379,18 @@ impl TreeActionSelectionStrategy {
             .into_par_iter()
             .map(|proposed| {
                 let _guard = span.clone().entered();
+                // Truth POV: the root searcher, reconstructed against root_state. Held fixed
+                // across recursion so play resolution uses the searcher's visible-card truth.
+                let root_knowledge = root_state.team_knowledge.player(root_player).clone();
+                let truth_pov = LightweightPlayerPOV::new(
+                    root_player,
+                    &root_knowledge,
+                    &root_state.team_knowledge,
+                    root_state.table_state(),
+                    static_data,
+                );
                 let mut next = root_state.clone();
-                next.apply(&proposed.action, convention_set);
+                next.apply(&proposed.action, convention_set, &truth_pov);
                 next.advance_turn();
                 let immediate_bonus = Self::immediate_action_bonus(
                     &proposed.action,
@@ -394,6 +408,7 @@ impl TreeActionSelectionStrategy {
                     evaluator,
                     subtree_depth,
                     &mut pv_table,
+                    &truth_pov,
                 );
                 let total = leaf_score + immediate_bonus;
                 let pv = pv_table.pv_at(subtree_depth);

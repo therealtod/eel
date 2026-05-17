@@ -179,7 +179,7 @@ pub fn is_minimal_clue_value_compliant(
 }
 
 /// Bitmask of variant card IDs still needed to complete the stacks.
-fn still_needed_cards_mask(
+pub fn still_needed_cards_mask(
     table_state: &TableState,
     static_data: &StaticGameData,
 ) -> VariantCardsBitField {

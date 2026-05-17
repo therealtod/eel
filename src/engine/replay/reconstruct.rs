@@ -5,6 +5,7 @@ use smallvec::SmallVec;
 use crate::engine::action_selection_strategy::ActionSelectionStrategy;
 use crate::engine::convention::convention_set::ConventionSet;
 use crate::engine::knowledge::knowledge_update::{Hypothesis, HypothesisId};
+use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 use crate::engine::knowledge_aware_game_state::{collect_hypotheses, KnowledgeAwareGameState};
 use crate::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
 use crate::external::hanablive::{Action, ActionType, Card};
@@ -196,7 +197,21 @@ impl<'a> ReplayRunner<'a> {
                     clue,
                     turn,
                 };
-                self.game.apply(&game_action, self.convention_set);
+                // Clue actions never consult `truth` (only Play does), but `apply` takes
+                // a POV for type uniformity. Clone the minimum needed to satisfy borrowck.
+                let active = self.game.table_state.active_player_index;
+                let knowledge_clone = self.game.team_knowledge.player(active).clone();
+                let team_clone = self.game.team_knowledge.clone();
+                let table_clone = self.game.table_state.clone();
+                let static_data_clone = self.game.static_data().clone();
+                let truth = LightweightPlayerPOV::new(
+                    active,
+                    &knowledge_clone,
+                    &team_clone,
+                    &table_clone,
+                    &static_data_clone,
+                );
+                self.game.apply(&game_action, self.convention_set, &truth);
                 AppliedAction::Clue
             }
             ActionType::EndGame => unreachable!("EndGame filtered in from_hanablive"),
@@ -294,7 +309,21 @@ impl<'a> ReplayRunner<'a> {
         match action {
             GameAction::Play { card_deck_index, .. } => self.apply_play(*card_deck_index),
             GameAction::Discard { card_deck_index, .. } => self.apply_discard(*card_deck_index),
-            GameAction::Clue { .. } => self.game.apply(action, self.convention_set),
+            GameAction::Clue { .. } => {
+                let active = self.game.table_state.active_player_index;
+                let knowledge_clone = self.game.team_knowledge.player(active).clone();
+                let team_clone = self.game.team_knowledge.clone();
+                let table_clone = self.game.table_state.clone();
+                let static_data_clone = self.game.static_data().clone();
+                let truth = LightweightPlayerPOV::new(
+                    active,
+                    &knowledge_clone,
+                    &team_clone,
+                    &table_clone,
+                    &static_data_clone,
+                );
+                self.game.apply(action, self.convention_set, &truth);
+            }
             GameAction::Draw { .. } => {}
         }
     }

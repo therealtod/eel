@@ -76,10 +76,22 @@ impl ClueTech for DirectPlayClue {
         // An observer matches this tech if, from their POV, the focus card could be
         // immediately playable. Observers who see the card (Alice, Bob) have a singleton
         // empathy; the receiver (Cathy) has a wide empathy narrowed only by the clue.
+        //
+        // Good-Touch tightening: a direct-play interpretation is incompatible with focus
+        // identities already gotten elsewhere — the giver wouldn't pick this tech if the
+        // focus could only be a duplicate. Strip those identities (other than the focus's
+        // own, when the focus itself is touched, to allow re-clue scenarios).
         let static_data = observer_pov.static_data();
         let clue_mask = static_data.variant.empathy_for_clue(clue).as_bits();
         let playable = observer_pov.table_state().playable_cards(static_data);
-        (observer_pov.empathy(focus_idx).as_bits() & clue_mask & playable) != 0
+        let gotten = observer_pov.gotten_cards().as_bits();
+        let focus_own_gotten = observer_pov
+            .card_identity(focus_idx)
+            .filter(|_| observer_pov.is_touched(focus_idx))
+            .map(|id| 1u64 << id)
+            .unwrap_or(0);
+        let external_gotten = gotten & !focus_own_gotten;
+        (observer_pov.empathy(focus_idx).as_bits() & clue_mask & playable & !external_gotten) != 0
     }
 
     fn clue_knowledge_updates(

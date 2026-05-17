@@ -82,7 +82,7 @@ fn engine_action_at_turn(replay_path: &str, turn: usize) -> GameAction {
 //     );
 // }
 
-/// Scenario (play_clues_trash_1.json):
+/// Scenario (should_respect_good_touch_and_prompt.json):
 ///
 /// 3 players. At turn 2 (Cathy/Bot2's turn) Bot1 already holds a touched, unidentified
 /// b1 at deck[8] (from the rank-1 clue at turn 0). After playing deck[6] on turn 1, Bot1
@@ -91,7 +91,7 @@ fn engine_action_at_turn(replay_path: &str, turn: usize) -> GameAction {
 /// here except one that touches deck[15].
 #[test]
 fn the_engine_should_not_play_clue_second_copy_of_b1() {
-    let action = engine_action_at_turn("play_clues_trash_1.json", 2);
+    let action = engine_action_at_turn("should_respect_good_touch_and_prompt.json", 2);
     if let GameAction::Clue {
         touched_card_deck_indexes,
         ..
@@ -105,14 +105,14 @@ fn the_engine_should_not_play_clue_second_copy_of_b1() {
 }
 
 #[test]
-fn should_not_play_known_trash() {
-    let action = engine_action_at_turn("plays_known_trash.json", 18);
+fn should_infer_clued_card_as_p3_and_not_play_it() {
+    let action = engine_action_at_turn("plays_known_trash.json", 7);
     if let GameAction::Play {
-        card_deck_index: 2,
+        card_deck_index: 9,
         ..
     } = &action
     {
-        panic!("engine played known trash: {action:?}");
+        panic!("engine played what should be a known p3: {action:?}");
     }
 }
 

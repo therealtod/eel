@@ -161,7 +161,70 @@ fn diag_<short_name>() {
 | Empathy includes ids that the clue history rules out | Raw clue mask narrowing skipped because intersection went empty in `narrow_inferred` (silent drop). |
 | Empathy is a singleton but wrong identity | Hypothesis cohort baked into baseline using too-narrow tech mask. |
 | `Signal::Play` on a touched card that's now trash | Signal lifetime / deadline not respecting played-stack progress. |
-| Tech proposes action but engine picks different action | Search ranking issue — also dump `strategy.scored_actions(&pov, &conv)` to compare totals. |
+| Tech proposes action but engine picks different action | Search ranking issue — see "Dumping the search ranking" below. |
+| Two hypotheses on same cohort, tier=0 narrows to wrong id, tier=1 to right id | A higher-priority tech is `matches_clue`-matching when it shouldn't. Tighten that tech's `matches_clue`, not the lower-priority one. |
+| Search rollout shows a card being played that is actually trash, with no strike | Phantom-play hallucination: empathy is ambiguous-but-all-playable, truth disagrees, but `apply_play` falls into the phantom branch without consulting truth. Fix in `apply_play`, not in the proposing tech. |
+
+## Dumping the search ranking
+
+When the tech that proposed the bad move looks fine in isolation but the search still
+picks something else (or the inverse — the search picks a bad action that no tech "owns"),
+dump the per-candidate scored line. The PV shows what the search believes will happen
+turn-by-turn, which is usually where the bug lives.
+
+```rust
+let strategy = TreeActionSelectionStrategy::default();
+let nodes = strategy.scored_actions(&pov, &conv);
+for n in nodes.iter().take(6) {
+    println!("  total={:.3} action={:?}", n.total_score, n.action);
+    for (i, step) in n.line.iter().enumerate() {
+        println!(
+            "    [{i}] imm={:+.2} {} {:?}",
+            step.immediate_bonus, step.tech_name, step.action
+        );
+    }
+}
+```
+
+Read the PVs for the actual choice and its losing rivals side-by-side: an unexpected
+`PlayKnownPlayable` of a trash card in the PV, or two lines converging on the same total
+score (a tie broken by enumeration order), tells you exactly which layer to fix.
+
+## Dumping a sub-search
+
+When the suspect decision is mid-rollout (not at the root), construct the intermediate
+state by applying the prefix actions yourself, then call `scored_actions` on the resulting
+POV. This works for both replay-loaded and scenario-loaded states.
+
+```rust
+// e.g. "after Alice's discard, what does Bob see?"
+let alice_knowledge = state.team_knowledge.player(0).clone();
+let alice_team = state.team_knowledge.clone();
+let alice_table = state.table_state().clone();
+let alice_pov = LightweightPlayerPOV::new(
+    0, &alice_knowledge, &alice_team, &alice_table, &static_data,
+);
+state.apply(&alice_discard, &conventions, &alice_pov);
+state.advance_turn();
+// now build Bob's POV and call scored_actions on it
+```
+
+The clone-then-borrow gymnastics are needed because `apply` takes `&mut self.state`
+while the truth POV holds `&` borrows of the same fields.
+
+## Scenario tests, not just replays
+
+The same dump pattern works for `tests/search_regression.rs` (scenario-driven) tests —
+substitute `common::load_scenario_by_name_with_knowledge("search/<name>")` for the
+`ReplayRunner::from_hanablive` setup. The rest of the diagnostic (empathy dump, tech
+proposals, scored_actions) is identical.
+
+## Bisecting recent code changes
+
+If a test was passing before a session's edits and now fails, bisect with `git stash`:
+stash a single file's worth of changes, re-run the test, restore. Iterate until you
+find the change that broke it. Useful when an architectural change (e.g. threading a
+new parameter through `apply`) interacts non-obviously with downstream tests.
 
 ## When to use this skill vs. just reading code
 

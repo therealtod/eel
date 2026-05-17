@@ -249,12 +249,24 @@ impl KnowledgeAwareGameState {
     /// already in `history` when this assignment runs.
     ///
     /// The search uses clone-and-recurse, so no undo token is needed.
-    pub fn apply(&mut self, action: &GameAction, convention_set: &dyn ConventionSet) {
+    ///
+    /// `truth` is the POV of the player who is reasoning about this action. For search,
+    /// it is the ROOT searcher (held fixed across recursion), so play resolution can use
+    /// the searcher's view of visible cards rather than the simulated active player's
+    /// (possibly mistaken) empathy. For replay/tests with no specific thinker, callers
+    /// should pass the active player's own POV — this preserves the legacy empathy-based
+    /// resolution behavior.
+    pub fn apply(
+        &mut self,
+        action: &GameAction,
+        convention_set: &dyn ConventionSet,
+        truth: &dyn PlayerPOV,
+    ) {
         let actor = self.table_state.active_player_index();
         match action {
             GameAction::Play {
                 card_deck_index, ..
-            } => self.apply_play(*card_deck_index, convention_set),
+            } => self.apply_play(*card_deck_index, convention_set, truth),
             GameAction::Discard {
                 card_deck_index, ..
             } => self.apply_discard(*card_deck_index),
@@ -292,7 +304,12 @@ impl KnowledgeAwareGameState {
         }
     }
 
-    fn apply_play(&mut self, card_deck_index: CardDeckIndex, convention_set: &dyn ConventionSet) {
+    fn apply_play(
+        &mut self,
+        card_deck_index: CardDeckIndex,
+        convention_set: &dyn ConventionSet,
+        truth: &dyn PlayerPOV,
+    ) {
         let p = self.table_state.active_player_index();
         let turn_counter = self.table_state.current_turn;
         let action = GameAction::Play {
@@ -341,7 +358,7 @@ impl KnowledgeAwareGameState {
                 &self.table_state,
                 &self.static_data.variant,
             );
-            let id = combined.known_card_id().or_else(|| {
+            let empathy_id = combined.known_card_id().or_else(|| {
                 if has_play_signal {
                     let playable = self.table_state.playable_cards(&self.static_data);
                     combined.narrow(playable).and_then(|e| e.known_card_id())
@@ -349,6 +366,23 @@ impl KnowledgeAwareGameState {
                     None
                 }
             });
+            // Truth override: prefer the thinker's view of the card when their truth
+            // CONTRADICTS the active player's empathy — i.e. the empathy candidates do not
+            // include the true identity. This catches:
+            //  - empathy collapsed to a singleton, but truth says a different identity
+            //    (duplicate-trash converging on a playable id);
+            //  - empathy is ambiguous-but-all-playable, but truth is something outside
+            //    that set (also typically trash) — the play should strike, not succeed.
+            // When the truth IS one of the empathy candidates, fall back to empathy: the
+            // active player's reasoning is consistent with the truth, and an ambiguous-
+            // but-playable case must keep flowing into the phantom-play branch so the
+            // search doesn't commit to a specific stack just because truth is visible.
+            let truth_id = truth.card_identity(card_deck_index);
+            let empathy_contains_truth = truth_id.is_some_and(|t| combined.as_bits() & (1 << t) != 0);
+            let id = match (empathy_id, truth_id) {
+                (_, Some(t)) if !empathy_contains_truth => Some(t),
+                _ => empathy_id,
+            };
             (id, has_play_signal)
         };
         if let Some(card_id) = known_id {
@@ -480,6 +514,15 @@ impl KnowledgeAwareGameState {
         // Convention-wide baseline narrowings on the receiver (e.g. H-Group good-touch
         // principle: every touched card is assumed eventually useful). Applied as
         // unconditional baseline so it intersects with per-tech cohort hypotheses.
+        //
+        // Per-card exception: if a touched card's post-raw empathy is already a subset of
+        // non-needed identities (every candidate is trash by public information), the
+        // holder won't misplay it without GTP help. Skip the GTP narrowing for that card
+        // so we don't smuggle in fake "still-useful" plausibility on top of trash empathy.
+        let still_needed = crate::engine::convention::hgroup::h_group_core::still_needed_cards_mask(
+            &self.table_state,
+            &self.static_data,
+        );
         for (idx, mask) in convention_set.clue_receiver_baseline(
             clue,
             touched_card_deck_indexes,
@@ -487,6 +530,13 @@ impl KnowledgeAwareGameState {
             &self.table_state,
             &self.static_data,
         ) {
+            let current_empathy = self.team_knowledge.player(receiver).inferred_identities
+                [idx as usize]
+                .map(|m| m.as_bits())
+                .unwrap_or(u64::MAX);
+            if current_empathy & still_needed == 0 {
+                continue;
+            }
             self.team_knowledge.player_mut(receiver).narrow_inferred(
                 idx,
                 mask,
@@ -887,7 +937,18 @@ mod tests {
             card_deck_index: 0,
             turn: 0,
         };
-        state.apply(&play_action, &conventions);
+        let knowledge_clone = state.team_knowledge.player(0).clone();
+        let team_clone = state.team_knowledge.clone();
+        let table_clone = state.table_state.clone();
+        let static_clone = state.static_data.clone();
+        let truth = LightweightPlayerPOV::new(
+            0,
+            &knowledge_clone,
+            &team_clone,
+            &table_clone,
+            &static_clone,
+        );
+        state.apply(&play_action, &conventions, &truth);
 
         assert_eq!(
             state.phantom_plays(),
@@ -923,6 +984,17 @@ mod tests {
             Some(CardIdentityMask::from_bits(1)); // narrowed to r1 only
 
         let conventions = HGroupConventionSet::new(vec![]);
+        let knowledge_clone = state.team_knowledge.player(0).clone();
+        let team_clone = state.team_knowledge.clone();
+        let table_clone = state.table_state.clone();
+        let static_clone = state.static_data.clone();
+        let truth = LightweightPlayerPOV::new(
+            0,
+            &knowledge_clone,
+            &team_clone,
+            &table_clone,
+            &static_clone,
+        );
         state.apply(
             &GameAction::Play {
                 player_index: 0,
@@ -930,6 +1002,7 @@ mod tests {
                 turn: 0,
             },
             &conventions,
+            &truth,
         );
 
         assert_eq!(state.phantom_plays(), 0);
