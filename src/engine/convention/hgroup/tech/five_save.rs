@@ -1,8 +1,10 @@
 use crate::engine::convention::convention_tech::ClueTech;
-use crate::engine::convention::hgroup::h_group_core::{get_chop_index, touched_cards_for_clue};
+use crate::engine::convention::hgroup::h_group_core::{
+    get_chop_index, get_clue_focus, touched_cards_for_clue,
+};
 use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, SaveClueTech, priority};
 use crate::engine::game_state_snapshot::GameStateSnapshot;
-use crate::engine::knowledge::knowledge_update::Hypothesis;
+use crate::engine::knowledge::knowledge_update::{Hypothesis, KnowledgeUpdate};
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::CardDeckIndex;
@@ -82,14 +84,40 @@ impl ClueTech for FiveSave {
 
     fn clue_knowledge_updates(
         &self,
-        _player_index: PlayerIndex,
-        _touched: &[CardDeckIndex],
+        player_index: PlayerIndex,
+        touched: &[CardDeckIndex],
         _clue: &Clue,
-        _turn: usize,
-        _history: &[GameStateSnapshot],
-        _observer_pov: &dyn PlayerPOV,
+        turn: usize,
+        history: &[GameStateSnapshot],
+        observer_pov: &dyn PlayerPOV,
     ) -> Hypothesis {
-        Hypothesis::empty()
+        let Some(snap) = history.get(turn) else {
+            return Hypothesis::empty();
+        };
+        let giver = snap.table_state.active_player_index;
+        let giver_pov = snap.player_pov(giver, observer_pov.static_data());
+        let focus = match get_clue_focus(player_index, touched, &giver_pov) {
+            Some(f) => f,
+            None => return Hypothesis::empty(),
+        };
+        let static_data = giver_pov.static_data();
+        let total_ids =
+            static_data.variant.number_of_suits as usize * static_data.variant.stacks_size as usize;
+        let rank5_mask = static_data.variant.empathy_for_clue(&RANK_5_CLUE).as_bits();
+        // Narrow the focus to rank-5 ids that are not immediately playable. A rank-5 clue
+        // touching chop is conventionally a save, so the receiver should not collapse to
+        // an immediately-playable 5 (which would be a direct-play interpretation). Mirrors
+        // TwoSave: a save clue excludes ids that would have been a direct play.
+        let mask: u64 = (0..total_ids)
+            .filter(|&id| (1u64 << id) & rank5_mask != 0 && giver_pov.away_value(id) > Some(0))
+            .fold(0u64, |acc, id| acc | (1 << id));
+        if mask == 0 {
+            return Hypothesis::empty();
+        }
+        Hypothesis::unconditional(vec![KnowledgeUpdate::NarrowPossibilities {
+            card_deck_index: focus,
+            mask,
+        }])
     }
 }
 

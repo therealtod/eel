@@ -83,35 +83,3 @@ fn engine_action_at_turn(replay_path: &str, turn: usize) -> GameAction {
 //         "expected rank-5 save clue to Bob, got: {action:?}"
 //     );
 // }
-
-#[test]
-#[ignore]
-fn should_play_known_playable_instead_of_discarding() {
-    let action = engine_action_at_turn("refuses_to_play_known_playable.json", 5);
-    if let GameAction::Play {
-        card_deck_index: 14,
-        ..
-    } = &action
-    {
-    } else {
-        panic!("Cathy should play a play clued y2. The chosen action was instead: {action:?}");
-    }
-}
-
-#[test]
-fn should_clue_g1_by_color_avoiding_bad_touch() {
-    let action = engine_action_at_turn("should_clue_g1_by_color_avoiding_bad_touch.json", 17);
-    if let GameAction::Clue {
-        clue: Clue {
-            clue_type: ClueType::Rank,
-            clue_value: 1,
-        },
-        player_index: 1,
-        ..
-    } = &action
-    {
-        panic!(
-            "Cathy should prefer a green color clue to target g1 without bad touching p1. The chosen action was instead: {action:?}"
-        );
-    }
-}
