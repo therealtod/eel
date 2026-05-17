@@ -123,6 +123,12 @@ impl TreeActionSelectionStrategy {
             }
         });
 
+        // DiscardKnownTrash takes priority: if a known-trash discard was proposed, drop all
+        // DiscardChop candidates so the search only considers the safe discard.
+        if proposed.iter().any(|p| p.tech_name == "DiscardKnownTrash") {
+            proposed.retain(|p| p.tech_name != "DiscardChop");
+        }
+
         // Move ordering: Play > Clue > Discard.
         proposed.sort_by_key(|p| match &p.action {
             GameAction::Play { .. } => 0,

@@ -472,6 +472,7 @@ mod tests {
     use crate::engine::convention::hgroup::tech::delayed_play_clue::DelayedPlayClue;
     use crate::engine::convention::hgroup::tech::direct_play_clue::DirectPlayClue;
     use crate::engine::convention::hgroup::tech::discard_chop::DiscardChop;
+    use crate::engine::convention::hgroup::tech::discard_known_trash::DiscardKnownTrash;
     use crate::engine::convention::hgroup::tech::five_save::FiveSave;
     use crate::engine::convention::hgroup::tech::play_known_playable::PlayKnownPlayable;
     use crate::engine::convention::hgroup::tech::simple_finesse::SimpleFinesse;
@@ -491,6 +492,7 @@ mod tests {
             Box::new(RankCriticalSave),
             Box::new(FiveSave),
             Box::new(TwoSave),
+            Box::new(DiscardKnownTrash),
             Box::new(DiscardChop),
         ])
     }

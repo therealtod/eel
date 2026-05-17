@@ -23,6 +23,7 @@ use eel::engine::convention::hgroup::tech::critical_save::{ColorCriticalSave, Ra
 use eel::engine::convention::hgroup::tech::delayed_play_clue::DelayedPlayClue;
 use eel::engine::convention::hgroup::tech::direct_play_clue::DirectPlayClue;
 use eel::engine::convention::hgroup::tech::discard_chop::DiscardChop;
+use eel::engine::convention::hgroup::tech::discard_known_trash::DiscardKnownTrash;
 use eel::engine::convention::hgroup::tech::five_save::FiveSave;
 use eel::engine::convention::hgroup::tech::play_known_playable::PlayKnownPlayable;
 use eel::engine::convention::hgroup::tech::simple_finesse::SimpleFinesse;
@@ -69,6 +70,7 @@ fn build_convention_set() -> HGroupConventionSet {
         Box::new(RankCriticalSave),
         Box::new(FiveSave),
         Box::new(TwoSave),
+        Box::new(DiscardKnownTrash),
         Box::new(DiscardChop),
     ])
 }
