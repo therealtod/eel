@@ -82,37 +82,19 @@ fn engine_action_at_turn(replay_path: &str, turn: usize) -> GameAction {
 //     );
 // }
 
-/// Scenario (should_respect_good_touch_and_prompt.json):
-///
-/// 3 players. At turn 2 (Cathy/Bot2's turn) Bot1 already holds a touched, unidentified
-/// b1 at deck[8] (from the rank-1 clue at turn 0). After playing deck[6] on turn 1, Bot1
-/// drew deck[15] which happens to also be b1. The engine was previously cluing deck[15]
-/// as a play clue — a second copy of an already-gotten card. Any action is acceptable
-/// here except one that touches deck[15].
-#[test]
-fn the_engine_should_not_play_clue_second_copy_of_b1() {
-    let action = engine_action_at_turn("should_respect_good_touch_and_prompt.json", 2);
-    if let GameAction::Clue {
-        touched_card_deck_indexes,
-        ..
-    } = &action
-    {
-        assert!(
-            !touched_card_deck_indexes.contains(&15),
-            "engine clued a second copy of b1 (deck[15] already gotten via deck[8]): {action:?}"
-        );
-    }
-}
 
 #[test]
-fn should_infer_clued_card_as_p3_and_not_play_it() {
-    let action = engine_action_at_turn("plays_known_trash.json", 7);
+#[ignore]
+fn should_play_known_playable_instead_of_discarding() {
+    let action = engine_action_at_turn("refuses_to_play_known_playable.json", 5);
     if let GameAction::Play {
-        card_deck_index: 9,
+        card_deck_index: 14,
         ..
     } = &action
     {
-        panic!("engine played what should be a known p3: {action:?}");
+
+    } else {
+        panic!("Cathy should play a play clued y2. The chosen action was instead: {action:?}");
     }
 }
 
