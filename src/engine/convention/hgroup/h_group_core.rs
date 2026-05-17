@@ -594,7 +594,7 @@ mod tests {
         table_state.update_with_draw_action(10);
         table_state
             .deck
-            .reveal_card(10, NoVarCards::R1.as_variant_card_id());
+            .reveal_card(10, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
 
         let knowledge = knowledge_for_hand(&[]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -620,7 +620,7 @@ mod tests {
         table_state.update_with_draw_action(20);
         table_state
             .deck
-            .reveal_card(20, NoVarCards::R1.as_variant_card_id());
+            .reveal_card(20, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
         table_state.clue_touched_cards |= 1 << 20;
 
         // Card 10 → player 1 (receiver) with fresh deck empathy (all IDs possible).
@@ -786,10 +786,10 @@ mod tests {
         // Reveal card identities in deck.
         table_state
             .deck
-            .reveal_card(10, NoVarCards::R1.as_variant_card_id());
+            .reveal_card(10, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
         table_state
             .deck
-            .reveal_card(11, NoVarCards::R2.as_variant_card_id());
+            .reveal_card(11, NoVarCards::R2.as_variant_card_id(), &static_data.variant);
 
         // Observer knows both cards.
         let knowledge = knowledge_with_visible(0, &[(10, R1_MASK), (11, R2_MASK)]);
@@ -817,10 +817,10 @@ mod tests {
         table_state.update_with_draw_action(11); // R2
         table_state
             .deck
-            .reveal_card(10, NoVarCards::R1.as_variant_card_id());
+            .reveal_card(10, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
         table_state
             .deck
-            .reveal_card(11, NoVarCards::R2.as_variant_card_id());
+            .reveal_card(11, NoVarCards::R2.as_variant_card_id(), &static_data.variant);
 
         let knowledge = knowledge_with_visible(0, &[(10, R1_MASK), (11, R2_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -844,7 +844,7 @@ mod tests {
         table_state.update_with_draw_action(10); // R1
         table_state
             .deck
-            .reveal_card(10, NoVarCards::R1.as_variant_card_id());
+            .reveal_card(10, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
         // Mark the only card as clued.
         table_state.clue_touched_cards |= 1 << 10;
 
@@ -894,13 +894,13 @@ mod tests {
         table_state.update_with_draw_action(12); // R3
         table_state
             .deck
-            .reveal_card(10, NoVarCards::R1.as_variant_card_id());
+            .reveal_card(10, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
         table_state
             .deck
-            .reveal_card(11, NoVarCards::R2.as_variant_card_id());
+            .reveal_card(11, NoVarCards::R2.as_variant_card_id(), &static_data.variant);
         table_state
             .deck
-            .reveal_card(12, NoVarCards::R3.as_variant_card_id());
+            .reveal_card(12, NoVarCards::R3.as_variant_card_id(), &static_data.variant);
         // Clue R1 and R2, leaving R3 as the only unclued card.
         table_state.clue_touched_cards |= (1 << 10) | (1 << 11);
 

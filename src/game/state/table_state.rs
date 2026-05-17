@@ -118,7 +118,8 @@ impl TableState {
         static_game_data: &StaticGameData,
     ) {
         self.update_with_play_action(card_deck_index);
-        self.deck.reveal_card(card_deck_index, card_id);
+        self.deck
+            .reveal_card(card_deck_index, card_id, &static_game_data.variant);
         let playable_cards = self.playable_cards(static_game_data);
         let is_valid_play = playable_cards & 1 << card_id != 0;
         if is_valid_play {
@@ -166,7 +167,8 @@ impl TableState {
         self.discard_pile.add_card_with_id(card_id);
         let bonus_tokens = static_game_data.variant.bonus_half_clue_tokens_for_discard;
         self.clue_token_bank.add_tokens(bonus_tokens);
-        self.deck.reveal_card(card_deck_index, card_id);
+        self.deck
+            .reveal_card(card_deck_index, card_id, &static_game_data.variant);
     }
 
     /// Update this [crate::game::game_state::GameState] when the player with the given
@@ -182,9 +184,11 @@ impl TableState {
         for slot in self.hands[receiver_player_index].cards() {
             if card_deck_index.contains(slot) {
                 self.clue_touched_cards |= 1 << slot;
-                self.deck.update_positive_empathy(*slot, clue_empathy);
+                self.deck
+                    .update_positive_empathy(*slot, clue_empathy, &static_game_data.variant);
             } else {
-                self.deck.update_negative_empathy(*slot, clue_empathy);
+                self.deck
+                    .update_negative_empathy(*slot, clue_empathy, &static_game_data.variant);
             }
         }
         self.clue_token_bank

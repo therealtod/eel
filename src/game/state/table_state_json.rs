@@ -261,7 +261,7 @@ fn build_deck(scenario: &ScenarioJson, variant: &Variant) -> Deck {
             let deck_index = base_index + hand_size - 1 - slot_pos as u8;
             let id = slot.id();
             if id != "x" {
-                deck.reveal_card(deck_index, parse_card(id));
+                deck.reveal_card(deck_index, parse_card(id), variant);
             }
         }
         base_index += hand_size;
@@ -286,14 +286,14 @@ fn apply_slot_clues(
             for clue_str in slot.positive() {
                 let (ct, cv) = parse_clue_string(clue_str);
                 let mask = variant.empathy_by_clue(ct, cv as usize).as_bits();
-                deck.update_positive_empathy(deck_index, mask);
+                deck.update_positive_empathy(deck_index, mask, variant);
                 *clue_touched_cards |= 1u64 << deck_index;
             }
 
             for clue_str in slot.negative() {
                 let (ct, cv) = parse_clue_string(clue_str);
                 let mask = variant.empathy_by_clue(ct, cv as usize).as_bits();
-                deck.update_negative_empathy(deck_index, mask);
+                deck.update_negative_empathy(deck_index, mask, variant);
             }
         }
         base_index += hand_size;

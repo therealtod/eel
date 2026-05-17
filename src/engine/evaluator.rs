@@ -1062,7 +1062,7 @@ mod tests {
 
         // Build a table state whose deck reveals card-id 7 at deck-index 5.
         let mut deck = Deck::new(&NO_VARIANT);
-        deck.reveal_card(5, 7); // truth = card 7 at position 5
+        deck.reveal_card(5, 7, &NO_VARIANT); // truth = card 7 at position 5
 
         let state = TableState::from_parts(
             ClueTokenBank::new(10),

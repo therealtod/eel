@@ -59,7 +59,14 @@ impl Deck {
         &mut self,
         card_position_in_starting_deck: CardDeckIndex,
         card_id: VariantCardId,
+        variant: &Variant,
     ) {
+        // Iterate over the variant's actual deck positions only. Using
+        // `current_size` would be wrong (it shrinks as cards are drawn,
+        // dropping high-index slots out of the exclusion loop); using
+        // MAX_CARDS_IN_DECK would waste work on phantom slots beyond the
+        // variant.
+        let valid_mask = (1u64 << variant.deck_size) - 1;
         let mut worklist: SmallVec<[(CardDeckIndex, VariantCardId); 4]> =
             smallvec::smallvec![(card_position_in_starting_deck, card_id)];
         while let Some((pos, id)) = worklist.pop() {
@@ -68,7 +75,6 @@ impl Deck {
             self.empathy_by_index[pos as usize] = CardIdentityMask::known(id);
             self.revealed_indexes |= 1u64 << pos;
             if self.revealed_copies_per_index[id] == self.total_copies_per_id[id] {
-                let valid_mask = (1u64 << self.current_size) - 1;
                 let mut unrevealed = !self.revealed_indexes & valid_mask;
                 while unrevealed != 0 {
                     let index = unrevealed.trailing_zeros() as usize;
@@ -92,6 +98,7 @@ impl Deck {
         &mut self,
         card_position_in_starting_deck: CardDeckIndex,
         empathy_update: VariantCardsBitField,
+        variant: &Variant,
     ) {
         let index = card_position_in_starting_deck as usize;
         let current_empathy = self.empathy_by_index[index];
@@ -99,7 +106,7 @@ impl Deck {
             self.empathy_by_index[index] = new_empathy;
             if new_empathy.is_exactly_known() {
                 let revealed_card_id = new_empathy.known_card_id().unwrap();
-                self.reveal_card(card_position_in_starting_deck, revealed_card_id);
+                self.reveal_card(card_position_in_starting_deck, revealed_card_id, variant);
             }
         }
     }
@@ -108,6 +115,7 @@ impl Deck {
         &mut self,
         card_position_in_starting_deck: CardDeckIndex,
         empathy_update: VariantCardsBitField,
+        variant: &Variant,
     ) {
         let index = card_position_in_starting_deck as usize;
         let current_empathy = self.empathy_by_index[index];
@@ -115,7 +123,7 @@ impl Deck {
             self.empathy_by_index[index] = new_empathy;
             if new_empathy.is_exactly_known() {
                 let revealed_card_id = new_empathy.known_card_id().unwrap();
-                self.reveal_card(card_position_in_starting_deck, revealed_card_id);
+                self.reveal_card(card_position_in_starting_deck, revealed_card_id, variant);
             }
         }
     }
@@ -231,7 +239,7 @@ mod tests {
     fn should_update_empathy_of_revealed_index() {
         let mut deck = NEW_DECK.clone();
 
-        deck.reveal_card(42, 2);
+        deck.reveal_card(42, 2, &NO_VARIANT);
         let expected = CardIdentityMask::from_bits(R3_MASK);
         let actual = deck.empathy_by_index[42];
         assert_eq!(expected, actual);
@@ -241,8 +249,8 @@ mod tests {
     fn should_update_empathy_indirectly_when_all_copies_are_revealed() {
         let mut deck = NEW_DECK.clone();
 
-        deck.reveal_card(42, 2);
-        deck.reveal_card(22, 2);
+        deck.reveal_card(42, 2, &NO_VARIANT);
+        deck.reveal_card(22, 2, &NO_VARIANT);
         assert_eq!(
             CardIdentityMask::from_bits(R3_MASK),
             deck.empathy_by_index[42]
@@ -330,7 +338,7 @@ mod tests {
             0,
         );
 
-        deck.reveal_card(47, 7);
+        deck.reveal_card(47, 7, &NO_VARIANT);
         assert_eq!(
             CardIdentityMask::from_bits(Y3_MASK),
             deck.empathy_by_index[47]
