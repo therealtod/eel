@@ -295,7 +295,7 @@ impl Default for DefaultEvaluator {
             critical_in_hand_weight: 1.5_f64,
             lost_score_ceiling_weight: 8.0_f64,
             empathy_weight: 0.0_f64,
-            good_touch_penalty: 4.0_f64,
+            good_touch_penalty: 10.0_f64,
             clue_token_weight: 0.6_f64,
             clue_demand_weight: 0.05_f64,
             clue_precision_weight: 0.0_f64,

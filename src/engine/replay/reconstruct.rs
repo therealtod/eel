@@ -414,14 +414,36 @@ impl<'a> ReplayRunner<'a> {
                 &self.static_data.variant,
             );
         }
+
+        for q in 0..num_players {
+            self.game.team_knowledge.player_mut(q).resolve_pending(
+                p,
+                &action,
+                &self.static_data.variant,
+            );
+        }
     }
 
     fn apply_discard(&mut self, card_deck_index: CardDeckIndex) {
         let p = self.game.table_state.active_player_index;
         let actual_id = self.actual_deck[card_deck_index as usize];
+        let action = GameAction::Discard {
+            player_index: p,
+            card_deck_index,
+            turn: self.game.table_state.current_turn,
+        };
         self.game
             .update_with_discard_action_of_specific_card(card_deck_index, actual_id);
         self.draw_next_card(p);
+
+        let num_players = self.static_data.number_of_players as usize;
+        for q in 0..num_players {
+            self.game.team_knowledge.player_mut(q).resolve_pending(
+                p,
+                &action,
+                &self.static_data.variant,
+            );
+        }
     }
 
     fn compute_touched_cards(

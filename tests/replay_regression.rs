@@ -18,22 +18,6 @@ use eel::game::action::game_action::GameAction;
 use eel::game::clue::Clue;
 use eel::game::clue_type::ClueType;
 
-fn build_convention_set() -> HGroupConventionSet {
-    HGroupConventionSet::new(vec![
-        Box::new(PlayKnownPlayable),
-        Box::new(BlindPlay),
-        Box::new(DirectPlayClue),
-        Box::new(DelayedPlayClue),
-        Box::new(SimplePrompt),
-        Box::new(SimpleFinesse),
-        Box::new(ColorCriticalSave),
-        Box::new(RankCriticalSave),
-        Box::new(FiveSave),
-        Box::new(TwoSave),
-        Box::new(DiscardChop),
-    ])
-}
-
 fn path_for(rel: &str) -> PathBuf {
     [env!("CARGO_MANIFEST_DIR"), "tests", "replays", rel]
         .iter()
@@ -47,7 +31,7 @@ fn engine_action_at_turn(replay_path: &str, turn: usize) -> GameAction {
         .unwrap_or_else(|e| panic!("could not read replay {replay_path}: {e}"));
     let game = Game::from_json(&json)
         .unwrap_or_else(|e| panic!("could not parse replay {replay_path}: {e}"));
-    let conv = build_convention_set();
+    let conv = HGroupConventionSet::default();
     let mut runner = ReplayRunner::from_hanablive(&game, &conv)
         .unwrap_or_else(|e| panic!("could not build runner from {replay_path}: {e}"));
     runner
