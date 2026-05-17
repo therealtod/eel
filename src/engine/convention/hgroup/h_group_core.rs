@@ -251,7 +251,11 @@ pub fn good_touch_baseline_mask(
 /// A card is a bad touch if:
 /// - its identity (truth, when visible to the searcher; public empathy otherwise) has no
 ///   overlap with still-needed cards, OR
-/// - its exact identity is already clued in another player's hand.
+/// - its exact identity is already clued in another player's hand, OR
+/// - its exact identity is already clued in the receiver's hand on a card outside the
+///   current `touched` set, OR
+/// - another card earlier in `touched` shares the same exact identity (intra-clue
+///   duplicate).
 ///
 /// `truth` is the searcher's POV (root POV during tree search). For cards visible to the
 /// searcher — including the receiver's hand when the clue-giver is the searcher — this
@@ -272,17 +276,47 @@ pub(crate) fn count_bad_touches(
     static_data: &StaticGameData,
 ) -> usize {
     let still_needed = still_needed_cards_mask(table_state, static_data);
-    let already_clued = already_clued_ids_mask(receiver, table_state, static_data);
-    touched
-        .iter()
-        .filter(|&&idx| {
-            let bits = match truth.card_identity(idx) {
-                Some(id) => 1u64 << id,
-                None => table_state.deck.get_global_empathy(idx).as_bits(),
-            };
-            bits & still_needed == 0 || bits & already_clued != 0
-        })
-        .count()
+    let already_clued_other_hands = already_clued_ids_mask(receiver, table_state, static_data);
+
+    // Identities already known-clued in the receiver's own hand, excluding cards
+    // currently being touched by this clue. A second touch onto an identity the
+    // receiver already holds (as another clued card) is a bad touch too.
+    let touched_mask: u64 = touched.iter().fold(0u64, |m, &i| m | (1u64 << i));
+    let mut already_clued_receiver: VariantCardsBitField = 0;
+    for &idx in table_state.hands[receiver].cards() {
+        if (1u64 << idx) & touched_mask != 0 {
+            continue;
+        }
+        if table_state.clue_touched_cards & (1u64 << idx) != 0 {
+            if let Some(id) = table_state.deck.get_global_empathy(idx).known_card_id() {
+                already_clued_receiver |= 1u64 << id;
+            }
+        }
+    }
+
+    let already_clued = already_clued_other_hands | already_clued_receiver;
+
+    // Track exact identities already accounted for among prior entries in `touched`,
+    // so an intra-clue duplicate (e.g. two R1s in the same hand touched together)
+    // counts as a bad touch on the second occurrence.
+    let mut seen_in_touched: VariantCardsBitField = 0;
+    let mut count = 0usize;
+    for &idx in touched {
+        let bits = match truth.card_identity(idx) {
+            Some(id) => 1u64 << id,
+            None => table_state.deck.get_global_empathy(idx).as_bits(),
+        };
+        let is_singleton = bits.count_ones() == 1;
+        let dup_within_touched = is_singleton && (bits & seen_in_touched) != 0;
+        let bad = bits & still_needed == 0 || bits & already_clued != 0 || dup_within_touched;
+        if bad {
+            count += 1;
+        }
+        if is_singleton {
+            seen_in_touched |= bits;
+        }
+    }
+    count
 }
 
 pub fn is_good_touch_principle_compliant(
@@ -690,6 +724,68 @@ mod tests {
             super::count_bad_touches(&[10], 1, &truth, &table_state, &static_data),
             1,
             "trash P1 in receiver's hand should be flagged via truth POV"
+        );
+    }
+
+    #[test]
+    fn count_bad_touches_one_when_two_touched_cards_share_identity_in_same_hand() {
+        // Cards 10 and 11 are both in player 1's hand, both revealed as R1. A single
+        // red clue touches both. R1 is still needed and not clued elsewhere, but the
+        // two cards duplicate each other within `touched` — the second one is bad-touch.
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards;
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10);
+        table_state
+            .deck
+            .reveal_card(10, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
+        table_state.update_with_draw_action(11);
+        table_state
+            .deck
+            .reveal_card(11, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
+
+        let knowledge = knowledge_for_hand(&[]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let truth = make_truth_pov(&knowledge, &team_knowledge, &table_state, &static_data);
+        assert_eq!(
+            super::count_bad_touches(&[10, 11], 1, &truth, &table_state, &static_data),
+            1,
+            "intra-clue duplicate identities in same hand should count as one bad touch"
+        );
+    }
+
+    #[test]
+    fn count_bad_touches_one_when_identity_already_clued_in_receiver_hand() {
+        // Card 10 is in player 1's hand, already clue-touched and exactly known as R1.
+        // Card 11 (also player 1) is newly touched with truth R1 — duplicate against
+        // the receiver's own already-clued R1.
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards;
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10);
+        table_state
+            .deck
+            .reveal_card(10, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
+        table_state.clue_touched_cards |= 1 << 10;
+
+        table_state.update_with_draw_action(11);
+        table_state
+            .deck
+            .reveal_card(11, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
+
+        let knowledge = knowledge_for_hand(&[]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let truth = make_truth_pov(&knowledge, &team_knowledge, &table_state, &static_data);
+        assert_eq!(
+            super::count_bad_touches(&[11], 1, &truth, &table_state, &static_data),
+            1,
+            "newly touched card whose identity is already clued in receiver's own hand should be a bad touch"
         );
     }
 
