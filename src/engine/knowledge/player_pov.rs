@@ -72,10 +72,10 @@ pub trait PlayerPOV {
 
     #[must_use]
     fn valid_actions(&self) -> Vec<GameAction>;
-    
+
     #[must_use]
     fn gotten_cards(&self) -> CardIdentityMask;
-    
+
     #[must_use]
     fn is_gotten(&self, variant_card_id: VariantCardId) -> bool;
 }

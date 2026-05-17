@@ -15,6 +15,8 @@ use eel::engine::replay::reconstruct::ReplayRunner;
 use eel::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
 use eel::external::hanablive::Game;
 use eel::game::action::game_action::GameAction;
+use eel::game::clue::Clue;
+use eel::game::clue_type::ClueType;
 
 fn build_convention_set() -> HGroupConventionSet {
     HGroupConventionSet::new(vec![
@@ -82,7 +84,6 @@ fn engine_action_at_turn(replay_path: &str, turn: usize) -> GameAction {
 //     );
 // }
 
-
 #[test]
 #[ignore]
 fn should_play_known_playable_instead_of_discarding() {
@@ -92,9 +93,25 @@ fn should_play_known_playable_instead_of_discarding() {
         ..
     } = &action
     {
-
     } else {
         panic!("Cathy should play a play clued y2. The chosen action was instead: {action:?}");
     }
 }
 
+#[test]
+fn should_clue_g1_by_color_avoiding_bad_touch() {
+    let action = engine_action_at_turn("should_clue_g1_by_color_avoiding_bad_touch.json", 17);
+    if let GameAction::Clue {
+        clue: Clue {
+            clue_type: ClueType::Rank,
+            clue_value: 1,
+        },
+        player_index: 1,
+        ..
+    } = &action
+    {
+        panic!(
+            "Cathy should prefer a green color clue to target g1 without bad touching p1. The chosen action was instead: {action:?}"
+        );
+    }
+}

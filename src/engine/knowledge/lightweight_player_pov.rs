@@ -605,7 +605,8 @@ mod tests {
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).own_hand |= 1 << 0;
 
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let gotten = pov.gotten_cards();
         assert!(gotten.contains(R1.as_variant_card_id()));
@@ -633,7 +634,8 @@ mod tests {
             deadline_turn: 1,
         });
 
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let gotten = pov.gotten_cards();
         assert!(gotten.contains(R1.as_variant_card_id()));
@@ -650,7 +652,8 @@ mod tests {
         let knowledge = knowledge_with_empathy(0, R1_MASK);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
 
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let gotten = pov.gotten_cards();
         assert!(!gotten.contains(R1.as_variant_card_id()));
@@ -667,7 +670,8 @@ mod tests {
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).own_hand |= 1 << 0;
 
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let gotten = pov.gotten_cards();
         assert_eq!(gotten.as_bits(), 0);
@@ -689,7 +693,8 @@ mod tests {
         team_knowledge.player_mut(0).own_hand |= 1 << 0;
         team_knowledge.player_mut(1).own_hand |= 1 << 1;
 
-        let pov = LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         let gotten = pov.gotten_cards();
         assert!(gotten.contains(R2.as_variant_card_id()));

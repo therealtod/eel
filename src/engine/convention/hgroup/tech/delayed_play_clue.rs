@@ -21,7 +21,9 @@ impl DelayedPlayClue {
     /// become playable once connecting cards are played (and all connecting cards are globally known).
     fn is_delayed_play_situation(card_id: VariantCardId, pov: &dyn PlayerPOV) -> bool {
         if let Some(away_value) = pov.away_value(card_id) {
-            away_value > 0 && !pov.is_gotten(card_id) && Self::connecting_cards_are_known(card_id, away_value, pov)
+            away_value > 0
+                && !pov.is_gotten(card_id)
+                && Self::connecting_cards_are_known(card_id, away_value, pov)
         } else {
             false
         }

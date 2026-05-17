@@ -42,7 +42,9 @@ fn reconstruct_clues(deck_empathy: u64, variant: &Variant) -> (Vec<String>, Vec<
     }
 
     for rank in 1..=variant.stacks_size {
-        let clue_mask = variant.empathy_by_clue(ClueType::Rank, rank as usize).as_bits();
+        let clue_mask = variant
+            .empathy_by_clue(ClueType::Rank, rank as usize)
+            .as_bits();
         if (deck_empathy & !clue_mask) == 0 {
             positive.push(rank.to_string());
         } else if (deck_empathy & clue_mask) == 0 {
@@ -72,8 +74,14 @@ pub fn to_scenario_json(game: &KnowledgeAwareGameState) -> Value {
     let tk = &game.team_knowledge;
     let sd = game.static_data();
     let variant = &sd.variant;
-    debug_assert_eq!(variant.number_of_suits, 5, "snapshot serialisation hardcodes NO_VARIANT");
-    debug_assert_eq!(variant.stacks_size, 5, "snapshot serialisation hardcodes NO_VARIANT");
+    debug_assert_eq!(
+        variant.number_of_suits, 5,
+        "snapshot serialisation hardcodes NO_VARIANT"
+    );
+    debug_assert_eq!(
+        variant.stacks_size, 5,
+        "snapshot serialisation hardcodes NO_VARIANT"
+    );
     let num_players = sd.number_of_players as usize;
     let active = ts.active_player_index;
 
@@ -257,7 +265,11 @@ mod tests {
             .collect();
 
         let mut builder = GameBuilder::new(
-            vec!["Alice".to_string(), "Bob".to_string(), "Charlie".to_string()],
+            vec![
+                "Alice".to_string(),
+                "Bob".to_string(),
+                "Charlie".to_string(),
+            ],
             cards,
         )
         .with_options({
@@ -292,10 +304,7 @@ mod tests {
         // Deck[0] = R1 → Alice plays it; deck[5] = Y1 → Bob discards it.
         let runner = runner_after_actions(
             &deck,
-            vec![
-                (ActionType::Play, 0, None),
-                (ActionType::Discard, 5, None),
-            ],
+            vec![(ActionType::Play, 0, None), (ActionType::Discard, 5, None)],
             &conv,
         );
 
@@ -305,18 +314,20 @@ mod tests {
         let (loaded_ts, _sd) = build_from_scenario(&scenario, NO_VARIANT);
 
         assert_eq!(
-            loaded_ts.playing_stacks,
-            runner.game.table_state.playing_stacks,
+            loaded_ts.playing_stacks, runner.game.table_state.playing_stacks,
             "playing stacks mismatch"
         );
         assert_eq!(
-            loaded_ts.discard_pile,
-            runner.game.table_state.discard_pile,
+            loaded_ts.discard_pile, runner.game.table_state.discard_pile,
             "discard pile mismatch"
         );
         assert_eq!(
             loaded_ts.clue_token_bank.whole_clue_tokens_count(),
-            runner.game.table_state.clue_token_bank.whole_clue_tokens_count(),
+            runner
+                .game
+                .table_state
+                .clue_token_bank
+                .whole_clue_tokens_count(),
             "clue tokens mismatch"
         );
         assert_eq!(
@@ -350,11 +361,7 @@ mod tests {
         //   Charlie: deck[10..14] = Y1 Y1 Y1 Y2 Y2
         //
         // Alice gives a rank-3 clue to Bob (touches deck[5]=R3 and deck[6]=R3).
-        let runner = runner_after_actions(
-            &deck,
-            vec![(ActionType::RankClue, 1, Some(3))],
-            &conv,
-        );
+        let runner = runner_after_actions(&deck, vec![(ActionType::RankClue, 1, Some(3))], &conv);
 
         let scenario_value = to_scenario_json(&runner.game);
         let json_str = serde_json::to_string(&scenario_value).unwrap();
@@ -362,8 +369,7 @@ mod tests {
         let (loaded_ts, _sd) = build_from_scenario(&scenario, NO_VARIANT);
 
         assert_eq!(
-            loaded_ts.clue_touched_cards,
-            runner.game.table_state.clue_touched_cards,
+            loaded_ts.clue_touched_cards, runner.game.table_state.clue_touched_cards,
             "clue_touched_cards mismatch"
         );
     }
@@ -373,7 +379,11 @@ mod tests {
         use crate::game::state::table_state_json::parse_card;
         for card_id in 0..25usize {
             let s = card_id_to_string(card_id);
-            assert_eq!(parse_card(&s), card_id, "roundtrip failed for card_id {card_id}");
+            assert_eq!(
+                parse_card(&s),
+                card_id,
+                "roundtrip failed for card_id {card_id}"
+            );
         }
     }
 
@@ -393,11 +403,17 @@ mod tests {
         let (pos, neg) = reconstruct_clues(rank3_mask, &NO_VARIANT);
         assert!(pos.contains(&"3".to_string()), "expected rank 3 positive");
         // Rank-3 mask overlaps every colour suit, so no colours are negative.
-        assert!(!neg.iter().any(|s| ["red","yellow","green","blue","purple"].contains(&s.as_str())),
-                "no colour negatives expected for rank-3 mask");
+        assert!(
+            !neg.iter()
+                .any(|s| ["red", "yellow", "green", "blue", "purple"].contains(&s.as_str())),
+            "no colour negatives expected for rank-3 mask"
+        );
         // All other ranks are negative (they have no overlap with rank-3 mask).
         for rank in ["1", "2", "4", "5"] {
-            assert!(neg.contains(&rank.to_string()), "expected rank {rank} negative");
+            assert!(
+                neg.contains(&rank.to_string()),
+                "expected rank {rank} negative"
+            );
         }
     }
 
@@ -433,12 +449,18 @@ mod tests {
             let clue_mask = NO_VARIANT.empathy_by_clue(ct, cv as usize).as_bits();
             empathy &= !clue_mask;
         }
-        assert_eq!(empathy, target_mask, "clue reconstruction did not reproduce target empathy");
+        assert_eq!(
+            empathy, target_mask,
+            "clue reconstruction did not reproduce target empathy"
+        );
     }
 
     #[test]
     fn to_scenario_json_active_player_is_correct() {
-        let static_data = StaticGameData { number_of_players: 3, variant: NO_VARIANT };
+        let static_data = StaticGameData {
+            number_of_players: 3,
+            variant: NO_VARIANT,
+        };
         let hand_size = hand_size_for(3);
         let conv = full_convention_set();
         let deck_ids: Vec<usize> = ordered_deck()
@@ -454,7 +476,11 @@ mod tests {
         let alice_hand = value["hands"][0].as_array().unwrap();
         assert_eq!(alice_hand.len(), hand_size);
         for slot in alice_hand {
-            assert_eq!(slot.as_str(), Some("x"), "active player's unclued slot should be 'x'");
+            assert_eq!(
+                slot.as_str(),
+                Some("x"),
+                "active player's unclued slot should be 'x'"
+            );
         }
         // Bob's hand (player 1): should have concrete card strings
         let bob_hand = value["hands"][1].as_array().unwrap();

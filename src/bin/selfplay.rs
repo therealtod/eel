@@ -127,11 +127,13 @@ fn run_game(
 
     let logging_enabled = log_failures_below.is_some();
     let mut builder = if logging_enabled {
-        Some(GameBuilder::new(player_names, hanablive_deck).with_options({
-            let mut opts = GameOptions::default();
-            opts.variant = Some("No Variant".to_string());
-            opts
-        }))
+        Some(
+            GameBuilder::new(player_names, hanablive_deck).with_options({
+                let mut opts = GameOptions::default();
+                opts.variant = Some("No Variant".to_string());
+                opts
+            }),
+        )
     } else {
         None
     };
@@ -155,13 +157,19 @@ fn run_game(
         // Record the action in hanab.live format before we mutate state.
         if let Some(ref mut b) = builder {
             match &action {
-                GameAction::Play { card_deck_index, .. } => {
+                GameAction::Play {
+                    card_deck_index, ..
+                } => {
                     b.push_play(*card_deck_index as usize);
                 }
-                GameAction::Discard { card_deck_index, .. } => {
+                GameAction::Discard {
+                    card_deck_index, ..
+                } => {
                     b.push_discard(*card_deck_index as usize);
                 }
-                GameAction::Clue { clue, player_index, .. } => match clue.clue_type {
+                GameAction::Clue {
+                    clue, player_index, ..
+                } => match clue.clue_type {
                     ClueType::Color => b.push_color_clue(*player_index, clue.clue_value as usize),
                     ClueType::Rank => b.push_rank_clue(*player_index, clue.clue_value as usize),
                 },

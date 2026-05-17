@@ -136,8 +136,9 @@ impl TreeActionSelectionStrategy {
     fn leaf_breakdown(
         evaluator: &dyn Evaluator,
         state: &KnowledgeAwareGameState,
+        truth: &dyn PlayerPOV,
     ) -> ScoreBreakdown {
-        evaluator.score_breakdown(state)
+        evaluator.score_breakdown(state, truth)
     }
 
     /// Per-action bonus applied along the search path.
@@ -155,6 +156,7 @@ impl TreeActionSelectionStrategy {
         state_before: &KnowledgeAwareGameState,
         state_after: &KnowledgeAwareGameState,
         static_data: &StaticGameData,
+        truth: &dyn PlayerPOV,
     ) -> Score {
         let actor = state_before.table_state().active_player_index;
         let signal_penalty = evaluator.signal_ignored_penalty(
@@ -173,6 +175,7 @@ impl TreeActionSelectionStrategy {
             evaluator.clue_precision_bonus(
                 touched_card_deck_indexes,
                 *player_index,
+                truth,
                 static_data,
                 &state_after.team_knowledge,
                 state_after.table_state(),
@@ -224,7 +227,7 @@ impl TreeActionSelectionStrategy {
         truth: &dyn PlayerPOV,
     ) -> (Score, ScoreBreakdown) {
         if depth == 0 || state.table_state.is_terminal(static_data) {
-            let breakdown = Self::leaf_breakdown(evaluator, state);
+            let breakdown = Self::leaf_breakdown(evaluator, state, truth);
             tracing::trace!(
                 target: "eel::search",
                 depth = 0,
@@ -263,6 +266,7 @@ impl TreeActionSelectionStrategy {
                 state,
                 &next,
                 static_data,
+                truth,
             );
             // Branch-and-bound: skip this candidate if its optimistic upper bound cannot
             // beat the best score we have already secured at this node.
@@ -320,7 +324,8 @@ impl TreeActionSelectionStrategy {
         // `best_breakdown` is set whenever the candidate loop ran. If no candidates were
         // produced (extremely rare — the fallback in `candidate_actions_with_provenance`
         // makes this near-impossible), score the current state as the leaf.
-        let breakdown = best_breakdown.unwrap_or_else(|| Self::leaf_breakdown(evaluator, state));
+        let breakdown =
+            best_breakdown.unwrap_or_else(|| Self::leaf_breakdown(evaluator, state, truth));
         (best, breakdown)
     }
 }
@@ -398,6 +403,7 @@ impl TreeActionSelectionStrategy {
                     &root_state,
                     &next,
                     static_data,
+                    &truth_pov,
                 );
                 // Allocate once per root candidate (outside the recursive hot path).
                 let mut pv_table = PvTable::new(subtree_depth);

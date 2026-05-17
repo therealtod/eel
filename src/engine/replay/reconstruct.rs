@@ -6,16 +6,16 @@ use crate::engine::action_selection_strategy::ActionSelectionStrategy;
 use crate::engine::convention::convention_set::ConventionSet;
 use crate::engine::knowledge::knowledge_update::{Hypothesis, HypothesisId};
 use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
-use crate::engine::knowledge_aware_game_state::{collect_hypotheses, KnowledgeAwareGameState};
+use crate::engine::knowledge_aware_game_state::{KnowledgeAwareGameState, collect_hypotheses};
 use crate::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
 use crate::external::hanablive::{Action, ActionType, Card};
+use crate::game::MAX_HAND_SIZE;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, VariantCardId};
 use crate::game::clue::Clue;
 use crate::game::clue_type::ClueType;
 use crate::game::static_game_data::StaticGameData;
 use crate::game::variant::test_variants::NO_VARIANT;
-use crate::game::MAX_HAND_SIZE;
 
 #[derive(Debug)]
 pub enum ReplayError {
@@ -74,10 +74,7 @@ impl<'a> ReplayRunner<'a> {
         game: &crate::external::hanablive::Game,
         convention_set: &'a dyn ConventionSet,
     ) -> Result<Self, ReplayError> {
-        let variant_name = game
-            .options
-            .as_ref()
-            .and_then(|o| o.variant.as_deref());
+        let variant_name = game.options.as_ref().and_then(|o| o.variant.as_deref());
         if variant_name != Some("No Variant") {
             return Err(ReplayError::UnsupportedVariant(
                 variant_name.map(|s| s.to_string()),
@@ -188,7 +185,10 @@ impl<'a> ReplayRunner<'a> {
                     ActionType::RankClue => (ClueType::Rank, value as u8),
                     _ => unreachable!(),
                 };
-                let clue = Clue { clue_type, clue_value };
+                let clue = Clue {
+                    clue_type,
+                    clue_value,
+                };
                 let touched = self.compute_touched_cards(receiver, &clue)?;
                 let turn = self.game.table_state.current_turn;
                 let game_action = GameAction::Clue {
@@ -232,7 +232,10 @@ impl<'a> ReplayRunner<'a> {
             return Err(ReplayError::PastEnd);
         }
         if target_turn < self.cursor {
-            return Err(ReplayError::BackwardsStep { from: self.cursor, to: target_turn });
+            return Err(ReplayError::BackwardsStep {
+                from: self.cursor,
+                to: target_turn,
+            });
         }
         while self.cursor < target_turn {
             self.step()?;
@@ -288,7 +291,10 @@ impl<'a> ReplayRunner<'a> {
                     ActionType::RankClue => (ClueType::Rank, value as u8),
                     _ => unreachable!(),
                 };
-                let clue = Clue { clue_type, clue_value };
+                let clue = Clue {
+                    clue_type,
+                    clue_value,
+                };
                 let touched = self.compute_touched_cards(receiver, &clue).ok()?;
                 Some(GameAction::Clue {
                     player_index: receiver,
@@ -307,8 +313,12 @@ impl<'a> ReplayRunner<'a> {
     /// that selfplay retains control of final-round counting and logging.
     pub fn apply_strategy_action(&mut self, action: &GameAction) {
         match action {
-            GameAction::Play { card_deck_index, .. } => self.apply_play(*card_deck_index),
-            GameAction::Discard { card_deck_index, .. } => self.apply_discard(*card_deck_index),
+            GameAction::Play {
+                card_deck_index, ..
+            } => self.apply_play(*card_deck_index),
+            GameAction::Discard {
+                card_deck_index, ..
+            } => self.apply_discard(*card_deck_index),
             GameAction::Clue { .. } => {
                 let active = self.game.table_state.active_player_index;
                 let knowledge_clone = self.game.team_knowledge.player(active).clone();
@@ -486,16 +496,17 @@ mod tests {
     }
 
     /// Build a minimal 3-player hanab.live Game from a deck + action list.
-    fn make_game(
-        deck: Vec<(usize, u8)>,
-        actions: Vec<(ActionType, usize, Option<usize>)>,
-    ) -> Game {
+    fn make_game(deck: Vec<(usize, u8)>, actions: Vec<(ActionType, usize, Option<usize>)>) -> Game {
         let cards: Vec<Card> = deck
             .iter()
             .map(|&(suit_index, rank)| Card { suit_index, rank })
             .collect();
         let mut builder = GameBuilder::new(
-            vec!["Alice".to_string(), "Bob".to_string(), "Charlie".to_string()],
+            vec![
+                "Alice".to_string(),
+                "Bob".to_string(),
+                "Charlie".to_string(),
+            ],
             cards,
         )
         .with_options({
@@ -507,9 +518,7 @@ mod tests {
             match action_type {
                 ActionType::Play => builder.push_play(target),
                 ActionType::Discard => builder.push_discard(target),
-                ActionType::ColorClue => {
-                    builder.push_color_clue(target, value.unwrap())
-                }
+                ActionType::ColorClue => builder.push_color_clue(target, value.unwrap()),
                 ActionType::RankClue => builder.push_rank_clue(target, value.unwrap()),
                 ActionType::EndGame => {}
             }
@@ -562,10 +571,17 @@ mod tests {
     fn from_hanablive_rejects_unsupported_variant() {
         let deck = ordered_deck()
             .into_iter()
-            .map(|(s, r)| Card { suit_index: s, rank: r })
+            .map(|(s, r)| Card {
+                suit_index: s,
+                rank: r,
+            })
             .collect();
         let mut game = GameBuilder::new(
-            vec!["Alice".to_string(), "Bob".to_string(), "Charlie".to_string()],
+            vec![
+                "Alice".to_string(),
+                "Bob".to_string(),
+                "Charlie".to_string(),
+            ],
             deck,
         )
         .finish();
@@ -591,7 +607,7 @@ mod tests {
         let game = make_game(
             deck.clone(),
             vec![
-                (ActionType::Play, 0, None),   // Alice plays deck[0] = R1
+                (ActionType::Play, 0, None),    // Alice plays deck[0] = R1
                 (ActionType::Discard, 5, None), // Bob discards deck[5] = Y1
             ],
         );

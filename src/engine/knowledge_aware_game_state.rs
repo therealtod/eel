@@ -378,7 +378,8 @@ impl KnowledgeAwareGameState {
             // but-playable case must keep flowing into the phantom-play branch so the
             // search doesn't commit to a specific stack just because truth is visible.
             let truth_id = truth.card_identity(card_deck_index);
-            let empathy_contains_truth = truth_id.is_some_and(|t| combined.as_bits() & (1 << t) != 0);
+            let empathy_contains_truth =
+                truth_id.is_some_and(|t| combined.as_bits() & (1 << t) != 0);
             let id = match (empathy_id, truth_id) {
                 (_, Some(t)) if !empathy_contains_truth => Some(t),
                 _ => empathy_id,
@@ -496,8 +497,7 @@ impl KnowledgeAwareGameState {
         // applying them first ensures that softer convention inferences (good-touch, tech
         // hypotheses) can never widen empathy past what the literal clue establishes.
         let clue_mask = self.static_data.variant.empathy_for_clue(clue).as_bits();
-        let hand_slots: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = self.table_state.hands
-            [receiver]
+        let hand_slots: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = self.table_state.hands[receiver]
             .cards()
             .iter()
             .copied()
@@ -713,8 +713,7 @@ impl KnowledgeAwareGameState {
             return f32::INFINITY;
         }
         let all_hand_bits = self.table_state.all_hand_bits;
-        let live_setups =
-            (self.table_state.clue_touched_cards & all_hand_bits).count_ones() as i32;
+        let live_setups = (self.table_state.clue_touched_cards & all_hand_bits).count_ones() as i32;
         (still_to_play - live_setups).max(0) as f32 / spare_turns as f32
     }
 
@@ -723,7 +722,8 @@ impl KnowledgeAwareGameState {
     /// phantom abstraction into `TableState`.
     #[must_use]
     pub fn is_terminal(&self) -> bool {
-        let max_score = self.static_data.variant.number_of_suits * self.static_data.variant.stacks_size;
+        let max_score =
+            self.static_data.variant.number_of_suits * self.static_data.variant.stacks_size;
         self.table_state.strike_tokens >= 3 || self.score(&self.static_data.variant) >= max_score
     }
 

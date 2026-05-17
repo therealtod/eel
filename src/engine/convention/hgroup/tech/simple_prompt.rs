@@ -104,7 +104,6 @@ impl ClueTech for SimplePrompt {
                         } else {
                             None
                         }
-
                     })
             })
             .collect()
@@ -171,7 +170,9 @@ impl ClueTech for SimplePrompt {
             let focus = get_clue_focus(clue_receiver_index, touched, &giver_pov);
             if let Some(focus) = focus {
                 let focus_id = match giver_pov.card_identity(focus) {
-                    Some(id) if giver_pov.away_value(id) == Some(1) && !giver_pov.is_gotten(id) => id,
+                    Some(id) if giver_pov.away_value(id) == Some(1) && !giver_pov.is_gotten(id) => {
+                        id
+                    }
                     _ => return Hypothesis::empty(),
                 };
                 let connecting_id = focus_id - 1;

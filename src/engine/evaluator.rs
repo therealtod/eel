@@ -1,6 +1,7 @@
 use crate::engine::convention::hgroup::h_group_core::count_bad_touches;
 use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::decision_tree::Score;
+use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
 use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
 use crate::game::action::game_action::GameAction;
@@ -64,15 +65,25 @@ impl std::fmt::Display for ScoreBreakdown {
 }
 
 /// Trait for scoring a leaf game state during search.
+///
+/// Truth-aware methods take a `truth: &dyn PlayerPOV` reference, which is the root
+/// searcher's POV held fixed across the rollout. It resolves the actual identity of
+/// cards visible to the searcher (other players' hands, played/discarded cards). This
+/// is required to see through clue-induced public-empathy narrowing — e.g. detecting
+/// that a touched card is trash even after a clue widens its public empathy via GTP.
 pub trait Evaluator: Send + Sync {
     /// Score the leaf state. Receives a full [`KnowledgeAwareGameState`] so the evaluator
     /// can consult engine-only signals like phantom plays (successful plays whose stack
     /// assignment was deferred).
-    fn score(&self, state: &KnowledgeAwareGameState) -> Score;
+    fn score(&self, state: &KnowledgeAwareGameState, truth: &dyn PlayerPOV) -> Score;
 
     /// Per-term breakdown of the score. The default implementation returns only the total;
     /// override this to expose individual contributions for debugging.
-    fn score_breakdown(&self, state: &KnowledgeAwareGameState) -> ScoreBreakdown {
+    fn score_breakdown(
+        &self,
+        state: &KnowledgeAwareGameState,
+        truth: &dyn PlayerPOV,
+    ) -> ScoreBreakdown {
         ScoreBreakdown {
             game_score: 0.0,
             strike_penalty: 0.0,
@@ -85,7 +96,7 @@ pub trait Evaluator: Send + Sync {
             known_playable: 0.0,
             team_empathy: 0.0,
             misinformation_penalty: 0.0,
-            total: self.score(state),
+            total: self.score(state, truth),
         }
     }
 
@@ -95,6 +106,7 @@ pub trait Evaluator: Send + Sync {
         &self,
         _touched: &[u8],
         _receiver: usize,
+        _truth: &dyn PlayerPOV,
         _static_data: &StaticGameData,
         _team_knowledge: &TeamKnowledge,
         _table_state: &TableState,
@@ -418,10 +430,16 @@ impl DefaultEvaluator {
     /// 2. `inferred_identities` — convention-inferred identity narrower than raw empathy
     ///    (field exists but currently unpopulated; check is future-proof).
     /// 3. Raw `empathy` — all possible identities fall within the current playable-cards mask.
+    ///
+    /// A card is **not** credited if the searcher's truth view reveals it to be unplayable,
+    /// even when the receiver's public knowledge appears playable. This guards against
+    /// rewarding clues that mislead a player into believing a trash card is a playable —
+    /// the receiver's optimistic reading is a misinformation cost, not an asset.
     fn known_playable_in_hands(
         table_state: &TableState,
         static_data: &StaticGameData,
         team_knowledge: &TeamKnowledge,
+        truth: &dyn PlayerPOV,
     ) -> f64 {
         let num_players = static_data.number_of_players as usize;
         let playable_mask = table_state.playable_cards(static_data);
@@ -432,6 +450,13 @@ impl DefaultEvaluator {
             while hand != 0 {
                 let idx = hand.trailing_zeros() as usize;
                 hand &= hand - 1;
+                // Detect the misinformation case: searcher knows the truth and it's
+                // unplayable. Skip even if the holder's local knowledge thinks otherwise.
+                if let Some(truth_id) = truth.card_identity(idx as CardDeckIndex) {
+                    if (1u64 << truth_id) & playable_mask == 0 {
+                        continue;
+                    }
+                }
                 // Priority 1: convention signal
                 if pk.signals[idx]
                     .iter()
@@ -541,7 +566,8 @@ impl DefaultEvaluator {
 
     /// Misinformation score per plan §4.3 — three-case formula summed over all own-hand cards.
     ///
-    /// For each card whose truth is known (singleton in the omniscient deck):
+    /// For each card whose truth is known (visible to the searcher, OR — for own cards —
+    /// narrowed to a singleton in their effective view):
     /// - `+0`               if `effective_mask` is a singleton equal to truth (exact knowledge).
     /// - `+w`               if `effective_mask` excludes truth entirely (committed to wrong id).
     /// - `+w * (n-1) / n`   if truth is present in the mask but `n > 1` (partial uncertainty).
@@ -550,12 +576,14 @@ impl DefaultEvaluator {
     /// which is 0 for `n=1` and approaches `w` as `n` grows. When truth is excluded, `n=0`
     /// overlap → the hard `+w` branch fires instead.
     ///
-    /// Truth is read from the omniscient deck (`table_state.deck`). Cards whose entry is not yet
-    /// a singleton (freshly-drawn search cards) contribute 0.
+    /// Truth comes from the searcher's POV — which sees other players' hands and any
+    /// publicly revealed cards. Cards the searcher cannot resolve (freshly-drawn search
+    /// cards) contribute 0.
     fn misinformation_score(
         static_data: &StaticGameData,
         team_knowledge: &TeamKnowledge,
-        table_state: &TableState,
+        _table_state: &TableState,
+        truth: &dyn PlayerPOV,
     ) -> f64 {
         let num_players = static_data.number_of_players as usize;
         let variant = &static_data.variant;
@@ -567,14 +595,12 @@ impl DefaultEvaluator {
                 let idx = hand.trailing_zeros() as usize;
                 hand &= hand - 1;
                 let card_deck_index = idx as CardDeckIndex;
-                // Pull truth directly from the omniscient deck: singleton iff the card has been
-                // revealed to spectators; multi-bit (freshly-drawn search card) means unknown.
-                let truth = table_state.deck.get_global_empathy(card_deck_index);
-                if !truth.is_exactly_known() {
+                let Some(truth_id) = truth.card_identity(card_deck_index) else {
                     continue;
-                }
+                };
+                let truth_bits = 1u64 << truth_id;
                 let effective = pk.effective_inferred_mask(card_deck_index, variant);
-                if effective.as_bits() & truth.as_bits() == 0 {
+                if effective.as_bits() & truth_bits == 0 {
                     // Truth fully excluded: full penalty.
                     total += 1.0;
                 } else {
@@ -624,11 +650,15 @@ impl DefaultEvaluator {
 }
 
 impl Evaluator for DefaultEvaluator {
-    fn score(&self, state: &KnowledgeAwareGameState) -> Score {
-        self.score_breakdown(state).total
+    fn score(&self, state: &KnowledgeAwareGameState, truth: &dyn PlayerPOV) -> Score {
+        self.score_breakdown(state, truth).total
     }
 
-    fn score_breakdown(&self, state: &KnowledgeAwareGameState) -> ScoreBreakdown {
+    fn score_breakdown(
+        &self,
+        state: &KnowledgeAwareGameState,
+        truth: &dyn PlayerPOV,
+    ) -> ScoreBreakdown {
         let table_state = state.table_state();
         let static_data = state.static_data();
         let team_knowledge = state.team_knowledge();
@@ -637,8 +667,7 @@ impl Evaluator for DefaultEvaluator {
         let strike_penalty = self.strike_penalties.get(strikes).copied().unwrap_or(0.0);
         let pace = self.pace_weight
             * (state.pace()).clamp(-10, static_data.number_of_players as i32) as f64;
-        let efficiency_penalty =
-            self.efficiency_weight * f64::from(state.required_efficiency());
+        let efficiency_penalty = self.efficiency_weight * f64::from(state.required_efficiency());
         let critical_in_hand =
             self.critical_in_hand_weight * Self::critical_cards_in_hand(table_state, static_data);
         let theoretical_max =
@@ -659,7 +688,7 @@ impl Evaluator for DefaultEvaluator {
         let clue_tokens = self.clue_token_weight * harmonic_value * demand_factor;
         let known_playable = if self.known_playable_weight != 0.0 {
             self.known_playable_weight
-                * Self::known_playable_in_hands(table_state, static_data, team_knowledge)
+                * Self::known_playable_in_hands(table_state, static_data, team_knowledge, truth)
         } else {
             0.0
         };
@@ -671,7 +700,7 @@ impl Evaluator for DefaultEvaluator {
         };
         let misinformation_penalty = if self.misinformation_weight != 0.0 {
             self.misinformation_weight
-                * Self::misinformation_score(static_data, team_knowledge, table_state)
+                * Self::misinformation_score(static_data, team_knowledge, table_state, truth)
         } else {
             0.0
         };
@@ -702,6 +731,7 @@ impl Evaluator for DefaultEvaluator {
         &self,
         touched: &[u8],
         receiver: usize,
+        truth: &dyn PlayerPOV,
         static_data: &StaticGameData,
         team_knowledge: &TeamKnowledge,
         table_state: &TableState,
@@ -726,7 +756,7 @@ impl Evaluator for DefaultEvaluator {
             0.0
         };
 
-        let bad_touch_count = count_bad_touches(touched, receiver, table_state, static_data);
+        let bad_touch_count = count_bad_touches(touched, receiver, truth, table_state, static_data);
 
         precision_bonus - bad_touch_count as f64 * self.good_touch_penalty
     }
@@ -843,6 +873,8 @@ impl Evaluator for DefaultEvaluator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
+    use crate::engine::knowledge::player_knowledge::PlayerKnowledge;
     use crate::engine::knowledge::team_knowledge::TeamKnowledge;
     use crate::game::card::copies_counting_card_collection::CopiesCountingCardCollection;
     use crate::game::clue_token_bank::ClueTokenBank;
@@ -852,6 +884,36 @@ mod tests {
     use crate::game::state::table_state::TableState;
     use crate::game::static_game_data::StaticGameData;
     use crate::game::variant::test_variants::NO_VARIANT;
+
+    /// Build a truth POV for tests by holding owned values and exposing them by reference.
+    /// `card_identity` falls back to the deck's public empathy via `combined_possible_identities`.
+    struct TruthFixture {
+        knowledge: PlayerKnowledge,
+        team_knowledge: TeamKnowledge,
+    }
+
+    impl TruthFixture {
+        fn new(static_data: &StaticGameData) -> Self {
+            TruthFixture {
+                knowledge: PlayerKnowledge::new(0),
+                team_knowledge: TeamKnowledge::new(static_data.number_of_players as usize),
+            }
+        }
+
+        fn pov<'a>(
+            &'a self,
+            table_state: &'a TableState,
+            static_data: &'a StaticGameData,
+        ) -> LightweightPlayerPOV<'a> {
+            LightweightPlayerPOV::new(
+                0,
+                &self.knowledge,
+                &self.team_knowledge,
+                table_state,
+                static_data,
+            )
+        }
+    }
 
     fn make_state(strikes: u8) -> (TableState, StaticGameData) {
         let static_data = StaticGameData {
@@ -883,8 +945,12 @@ mod tests {
         let s0 = make_kags(0);
         let s1 = make_kags(1);
         let s2 = make_kags(2);
-        assert!(evaluator.score(&s0) > evaluator.score(&s1));
-        assert!(evaluator.score(&s1) > evaluator.score(&s2));
+        let truth = TruthFixture::new(s0.static_data());
+        let p0 = truth.pov(s0.table_state(), s0.static_data());
+        let p1 = truth.pov(s1.table_state(), s1.static_data());
+        let p2 = truth.pov(s2.table_state(), s2.static_data());
+        assert!(evaluator.score(&s0, &p0) > evaluator.score(&s1, &p1));
+        assert!(evaluator.score(&s1, &p1) > evaluator.score(&s2, &p2));
     }
 
     #[test]
@@ -1015,7 +1081,10 @@ mod tests {
         pk0.inferred_identities[5] = Some(crate::game::card::CardIdentityMask::from_bits(1 << 3));
         *tk.player_mut(0) = pk0;
 
-        let score_misinformed = DefaultEvaluator::misinformation_score(&static_data, &tk, &state);
+        let truth_fixture = TruthFixture::new(&static_data);
+        let truth = truth_fixture.pov(&state, &static_data);
+        let score_misinformed =
+            DefaultEvaluator::misinformation_score(&static_data, &tk, &state, &truth);
         assert!(
             score_misinformed > 0.0,
             "misinformation_score should be positive when effective mask excludes truth (got {score_misinformed})"
@@ -1024,7 +1093,8 @@ mod tests {
         // Correct the knowledge: effective mask now includes the truth.
         tk.player_mut(0).inferred_identities[5] =
             Some(crate::game::card::CardIdentityMask::from_bits(1 << 7));
-        let score_correct = DefaultEvaluator::misinformation_score(&static_data, &tk, &state);
+        let score_correct =
+            DefaultEvaluator::misinformation_score(&static_data, &tk, &state, &truth);
         assert_eq!(
             score_correct, 0.0,
             "misinformation_score should be 0 when knowledge exactly matches truth"

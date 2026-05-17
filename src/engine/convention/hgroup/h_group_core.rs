@@ -249,11 +249,25 @@ pub fn good_touch_baseline_mask(
 /// Counts cards in `touched` that violate the good-touch principle.
 ///
 /// A card is a bad touch if:
-/// - its empathy has no overlap with still-needed cards, OR
+/// - its identity (truth, when visible to the searcher; public empathy otherwise) has no
+///   overlap with still-needed cards, OR
 /// - its exact identity is already clued in another player's hand.
+///
+/// `truth` is the searcher's POV (root POV during tree search). For cards visible to the
+/// searcher — including the receiver's hand when the clue-giver is the searcher — this
+/// resolves to a singleton truth identity. Cards the searcher cannot see (fresh draws
+/// during rollout, or the searcher's own cards under raw clue empathy) fall back to the
+/// deck's public empathy.
+///
+/// Using truth here is essential: the clue itself narrows a touched card's *public*
+/// empathy to the GTP-good set, which can hide a trash touch (e.g. clueing rank 1 to a
+/// hand containing trash P1 makes its public empathy `{R1, G1, B1, P1}`, all overlapping
+/// still-needed, even though the searcher knows it is P1). Truth-based detection sees
+/// through this.
 pub(crate) fn count_bad_touches(
     touched: &[CardDeckIndex],
     receiver: PlayerIndex,
+    truth: &dyn PlayerPOV,
     table_state: &TableState,
     static_data: &StaticGameData,
 ) -> usize {
@@ -262,7 +276,10 @@ pub(crate) fn count_bad_touches(
     touched
         .iter()
         .filter(|&&idx| {
-            let bits = table_state.deck.get_global_empathy(idx).as_bits();
+            let bits = match truth.card_identity(idx) {
+                Some(id) => 1u64 << id,
+                None => table_state.deck.get_global_empathy(idx).as_bits(),
+            };
             bits & still_needed == 0 || bits & already_clued != 0
         })
         .count()
@@ -277,6 +294,7 @@ pub fn is_good_touch_principle_compliant(
     count_bad_touches(
         touched_cards,
         *clue_receiver_player_index,
+        player_pov,
         player_pov.table_state(),
         player_pov.static_data(),
     ) == 0
@@ -299,7 +317,9 @@ pub fn has_on_finesse_position(
 mod tests {
     use super::*;
     use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
-    use crate::engine::knowledge::player_knowledge::{knowledge_for_hand, knowledge_with_visible};
+    use crate::engine::knowledge::player_knowledge::{
+        PlayerKnowledge, knowledge_for_hand, knowledge_with_visible,
+    };
     use crate::engine::knowledge::team_knowledge::TeamKnowledge;
     use crate::game::clue_type::ClueType;
     use crate::game::deck::unit_test_constants::novariant_constants::{R1_MASK, R2_MASK};
@@ -521,6 +541,18 @@ mod tests {
 
     // ── count_bad_touches ──────────────────────────────────────────────────
 
+    /// Build a minimal-knowledge truth POV for tests: an empty PlayerKnowledge so
+    /// `card_identity` falls back to the deck's public empathy. This matches the
+    /// behaviour the old `count_bad_touches` had when it consulted the deck directly.
+    fn make_truth_pov<'a>(
+        knowledge: &'a PlayerKnowledge,
+        team_knowledge: &'a TeamKnowledge,
+        table_state: &'a TableState,
+        static_data: &'a StaticGameData,
+    ) -> LightweightPlayerPOV<'a> {
+        LightweightPlayerPOV::new(0, knowledge, team_knowledge, table_state, static_data)
+    }
+
     #[test]
     fn count_bad_touches_zero_when_touched_card_still_needed() {
         // Card 10 has fresh (all-possible-IDs) deck empathy. Nothing has been played.
@@ -531,8 +563,11 @@ mod tests {
         table_state.update_with_draw_action(10);
         table_state.active_player_index = 0;
 
+        let knowledge = knowledge_for_hand(&[]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let truth = make_truth_pov(&knowledge, &team_knowledge, &table_state, &static_data);
         assert_eq!(
-            super::count_bad_touches(&[10], 1, &table_state, &static_data),
+            super::count_bad_touches(&[10], 1, &truth, &table_state, &static_data),
             0
         );
     }
@@ -561,8 +596,11 @@ mod tests {
             .deck
             .reveal_card(10, NoVarCards::R1.as_variant_card_id());
 
+        let knowledge = knowledge_for_hand(&[]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let truth = make_truth_pov(&knowledge, &team_knowledge, &table_state, &static_data);
         assert_eq!(
-            super::count_bad_touches(&[10], 1, &table_state, &static_data),
+            super::count_bad_touches(&[10], 1, &truth, &table_state, &static_data),
             1
         );
     }
@@ -589,9 +627,69 @@ mod tests {
         table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
 
+        let knowledge = knowledge_for_hand(&[]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let truth = make_truth_pov(&knowledge, &team_knowledge, &table_state, &static_data);
         assert_eq!(
-            super::count_bad_touches(&[10], 1, &table_state, &static_data),
+            super::count_bad_touches(&[10], 1, &truth, &table_state, &static_data),
             1
+        );
+    }
+
+    #[test]
+    fn count_bad_touches_detects_trash_via_truth_pov_after_clue_narrowing() {
+        // Regression for the rank-1 → bad-touch P1 case from
+        // tests/replays/should_clue_g1_by_color_avoiding_bad_touch.json.
+        //
+        // Card 10 is in player 1's hand. Its truth is P1 (purple-1). Purple is already
+        // complete on the stacks, so P1 is trash. The receiver's *public* empathy on
+        // card 10 may not even be a singleton (e.g. after a rank-1 clue narrows via GTP
+        // to {R1, G1, B1, P1}, all overlapping still_needed). The truth POV — the
+        // searcher who sees card 10 — knows it is P1 and must classify it as a bad touch.
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards;
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+
+        // Fill the purple stack: play P1..P5 from spare deck positions.
+        for (deck_idx, card) in [
+            (0u8, NoVarCards::P1),
+            (1, NoVarCards::P2),
+            (2, NoVarCards::P3),
+            (3, NoVarCards::P4),
+            (4, NoVarCards::P5),
+        ] {
+            table_state.update_with_draw_action(deck_idx);
+            table_state.update_with_play_action_of_specific_card(
+                deck_idx,
+                card.as_variant_card_id(),
+                &static_data,
+            );
+        }
+
+        // Draw card 10 into player 1's hand. The public deck empathy for card 10 still
+        // includes many identities (no clue has narrowed it). The searcher, however,
+        // knows it is a second P1.
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10);
+
+        // Build a truth POV for player 0 (searcher) where card 10 is visible as a
+        // second P1. Reveal does not mutate the stack, but does narrow the deck empathy
+        // — we *don't* call reveal_card here because we want to simulate the case where
+        // public empathy is *not* a singleton; only the searcher knows the identity via
+        // their own `inferred_identities`.
+        let mut knowledge = knowledge_for_hand(&[]);
+        knowledge.inferred_identities[10] = Some(crate::game::card::CardIdentityMask::from_bits(
+            1 << NoVarCards::P1.as_variant_card_id(),
+        ));
+        knowledge.visible_cards |= 1 << 10;
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let truth = make_truth_pov(&knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert_eq!(
+            super::count_bad_touches(&[10], 1, &truth, &table_state, &static_data),
+            1,
+            "trash P1 in receiver's hand should be flagged via truth POV"
         );
     }
 

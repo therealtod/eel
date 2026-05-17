@@ -30,8 +30,10 @@ pub struct DirectPlayClue;
 impl DirectPlayClue {
     /// Core direct play detection: checks if the focus card is currently playable on the stacks.
     fn is_direct_play_situation(focus_idx: CardDeckIndex, pov: &dyn PlayerPOV) -> bool {
-        pov.card_identity(focus_idx)
-            .is_some_and(|card_id| {  (pov.table_state().playable_cards(pov.static_data()) >> card_id) & 1 != 0 && !pov.is_gotten(card_id)})
+        pov.card_identity(focus_idx).is_some_and(|card_id| {
+            (pov.table_state().playable_cards(pov.static_data()) >> card_id) & 1 != 0
+                && !pov.is_gotten(card_id)
+        })
     }
 }
 
@@ -46,8 +48,7 @@ impl ClueTech for DirectPlayClue {
                 clues_for_player_with_focus(target, active_player_pov)
                     .into_iter()
                     .filter_map(move |(action, focus_idx)| {
-                        if Self::is_direct_play_situation(focus_idx, active_player_pov)
-                        {
+                        if Self::is_direct_play_situation(focus_idx, active_player_pov) {
                             Some(action)
                         } else {
                             None

@@ -16,6 +16,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
+use eel::engine::action_selection_strategy::ActionSelectionStrategy;
 use eel::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet;
 use eel::engine::convention::hgroup::tech::blind_play::BlindPlay;
 use eel::engine::convention::hgroup::tech::critical_save::{ColorCriticalSave, RankCriticalSave};
@@ -27,12 +28,11 @@ use eel::engine::convention::hgroup::tech::play_known_playable::PlayKnownPlayabl
 use eel::engine::convention::hgroup::tech::simple_finesse::SimpleFinesse;
 use eel::engine::convention::hgroup::tech::simple_prompt::SimplePrompt;
 use eel::engine::convention::hgroup::tech::two_save::TwoSave;
+use eel::engine::replay::from_scenario::knowledge_aware_from_scenario;
 use eel::engine::replay::reconstruct::ReplayRunner;
 use eel::engine::replay::snapshot::to_scenario_json;
 use eel::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
 use eel::external::hanablive::Game;
-use eel::engine::action_selection_strategy::ActionSelectionStrategy;
-use eel::engine::replay::from_scenario::knowledge_aware_from_scenario;
 use eel::game::state::table_state_json::parse_scenario;
 
 #[derive(Parser, Debug)]
@@ -89,20 +89,21 @@ fn main() {
         .unwrap_or_else(|e| panic!("could not step to turn {}: {e}", args.turn));
 
     let mut scenario_value = to_scenario_json(&runner.game);
-    scenario_value["scenario_description"] =
-        serde_json::Value::String(args.description.clone());
+    scenario_value["scenario_description"] = serde_json::Value::String(args.description.clone());
 
     // Roundtrip check: compare the engine's recommendation before and after serialisation.
     let strategy = TreeActionSelectionStrategy::default();
     let original_action = runner.engine_recommendation(&strategy);
 
-    let json_str = serde_json::to_string_pretty(&scenario_value)
-        .expect("could not serialise scenario JSON");
+    let json_str =
+        serde_json::to_string_pretty(&scenario_value).expect("could not serialise scenario JSON");
     let loaded_scenario = parse_scenario(&json_str);
 
     // Compare engine recommendations before and after serialisation.
-    let loaded_game =
-        knowledge_aware_from_scenario(&loaded_scenario, eel::game::variant::test_variants::NO_VARIANT);
+    let loaded_game = knowledge_aware_from_scenario(
+        &loaded_scenario,
+        eel::game::variant::test_variants::NO_VARIANT,
+    );
     let active = loaded_game.table_state.active_player_index;
     let roundtrip_pov = loaded_game.player_pov(active);
     let roundtrip_action = strategy.select_active_player_action(&roundtrip_pov, &conv);
@@ -133,7 +134,10 @@ fn main() {
 
     eprintln!("Wrote scenario to {out_display}.");
     eprintln!();
-    eprintln!("Engine recommendation at turn {}: {original_action:?}", args.turn);
+    eprintln!(
+        "Engine recommendation at turn {}: {original_action:?}",
+        args.turn
+    );
     eprintln!();
     eprintln!("Add a test in tests/search_regression.rs:");
     eprintln!();
