@@ -137,33 +137,19 @@ impl ClueTech for DelayedPlayClue {
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
     ) -> Hypothesis {
-        let Some(snap) = history.get(turn) else {
-            return Hypothesis::empty();
-        };
-        let giver = snap.table_state.active_player_index;
-        let giver_pov = snap.player_pov(giver, observer_pov.static_data());
-        let focus = match get_clue_focus(player_index, touched, &giver_pov) {
-            Some(f) => f,
-            None => return Hypothesis::empty(),
-        };
-        let static_data = giver_pov.static_data();
-        let total_ids =
-            static_data.variant.number_of_suits as usize * static_data.variant.stacks_size as usize;
-        let clue_mask = static_data.variant.empathy_for_clue(clue).as_bits();
-        let mask: u64 = (0..total_ids)
-            .filter(|&id| {
-                if let Some(away_value) = giver_pov.away_value(id) {
-                    (1u64 << id) & clue_mask != 0
-                        && away_value > 0
-                        && Self::connecting_cards_are_known(id, away_value, &giver_pov)
-                } else {
-                    false
+        let multi =
+            self.clue_knowledge_updates_multi(player_index, touched, clue, turn, history, observer_pov);
+        let mut focus_card: Option<CardDeckIndex> = None;
+        let mut mask: u64 = 0;
+        for h in &multi {
+            for u in &h.immediate {
+                if let KnowledgeUpdate::NarrowPossibilities { card_deck_index, mask: m } = u {
+                    focus_card = Some(*card_deck_index);
+                    mask |= m;
                 }
-            })
-            .fold(0u64, |acc, id| acc | (1 << id));
-        if mask == 0 {
-            return Hypothesis::empty();
+            }
         }
+        let Some(focus) = focus_card else { return Hypothesis::empty(); };
         Hypothesis::unconditional(vec![KnowledgeUpdate::NarrowPossibilities {
             card_deck_index: focus,
             mask,
@@ -783,10 +769,10 @@ mod tests {
         table_state.active_player_index = 0; // Clue giver
 
         let known_playable_one_mask = R1_MASK | Y1_MASK | G1_MASK;
+        let rank2_mask = R2_MASK | Y2_MASK | G2_MASK | B2_MASK | P2_MASK;
 
-        let knowledge = knowledge_with_visible(0, &[(40, R2_MASK), (30, R1_MASK)]);
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
-        // Player 0 (observer/giver) sees both cards' true identities.
+        // Player 0 (giver) sees both cards' true identities.
         team_knowledge.player_mut(0).inferred_identities[40] =
             Some(CardIdentityMask::from_bits(R2_MASK));
         team_knowledge.player_mut(0).visible_cards |= 1u64 << 40;
@@ -797,10 +783,20 @@ mod tests {
         team_knowledge.player_mut(2).own_hand |= 1 << 30;
         team_knowledge.player_mut(2).inferred_identities[30] =
             Some(CardIdentityMask::from_bits(known_playable_one_mask));
+        // Player 1 (receiver) holds card 40; after the rank-2 clue their empathy is the full rank-2 mask.
+        team_knowledge.player_mut(1).own_hand |= 1u64 << 40;
+        team_knowledge.player_mut(1).inferred_identities[40] =
+            Some(CardIdentityMask::from_bits(rank2_mask));
 
+        // Snapshot: active player is the giver (player 0).
         let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
+        // Observer is the receiver (player 1); update active_player accordingly.
+        table_state.active_player_index = 1;
+        let mut p1_knowledge = PlayerKnowledge::new(1);
+        p1_knowledge.own_hand = 1u64 << 40;
+        p1_knowledge.inferred_identities[40] = Some(CardIdentityMask::from_bits(rank2_mask));
         let pov =
-            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+            LightweightPlayerPOV::new(1, &p1_knowledge, &team_knowledge, &table_state, &static_data);
 
         let updates = DelayedPlayClue.knowledge_updates(
             &GameAction::Clue {
