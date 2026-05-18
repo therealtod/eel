@@ -69,12 +69,13 @@ fn engine_action_at_turn(replay_path: &str, turn: usize) -> GameAction {
 // }
 
 #[test]
-fn should_not_discard_for_no_good_reason() {
-    let action = engine_action_at_turn("discards_for_no_good_reason.json", 9);
-    if let GameAction::Discard {
+fn should_understand_delayed_play_clue() {
+    let action = engine_action_at_turn("should_understand_delayed_play_clue.json", 9);
+    if let GameAction::Play {
         player_index: 0,
+        card_deck_index: 17,
         ..
     } = action {
-        panic!("expected to do something useful such as playing a known playable or play cluing r2, got: {action:?}");
+        panic!("Alice should not play the play clued p2 before the globally known p1. Instead she chose this action: {action:?}");
     }
 }

@@ -504,7 +504,6 @@ impl KnowledgeAwareGameState {
         convention_set: &dyn ConventionSet,
     ) {
         let giver = self.table_state.active_player_index();
-        let pre_clue_snapshot = self.snapshot();
         self.table_state.update_with_clue_action(
             touched_card_deck_indexes.clone(),
             clue.clone(),
@@ -569,26 +568,28 @@ impl KnowledgeAwareGameState {
         let num_players = self.static_data.number_of_players as usize;
         let techs = convention_set.techs();
 
-        // In normal gameplay `record_snapshot` is called before each action, so
-        // `self.history[turn]` holds the pre-clue state that `knowledge_updates` need.
-        // In search no history is recorded; synthesise a slice padded up to `action.turn`
-        // so `history.get(action.turn)` resolves to `pre_clue_snapshot`. Padding (rather
-        // than a single-entry slice) is required because search advances `current_turn`,
-        // so simulated actions past the first ply carry `turn > 0`.
-        let local_history;
-        let knowledge_history: &[GameStateSnapshot] = if !self.history.is_empty() {
-            &self.history
-        } else {
-            let action_turn = match action {
-                GameAction::Clue { turn, .. } => *turn,
-                _ => 0,
-            };
-            local_history = vec![pre_clue_snapshot.clone(); action_turn + 1];
-            &local_history
+        // Take a snapshot AFTER the raw clue narrowing and GTP baseline have been applied.
+        // Convention techs reason about the clue from the giver's forward-looking POV: the
+        // giver knows that giving this clue will narrow the receiver's empathy via the raw
+        // clue mask, and any inference about "is the connecting card already known to its
+        // holder?" must account for that narrowing. Without this, e.g. DelayedPlayClue
+        // would miss situations where the connecting card becomes known precisely *because*
+        // of the clue being interpreted, and DirectPlayClue would fail to recognise that
+        // the focus identity is about to be a duplicate of an identity made known elsewhere
+        // in the same hand by this clue.
+        let post_raw_snapshot = self.snapshot();
+        let action_turn = match action {
+            GameAction::Clue { turn, .. } => *turn,
+            _ => 0,
         };
+        // Techs only consult `history.get(turn)` (the clue being interpreted); padding to
+        // `action_turn + 1` covers search's nonzero turn indices without copying the full
+        // `self.history`.
+        let local_history = vec![post_raw_snapshot.clone(); action_turn + 1];
+        let knowledge_history: &[GameStateSnapshot] = &local_history;
 
         // Receiver: collect all matching techs' hypotheses from the receiver's own POV.
-        let receiver_pov = pre_clue_snapshot.player_pov(receiver, &self.static_data);
+        let receiver_pov = post_raw_snapshot.player_pov(receiver, &self.static_data);
         let receiver_hypotheses =
             collect_hypotheses(techs, action, knowledge_history, &receiver_pov);
         if !receiver_hypotheses.is_empty() {

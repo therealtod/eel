@@ -138,9 +138,21 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
                 return true;
             }
             // Known via a play signal (e.g. finesse blind-play)
-            pk.signals[card_deck_index as usize]
+            if pk.signals[card_deck_index as usize]
                 .iter()
                 .any(|s| matches!(s, Signal::Play { .. }))
+            {
+                return true;
+            }
+            // Known via empathy: the holder's own combined possibilities narrow to a
+            // singleton (e.g. via clue mask intersection across multiple clues).
+            pk.combined_possible_identities(
+                card_deck_index,
+                self.table_state,
+                &self.static_data.variant,
+            )
+            .known_card_id()
+            .is_some()
         })
     }
 
