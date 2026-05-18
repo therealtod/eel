@@ -280,20 +280,12 @@ impl ClueTech for DelayedPlayClue {
             }
         }
 
-        if union_fallback_mask != 0 {
-            out.push(Hypothesis::unconditional(vec![
-                KnowledgeUpdate::NarrowPossibilities {
-                    card_deck_index: focus,
-                    mask: union_fallback_mask,
-                },
-            ]));
-        }
-
         // Suppress duplicate provisional sub-hypotheses that target the same
         // (focus_id, connecting_card_idx). This happens when iterating
         // `connecting_id` across many candidates that all live in the same
         // holder's empathy — we want one per (alt_group, focus_id) pair.
         // Conservatively dedup on (alt_group, focus_mask, expected_identity).
+        // O(n²) on a SmallVec — intentional; `out` is bounded by hand size * candidates.
         let mut seen: smallvec::SmallVec<[(Option<AltGroupKey>, u64, Option<VariantCardId>); 4]> =
             smallvec![];
         out.retain(|h| {
@@ -319,6 +311,15 @@ impl ClueTech for DelayedPlayClue {
                 true
             }
         });
+
+        if union_fallback_mask != 0 {
+            out.push(Hypothesis::unconditional(vec![
+                KnowledgeUpdate::NarrowPossibilities {
+                    card_deck_index: focus,
+                    mask: union_fallback_mask,
+                },
+            ]));
+        }
 
         out
     }

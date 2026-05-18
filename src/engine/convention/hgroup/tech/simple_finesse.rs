@@ -186,11 +186,7 @@ impl ClueTech for SimpleFinesse {
                     card_deck_index: focus,
                     mask: 1u64 << one_away_id,
                 }],
-                PendingTrigger::BlindPlay {
-                    player: finessed_player,
-                    expected_card: finesse_position,
-                    expected_identity: None,
-                },
+                PendingTrigger::blind_play(finessed_player, finesse_position),
             );
         }
 

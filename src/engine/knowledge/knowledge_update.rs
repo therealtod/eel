@@ -172,3 +172,10 @@ pub enum PendingTrigger {
         expected_identity: Option<VariantCardId>,
     },
 }
+
+impl PendingTrigger {
+    /// Convenience constructor: blind-play trigger with no identity gate.
+    pub fn blind_play(player: PlayerIndex, expected_card: CardDeckIndex) -> Self {
+        Self::BlindPlay { player, expected_card, expected_identity: None }
+    }
+}
