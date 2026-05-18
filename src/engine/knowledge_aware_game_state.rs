@@ -528,6 +528,11 @@ impl KnowledgeAwareGameState {
         convention_set: &dyn ConventionSet,
     ) {
         let giver = self.table_state.active_player_index();
+        // Save pre-clue table state so that focus calculation can correctly distinguish
+        // "already clued before this clue" from "newly touched by this clue". The snapshot
+        // passed to techs via local_history uses this pre-clue table_state paired with
+        // post-raw team_knowledge, giving get_clue_focus the right clue_touched_cards.
+        let pre_clue_table_state = self.table_state.clone();
         self.table_state.update_with_clue_action(
             touched_card_deck_indexes.clone(),
             clue.clone(),
@@ -592,16 +597,18 @@ impl KnowledgeAwareGameState {
         let num_players = self.static_data.number_of_players as usize;
         let techs = convention_set.techs();
 
-        // Take a snapshot AFTER the raw clue narrowing and GTP baseline have been applied.
-        // Convention techs reason about the clue from the giver's forward-looking POV: the
-        // giver knows that giving this clue will narrow the receiver's empathy via the raw
-        // clue mask, and any inference about "is the connecting card already known to its
-        // holder?" must account for that narrowing. Without this, e.g. DelayedPlayClue
-        // would miss situations where the connecting card becomes known precisely *because*
-        // of the clue being interpreted, and DirectPlayClue would fail to recognise that
-        // the focus identity is about to be a duplicate of an identity made known elsewhere
-        // in the same hand by this clue.
-        let post_raw_snapshot = self.snapshot();
+        // Build the snapshot for local_history using the PRE-clue table_state but the
+        // POST-raw-narrowing team_knowledge. This combination gives techs what they need:
+        //
+        // - pre-clue table_state.clue_touched_cards: get_clue_focus can correctly
+        //   distinguish "already clued before this clue" from "newly touched", so chop
+        //   detection and focus selection work correctly.
+        //
+        // - post-raw team_knowledge: convention techs see the narrowed empathy that the
+        //   clue mask imposes. DelayedPlayClue needs this to recognise when a connecting
+        //   card becomes uniquely known *because of* the clue, and DirectPlayClue needs
+        //   it to detect good-touch duplicates introduced by the same clue.
+        let tech_snapshot = GameStateSnapshot::new(pre_clue_table_state, self.team_knowledge.clone());
         let action_turn = match action {
             GameAction::Clue { turn, .. } => *turn,
             _ => 0,
@@ -609,11 +616,20 @@ impl KnowledgeAwareGameState {
         // Techs only consult `history.get(turn)` (the clue being interpreted); padding to
         // `action_turn + 1` covers search's nonzero turn indices without copying the full
         // `self.history`.
-        let local_history = vec![post_raw_snapshot.clone(); action_turn + 1];
+        let local_history = vec![tech_snapshot; action_turn + 1];
         let knowledge_history: &[GameStateSnapshot] = &local_history;
 
         // Receiver: collect all matching techs' hypotheses from the receiver's own POV.
-        let receiver_pov = post_raw_snapshot.player_pov(receiver, &self.static_data);
+        // Use the current (post-raw) table_state so the receiver's POV reflects the clue
+        // token spent and the deck narrowing, while local_history supplies pre-clue
+        // clue_touched_cards for focus calculation inside the techs.
+        let receiver_pov = LightweightPlayerPOV::new(
+            receiver,
+            self.team_knowledge.player(receiver),
+            &self.team_knowledge,
+            &self.table_state,
+            &self.static_data,
+        );
         let receiver_hypotheses =
             collect_hypotheses(techs, action, knowledge_history, &receiver_pov);
         if !receiver_hypotheses.is_empty() {
@@ -894,6 +910,7 @@ impl KnowledgeAwareGameState {
 mod tests {
     use super::*;
     use crate::game::card::CardIdentityMask;
+    use crate::game::clue_type::ClueType;
     use crate::game::variant::test_variants::NO_VARIANT;
 
     fn make_state() -> KnowledgeAwareGameState {
@@ -1105,5 +1122,90 @@ mod tests {
         let _ = state.player_pov(0);
         let _ = state.player_pov(1);
         let _ = state.player_pov(2);
+    }
+
+    // Regression: get_clue_focus must use the PRE-clue table_state so that
+    // clue_touched_cards reflects which cards were already clued before the
+    // current clue. Previously apply_clue passed the POST-clue snapshot, where
+    // every newly-touched card already appeared as is_touched, emptying the
+    // "newly touched" set and causing focus to fall back to the leftmost touched
+    // card (slot 1) instead of the chop.
+    #[test]
+    fn clue_focus_is_chop_not_leftmost_when_chop_is_newly_touched() {
+        use crate::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet;
+        use crate::engine::convention::hgroup::tech::direct_play_clue::DirectPlayClue;
+
+        // 3 players; stacks empty throughout.
+        let static_data = StaticGameData {
+            number_of_players: 3,
+            variant: NO_VARIANT,
+        };
+        let mut state = KnowledgeAwareGameState::new(static_data);
+
+        // Alice (player 0) draws two cards.
+        //   deck[0] = R1 (id 0) — drawn first → oldest → chop
+        //   deck[1] = R2 (id 1) — drawn second → newest → slot 1
+        // Both are unclued. The red color clue below touches both.
+        state.update_with_draw_action_of_specific_card(0, 0, 0); // R1
+        state.update_with_draw_action_of_specific_card(0, 1, 1); // R2
+
+        // Bob (player 1) gives a red color clue to Alice.
+        state.table_state.active_player_index = 1;
+
+        let clue = Clue {
+            clue_type: ClueType::Color,
+            clue_value: 0, // red = suit 0
+        };
+        let action = GameAction::Clue {
+            player_index: 0,
+            touched_card_deck_indexes: smallvec::smallvec![0, 1],
+            clue,
+            turn: 0,
+        };
+
+        // Convention set with only DirectPlayClue so the test is self-contained.
+        let conv = HGroupConventionSet::new(vec![Box::new(DirectPlayClue)]);
+        let knowledge_clone = state.team_knowledge.player(1).clone();
+        let team_clone = state.team_knowledge.clone();
+        let table_clone = state.table_state.clone();
+        let static_clone = state.static_data.clone();
+        let truth = LightweightPlayerPOV::new(
+            1,
+            &knowledge_clone,
+            &team_clone,
+            &table_clone,
+            &static_clone,
+        );
+        state.apply(&action, &conv, &truth);
+
+        let alice = state.team_knowledge.player(0);
+
+        // deck[0] is the chop and the correct focus. DirectPlayClue narrows the
+        // focus to immediately-playable red ids only. On empty stacks the only
+        // playable red card is R1 (id 0, bit 0), so the empathy must be exactly 1.
+        // With the pre-fix bug the focus was deck[1] (leftmost), leaving deck[0]
+        // at the raw red mask {R1..R5} = 0b11111 = 31.
+        let deck0_empathy = alice
+            .combined_possible_identities(0, &state.table_state, &state.static_data.variant)
+            .as_bits();
+        assert_eq!(
+            deck0_empathy,
+            1u64,
+            "chop (deck[0]=R1) should be narrowed to {{R1}} by DirectPlayClue as focus; \
+             got {deck0_empathy:025b}"
+        );
+
+        // deck[1] is not the focus; DirectPlayClue applies no hypothesis to it,
+        // leaving it at the raw red mask = {R1..R5} = bits 0–4.
+        let deck1_empathy = alice
+            .combined_possible_identities(1, &state.table_state, &state.static_data.variant)
+            .as_bits();
+        let red_mask: u64 = 0b11111;
+        assert_eq!(
+            deck1_empathy & red_mask,
+            red_mask,
+            "non-focus (deck[1]=R2) should retain all red identities; \
+             got {deck1_empathy:025b}"
+        );
     }
 }

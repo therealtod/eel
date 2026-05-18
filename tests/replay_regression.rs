@@ -81,6 +81,27 @@ fn should_understand_delayed_play_clue() {
     }
 }
 
+/// The yellow clue at turn 1 touches Alice's chop (slot 5, deck 0 = Y4) and three
+/// interior cards. Chop is the focus, so Alice should eventually play deck 0 (Y4).
+/// Before the fix, `get_clue_focus` was called with the POST-clue snapshot, where
+/// all touched cards already appear as `is_touched`, so the "newly touched" set was
+/// empty and focus fell back to the leftmost touched card (slot 1) instead of the
+/// chop (slot 5).
+#[test]
+fn should_calculate_focus_correctly() {
+    let action = engine_action_at_turn("should_calculate_focus_correctly.json", 21);
+    assert!(
+        matches!(
+            action,
+            GameAction::Play {
+                card_deck_index: 0,
+                ..
+            }
+        ),
+        "Alice should play deck 0 (Y4, her chop focused by the yellow clue), got: {action:?}"
+    );
+}
+
 /// After the same rank-2 clue, Alice's empathy on the focused slot 2 (deck 3)
 /// must span the full {R2, Y2, G2, B2, P2} candidate set: `DirectPlayClue`
 /// contributes {B2, P2} (immediately playable), and `DelayedPlayClue` contributes
