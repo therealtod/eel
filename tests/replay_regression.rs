@@ -103,15 +103,15 @@ fn delayed_play_clue_admits_full_rank2_union_on_focus() {
 
 #[test]
 fn should_not_clue_unplayable_cards() {
-    let action = engine_action_at_turn("should_not_clue_unplayable_cards.json", 10);
+    let action = engine_action_at_turn("should_not_clue_unplayable_cards.json", 1);
     if let GameAction::Clue {
-        player_index: 2,
+        player_index: 0,
         clue: Clue {
             clue_type: ClueType::Rank,
-            clue_value: 3
+            clue_value: 2
         },
         ..
     } = action {
-        panic!("Bob should not clue on a non-playable p3, got: {action:?}");
+        panic!("Bob should not clue on a non-playable b2, got: {action:?}");
     }
 }

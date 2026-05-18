@@ -71,6 +71,15 @@ impl DelayedPlayClue {
                     if p == active {
                         return false;
                     }
+                    // The giver can see other players' cards directly. If the giver can
+                    // determine the actual identity and it doesn't match connecting_id,
+                    // the card is provably not the connector — even if the holder's empathy
+                    // includes connecting_id as a possibility.
+                    if let Some(giver_id) = pov.card_identity(idx) {
+                        if giver_id != connecting_id {
+                            return false;
+                        }
+                    }
                     let possibilities = pk
                         .combined_possible_identities(idx, table_state, variant)
                         .as_bits();
@@ -515,6 +524,44 @@ mod tests {
         assert!(
             actions.iter().any(|a| matches!(a, GameAction::Clue { player_index: 1, .. })),
             "must propose a delayed play clue to p=1 when giver's own card is exactly-known P2"
+        );
+    }
+
+    /// The receiver-friendly path must NOT use a teammate's card as a connector when the
+    /// giver can see its actual identity and it differs from the connecting card — even if
+    /// the holder's empathy includes the connecting identity as a possibility.
+    #[test]
+    fn game_actions_does_not_use_misidentified_teammate_card_as_connector() {
+        // Stacks empty → all rank-1 cards are playable.
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+
+        // p=1 has B2 at deck[10] — potential delayed play target.
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10);
+
+        // p=2 has a rank-1 clued card at deck[20]; from p=2's perspective it could be
+        // any of {R1,Y1,G1,B1,P1} — including B1 (the needed connector for B2). But the
+        // giver (p=0) can see it is actually R1, not B1.
+        table_state.active_player_index = 2;
+        table_state.update_with_draw_action(20);
+        table_state.clue_touched_cards |= 1 << 20;
+        table_state.active_player_index = 0;
+
+        let knowledge = knowledge_with_visible(0, &[(10, B2_MASK), (20, R1_MASK)]);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(2).own_hand |= 1 << 20;
+        team_knowledge.player_mut(2).inferred_identities[20] =
+            Some(CardIdentityMask::from_bits(R1_MASK | Y1_MASK | G1_MASK | B1_MASK | P1_MASK));
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        // B2 is 1-away; the only connector candidate is deck[20] which p=2 thinks could be B1,
+        // but the giver knows is actually R1. The delayed play must not be proposed.
+        assert!(
+            DelayedPlayClue.game_actions(&pov).is_empty(),
+            "must not propose a delayed play clue when the giver sees the connector candidate \
+             is actually a different card"
         );
     }
 
