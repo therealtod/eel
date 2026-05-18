@@ -578,4 +578,87 @@ mod tests {
                 .is_empty()
         );
     }
+
+    #[test]
+    fn knowledge_updates_recognizes_delayed_play_via_ambiguous_known_playable_one() {
+        // B1 and P1 are played. Player 2 holds card 30, touched, with empathy narrowed
+        // to {R1, Y1, G1} (i.e. "known playable 1 of unknown color" — typical good-touch
+        // result of a rank-1 clue after B1/P1 are off the table). Player 0 then clues
+        // rank 2 to player 1, focusing card 40.
+        //
+        // The receiver-friendly path of `connecting_cards_are_known` should recognise
+        // that card 30 is a valid connecting card for any of R2/Y2/G2, so the focus
+        // mask returned by `knowledge_updates` must include R2, Y2, and G2.
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards::{B1, P1};
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            B1.as_variant_card_id(),
+            &static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            P1.as_variant_card_id(),
+            &static_data,
+        );
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(40); // R2 in player 1's hand (focus)
+        table_state.active_player_index = 2;
+        table_state.update_with_draw_action(30); // R1 in player 2's hand (connecting)
+        table_state.clue_touched_cards |= 1 << 30;
+        table_state.active_player_index = 0; // Clue giver
+
+        let known_playable_one_mask = R1_MASK | Y1_MASK | G1_MASK;
+
+        let knowledge = knowledge_with_visible(0, &[(40, R2_MASK), (30, R1_MASK)]);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        // Player 0 (observer/giver) sees both cards' true identities.
+        team_knowledge.player_mut(0).inferred_identities[40] =
+            Some(CardIdentityMask::from_bits(R2_MASK));
+        team_knowledge.player_mut(0).visible_cards |= 1u64 << 40;
+        team_knowledge.player_mut(0).inferred_identities[30] =
+            Some(CardIdentityMask::from_bits(R1_MASK));
+        team_knowledge.player_mut(0).visible_cards |= 1u64 << 30;
+        // Player 2 holds card 30; their empathy narrows to the three remaining 1s.
+        team_knowledge.player_mut(2).own_hand |= 1 << 30;
+        team_knowledge.player_mut(2).inferred_identities[30] =
+            Some(CardIdentityMask::from_bits(known_playable_one_mask));
+
+        let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let updates = DelayedPlayClue.knowledge_updates(
+            &GameAction::Clue {
+                player_index: 1,
+                touched_card_deck_indexes: smallvec::smallvec![40],
+                clue: Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 2,
+                },
+                turn: 0,
+            },
+            &[snapshot],
+            &pov,
+        );
+
+        assert_eq!(updates.immediate.len(), 1);
+        if let KnowledgeUpdate::NarrowPossibilities {
+            card_deck_index,
+            mask,
+        } = &updates.immediate[0]
+        {
+            assert_eq!(*card_deck_index, 40);
+            assert_ne!(mask & R2_MASK, 0, "R2 should be in the delayed-play mask");
+            assert_ne!(mask & Y2_MASK, 0, "Y2 should be in the delayed-play mask");
+            assert_ne!(mask & G2_MASK, 0, "G2 should be in the delayed-play mask");
+            // B2 and P2 are already directly playable (away=0), so they are not
+            // delayed — DelayedPlayClue must not include them.
+            assert_eq!(mask & B2_MASK, 0, "B2 (directly playable) must not be in delayed mask");
+            assert_eq!(mask & P2_MASK, 0, "P2 (directly playable) must not be in delayed mask");
+        } else {
+            panic!("expected NarrowPossibilities");
+        }
+    }
 }
