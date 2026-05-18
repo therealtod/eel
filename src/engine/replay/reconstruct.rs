@@ -402,6 +402,7 @@ impl<'a> ReplayRunner<'a> {
                                 .cloned()
                                 .collect(),
                             trigger: h.trigger.clone(),
+                            alt_group: h.alt_group,
                         },
                     )
                 })
@@ -419,6 +420,7 @@ impl<'a> ReplayRunner<'a> {
             self.game.team_knowledge.player_mut(q).resolve_pending(
                 p,
                 &action,
+                Some(actual_id),
                 &self.static_data.variant,
             );
         }
@@ -441,6 +443,7 @@ impl<'a> ReplayRunner<'a> {
             self.game.team_knowledge.player_mut(q).resolve_pending(
                 p,
                 &action,
+                None,
                 &self.static_data.variant,
             );
         }

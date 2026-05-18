@@ -21,10 +21,14 @@ The codebase is split into two modules:
 - **`ConventionSet`** (`convention/`): System for interpreting clues and selecting actions. The H-Group convention set
   lives in `convention/hgroup/`, with individual techniques as separate files in `tech/` (e.g., `critical_save`,
   `five_save`, `two_save`, `simple_prompt`, `simple_finesse`, `delayed_play_clue`).
-- **`ConventionTech`**: Each technique implements three methods — `game_actions` (what to do), `matches_action` (does
-  this tech explain an observed action?), and `knowledge_updates` (what to infer from this action). Concrete techs
-  don't implement `ConventionTech` directly — they implement an **action-typed sub-trait** (`ClueTech`, `PlayTech`, or
-  `DiscardTech` in `convention_tech.rs`) that receives pre-unwrapped typed parameters. A macro
+- **`ConventionTech`**: Each technique implements `game_actions` (what to do), `matches_action` (does this tech
+  explain an observed action?), and `knowledge_updates` (what to infer — returns a single `Hypothesis`). Techs that
+  need to emit several mutually-exclusive sub-alternatives for the same observation (e.g. `DelayedPlayClue` fanning
+  out across candidate connecting identities) additionally override `knowledge_updates_multi`, which returns a
+  `HypothesisSet` (`SmallVec<[Hypothesis; 1]>`); the default impl wraps the single hypothesis so existing techs are
+  unaffected. The dispatcher (`collect_hypotheses`) always invokes the multi variant. Concrete techs don't implement
+  `ConventionTech` directly — they implement an **action-typed sub-trait** (`ClueTech`, `PlayTech`, or `DiscardTech`
+  in `convention_tech.rs`) that receives pre-unwrapped typed parameters. A macro
   (`impl_convention_tech_for_clue_tech!` / `_play_tech!` / `_discard_tech!`) generates the `ConventionTech` impl,
   eliminating per-tech `if let GameAction::Clue { .. }` boilerplate.
 - **H-Group priority layer** (`hgroup/h_group_tech.rs`): Clue-interpretation priority (save > play > prompt > finesse)

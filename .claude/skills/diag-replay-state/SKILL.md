@@ -25,7 +25,7 @@ diagnostic test, then walking backwards to the corrupted layer.
    - Per own-hand card: `combined_possible_identities` bits, `inferred_identities` bits,
      `is_touched`, signals.
    - `playable_cards` mask.
-   - Hypotheses on the player's knowledge (tier, cohort, immediate updates).
+   - Hypotheses on the player's knowledge (tier, cohort, alt_group, immediate updates, trigger).
    - Each tech's `game_actions(&pov)` output — tells you *who* is proposing the bad move.
 3. **Run** `cargo test --test _diag diag_<name> -- --nocapture`.
 4. **Decode bits** (suit-major: ids 0–4 = suit 0 ranks 1–5, ids 5–9 = suit 1, …) and find
@@ -123,11 +123,13 @@ fn diag_<short_name>() {
     println!("hypotheses ({}):", knowledge.hypotheses.len());
     for h in &knowledge.hypotheses {
         println!(
-            "  tier={} cohort={} immediate={:?} trigger?={}",
+            "  id={} tier={} cohort={} alt_group={:?} immediate={:?} trigger={:?}",
+            h.id,
             h.tier,
             h.cohort_id,
+            h.alt_group,
             h.immediate,
-            h.trigger.is_some()
+            h.trigger
         );
     }
 

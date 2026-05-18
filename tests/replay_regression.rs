@@ -11,6 +11,7 @@ use eel::engine::convention::hgroup::tech::play_known_playable::PlayKnownPlayabl
 use eel::engine::convention::hgroup::tech::simple_finesse::SimpleFinesse;
 use eel::engine::convention::hgroup::tech::simple_prompt::SimplePrompt;
 use eel::engine::convention::hgroup::tech::two_save::TwoSave;
+use eel::engine::knowledge::player_pov::PlayerPOV;
 use eel::engine::replay::reconstruct::ReplayRunner;
 use eel::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
 use eel::external::hanablive::Game;
@@ -78,4 +79,34 @@ fn should_understand_delayed_play_clue() {
     } = action {
         panic!("Alice should not play her clued 2 before playing her clued 1. Instead she chose: {action:?}");
     }
+}
+
+/// After the same rank-2 clue, Alice's empathy on the focused slot 2 (deck 3)
+/// must span the full {R2, Y2, G2, B2, P2} candidate set: `DirectPlayClue`
+/// contributes {B2, P2} (immediately playable), and `DelayedPlayClue` contributes
+/// {R2, Y2, G2} via the per-connecting-id sub-hypotheses keyed on her known
+/// playable slot 1 (empathy {R1, Y1, G1}).
+#[test]
+fn delayed_play_clue_admits_full_rank2_union_on_focus() {
+    let json = std::fs::read_to_string(path_for("should_understand_delayed_play_clue.json"))
+        .expect("read replay");
+    let game = Game::from_json(&json).expect("parse replay");
+    let conv = HGroupConventionSet::default();
+    let mut runner = ReplayRunner::from_hanablive(&game, &conv).expect("build runner");
+    runner.step_to_turn(6).expect("step to turn 6");
+
+    let active = runner.game.table_state.active_player_index;
+    assert_eq!(active, 0, "Alice (player 0) should be on turn");
+    let pov = runner.game.player_pov(active);
+    // NO_VARIANT id layout: suit_idx * 5 + (rank - 1).
+    // R2=1, Y2=6, G2=11, B2=16, P2=21.
+    let expected_rank2_union: u64 = (1 << 1) | (1 << 6) | (1 << 11) | (1 << 16) | (1 << 21);
+    let focus_empathy = pov.empathy(3).as_bits();
+    assert_eq!(
+        focus_empathy & expected_rank2_union,
+        expected_rank2_union,
+        "Alice's empathy on the focused slot 2 (deck 3) should be the full \
+         union of direct ({{B2, P2}}) and delayed ({{R2, Y2, G2}}) candidates; \
+         got {focus_empathy:025b}"
+    );
 }

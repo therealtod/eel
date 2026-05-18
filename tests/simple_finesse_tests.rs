@@ -225,6 +225,7 @@ fn cathy_finesse_hypothesis_confirms_when_bob_blind_plays() {
             card_deck_index: 9,
             turn: 1,
         },
+        None,
         &static_data.variant,
     );
 
@@ -254,6 +255,7 @@ fn cathy_finesse_hypothesis_rejects_when_bob_does_not_blind_play() {
             card_deck_index: 5,
             turn: 1,
         },
+        None,
         &static_data.variant,
     );
 
@@ -389,6 +391,7 @@ fn rank_3_clue_on_chop_three_interpretations_finesse_excluded_by_critical_save()
             card_deck_index: 5,
             turn: 1,
         },
+        None,
         &static_data.variant,
     );
 

@@ -205,51 +205,94 @@ impl PlayerKnowledge {
                 tier,
                 immediate: h.immediate,
                 trigger: h.trigger,
+                alt_group: h.alt_group,
             });
         }
     }
 
     /// Resolve any provisional hypotheses triggered by `actor`'s observed `action`.
     ///
-    /// For each hypothesis whose trigger matches the action:
-    /// - **Confirm**: the hypothesis survives. Its narrowings/signals are baked
-    ///   into baseline; **all sibling hypotheses in the same cohort are dropped**.
+    /// `played_identity` carries the resolved identity of a `Play` action (when
+    /// known), used by triggers whose `expected_identity` is `Some(_)`.
+    ///
+    /// For each hypothesis whose trigger fires:
+    /// - **Confirm**: behavior depends on the hypothesis's `alt_group`:
+    ///   - `None` (cohort-wide): bake the hypothesis's narrowings into baseline,
+    ///     then drop **all** sibling hypotheses in the same cohort. Used by
+    ///     SimpleFinesse — a blind-play refutes Direct/Save siblings outright.
+    ///   - `Some(group)`: keep the confirmed hypothesis in the cohort with its
+    ///     trigger cleared (so its mask continues to contribute to the cohort
+    ///     union), and drop **only** sibling hypotheses sharing the same
+    ///     `(cohort_id, alt_group)`. The hypothesis is NOT baked into baseline,
+    ///     because doing so would collide with unconditional siblings outside
+    ///     the alt_group (e.g. DirectPlayClue's mask), producing an empty
+    ///     effective intersection.
     /// - **Reject**: the hypothesis is dropped from the list. Sibling hypotheses
     ///   in the same cohort remain (the receiver's superposition narrows by one
     ///   branch).
-    pub fn resolve_pending(&mut self, actor: PlayerIndex, action: &GameAction, variant: &Variant) {
+    pub fn resolve_pending(
+        &mut self,
+        actor: PlayerIndex,
+        action: &GameAction,
+        played_identity: Option<VariantCardId>,
+        variant: &Variant,
+    ) {
         if self.hypotheses.is_empty() {
             return;
         }
-        let mut confirmed_cohorts: Vec<HypothesisId> = Vec::new();
+        // Cohorts to drop entirely (a tier-0 hypothesis with alt_group=None confirmed).
+        let mut confirmed_full_cohorts: Vec<HypothesisId> = Vec::new();
+        // (cohort_id, alt_group) pairs whose group siblings should be pruned.
+        let mut confirmed_groups: Vec<(HypothesisId, HypothesisId)> = Vec::new();
+        // Hypotheses that confirmed in alt_group mode — survive with trigger cleared.
+        let mut keep_with_trigger_cleared: Vec<HypothesisId> = Vec::new();
         let mut rejected_ids: Vec<HypothesisId> = Vec::new();
-        // Snapshot id+cohort+trigger to decide outcomes without holding a borrow.
-        let triggers: Vec<(HypothesisId, HypothesisId, PendingTrigger)> = self
-            .hypotheses
-            .iter()
-            .filter_map(|h| h.trigger.clone().map(|t| (h.id, h.cohort_id, t)))
-            .collect();
-        for (id, cohort_id, trigger) in triggers {
+        // Snapshot id+cohort+alt_group+trigger to decide outcomes without holding a borrow.
+        let triggers: Vec<(HypothesisId, HypothesisId, Option<HypothesisId>, PendingTrigger)> =
+            self.hypotheses
+                .iter()
+                .filter_map(|h| {
+                    h.trigger
+                        .clone()
+                        .map(|t| (h.id, h.cohort_id, h.alt_group, t))
+                })
+                .collect();
+        for (id, cohort_id, alt_group, trigger) in triggers {
             match trigger {
                 PendingTrigger::BlindPlay {
                     player,
                     expected_card,
+                    expected_identity,
                     ..
                 } if player == actor => {
-                    let confirmed = matches!(
+                    let play_idx_matches = matches!(
                         action,
                         GameAction::Play {
                             card_deck_index,
                             ..
                         } if *card_deck_index == expected_card
                     );
+                    let identity_matches = match expected_identity {
+                        Some(eid) => played_identity == Some(eid),
+                        None => true,
+                    };
+                    let confirmed = play_idx_matches && identity_matches;
                     if confirmed {
-                        confirmed_cohorts.push(cohort_id);
-                        // Bake this hypothesis's updates into baseline before pruning siblings.
-                        if let Some(h) = self.hypotheses.iter().find(|h| h.id == id) {
-                            let updates = h.immediate.clone();
-                            for u in &updates {
-                                self.apply_baseline_update(u, variant);
+                        match alt_group {
+                            None => {
+                                confirmed_full_cohorts.push(cohort_id);
+                                // Bake this hypothesis's updates into baseline before
+                                // pruning siblings.
+                                if let Some(h) = self.hypotheses.iter().find(|h| h.id == id) {
+                                    let updates = h.immediate.clone();
+                                    for u in &updates {
+                                        self.apply_baseline_update(u, variant);
+                                    }
+                                }
+                            }
+                            Some(g) => {
+                                confirmed_groups.push((cohort_id, g));
+                                keep_with_trigger_cleared.push(id);
                             }
                         }
                     } else {
@@ -287,10 +330,39 @@ impl PlayerKnowledge {
             }
         }
 
-        if !confirmed_cohorts.is_empty() || !rejected_ids.is_empty() {
+        if !confirmed_full_cohorts.is_empty()
+            || !confirmed_groups.is_empty()
+            || !rejected_ids.is_empty()
+        {
             self.hypotheses.retain(|h| {
-                !confirmed_cohorts.contains(&h.cohort_id) && !rejected_ids.contains(&h.id)
+                if confirmed_full_cohorts.contains(&h.cohort_id) {
+                    return false;
+                }
+                if rejected_ids.contains(&h.id) {
+                    return false;
+                }
+                if keep_with_trigger_cleared.contains(&h.id) {
+                    return true;
+                }
+                if let Some(hg) = h.alt_group {
+                    if confirmed_groups
+                        .iter()
+                        .any(|(c, g)| *c == h.cohort_id && *g == hg)
+                    {
+                        return false;
+                    }
+                }
+                true
             });
+        }
+
+        // Clear triggers on the kept-confirmed hypotheses so they don't re-fire.
+        if !keep_with_trigger_cleared.is_empty() {
+            for h in &mut self.hypotheses {
+                if keep_with_trigger_cleared.contains(&h.id) {
+                    h.trigger = None;
+                }
+            }
         }
 
         // Promote fallback (tier-1) hypotheses to primary (tier-0) for cohorts whose
@@ -489,6 +561,7 @@ mod tests {
             PendingTrigger::BlindPlay {
                 player: 1,
                 expected_card: 3,
+                expected_identity: None,
                 deadline_turn: 99,
             },
         );
@@ -519,7 +592,7 @@ mod tests {
             card_deck_index: 7,
             turn: 1,
         };
-        pk.resolve_pending(1, &wrong_play, variant);
+        pk.resolve_pending(1, &wrong_play, None, variant);
 
         // After rejection: tier-0 removed, tier-1 promoted → effective mask is mask_b.
         let after = pk.effective_inferred_mask(card, variant).as_bits();
@@ -528,6 +601,155 @@ mod tests {
             after & mask_b,
             0,
             "tier-1 fallback should be active after promotion"
+        );
+    }
+
+    /// New alt_group semantics: confirmation of a grouped hypothesis prunes only
+    /// same-group siblings, leaves cohort-mate hypotheses outside the alt_group
+    /// untouched, and the confirmed hypothesis itself is kept (trigger cleared)
+    /// so its mask continues to contribute to the cohort union.
+    ///
+    /// Mirrors the DelayedPlayClue scenario: focus is rank-2 of unknown color;
+    /// receiver has three delayed-via-{R,Y,G}-1 sub-hypotheses (alt_group keyed
+    /// on the connecting card) plus an unconditional DirectPlayClue sibling
+    /// covering {B2, P2}. When the connecting card plays as R1, only the R-path
+    /// confirms; Y and G paths reject; direct survives.
+    #[test]
+    fn identity_keyed_alt_group_confirm_prunes_only_same_group_siblings() {
+        let variant = &NO_VARIANT;
+        let focus: CardDeckIndex = 11;
+        let connecting_card: CardDeckIndex = 10;
+        // Identity bits (NO_VARIANT, suit_idx*5 + rank-1).
+        let r1_id: VariantCardId = 0; // R1
+        let y1_id: VariantCardId = 5; // Y1
+        let g1_id: VariantCardId = 10; // G1
+        let r2_mask: u64 = 1 << 1;
+        let y2_mask: u64 = 1 << 6;
+        let g2_mask: u64 = 1 << 11;
+        let b2_mask: u64 = 1 << 16;
+        let p2_mask: u64 = 1 << 21;
+        let direct_mask = b2_mask | p2_mask;
+        let alt_group: HypothesisId = connecting_card as HypothesisId;
+
+        let mut pk = PlayerKnowledge::new(0);
+        pk.own_hand = (1 << focus) | (1 << connecting_card);
+        let mut next_id: HypothesisId = 0;
+
+        let cohort: Vec<(u8, Hypothesis)> = vec![
+            // Three identity-keyed delayed-play sub-hypotheses sharing alt_group.
+            (
+                0,
+                Hypothesis::provisional_grouped(
+                    vec![KnowledgeUpdate::NarrowPossibilities {
+                        card_deck_index: focus,
+                        mask: r2_mask,
+                    }],
+                    PendingTrigger::BlindPlay {
+                        player: 0,
+                        expected_card: connecting_card,
+                        expected_identity: Some(r1_id),
+                        deadline_turn: 99,
+                    },
+                    alt_group,
+                ),
+            ),
+            (
+                0,
+                Hypothesis::provisional_grouped(
+                    vec![KnowledgeUpdate::NarrowPossibilities {
+                        card_deck_index: focus,
+                        mask: y2_mask,
+                    }],
+                    PendingTrigger::BlindPlay {
+                        player: 0,
+                        expected_card: connecting_card,
+                        expected_identity: Some(y1_id),
+                        deadline_turn: 99,
+                    },
+                    alt_group,
+                ),
+            ),
+            (
+                0,
+                Hypothesis::provisional_grouped(
+                    vec![KnowledgeUpdate::NarrowPossibilities {
+                        card_deck_index: focus,
+                        mask: g2_mask,
+                    }],
+                    PendingTrigger::BlindPlay {
+                        player: 0,
+                        expected_card: connecting_card,
+                        expected_identity: Some(g1_id),
+                        deadline_turn: 99,
+                    },
+                    alt_group,
+                ),
+            ),
+            // Unconditional DirectPlayClue sibling.
+            (
+                0,
+                Hypothesis::unconditional(vec![KnowledgeUpdate::NarrowPossibilities {
+                    card_deck_index: focus,
+                    mask: direct_mask,
+                }]),
+            ),
+        ];
+        pk.apply_cohort(0, cohort, &mut next_id, variant);
+        assert_eq!(
+            pk.hypotheses.len(),
+            4,
+            "all four cohort members should be registered"
+        );
+
+        let before = pk.effective_inferred_mask(focus, variant).as_bits();
+        let expected_before = r2_mask | y2_mask | g2_mask | direct_mask;
+        assert_eq!(
+            before & expected_before,
+            expected_before,
+            "pre-play focus mask should be the union of all four interpretations"
+        );
+
+        // Player 0 plays the connecting card with revealed identity R1.
+        pk.resolve_pending(
+            0,
+            &GameAction::Play {
+                player_index: 0,
+                card_deck_index: connecting_card,
+                turn: 1,
+            },
+            Some(r1_id),
+            variant,
+        );
+
+        // After resolution:
+        // - R-keyed hypothesis: confirmed → kept with trigger cleared.
+        // - Y-keyed and G-keyed hypotheses: rejected on identity mismatch → dropped.
+        // - Direct (unconditional): no trigger fires → survives.
+        assert_eq!(
+            pk.hypotheses.len(),
+            2,
+            "exactly R-keyed (confirmed) and Direct (untouched) should remain"
+        );
+        assert!(
+            pk.hypotheses.iter().all(|h| h.trigger.is_none()),
+            "surviving hypotheses should have no live triggers"
+        );
+
+        let after = pk.effective_inferred_mask(focus, variant).as_bits();
+        assert_eq!(
+            after & r2_mask,
+            r2_mask,
+            "R2 (from confirmed delayed-via-R1) must remain in the focus mask"
+        );
+        assert_eq!(
+            after & direct_mask,
+            direct_mask,
+            "{{B2, P2}} from DirectPlayClue must still be in the focus mask"
+        );
+        assert_eq!(
+            after & (y2_mask | g2_mask),
+            0,
+            "Y2 and G2 (from rejected delayed-via-Y1/G1) must be gone"
         );
     }
 }

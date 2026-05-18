@@ -1,5 +1,5 @@
 use crate::engine::game_state_snapshot::GameStateSnapshot;
-use crate::engine::knowledge::knowledge_update::Hypothesis;
+use crate::engine::knowledge::knowledge_update::{Hypothesis, HypothesisSet};
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::CardDeckIndex;
@@ -30,13 +30,15 @@ pub trait ConventionTech: Sync {
 
     /// Compute this tech's hypothesis for the action from the observer's POV.
     ///
-    /// Each tech contributes a *single* hypothesis (its interpretation of the action).
-    /// The dispatcher collects hypotheses from all matching techs into a *cohort* —
-    /// the observer's effective narrowing on any card is the **union** of cohort
-    /// hypothesis masks targeting that card. A hypothesis with a trigger is
-    /// provisional: confirmation prunes its siblings, rejection drops the hypothesis.
+    /// Each tech contributes a *single* hypothesis (its interpretation of the
+    /// action). The dispatcher invokes [`knowledge_updates_multi`] (which defaults
+    /// to wrapping this) and collects hypotheses from all matching techs into a
+    /// *cohort* — the observer's effective narrowing on any card is the **union**
+    /// of cohort hypothesis masks targeting that card. A hypothesis with a trigger
+    /// is provisional: confirmation prunes its `alt_group` siblings (or the whole
+    /// cohort when `alt_group = None`); rejection drops just the hypothesis.
     ///
-    /// Return `Hypothesis::empty()` when this tech has nothing to claim from this
+    /// Return [`Hypothesis::empty`] when this tech has nothing to claim from this
     /// observer's POV (typically when the action does not match the tech's action
     /// type — clue techs return empty for play/discard actions, etc.).
     fn knowledge_updates(
@@ -45,6 +47,24 @@ pub trait ConventionTech: Sync {
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
     ) -> Hypothesis;
+
+    /// Multi-hypothesis variant used by the dispatcher. Defaults to wrapping
+    /// [`knowledge_updates`] in a single-element set. Override only when the tech
+    /// emits several mutually-exclusive sub-alternatives that should share the
+    /// same cohort (e.g. DelayedPlayClue's per-connecting-card sub-hypotheses).
+    fn knowledge_updates_multi(
+        &self,
+        action: &GameAction,
+        history: &[GameStateSnapshot],
+        observer_pov: &dyn PlayerPOV,
+    ) -> HypothesisSet {
+        let h = self.knowledge_updates(action, history, observer_pov);
+        if h.is_empty() {
+            HypothesisSet::new()
+        } else {
+            smallvec::smallvec![h]
+        }
+    }
 }
 
 // ── ClueTech ─────────────────────────────────────────────────────────────────
@@ -108,6 +128,37 @@ pub trait ClueTech: Sync {
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
     ) -> Hypothesis;
+
+    /// Multi-hypothesis variant for techs that emit several mutually-exclusive
+    /// sub-alternatives in a single cohort (typically tagged with the same
+    /// [`Hypothesis::alt_group`]). The default implementation wraps the single
+    /// hypothesis returned by [`clue_knowledge_updates`]. Override only when the
+    /// tech genuinely needs multiple sibling hypotheses for the same observation
+    /// (e.g. `DelayedPlayClue` emitting one hypothesis per possible connecting
+    /// card identity).
+    fn clue_knowledge_updates_multi(
+        &self,
+        player_index: PlayerIndex,
+        touched: &[CardDeckIndex],
+        clue: &Clue,
+        turn: usize,
+        history: &[GameStateSnapshot],
+        observer_pov: &dyn PlayerPOV,
+    ) -> HypothesisSet {
+        let h = self.clue_knowledge_updates(
+            player_index,
+            touched,
+            clue,
+            turn,
+            history,
+            observer_pov,
+        );
+        if h.is_empty() {
+            HypothesisSet::new()
+        } else {
+            smallvec::smallvec![h]
+        }
+    }
 }
 
 /// Internal macro: expands to the `matches_action` and `knowledge_updates` method bodies shared
@@ -167,6 +218,33 @@ macro_rules! __impl_clue_tech_matches_and_updates {
                 )
             } else {
                 $crate::engine::knowledge::knowledge_update::Hypothesis::empty()
+            }
+        }
+
+        fn knowledge_updates_multi(
+            &self,
+            action: &$crate::game::action::game_action::GameAction,
+            history: &[$crate::engine::game_state_snapshot::GameStateSnapshot],
+            observer_pov: &dyn $crate::engine::knowledge::player_pov::PlayerPOV,
+        ) -> $crate::engine::knowledge::knowledge_update::HypothesisSet {
+            if let $crate::game::action::game_action::GameAction::Clue {
+                player_index,
+                touched_card_deck_indexes,
+                clue,
+                turn,
+            } = action
+            {
+                $crate::engine::convention::convention_tech::ClueTech::clue_knowledge_updates_multi(
+                    self,
+                    *player_index,
+                    touched_card_deck_indexes,
+                    clue,
+                    *turn,
+                    history,
+                    observer_pov,
+                )
+            } else {
+                $crate::engine::knowledge::knowledge_update::HypothesisSet::new()
             }
         }
     };

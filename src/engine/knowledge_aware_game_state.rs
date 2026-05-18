@@ -39,8 +39,10 @@ pub fn collect_hypotheses(
         if !tech.matches_action(action, history, observer_pov) {
             continue;
         }
-        let hyp = tech.knowledge_updates(action, history, observer_pov);
-        if hyp.is_empty() {
+        let hyps = tech.knowledge_updates_multi(action, history, observer_pov);
+        let non_empty: smallvec::SmallVec<[Hypothesis; 1]> =
+            hyps.into_iter().filter(|h| !h.is_empty()).collect();
+        if non_empty.is_empty() {
             continue;
         }
         let tier = match primary_priority {
@@ -56,7 +58,9 @@ pub fn collect_hypotheses(
                 1
             }
         };
-        result.push((tier, hyp));
+        for h in non_empty {
+            result.push((tier, h));
+        }
     }
     result
 }
@@ -269,13 +273,16 @@ impl KnowledgeAwareGameState {
         truth: &dyn PlayerPOV,
     ) {
         let actor = self.table_state.active_player_index();
-        match action {
+        let played_identity: Option<VariantCardId> = match action {
             GameAction::Play {
                 card_deck_index, ..
             } => self.apply_play(*card_deck_index, convention_set, truth),
             GameAction::Discard {
                 card_deck_index, ..
-            } => self.apply_discard(*card_deck_index),
+            } => {
+                self.apply_discard(*card_deck_index);
+                None
+            }
             GameAction::Clue {
                 touched_card_deck_indexes,
                 clue,
@@ -286,6 +293,7 @@ impl KnowledgeAwareGameState {
                 let clue_val = clue.clone();
                 let receiver = *player_index;
                 self.apply_clue(&touched, &clue_val, receiver, action, convention_set);
+                None
             }
             GameAction::Draw {
                 card_deck_index,
@@ -293,8 +301,9 @@ impl KnowledgeAwareGameState {
             } => {
                 self.table_state.update_with_draw_action(*card_deck_index);
                 self.team_knowledge.player_mut(*player_index).own_hand |= 1u64 << *card_deck_index;
+                None
             }
-        }
+        };
 
         // Resolve pending interpretations across all players keyed on `actor`'s action.
         // Draw actions never trigger a resolution.
@@ -304,6 +313,7 @@ impl KnowledgeAwareGameState {
                 self.team_knowledge.player_mut(p).resolve_pending(
                     actor,
                     action,
+                    played_identity,
                     &self.static_data.variant,
                 );
             }
@@ -315,7 +325,7 @@ impl KnowledgeAwareGameState {
         card_deck_index: CardDeckIndex,
         convention_set: &dyn ConventionSet,
         truth: &dyn PlayerPOV,
-    ) {
+    ) -> Option<VariantCardId> {
         let p = self.table_state.active_player_index();
         let turn_counter = self.table_state.current_turn;
         let action = GameAction::Play {
@@ -445,6 +455,7 @@ impl KnowledgeAwareGameState {
                                 .cloned()
                                 .collect(),
                             trigger: h.trigger.clone(),
+                            alt_group: h.alt_group,
                         },
                     )
                 })
@@ -460,6 +471,7 @@ impl KnowledgeAwareGameState {
                 &self.static_data.variant,
             );
         }
+        known_id
     }
 
     fn apply_discard(&mut self, card_deck_index: CardDeckIndex) {
@@ -635,6 +647,7 @@ impl KnowledgeAwareGameState {
                                 .filter(|u| own_hand & (1 << u.card_deck_index()) != 0)
                                 .collect(),
                             trigger: h.trigger,
+                            alt_group: h.alt_group,
                         },
                     )
                 })

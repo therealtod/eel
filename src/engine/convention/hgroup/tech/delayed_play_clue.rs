@@ -1,10 +1,14 @@
+use smallvec::smallvec;
+
 use crate::engine::convention::convention_tech::ClueTech;
 use crate::engine::convention::hgroup::h_group_core::{
     clues_for_player_with_focus, get_clue_focus,
 };
 use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, PlayClueTech, priority};
 use crate::engine::game_state_snapshot::GameStateSnapshot;
-use crate::engine::knowledge::knowledge_update::{Hypothesis, KnowledgeUpdate};
+use crate::engine::knowledge::knowledge_update::{
+    Hypothesis, HypothesisId, HypothesisSet, KnowledgeUpdate, PendingTrigger,
+};
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, VariantCardId};
@@ -164,6 +168,175 @@ impl ClueTech for DelayedPlayClue {
             card_deck_index: focus,
             mask,
         }])
+    }
+
+    /// Multi-hypothesis variant: when the connecting card for a 1-away focus has
+    /// ambiguous-known-playable empathy (e.g. a touched card known to be "some 1"
+    /// of unknown color), emit one sub-hypothesis **per candidate connecting
+    /// identity**, each pinning the focus to its matching `connecting_id + 1` and
+    /// gated on the connecting card playing as that specific identity.
+    ///
+    /// Sub-hypotheses for the same connecting card share an `alt_group` so that
+    /// confirmation of one prunes only the others in that group — sibling techs'
+    /// interpretations (e.g. `DirectPlayClue`'s mask on the focus) survive.
+    ///
+    /// Falls back to the union-mask single-hypothesis behavior for focus
+    /// identities whose connecting card is uniquely known to its holder (no
+    /// alt_group structure needed) or whose `away_value > 1` (deeper chains —
+    /// not yet handled).
+    fn clue_knowledge_updates_multi(
+        &self,
+        player_index: PlayerIndex,
+        touched: &[CardDeckIndex],
+        clue: &Clue,
+        turn: usize,
+        history: &[GameStateSnapshot],
+        observer_pov: &dyn PlayerPOV,
+    ) -> HypothesisSet {
+        let Some(snap) = history.get(turn) else {
+            return HypothesisSet::new();
+        };
+        let giver = snap.table_state.active_player_index;
+        let giver_pov = snap.player_pov(giver, observer_pov.static_data());
+        let focus = match get_clue_focus(player_index, touched, &giver_pov) {
+            Some(f) => f,
+            None => return HypothesisSet::new(),
+        };
+
+        let static_data = observer_pov.static_data();
+        let variant = &static_data.variant;
+        let total_ids = variant.number_of_suits as usize * variant.stacks_size as usize;
+        let clue_mask = variant.empathy_for_clue(clue).as_bits();
+        let observer_focus_empathy = observer_pov.empathy(focus).as_bits();
+        let candidates = observer_focus_empathy & clue_mask;
+        let table_state = giver_pov.table_state();
+        let playable_mask = table_state.playable_cards(static_data);
+        let num_players = static_data.number_of_players as usize;
+        let current_turn = table_state.current_turn;
+
+        let mut out = HypothesisSet::new();
+        // `union_fallback_mask` accumulates focus ids whose connecting card is
+        // uniquely known to its holder (no need for an identity-keyed trigger) or
+        // whose away_value > 1 (chain refinement not yet implemented). These fall
+        // back to a single unconditional Hypothesis carrying their union mask.
+        let mut union_fallback_mask: u64 = 0;
+
+        for focus_id in 0..total_ids {
+            if candidates & (1u64 << focus_id) == 0 {
+                continue;
+            }
+            let Some(away_value) = giver_pov.away_value(focus_id) else {
+                continue;
+            };
+            if away_value == 0 {
+                continue;
+            }
+            // Note: do NOT apply `is_gotten(focus_id)` here. From the giver's POV
+            // the focus card is touched and seen, so its identity always shows up
+            // in `gotten_cards` — filtering on it would mask out the very identity
+            // we are interpreting from the receiver's POV. `is_gotten` is the right
+            // gate for *clue generation* (`is_delayed_play_situation`), not for
+            // interpretation.
+            if away_value > 1 {
+                // Deeper chain — keep the legacy union-mask treatment.
+                if Self::connecting_cards_are_known(focus_id, away_value, &giver_pov) {
+                    union_fallback_mask |= 1u64 << focus_id;
+                }
+                continue;
+            }
+            let connecting_id = focus_id - 1;
+            let connecting_bit = 1u64 << connecting_id;
+
+            // Walk each player's hand looking for valid connecting cards for this
+            // `connecting_id`.
+            for holder in 0..num_players {
+                let pk = giver_pov.team_knowledge().player(holder);
+                for &idx in table_state.hands[holder].cards() {
+                    if !giver_pov.is_touched(idx) {
+                        continue;
+                    }
+                    let strict_match = giver_pov.is_identity_known_to_holder(idx)
+                        && giver_pov.card_identity(idx) == Some(connecting_id);
+                    let possibilities =
+                        pk.combined_possible_identities(idx, table_state, variant).as_bits();
+                    let ambiguous_match = possibilities != 0
+                        && (possibilities & !playable_mask) == 0
+                        && (possibilities & connecting_bit) != 0;
+                    if !(strict_match || ambiguous_match) {
+                        continue;
+                    }
+                    if strict_match {
+                        // Holder knows the exact identity — connecting card will
+                        // definitely play as `connecting_id`, no need for the
+                        // identity-keyed branching. Treat as a fallback union
+                        // contribution.
+                        union_fallback_mask |= 1u64 << focus_id;
+                        continue;
+                    }
+                    // Ambiguous case: emit a provisional sub-hypothesis keyed on
+                    // the connecting card's identity. `alt_group = idx` groups all
+                    // sub-hypotheses for the same connecting card so that
+                    // confirmation of one prunes its same-card siblings without
+                    // touching DirectPlayClue's interpretation in the cohort.
+                    let alt_group = idx as HypothesisId;
+                    out.push(Hypothesis::provisional_grouped(
+                        vec![KnowledgeUpdate::NarrowPossibilities {
+                            card_deck_index: focus,
+                            mask: 1u64 << focus_id,
+                        }],
+                        PendingTrigger::BlindPlay {
+                            player: holder,
+                            expected_card: idx,
+                            expected_identity: Some(connecting_id),
+                            deadline_turn: current_turn + num_players,
+                        },
+                        alt_group,
+                    ));
+                }
+            }
+        }
+
+        if union_fallback_mask != 0 {
+            out.push(Hypothesis::unconditional(vec![
+                KnowledgeUpdate::NarrowPossibilities {
+                    card_deck_index: focus,
+                    mask: union_fallback_mask,
+                },
+            ]));
+        }
+
+        // Suppress duplicate provisional sub-hypotheses that target the same
+        // (focus_id, connecting_card_idx). This happens when iterating
+        // `connecting_id` across many candidates that all live in the same
+        // holder's empathy — we want one per (alt_group, focus_id) pair.
+        // Conservatively dedup on (alt_group, focus_mask, expected_identity).
+        let mut seen: smallvec::SmallVec<[(Option<HypothesisId>, u64, Option<VariantCardId>); 4]> =
+            smallvec![];
+        out.retain(|h| {
+            let key = (
+                h.alt_group,
+                h.immediate
+                    .iter()
+                    .find_map(|u| match u {
+                        KnowledgeUpdate::NarrowPossibilities { mask, .. } => Some(*mask),
+                        _ => None,
+                    })
+                    .unwrap_or(0),
+                h.trigger.as_ref().and_then(|t| match t {
+                    PendingTrigger::BlindPlay {
+                        expected_identity, ..
+                    } => *expected_identity,
+                }),
+            );
+            if seen.iter().any(|k| k == &key) {
+                false
+            } else {
+                seen.push(key);
+                true
+            }
+        });
+
+        out
     }
 }
 
@@ -660,5 +833,131 @@ mod tests {
         } else {
             panic!("expected NarrowPossibilities");
         }
+    }
+
+    /// `clue_knowledge_updates_multi` must split the delayed-play interpretation
+    /// across each candidate connecting identity when the connecting card is
+    /// ambiguous-known-playable in its holder's empathy. Each sub-hypothesis
+    /// pins the focus to `connecting_id + 1`, carries a BlindPlay trigger keyed
+    /// on the connecting card's deck index AND its identity, and shares an
+    /// `alt_group` with its same-card siblings.
+    #[test]
+    fn clue_knowledge_updates_multi_emits_per_connecting_id_subhypotheses() {
+        use crate::engine::convention::convention_tech::ClueTech;
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards::{B1, P1};
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        // B1 and P1 already played → playable_cards = {R1, Y1, G1, B2, P2}.
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            B1.as_variant_card_id(),
+            &static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            P1.as_variant_card_id(),
+            &static_data,
+        );
+        // Receiver (player 0) holds the focus card (deck 30) and the connecting
+        // card (deck 10). Connecting card is touched.
+        table_state.active_player_index = 0;
+        table_state.update_with_draw_action(30); // R2 (focus)
+        table_state.update_with_draw_action(10); // R1 (connecting, will be touched)
+        table_state.clue_touched_cards |= 1 << 10;
+        // Clue giver is player 1.
+        table_state.active_player_index = 1;
+
+        let known_playable_one_mask = R1_MASK | Y1_MASK | G1_MASK;
+
+        // Player 0's knowledge: connecting card has empathy {R1, Y1, G1}.
+        let mut p0_knowledge = PlayerKnowledge::new(0);
+        p0_knowledge.own_hand = (1u64 << 30) | (1u64 << 10);
+        p0_knowledge.inferred_identities[10] =
+            Some(CardIdentityMask::from_bits(known_playable_one_mask));
+
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(0).own_hand = (1u64 << 30) | (1u64 << 10);
+        team_knowledge.player_mut(0).inferred_identities[10] =
+            Some(CardIdentityMask::from_bits(known_playable_one_mask));
+
+        // Snapshot represents the post-raw-clue state (which gives the receiver
+        // the rank-2 narrowing on the focus). For test simplicity, set the
+        // receiver's empathy on focus to the full rank-2 mask.
+        let rank2_mask = R2_MASK | Y2_MASK | G2_MASK | B2_MASK | P2_MASK;
+        p0_knowledge.inferred_identities[30] = Some(CardIdentityMask::from_bits(rank2_mask));
+        team_knowledge.player_mut(0).inferred_identities[30] =
+            Some(CardIdentityMask::from_bits(rank2_mask));
+
+        let snapshot = GameStateSnapshot::new(table_state.clone(), team_knowledge.clone());
+        // Observer is the receiver (player 0).
+        let pov = LightweightPlayerPOV::new(
+            0,
+            &p0_knowledge,
+            &team_knowledge,
+            &table_state,
+            &static_data,
+        );
+
+        let updates = DelayedPlayClue.clue_knowledge_updates_multi(
+            0,
+            &[30],
+            &Clue {
+                clue_type: ClueType::Rank,
+                clue_value: 2,
+            },
+            0,
+            &[snapshot],
+            &pov,
+        );
+
+        // Expect exactly three per-connecting-id sub-hypotheses (R1, Y1, G1).
+        // Each pins the focus to a single rank-2 identity and carries an
+        // identity-keyed trigger.
+        assert_eq!(
+            updates.len(),
+            3,
+            "expected three identity-keyed sub-hypotheses (one per candidate connecting id)"
+        );
+        let mut got_masks: Vec<u64> = Vec::new();
+        let mut got_alt_groups: Vec<Option<HypothesisId>> = Vec::new();
+        for h in &updates {
+            assert_eq!(h.immediate.len(), 1);
+            match &h.immediate[0] {
+                KnowledgeUpdate::NarrowPossibilities {
+                    card_deck_index,
+                    mask,
+                } => {
+                    assert_eq!(*card_deck_index, 30);
+                    got_masks.push(*mask);
+                }
+                _ => panic!("expected NarrowPossibilities"),
+            }
+            match &h.trigger {
+                Some(PendingTrigger::BlindPlay {
+                    player,
+                    expected_card,
+                    expected_identity,
+                    ..
+                }) => {
+                    assert_eq!(*player, 0, "trigger should fire on player 0 playing");
+                    assert_eq!(*expected_card, 10, "trigger should key on connecting deck idx");
+                    assert!(
+                        expected_identity.is_some(),
+                        "trigger must be identity-keyed for selective rejection"
+                    );
+                }
+                _ => panic!("expected BlindPlay trigger"),
+            }
+            got_alt_groups.push(h.alt_group);
+        }
+        got_masks.sort();
+        let mut expected_masks = vec![R2_MASK, Y2_MASK, G2_MASK];
+        expected_masks.sort();
+        assert_eq!(got_masks, expected_masks);
+        // All sub-hypotheses for the same connecting card share an alt_group.
+        assert!(
+            got_alt_groups.iter().all(|g| *g == Some(10)),
+            "all sub-hypotheses must share alt_group keyed on connecting card index"
+        );
     }
 }

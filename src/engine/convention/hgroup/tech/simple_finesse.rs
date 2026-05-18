@@ -189,6 +189,7 @@ impl ClueTech for SimpleFinesse {
                 PendingTrigger::BlindPlay {
                     player: finessed_player,
                     expected_card: finesse_position,
+                    expected_identity: None,
                     deadline_turn: snap.table_state.current_turn + num_players,
                 },
             );

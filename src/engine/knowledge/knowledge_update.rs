@@ -1,6 +1,15 @@
+use smallvec::SmallVec;
+
 use crate::engine::convention::hgroup::signal::Signal;
-use crate::game::card::{CardDeckIndex, VariantCardsBitField};
+use crate::game::card::{CardDeckIndex, VariantCardId, VariantCardsBitField};
 use crate::game::state::PlayerIndex;
+
+/// Hypotheses emitted by a tech for a single observed action.
+///
+/// Most techs emit 0 or 1 hypothesis (the common path). Techs like DelayedPlayClue
+/// that fan out into per-connecting-card sub-alternatives emit several. Inline
+/// capacity 1 keeps the common case allocation-free.
+pub type HypothesisSet = SmallVec<[Hypothesis; 1]>;
 
 /// Identifier of a tracked hypothesis. Assigned by the dispatcher when storing a
 /// hypothesis in a player's knowledge.
@@ -56,6 +65,20 @@ pub struct Hypothesis {
     /// If `Some`, the hypothesis is provisional: it survives only if the trigger
     /// resolves with confirmation. On rejection it is dropped from the cohort.
     pub trigger: Option<PendingTrigger>,
+    /// Optional rejection-scope tag.
+    ///
+    /// On confirmation of a hypothesis, sibling hypotheses in the **same cohort**
+    /// are pruned. The scope is controlled by `alt_group`:
+    ///
+    /// - `None` (default): cohort-wide drop on confirm — every sibling in the
+    ///   cohort is removed. This preserves the original framework behavior used
+    ///   by SimpleFinesse (a blind-play refutes Direct/Save siblings wholesale).
+    /// - `Some(group)`: only siblings sharing the same `alt_group` are removed.
+    ///   Used when a tech emits multiple mutually-exclusive sub-alternatives that
+    ///   should refute each other on confirmation but should **not** disturb
+    ///   sibling techs' interpretations (e.g. DelayedPlayClue's per-connecting-id
+    ///   sub-hypotheses must not eliminate DirectPlayClue's interpretation).
+    pub alt_group: Option<HypothesisId>,
 }
 
 impl Hypothesis {
@@ -69,6 +92,7 @@ impl Hypothesis {
         Self {
             immediate,
             trigger: None,
+            alt_group: None,
         }
     }
 
@@ -77,6 +101,22 @@ impl Hypothesis {
         Self {
             immediate,
             trigger: Some(trigger),
+            alt_group: None,
+        }
+    }
+
+    /// Provisional hypothesis whose confirmation drops only same-`alt_group`
+    /// siblings rather than the whole cohort.
+    #[must_use]
+    pub fn provisional_grouped(
+        immediate: Vec<KnowledgeUpdate>,
+        trigger: PendingTrigger,
+        alt_group: HypothesisId,
+    ) -> Self {
+        Self {
+            immediate,
+            trigger: Some(trigger),
+            alt_group: Some(alt_group),
         }
     }
 
@@ -107,6 +147,8 @@ pub struct TrackedHypothesis {
     pub tier: u8,
     pub immediate: Vec<KnowledgeUpdate>,
     pub trigger: Option<PendingTrigger>,
+    /// Rejection scope on confirmation. See [`Hypothesis::alt_group`].
+    pub alt_group: Option<HypothesisId>,
 }
 
 /// Triggers that resolve a hypothesis.
@@ -121,6 +163,12 @@ pub enum PendingTrigger {
     BlindPlay {
         player: PlayerIndex,
         expected_card: CardDeckIndex,
+        /// Optional identity gate. When `Some(id)`, confirmation additionally
+        /// requires the revealed identity of the played card to equal `id`; a
+        /// mismatch rejects the hypothesis. When `None`, only the deck-index
+        /// match is checked (legacy behavior used by SimpleFinesse).
+        expected_identity: Option<VariantCardId>,
+        /// Turn after which the hypothesis is forced to resolve.
         deadline_turn: usize,
     },
 }
