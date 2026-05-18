@@ -2,7 +2,7 @@ use smallvec::SmallVec;
 
 use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::knowledge::knowledge_update::{
-    Hypothesis, HypothesisId, KnowledgeUpdate, PendingTrigger, TrackedHypothesis,
+    AltGroupKey, Hypothesis, HypothesisId, KnowledgeUpdate, PendingTrigger, TrackedHypothesis,
 };
 use crate::game::MAX_CARDS_IN_DECK;
 use crate::game::action::game_action::GameAction;
@@ -248,7 +248,7 @@ impl PlayerKnowledge {
         let mut keep_with_trigger_cleared: Vec<HypothesisId> = Vec::new();
         let mut rejected_ids: Vec<HypothesisId> = Vec::new();
         // Snapshot id+cohort+alt_group+trigger to decide outcomes without holding a borrow.
-        let triggers: Vec<(HypothesisId, HypothesisId, Option<HypothesisId>, PendingTrigger)> =
+        let triggers: Vec<(HypothesisId, HypothesisId, Option<AltGroupKey>, PendingTrigger)> =
             self.hypotheses
                 .iter()
                 .filter_map(|h| {
@@ -637,7 +637,7 @@ mod tests {
         let b2_mask: u64 = 1 << 16;
         let p2_mask: u64 = 1 << 21;
         let direct_mask = b2_mask | p2_mask;
-        let alt_group: HypothesisId = connecting_card as HypothesisId;
+        let alt_group: AltGroupKey = AltGroupKey::from(connecting_card);
 
         let mut pk = PlayerKnowledge::new(0);
         pk.own_hand = (1 << focus) | (1 << connecting_card);
@@ -779,7 +779,7 @@ mod tests {
         let b2_mask: u64 = 1 << 16;
         let p2_mask: u64 = 1 << 21;
         let direct_mask = b2_mask | p2_mask;
-        let alt_group: HypothesisId = connecting_card as HypothesisId;
+        let alt_group: AltGroupKey = AltGroupKey::from(connecting_card);
 
         let mut pk = PlayerKnowledge::new(0);
         pk.own_hand = (1 << focus) | (1 << connecting_card);

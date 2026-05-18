@@ -15,6 +15,11 @@ pub type HypothesisSet = SmallVec<[Hypothesis; 1]>;
 /// hypothesis in a player's knowledge.
 pub type HypothesisId = u32;
 
+/// Opaque grouping key for sibling-pruning within a cohort. Distinct from
+/// [`HypothesisId`] — the values come from domain keys (e.g. deck indices),
+/// not from the hypothesis ID counter.
+pub type AltGroupKey = u32;
+
 /// Describes a discrete update to a player's knowledge state,
 /// produced by convention interpretation.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -78,7 +83,7 @@ pub struct Hypothesis {
     ///   should refute each other on confirmation but should **not** disturb
     ///   sibling techs' interpretations (e.g. DelayedPlayClue's per-connecting-id
     ///   sub-hypotheses must not eliminate DirectPlayClue's interpretation).
-    pub alt_group: Option<HypothesisId>,
+    pub alt_group: Option<AltGroupKey>,
 }
 
 impl Hypothesis {
@@ -111,7 +116,7 @@ impl Hypothesis {
     pub fn provisional_grouped(
         immediate: Vec<KnowledgeUpdate>,
         trigger: PendingTrigger,
-        alt_group: HypothesisId,
+        alt_group: AltGroupKey,
     ) -> Self {
         Self {
             immediate,
@@ -148,7 +153,7 @@ pub struct TrackedHypothesis {
     pub immediate: Vec<KnowledgeUpdate>,
     pub trigger: Option<PendingTrigger>,
     /// Rejection scope on confirmation. See [`Hypothesis::alt_group`].
-    pub alt_group: Option<HypothesisId>,
+    pub alt_group: Option<AltGroupKey>,
 }
 
 /// Triggers that resolve a hypothesis.

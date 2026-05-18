@@ -7,7 +7,7 @@ use crate::engine::convention::hgroup::h_group_core::{
 use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, PlayClueTech, priority};
 use crate::engine::game_state_snapshot::GameStateSnapshot;
 use crate::engine::knowledge::knowledge_update::{
-    Hypothesis, HypothesisId, HypothesisSet, KnowledgeUpdate, PendingTrigger,
+    AltGroupKey, Hypothesis, HypothesisId, HypothesisSet, KnowledgeUpdate, PendingTrigger,
 };
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
@@ -264,7 +264,7 @@ impl ClueTech for DelayedPlayClue {
                     // sub-hypotheses for the same connecting card so that
                     // confirmation of one prunes its same-card siblings without
                     // touching DirectPlayClue's interpretation in the cohort.
-                    let alt_group = idx as HypothesisId;
+                    let alt_group: AltGroupKey = AltGroupKey::from(idx);
                     out.push(Hypothesis::provisional_grouped(
                         vec![KnowledgeUpdate::NarrowPossibilities {
                             card_deck_index: focus,
@@ -296,7 +296,7 @@ impl ClueTech for DelayedPlayClue {
         // `connecting_id` across many candidates that all live in the same
         // holder's empathy — we want one per (alt_group, focus_id) pair.
         // Conservatively dedup on (alt_group, focus_mask, expected_identity).
-        let mut seen: smallvec::SmallVec<[(Option<HypothesisId>, u64, Option<VariantCardId>); 4]> =
+        let mut seen: smallvec::SmallVec<[(Option<AltGroupKey>, u64, Option<VariantCardId>); 4]> =
             smallvec![];
         out.retain(|h| {
             let key = (
@@ -915,7 +915,7 @@ mod tests {
             "expected three identity-keyed sub-hypotheses (one per candidate connecting id)"
         );
         let mut got_masks: Vec<u64> = Vec::new();
-        let mut got_alt_groups: Vec<Option<HypothesisId>> = Vec::new();
+        let mut got_alt_groups: Vec<Option<AltGroupKey>> = Vec::new();
         for h in &updates {
             assert_eq!(h.immediate.len(), 1);
             match &h.immediate[0] {
