@@ -26,6 +26,7 @@ Load only when relevant to the task:
 - Do not rewrite unrelated modules
 - Do not emit full files unless requested
 - When a change affects something described in a doc under `docs/`, update that doc too
+- When changing the code behavior, strongly consider capturing the new behavior in unit tests
 
 # Project Constraints
 
