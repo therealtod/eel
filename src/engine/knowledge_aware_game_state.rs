@@ -276,7 +276,13 @@ impl KnowledgeAwareGameState {
         let played_identity: Option<VariantCardId> = match action {
             GameAction::Play {
                 card_deck_index, ..
-            } => self.apply_play(*card_deck_index, convention_set, truth),
+            } => {
+                let known = self.apply_play(*card_deck_index, convention_set, truth);
+                // Prefer truth's identity for resolve_pending: when the searcher can see
+                // the connecting card, identity-keyed triggers discriminate correctly even
+                // when the active player's empathy is ambiguous (phantom-play branch).
+                truth.card_identity(*card_deck_index).or(known)
+            }
             GameAction::Discard {
                 card_deck_index, ..
             } => {

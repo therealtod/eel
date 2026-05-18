@@ -277,6 +277,12 @@ impl PlayerKnowledge {
                         None => true,
                     };
                     let confirmed = play_idx_matches && identity_matches;
+                    // The connecting card was played but identity is ambiguous (phantom play):
+                    // we cannot discriminate between alt-group siblings, so preserve all of
+                    // them with triggers cleared rather than incorrectly rejecting them.
+                    let phantom_keep = play_idx_matches
+                        && expected_identity.is_some()
+                        && played_identity.is_none();
                     if confirmed {
                         match alt_group {
                             None => {
@@ -295,6 +301,8 @@ impl PlayerKnowledge {
                                 keep_with_trigger_cleared.push(id);
                             }
                         }
+                    } else if phantom_keep {
+                        keep_with_trigger_cleared.push(id);
                     } else {
                         rejected_ids.push(id);
                     }
@@ -750,6 +758,121 @@ mod tests {
             after & (y2_mask | g2_mask),
             0,
             "Y2 and G2 (from rejected delayed-via-Y1/G1) must be gone"
+        );
+    }
+
+    /// PhantomKeep: when the connecting card is played but its identity is ambiguous
+    /// (`played_identity = None`), identity-keyed alt-group siblings must all survive
+    /// with triggers cleared — none should be rejected. This is the search-time bug
+    /// where phantom plays silently collapsed multi cohorts to {B2, P2} only.
+    #[test]
+    fn identity_keyed_alt_group_phantom_play_preserves_all_siblings() {
+        let variant = &NO_VARIANT;
+        let focus: CardDeckIndex = 11;
+        let connecting_card: CardDeckIndex = 10;
+        let r1_id: VariantCardId = 0;
+        let y1_id: VariantCardId = 5;
+        let g1_id: VariantCardId = 10;
+        let r2_mask: u64 = 1 << 1;
+        let y2_mask: u64 = 1 << 6;
+        let g2_mask: u64 = 1 << 11;
+        let b2_mask: u64 = 1 << 16;
+        let p2_mask: u64 = 1 << 21;
+        let direct_mask = b2_mask | p2_mask;
+        let alt_group: HypothesisId = connecting_card as HypothesisId;
+
+        let mut pk = PlayerKnowledge::new(0);
+        pk.own_hand = (1 << focus) | (1 << connecting_card);
+        let mut next_id: HypothesisId = 0;
+
+        let cohort: Vec<(u8, Hypothesis)> = vec![
+            (
+                0,
+                Hypothesis::provisional_grouped(
+                    vec![KnowledgeUpdate::NarrowPossibilities {
+                        card_deck_index: focus,
+                        mask: r2_mask,
+                    }],
+                    PendingTrigger::BlindPlay {
+                        player: 0,
+                        expected_card: connecting_card,
+                        expected_identity: Some(r1_id),
+                        deadline_turn: 99,
+                    },
+                    alt_group,
+                ),
+            ),
+            (
+                0,
+                Hypothesis::provisional_grouped(
+                    vec![KnowledgeUpdate::NarrowPossibilities {
+                        card_deck_index: focus,
+                        mask: y2_mask,
+                    }],
+                    PendingTrigger::BlindPlay {
+                        player: 0,
+                        expected_card: connecting_card,
+                        expected_identity: Some(y1_id),
+                        deadline_turn: 99,
+                    },
+                    alt_group,
+                ),
+            ),
+            (
+                0,
+                Hypothesis::provisional_grouped(
+                    vec![KnowledgeUpdate::NarrowPossibilities {
+                        card_deck_index: focus,
+                        mask: g2_mask,
+                    }],
+                    PendingTrigger::BlindPlay {
+                        player: 0,
+                        expected_card: connecting_card,
+                        expected_identity: Some(g1_id),
+                        deadline_turn: 99,
+                    },
+                    alt_group,
+                ),
+            ),
+            (
+                0,
+                Hypothesis::unconditional(vec![KnowledgeUpdate::NarrowPossibilities {
+                    card_deck_index: focus,
+                    mask: direct_mask,
+                }]),
+            ),
+        ];
+        pk.apply_cohort(0, cohort, &mut next_id, variant);
+
+        // Simulate a phantom play: connecting card played but identity unknown (None).
+        pk.resolve_pending(
+            0,
+            &GameAction::Play {
+                player_index: 0,
+                card_deck_index: connecting_card,
+                turn: 1,
+            },
+            None, // phantom play — identity ambiguous
+            variant,
+        );
+
+        // All four hypotheses survive (triggers cleared on the three identity-keyed ones).
+        assert_eq!(
+            pk.hypotheses.len(),
+            4,
+            "all siblings must survive a phantom play — no rejection allowed"
+        );
+        assert!(
+            pk.hypotheses.iter().all(|h| h.trigger.is_none()),
+            "all triggers must be cleared after the phantom play"
+        );
+
+        let after = pk.effective_inferred_mask(focus, variant).as_bits();
+        let full_union = r2_mask | y2_mask | g2_mask | direct_mask;
+        assert_eq!(
+            after & full_union,
+            full_union,
+            "full cohort union must be preserved: phantom play reveals no identity info"
         );
     }
 }
