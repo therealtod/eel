@@ -4,3 +4,4 @@ CLAUDE.md
 GEMINI.md
 .aider*
 logs/
+tests/_diag.rs

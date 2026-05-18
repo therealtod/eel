@@ -20,42 +20,28 @@ diagnostic test, then walking backwards to the corrupted layer.
 
 1. **Read the failing test** to identify the replay file and turn number (e.g.
    `engine_action_at_turn("plays_known_trash.json", 18)`).
-2. **Write a throwaway `tests/_diag.rs`** that steps the replay to that turn and prints:
-   - Active player, hand contents, `playing_stacks`.
-   - Per own-hand card: `combined_possible_identities` bits, `inferred_identities` bits,
-     `is_touched`, signals.
-   - `playable_cards` mask.
-   - Hypotheses on the player's knowledge (tier, cohort, alt_group, immediate updates, trigger).
-   - Each tech's `game_actions(&pov)` output — tells you *who* is proposing the bad move.
-3. **Run** `cargo test --test _diag diag_<name> -- --nocapture`.
-4. **Decode bits** (suit-major: ids 0–4 = suit 0 ranks 1–5, ids 5–9 = suit 1, …) and find
+2. **Run the script** — it generates `tests/_diag.rs` and executes it in one step:
+   ```
+   scripts/diag.sh <replay_file.json> <turn> [optional_name]
+   ```
+   For example: `scripts/diag.sh plays_known_trash.json 18 trash_play`
+3. **Decode bits** (suit-major: ids 0–4 = suit 0 ranks 1–5, ids 5–9 = suit 1, …) and find
    the layer that disagrees with what you expected.
-5. **Walk backwards through the action log** to find the event that introduced the bad
+4. **Walk backwards through the action log** to find the event that introduced the bad
    state. The hanablive action list (`type`/`target`/`value`) is your timeline.
-6. **Fix, re-run the original test, then `rm tests/_diag.rs`** — never check it in.
+5. **Fix and re-run the original test.** `tests/_diag.rs` is gitignored — leave it or
+   delete it; it will never be committed.
 
-## Diagnostic template
+`scripts/diag.sh` uses `HGroupConventionSet::default()` which always reflects the current
+full tech list. If you need a custom tech subset, edit the generated `tests/_diag.rs`
+directly and re-run with `cargo test --test _diag diag_<name> -- --nocapture`.
 
-Adjust the convention set list to match what the failing test uses. The `_` prefix on the
-filename keeps it visually distinct from real tests.
+## Diagnostic template (for reference / custom subsets)
 
 ```rust
-// tests/_diag.rs
+// tests/_diag.rs  (gitignored — safe to leave in place)
 use eel::engine::convention::convention_set::ConventionSet;
-use eel::engine::convention::convention_tech::ConventionTech;
 use eel::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet;
-use eel::engine::convention::hgroup::tech::{
-    blind_play::BlindPlay,
-    critical_save::{ColorCriticalSave, RankCriticalSave},
-    delayed_play_clue::DelayedPlayClue,
-    direct_play_clue::DirectPlayClue,
-    discard_chop::DiscardChop,
-    five_save::FiveSave,
-    play_known_playable::PlayKnownPlayable,
-    simple_finesse::SimpleFinesse,
-    simple_prompt::SimplePrompt,
-    two_save::TwoSave,
-};
 use eel::engine::knowledge::player_pov::PlayerPOV;
 use eel::engine::replay::reconstruct::ReplayRunner;
 use eel::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
@@ -69,20 +55,7 @@ fn diag_<short_name>() {
     );
     let json = std::fs::read_to_string(&path).unwrap();
     let game = Game::from_json(&json).unwrap();
-    let techs: Vec<Box<dyn ConventionTech>> = vec![
-        Box::new(PlayKnownPlayable),
-        Box::new(BlindPlay),
-        Box::new(DirectPlayClue),
-        Box::new(DelayedPlayClue),
-        Box::new(SimplePrompt),
-        Box::new(SimpleFinesse),
-        Box::new(ColorCriticalSave),
-        Box::new(RankCriticalSave),
-        Box::new(FiveSave),
-        Box::new(TwoSave),
-        Box::new(DiscardChop),
-    ];
-    let conv = HGroupConventionSet::new(techs);
+    let conv = HGroupConventionSet::default();
     let mut runner = ReplayRunner::from_hanablive(&game, &conv).unwrap();
     runner.step_to_turn(<TURN>).unwrap();
 
@@ -244,7 +217,6 @@ Skip it when:
 
 ## Cleanup
 
-The diagnostic file is not a test of the system; it's a probe. Always `rm tests/_diag.rs`
-before committing. If the bug surfaces a missing assertion that's worth keeping, add a
-real `#[test]` to `tests/replay_regression.rs` (or the appropriate file) and delete the
-diag.
+`tests/_diag.rs` is gitignored — it can never be accidentally committed, so no cleanup is
+required. If the bug surfaces a missing assertion that's worth keeping, add a real `#[test]`
+to `tests/replay_regression.rs` (or the appropriate file).
