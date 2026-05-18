@@ -42,6 +42,7 @@ impl DelayedPlayClue {
         let table_state = pov.table_state();
         let variant = &pov.static_data().variant;
         let playable_mask = table_state.playable_cards(pov.static_data());
+        let active = pov.active_player_index();
 
         (1..=away_value as usize).all(|offset| {
             let connecting_id = card_id - offset;
@@ -63,6 +64,13 @@ impl DelayedPlayClue {
                     // playable) and `connecting_id` is one of those possibilities. Covers
                     // the case "I have a known-playable 1 of unknown color" — a valid
                     // connecting card for a delayed play through any matching 2.
+                    //
+                    // Not applicable to the active player's own cards: they see their own
+                    // possibilities (not truth), so `connecting_id` being one of several
+                    // possibilities does not guarantee the card actually IS connecting_id.
+                    if p == active {
+                        return false;
+                    }
                     let possibilities = pk
                         .combined_possible_identities(idx, table_state, variant)
                         .as_bits();
@@ -426,6 +434,88 @@ mod tests {
                 ..
             }
         )));
+    }
+
+    /// The receiver-friendly path in `connecting_cards_are_known` must NOT fire for
+    /// the active player's own cards.  The clue giver works from inferred possibilities
+    /// on their own hand, so seeing P2 *among* {R2, Y2, P2} does not guarantee the
+    /// card IS P2 — using it as a connector for P3 would be a misidentification.
+    #[test]
+    fn game_actions_does_not_use_own_ambiguous_card_as_connector() {
+        // R1, Y1, P1 played → R2, Y2, P2 all immediately playable.
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards::{P1, R1, Y1};
+        table_state.update_with_play_action_of_specific_card(0, R1.as_variant_card_id(), &static_data);
+        table_state.update_with_play_action_of_specific_card(0, Y1.as_variant_card_id(), &static_data);
+        table_state.update_with_play_action_of_specific_card(0, P1.as_variant_card_id(), &static_data);
+
+        // p=0 draws deck[10] and it is touched; from p=0's perspective it could be R2, Y2, or P2.
+        table_state.active_player_index = 0;
+        table_state.update_with_draw_action(10);
+        table_state.clue_touched_cards |= 1 << 10;
+
+        // p=1 draws deck[20] = P3 (true identity, visible to the giver).
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(20);
+        table_state.active_player_index = 0; // p=0 is the active clue giver
+
+        // Giver sees P3 in p=1's hand. Their own deck[10] is ambiguous: {R2, Y2, P2}.
+        let knowledge = knowledge_with_visible(0, &[(20, P3_MASK)]);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(0).own_hand |= 1 << 10;
+        team_knowledge.player_mut(0).inferred_identities[10] =
+            Some(CardIdentityMask::from_bits(R2_MASK | Y2_MASK | P2_MASK));
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        // P3 is 1-away; the only candidate connector is P2 — in p=0's OWN hand,
+        // ambiguously. The fix must suppress the delayed play proposal entirely.
+        assert!(
+            DelayedPlayClue.game_actions(&pov).is_empty(),
+            "must not propose a delayed play clue when the only connector is the giver's own \
+             ambiguous card"
+        );
+    }
+
+    /// When the active player has collapsed their own card to a singleton identity
+    /// (e.g. via hypothesis narrowing) the strict path of `connecting_cards_are_known`
+    /// still fires and the delayed play clue is correctly proposed.
+    #[test]
+    fn game_actions_uses_own_exactly_known_card_as_connector() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards::{P1, R1, Y1};
+        table_state.update_with_play_action_of_specific_card(0, R1.as_variant_card_id(), &static_data);
+        table_state.update_with_play_action_of_specific_card(0, Y1.as_variant_card_id(), &static_data);
+        table_state.update_with_play_action_of_specific_card(0, P1.as_variant_card_id(), &static_data);
+
+        table_state.active_player_index = 0;
+        table_state.update_with_draw_action(10);
+        table_state.clue_touched_cards |= 1 << 10;
+
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(20);
+        table_state.active_player_index = 0;
+
+        // Giver knows their own deck[10] is exactly P2 (singleton empathy).
+        let mut knowledge = knowledge_with_visible(0, &[(20, P3_MASK)]);
+        knowledge.own_hand |= 1 << 10;
+        knowledge.inferred_identities[10] = Some(CardIdentityMask::from_bits(P2_MASK));
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(0).own_hand |= 1 << 10;
+        team_knowledge.player_mut(0).inferred_identities[10] =
+            Some(CardIdentityMask::from_bits(P2_MASK));
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        // P3 is 1-away; connecting card is P2, which p=0 knows exactly. Delayed play
+        // clue targeting p=1 must be proposed.
+        let actions = DelayedPlayClue.game_actions(&pov);
+        assert!(
+            actions.iter().any(|a| matches!(a, GameAction::Clue { player_index: 1, .. })),
+            "must propose a delayed play clue to p=1 when giver's own card is exactly-known P2"
+        );
     }
 
     #[test]

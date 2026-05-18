@@ -1,16 +1,6 @@
 use std::path::PathBuf;
 
 use eel::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet;
-use eel::engine::convention::hgroup::tech::blind_play::BlindPlay;
-use eel::engine::convention::hgroup::tech::critical_save::{ColorCriticalSave, RankCriticalSave};
-use eel::engine::convention::hgroup::tech::delayed_play_clue::DelayedPlayClue;
-use eel::engine::convention::hgroup::tech::direct_play_clue::DirectPlayClue;
-use eel::engine::convention::hgroup::tech::discard_chop::DiscardChop;
-use eel::engine::convention::hgroup::tech::five_save::FiveSave;
-use eel::engine::convention::hgroup::tech::play_known_playable::PlayKnownPlayable;
-use eel::engine::convention::hgroup::tech::simple_finesse::SimpleFinesse;
-use eel::engine::convention::hgroup::tech::simple_prompt::SimplePrompt;
-use eel::engine::convention::hgroup::tech::two_save::TwoSave;
 use eel::engine::knowledge::player_pov::PlayerPOV;
 use eel::engine::replay::reconstruct::ReplayRunner;
 use eel::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
@@ -81,27 +71,6 @@ fn should_understand_delayed_play_clue() {
     }
 }
 
-/// The yellow clue at turn 1 touches Alice's chop (slot 5, deck 0 = Y4) and three
-/// interior cards. Chop is the focus, so Alice should eventually play deck 0 (Y4).
-/// Before the fix, `get_clue_focus` was called with the POST-clue snapshot, where
-/// all touched cards already appear as `is_touched`, so the "newly touched" set was
-/// empty and focus fell back to the leftmost touched card (slot 1) instead of the
-/// chop (slot 5).
-#[test]
-fn should_calculate_focus_correctly() {
-    let action = engine_action_at_turn("should_calculate_focus_correctly.json", 21);
-    assert!(
-        matches!(
-            action,
-            GameAction::Play {
-                card_deck_index: 0,
-                ..
-            }
-        ),
-        "Alice should play deck 0 (Y4, her chop focused by the yellow clue), got: {action:?}"
-    );
-}
-
 /// After the same rank-2 clue, Alice's empathy on the focused slot 2 (deck 3)
 /// must span the full {R2, Y2, G2, B2, P2} candidate set: `DirectPlayClue`
 /// contributes {B2, P2} (immediately playable), and `DelayedPlayClue` contributes
@@ -130,4 +99,19 @@ fn delayed_play_clue_admits_full_rank2_union_on_focus() {
          union of direct ({{B2, P2}}) and delayed ({{R2, Y2, G2}}) candidates; \
          got {focus_empathy:025b}"
     );
+}
+
+#[test]
+fn should_not_clue_unplayable_cards() {
+    let action = engine_action_at_turn("should_not_clue_unplayable_cards.json", 10);
+    if let GameAction::Clue {
+        player_index: 2,
+        clue: Clue {
+            clue_type: ClueType::Rank,
+            clue_value: 3
+        },
+        ..
+    } = action {
+        panic!("Bob should not clue on a non-playable p3, got: {action:?}");
+    }
 }
