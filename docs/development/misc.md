@@ -44,7 +44,7 @@ Save techs use the same shape but iterate over the chop card and check against
 `pov.active_player_index()` is the **observer** whose knowledge is being updated, not the clue giver. The method is called separately for each player. Typical patterns:
 
 - **Clue receiver**: return `Hypothesis::unconditional(vec![NarrowPossibilities { focus_card, mask }])`. For a finesse (provisional), return `Hypothesis::provisional(updates, PendingTrigger::BlindPlay { ... })`.
-- **Third party** (prompted/finessed): return `Hypothesis::unconditional(vec![AddSignal { card, Signal::Play { committed_identity, deadline_turn } }])`.
+- **Third party** (prompted/finessed): return `Hypothesis::unconditional(vec![AddSignal { card, Signal::Play { committed_identity } }])`.
 - **Clue giver or uninvolved observer**: return `Hypothesis::empty()`.
 
 ### `clue_knowledge_updates_multi` — emit multiple sibling hypotheses
@@ -65,7 +65,6 @@ The dispatcher (`collect_hypotheses`) calls `knowledge_updates_multi`, so what a
 Signal::Play {
     card_deck_index,        // which card in the deck
     committed_identity,     // the identity the convention says this card has
-    deadline_turn,          // turn by which the play is expected
 }
 Signal::Save { slot_index, turn }
 Signal::Discard { slot_index, turn }
@@ -92,7 +91,7 @@ Hypothesis::provisional_grouped(updates, trigger, alt_group)
                                                  // provisional with selective rejection scope
 ```
 
-`PendingTrigger::BlindPlay { player, expected_card, expected_identity, deadline_turn }` confirms when `player`'s next action plays `expected_card` — and, if `expected_identity = Some(id)`, the revealed identity also matches `id`. A mismatch on either deck index or expected identity (when set) rejects the hypothesis; any non-play action by `player` rejects too. `expected_identity = None` keeps the legacy "any play of `expected_card` confirms" behavior used by SimpleFinesse.
+`PendingTrigger::BlindPlay { player, expected_card, expected_identity }` confirms when `player`'s next action plays `expected_card` — and, if `expected_identity = Some(id)`, the revealed identity also matches `id`. A mismatch on either deck index or expected identity (when set) rejects the hypothesis; any non-play action by `player` rejects too. `expected_identity = None` keeps the legacy "any play of `expected_card` confirms" behavior used by SimpleFinesse.
 
 The played card's resolved identity is threaded into `resolve_pending` by `apply_play` / replay reconstruction so identity-keyed triggers can compare against it.
 

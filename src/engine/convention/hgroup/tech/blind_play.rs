@@ -117,7 +117,6 @@ mod tests {
         Signal::Play {
             card_deck_index,
             committed_identity: R2.as_variant_card_id(),
-            deadline_turn: 1,
         }
     }
 

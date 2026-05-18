@@ -150,7 +150,6 @@ mod tests {
         let signal = Signal::Play {
             card_deck_index: 10,
             committed_identity: 0,
-            deadline_turn: 1,
         };
 
         let mut knowledge = PlayerKnowledge::new(0);
@@ -180,7 +179,6 @@ mod tests {
         let signal = Signal::Play {
             card_deck_index: 10,
             committed_identity: 0,
-            deadline_turn: 1,
         };
 
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);

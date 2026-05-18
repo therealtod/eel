@@ -198,7 +198,6 @@ impl ClueTech for DelayedPlayClue {
         let table_state = giver_pov.table_state();
         let playable_mask = table_state.playable_cards(static_data);
         let num_players = static_data.number_of_players as usize;
-        let current_turn = table_state.current_turn;
 
         let mut out = HypothesisSet::new();
         // `union_fallback_mask` accumulates focus ids whose connecting card is
@@ -274,7 +273,6 @@ impl ClueTech for DelayedPlayClue {
                             player: holder,
                             expected_card: idx,
                             expected_identity: Some(connecting_id),
-                            deadline_turn: current_turn + num_players,
                         },
                         alt_group,
                     ));

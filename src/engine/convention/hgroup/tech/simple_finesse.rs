@@ -190,7 +190,6 @@ impl ClueTech for SimpleFinesse {
                     player: finessed_player,
                     expected_card: finesse_position,
                     expected_identity: None,
-                    deadline_turn: snap.table_state.current_turn + num_players,
                 },
             );
         }
@@ -233,7 +232,6 @@ impl ClueTech for SimpleFinesse {
                 signal: Signal::Play {
                     card_deck_index: finesse_position,
                     committed_identity: connecting_id,
-                    deadline_turn: snap.table_state.current_turn + num_players,
                 },
             },
         ])

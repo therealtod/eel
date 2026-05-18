@@ -636,14 +636,12 @@ mod tests {
         knowledge.signals[0].push(Signal::Play {
             card_deck_index: 0,
             committed_identity: R1.as_variant_card_id(),
-            deadline_turn: 1,
         });
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).own_hand |= 1 << 0;
         team_knowledge.player_mut(0).signals[0].push(Signal::Play {
             card_deck_index: 0,
             committed_identity: R1.as_variant_card_id(),
-            deadline_turn: 1,
         });
 
         let pov =

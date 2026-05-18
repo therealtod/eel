@@ -7,12 +7,10 @@ pub enum Signal {
     /// The holder is committed to playing this card.
     ///
     /// `committed_identity` is the identity the convention says this card has — the holder
-    /// can use it to resolve their own empathy. `deadline_turn` records the turn by which
-    /// the play is expected (e.g. the holder's next turn for a finesse).
+    /// can use it to resolve their own empathy.
     Play {
         card_deck_index: CardDeckIndex,
         committed_identity: VariantCardId,
-        deadline_turn: usize,
     },
     Discard {
         slot_index: SlotIndex,

@@ -986,7 +986,6 @@ mod tests {
         tk.player_mut(0).signals[5].push(Signal::Play {
             card_deck_index: 5,
             committed_identity: 0,
-            deadline_turn: 10,
         });
 
         // Discarding while signalled → full penalty.
@@ -1052,7 +1051,6 @@ mod tests {
         tk.player_mut(0).signals[5].push(Signal::Play {
             card_deck_index: 5,
             committed_identity: 0,
-            deadline_turn: 10,
         });
 
         let discard = GameAction::Discard {

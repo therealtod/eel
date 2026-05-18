@@ -162,9 +162,6 @@ pub enum PendingTrigger {
     /// Resolves on `player`'s next action.
     /// - **Confirm** when that action is `Play { card_deck_index: expected_card, .. }`.
     /// - **Reject** for any other action by `player`.
-    ///
-    /// `deadline_turn` records the turn after which the hypothesis is forced to
-    /// resolve (used as a backstop when the player is somehow skipped).
     BlindPlay {
         player: PlayerIndex,
         expected_card: CardDeckIndex,
@@ -173,7 +170,5 @@ pub enum PendingTrigger {
         /// mismatch rejects the hypothesis. When `None`, only the deck-index
         /// match is checked (legacy behavior used by SimpleFinesse).
         expected_identity: Option<VariantCardId>,
-        /// Turn after which the hypothesis is forced to resolve.
-        deadline_turn: usize,
     },
 }
