@@ -35,14 +35,36 @@ impl DelayedPlayClue {
         pov: &dyn PlayerPOV,
     ) -> bool {
         let num_players = pov.static_data().number_of_players as usize;
+        let table_state = pov.table_state();
+        let variant = &pov.static_data().variant;
+        let playable_mask = table_state.playable_cards(pov.static_data());
 
         (1..=away_value as usize).all(|offset| {
             let connecting_id = card_id - offset;
+            let connecting_bit = 1u64 << connecting_id;
             (0..num_players).any(|p| {
-                pov.table_state().hands[p].cards().iter().any(|&idx| {
-                    pov.card_identity(idx) == Some(connecting_id)
-                        && pov.is_touched(idx)
-                        && pov.is_identity_known_to_holder(idx)
+                let pk = pov.team_knowledge().player(p);
+                table_state.hands[p].cards().iter().any(|&idx| {
+                    if !pov.is_touched(idx) {
+                        return false;
+                    }
+                    // Strict path: holder knows the exact identity and it equals connecting_id.
+                    if pov.is_identity_known_to_holder(idx)
+                        && pov.card_identity(idx) == Some(connecting_id)
+                    {
+                        return true;
+                    }
+                    // Receiver-friendly path: holder's empathy on the card is a subset of
+                    // currently-playable identities (i.e. the holder treats it as a known
+                    // playable) and `connecting_id` is one of those possibilities. Covers
+                    // the case "I have a known-playable 1 of unknown color" — a valid
+                    // connecting card for a delayed play through any matching 2.
+                    let possibilities = pk
+                        .combined_possible_identities(idx, table_state, variant)
+                        .as_bits();
+                    possibilities != 0
+                        && (possibilities & !playable_mask) == 0
+                        && (possibilities & connecting_bit) != 0
                 })
             })
         })
