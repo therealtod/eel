@@ -665,6 +665,27 @@ impl Evaluator for DefaultEvaluator {
         let game_score = self.score_weight * state.score(&static_data.variant) as f64;
         let strikes = table_state.strike_tokens as usize;
         let strike_penalty = self.strike_penalties.get(strikes).copied().unwrap_or(0.0);
+        // Terminal states (max score reached or struck out) are end-of-game: in-flight
+        // heuristics like misinformation, team empathy, pace, and critical-in-hand model
+        // future risk that no longer applies. Returning just game_score - strike_penalty
+        // keeps the search from preferring a delayed win over an immediate one because
+        // intermediate draws happen to mask cards from soft-term counting.
+        if table_state.is_terminal(static_data) {
+            return ScoreBreakdown {
+                game_score,
+                strike_penalty,
+                pace: 0.0,
+                efficiency_penalty: 0.0,
+                critical_in_hand: 0.0,
+                lost_ceiling_penalty: 0.0,
+                empathy_bonus: 0.0,
+                clue_tokens: 0.0,
+                known_playable: 0.0,
+                team_empathy: 0.0,
+                misinformation_penalty: 0.0,
+                total: game_score - strike_penalty,
+            };
+        }
         let pace = self.pace_weight
             * (state.pace()).clamp(-10, static_data.number_of_players as i32) as f64;
         let efficiency_penalty = self.efficiency_weight * f64::from(state.required_efficiency());

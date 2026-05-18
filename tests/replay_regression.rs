@@ -69,13 +69,13 @@ fn engine_action_at_turn(replay_path: &str, turn: usize) -> GameAction {
 // }
 
 #[test]
-fn should_understand_delayed_play_clue() {
-    let action = engine_action_at_turn("should_understand_delayed_play_clue.json", 9);
+fn should_play_the_5() {
+    let action = engine_action_at_turn("should_play_the_5.json", 55);
     if let GameAction::Play {
-        player_index: 0,
-        card_deck_index: 17,
+        player_index: 1,
         ..
-    } = action {
-        panic!("Alice should not play the play clued p2 before the globally known p1. Instead she chose this action: {action:?}");
+    } = action { } else {
+        panic!("Bob should play his 5 and achieve max score. Instead he chose: {action:?}");
+
     }
 }

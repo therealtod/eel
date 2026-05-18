@@ -180,12 +180,18 @@ impl KnowledgeAwareGameState {
         card_id: VariantCardId,
     ) {
         let player_index = self.table_state.active_player_index();
+        let stack_idx = (card_id as usize) / self.static_data.variant.stacks_size as usize;
+        let pre = self.table_state.playing_stacks.stack_size(stack_idx);
         self.table_state.update_with_play_action_of_specific_card(
             card_deck_index,
             card_id,
             &self.static_data,
         );
+        let post = self.table_state.playing_stacks.stack_size(stack_idx);
         self.remove_card_from_own_hand(player_index, card_deck_index);
+        if post > pre {
+            self.reapply_good_touch_after_state_change();
+        }
     }
 
     /// Apply a play for the current player without knowing the card's identity.
