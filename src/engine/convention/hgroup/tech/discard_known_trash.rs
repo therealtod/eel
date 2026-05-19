@@ -5,6 +5,7 @@ use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::CardDeckIndex;
 use crate::game::state::PlayerIndex;
+use crate::game::MAX_CLUE_TOKEN_COUNT;
 use crate::impl_convention_tech_for_discard_tech;
 
 /// Discard the leftmost (newest, slot 1) known trash card in the active player's hand.
@@ -20,7 +21,11 @@ pub struct DiscardKnownTrash;
 impl DiscardTech for DiscardKnownTrash {
     fn discard_game_actions(&self, active_player_pov: &dyn PlayerPOV) -> Vec<GameAction> {
         let player_index = active_player_pov.active_player_index();
-        let hand = &active_player_pov.table_state().hands[player_index];
+        let table_state = active_player_pov.table_state();
+        if table_state.clue_token_bank.whole_clue_tokens_count() >= MAX_CLUE_TOKEN_COUNT {
+            return vec![];
+        }
+        let hand = &table_state.hands[player_index];
         // Hand::cards() is newest-first (slot 1 → slot N); first match = leftmost.
         match hand
             .cards()
@@ -31,7 +36,7 @@ impl DiscardTech for DiscardKnownTrash {
             Some(card_deck_index) => vec![GameAction::Discard {
                 player_index,
                 card_deck_index,
-                turn: active_player_pov.table_state().current_turn,
+                turn: table_state.current_turn,
             }],
             None => vec![],
         }
@@ -137,6 +142,7 @@ mod tests {
             let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
             let mut table_state = initial_five_players_table_state();
             play_r1(&mut table_state, &static_data);
+            table_state.clue_token_bank.set_half_tokens(14); // 7 whole tokens (not max)
             table_state.current_turn = 2;
             // Draw hand cards: oldest→newest = [10, 20].
             for &idx in &[10u8, 20] {
@@ -170,6 +176,7 @@ mod tests {
             let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
             let mut table_state = initial_five_players_table_state();
             play_r1(&mut table_state, &static_data);
+            table_state.clue_token_bank.set_half_tokens(14); // 7 whole tokens (not max)
             table_state.current_turn = 3;
             // Draw hand: oldest→newest = [10, 20, 30].
             for &idx in &[10u8, 20, 30] {
@@ -203,6 +210,7 @@ mod tests {
             let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
             let mut table_state = initial_five_players_table_state();
             play_r1(&mut table_state, &static_data);
+            table_state.clue_token_bank.set_half_tokens(14); // 7 whole tokens (not max)
             table_state.current_turn = 4;
             // Hand: oldest→newest = [10, 20]. Both trash.
             for &idx in &[10u8, 20] {
@@ -228,6 +236,29 @@ mod tests {
                     turn: 4,
                 }]
             );
+        }
+
+        #[test]
+        fn returns_no_action_when_clue_tokens_at_max() {
+            let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+            let mut table_state = initial_five_players_table_state();
+            play_r1(&mut table_state, &static_data);
+            // Clue tokens at max (16 half-tokens = 8 whole)
+            table_state.current_turn = 2;
+            for &idx in &[10u8, 20] {
+                table_state.update_with_draw_action(idx);
+            }
+            let knowledge = make_knowledge(&[10, 20], &[(10, R1_MASK)]);
+            let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+            let pov = LightweightPlayerPOV::new(
+                0,
+                &knowledge,
+                &team_knowledge,
+                &table_state,
+                &static_data,
+            );
+
+            assert!(DiscardKnownTrash.game_actions(&pov).is_empty());
         }
 
         #[test]
