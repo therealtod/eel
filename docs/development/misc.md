@@ -16,7 +16,7 @@ The idiom used uniformly across techs:
 ```rust
 fn matches_clue(&self, player_index: PlayerIndex, touched: &[CardDeckIndex], clue: &Clue,
                 turn: usize, history: &[GameStateSnapshot], observer_pov: &dyn PlayerPOV) -> bool {
-    let Some(snap) = history.get(turn) else { return false; };
+    let Some(snap) = history.get(turn.saturating_sub(1)) else { return false; };
     let giver = snap.table_state.active_player_index;
     let giver_pov = snap.player_pov(giver, observer_pov.static_data());
     let Some(focus) = get_clue_focus(player_index, touched, &giver_pov) else { return false; };
