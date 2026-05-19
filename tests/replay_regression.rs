@@ -103,16 +103,16 @@ fn delayed_play_clue_admits_full_rank2_union_on_focus() {
 
 #[test]
 fn should_avoid_bad_touch() {
-    let action = engine_action_at_turn("should_avoid_bad_touch.json", 1);
+    let action = engine_action_at_turn("should_avoid_bad_touch.json", 9);
     if let GameAction::Clue {
-        player_index: 0,
+        player_index: 2,
         clue: Clue {
             clue_type: ClueType::Rank,
-            clue_value: 1
+            clue_value: 2
         },
         ..
     } = action {
-        panic!("Alice should not use a rank-1 clue to get r1 because it bad touches y1. Instead got: {action:?}");
+        panic!("Alice should not clue the b2 as it implies bad touch. Instead got: {action:?}");
     }
 }
 
