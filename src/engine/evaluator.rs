@@ -163,6 +163,32 @@ pub trait Evaluator: Send + Sync {
         0.0
     }
 
+    /// Penalty assessed when `actor` chooses to `Discard`.
+    ///
+    /// Combines two risks the chop-discard pricing should reflect:
+    ///
+    /// 1. **Bottom Deck Risk (BDR):** the discarded card has wide empathy; some of its
+    ///    candidate identities have all-but-one copy already accounted for, so discarding
+    ///    *this* copy would make that identity newly critical. If the remaining copy is not
+    ///    visible in any player's hand, it might be at the bottom of the deck and lost —
+    ///    a ceiling-loss risk weighted by the candidate's probability under the empathy.
+    ///
+    /// 2. **Discard while holding a known-playable:** the team expected this actor to play
+    ///    a globally-known-playable; choosing to discard instead means the team did not
+    ///    save a critical onto chop on the prior turn, so this discard may dump a critical.
+    ///    Modeled as a flat penalty.
+    ///
+    /// Returns a non-positive `Score` (penalty). Default zero.
+    fn discard_action_penalty(
+        &self,
+        _action: &GameAction,
+        _actor: PlayerIndex,
+        _pre_action_state: &KnowledgeAwareGameState,
+        _truth: &dyn PlayerPOV,
+    ) -> Score {
+        0.0
+    }
+
     /// Immediate bonus for a clue action that tightens team-wide empathy: the change in
     /// `team_empathy_score` from before to after the clue, weighted by `team_empathy_weight`.
     ///
@@ -345,6 +371,28 @@ pub struct DefaultEvaluator {
     ///
     /// Set to 0 to disable.
     pub play_progress_weight: f64,
+    /// Multiplier for the **Bottom Deck Risk (BDR)** score charged on `Discard` actions.
+    ///
+    /// For each candidate identity `id` in the discarded card's empathy, if discarding this
+    /// copy would make `id` newly critical (`remaining_copies − 1 == 1`) **and** no other
+    /// player's hand visibly holds the surviving copy (truth POV), the term contributes
+    /// `(stacks_size − rank_idx) / popcount(empathy)` — the score points that would be lost
+    /// if the surviving copy turns out to be on the bottom of the deck, scaled by the
+    /// uniform probability the discarded card actually is `id`. Terminal-rank ids are
+    /// skipped (they're single-copy by construction).
+    ///
+    /// Set to 0 to disable.
+    pub bottom_deck_risk_weight: f64,
+    /// Flat penalty applied when the actor chooses `Discard` while at least one card in
+    /// their own hand is globally known-playable (a clued play, a `Signal::Play`, or empathy
+    /// fully inside the playable mask).
+    ///
+    /// Models the H-Group expectation that a player with a known-playable plays it; a
+    /// discard instead implies the team did not save a critical onto chop, so the chop
+    /// being dumped may itself be critical. The penalty is large enough to prefer the play.
+    ///
+    /// Set to 0 to disable.
+    pub discard_while_known_playable_penalty: f64,
     /// Flat penalty applied when the clue may duplicate, in the receiver's hand, a still-needed
     /// identity the giver likely already holds.
     ///
@@ -376,6 +424,8 @@ impl Default for DefaultEvaluator {
             misinformation_weight: 3.0_f64,
             play_progress_weight: 1.0_f64,
             potential_bad_touch_penalty: 5.0_f64,
+            bottom_deck_risk_weight: 3.0_f64,
+            discard_while_known_playable_penalty: 8.0_f64,
         }
     }
 }
@@ -745,6 +795,98 @@ impl DefaultEvaluator {
         total
     }
 
+    /// Bottom Deck Risk score for discarding `discarded_deck_idx` from `table_state`.
+    ///
+    /// For every candidate identity `id` in the card's global empathy:
+    ///   - skip if `id` has only one total copy (terminal — already critical) or its rank
+    ///     is the top of the stack (BDR is conceptually about non-terminal cards);
+    ///   - skip if the suit's stack already includes `id` (the card is already trash, not at risk);
+    ///   - skip if discarding doesn't drive remaining copies to exactly 1;
+    ///   - skip if any other player's hand visibly holds a copy of `id` (truth POV) — the
+    ///     surviving copy is observed, hence not bottom-decked;
+    ///   - otherwise contribute `(stacks_size − rank_idx) / popcount`, the ceiling loss if
+    ///     the surviving copy is bottom-decked, weighted by the uniform empathy probability.
+    fn bottom_deck_risk_score(
+        discarded_deck_idx: CardDeckIndex,
+        table_state: &TableState,
+        static_data: &StaticGameData,
+        truth: &dyn PlayerPOV,
+    ) -> f64 {
+        let variant = &static_data.variant;
+        let stacks_size = variant.stacks_size as usize;
+        let empathy = table_state
+            .deck
+            .get_global_empathy(discarded_deck_idx)
+            .as_bits();
+        if empathy == 0 {
+            return 0.0;
+        }
+        let popcount = empathy.count_ones() as f64;
+        let num_players = static_data.number_of_players as usize;
+        let mut visible_ids: VariantCardsBitField = 0;
+        for hand in table_state.hands[..num_players].iter() {
+            for &di in hand.cards() {
+                if di == discarded_deck_idx {
+                    continue;
+                }
+                if let Some(id) = truth.card_identity(di) {
+                    visible_ids |= 1u64 << id;
+                }
+            }
+        }
+        let mut score = 0.0f64;
+        let mut bits = empathy;
+        while bits != 0 {
+            let id = bits.trailing_zeros() as usize;
+            bits &= bits - 1;
+            let total_copies = variant.card_copies_count_by_id[id] as usize;
+            if total_copies <= 1 {
+                continue;
+            }
+            let rank_idx = id % stacks_size;
+            if rank_idx + 1 == stacks_size {
+                continue; // terminal rank — single-copy by construction
+            }
+            let suit = id / stacks_size;
+            if table_state.playing_stacks.stack_size(suit) as usize > rank_idx {
+                continue; // already on the stack: card is trash, no BDR
+            }
+            let already_discarded =
+                table_state.discard_pile.copies_of(id as VariantCardId) as usize;
+            if total_copies.saturating_sub(already_discarded + 1) != 1 {
+                continue;
+            }
+            if (visible_ids >> id) & 1 != 0 {
+                continue;
+            }
+            let loss = (stacks_size - rank_idx) as f64;
+            score += loss / popcount;
+        }
+        score
+    }
+
+    /// True iff `actor` currently holds at least one globally-known-playable card —
+    /// by `Signal::Play`, by convention-inferred identity ⊆ playable, or by raw empathy
+    /// ⊆ playable. Mirrors [`Self::card_known_playable`].
+    fn actor_has_known_playable(
+        actor: PlayerIndex,
+        table_state: &TableState,
+        static_data: &StaticGameData,
+        team_knowledge: &TeamKnowledge,
+    ) -> bool {
+        let pk = team_knowledge.player(actor);
+        let playable_mask = table_state.playable_cards(static_data);
+        let mut hand = pk.own_hand;
+        while hand != 0 {
+            let idx = hand.trailing_zeros() as CardDeckIndex;
+            hand &= hand - 1;
+            if Self::card_known_playable(pk, idx, table_state, playable_mask) {
+                return true;
+            }
+        }
+        false
+    }
+
     /// Count of own-hand cards fully resolved to a single identity (`popcount == 1`).
     ///
     /// A sharper reward than `team_empathy_score`: fires only when a player knows exactly
@@ -1016,6 +1158,37 @@ impl Evaluator for DefaultEvaluator {
         let post_score =
             Self::team_empathy_score(static_data, post.team_knowledge(), post.table_state());
         self.team_empathy_weight * (post_score - pre_score)
+    }
+
+    fn discard_action_penalty(
+        &self,
+        action: &GameAction,
+        actor: PlayerIndex,
+        pre: &KnowledgeAwareGameState,
+        truth: &dyn PlayerPOV,
+    ) -> Score {
+        let GameAction::Discard {
+            card_deck_index, ..
+        } = action
+        else {
+            return 0.0;
+        };
+        let table_state = pre.table_state();
+        let static_data = pre.static_data();
+        let bdr = if self.bottom_deck_risk_weight != 0.0 {
+            self.bottom_deck_risk_weight
+                * Self::bottom_deck_risk_score(*card_deck_index, table_state, static_data, truth)
+        } else {
+            0.0
+        };
+        let kp_penalty = if self.discard_while_known_playable_penalty != 0.0
+            && Self::actor_has_known_playable(actor, table_state, static_data, pre.team_knowledge())
+        {
+            self.discard_while_known_playable_penalty
+        } else {
+            0.0
+        };
+        -(bdr + kp_penalty)
     }
 
     fn upper_bound(

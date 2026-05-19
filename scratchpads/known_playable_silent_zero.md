@@ -2,7 +2,7 @@
 
 ## Symptom
 
-Replay `should_play_known_playable.json`, turn 6. Alice holds a touched
+Replay `should_play_known_playable.json`, turn 7. Alice holds a touched
 `deck[2]` with empathy `{Y1, G1, P1}` — all currently playable. `PlayKnownPlayable`
 correctly proposes `Play deck[2]`. The engine instead picks `Discard chop`
 (`deck[0]`).
@@ -11,7 +11,7 @@ Test: `tests/replay_regression.rs::should_play_known_playable`.
 
 ## What the search sees
 
-Top two PVs at the root (Alice, turn 6):
+Top two PVs at the root (Alice, turn 7):
 
 ```
 total=50.139  Discard chop (deck[0])                   (chosen)
@@ -44,7 +44,7 @@ Initial hypothesis: rollout policy asymmetry from `rollout_outsources_disambigua
 This turned out to be wrong. Investigation:
 
 1. **`clues_for_player_with_focus` returns identical candidate sets** for Bob in
-   all sibling subtrees at Alice's depth-3 turn 9 (7 candidates, same focus
+   all sibling subtrees at Alice's depth-3 turn 10 (7 candidates, same focus
    choices). So clue *enumeration* is consistent.
 
 2. **`DelayedPlayClue` filters those candidates through `is_delayed_play_situation`**,
@@ -70,37 +70,44 @@ Also not draw-dilution (`draw_dilution_bias.md`): leaf-shape terms
 
 Two compounding issues that both let the discard line win:
 
-### Issue A — `known_playable_in_hands` returning 0 at the leaf when it shouldn't
+### Issue A — `known_playable_in_hands` returning 0 at the leaf (investigated, ruled out as primary)
 
-At the PLAY line's leaf (turn 12), stacks are R=1, Y=1, G=1, B=1, P=1. Cathy's
-`deck[14]` is touched (rank-2 clue from turn 5) with empathy `{R2, Y2, G2}` (or
-similar narrowed subset). All three identities are in the current playable mask.
+At the PLAY line's leaf the team's empathy on Cathy's `deck[14]` is `{R2, Y2,
+G2, B2, P2}` (rank-2 clue, not narrowed by Good Touch because phantom plays do
+not reapply it). `known_playable_in_hands` checks `empathy ⊆ playable_mask`.
 
-`known_playable_in_hands` should fire Priority 3 (game-rule empathy ⊆ playable):
+Cause of the zero: phantom plays remove the card from the hand but **do not
+advance the playing stack**. So `table_state.playing_stacks` only reflects
+real-identity-resolved plays. At the PLAY-line leaf:
 
-```rust
-let bits = table_state.deck.get_global_empathy(idx).as_bits();
-if bits != 0 && (bits & playable_mask) == bits {
-    total += 1.0;
-}
-```
+| | DISCARD leaf | PLAY leaf |
+|---|---|---|
+| real stacks | R=1, G=1, B=1 | R=1, G=1, B=1 |
+| phantom plays | 3 | 2 |
+| `state.score(variant, phantom)` | 6 → game_score=60 | 5 → game_score=50 |
+| `playable_mask` | {R2, Y1, G2, B2, P1} | {R2, Y1, G2, B2, P1} |
 
-But the leaf breakdown shows `known_playable: 0.0`. Either:
-- Phantom-play state at the leaf is producing a different effective
-  `playable_mask` than the visible `stacks` would suggest (commit `06a30a4`
-  moved phantom_plays to the search layer; this may affect `playable_cards`
-  reads downstream), or
-- The truth-id early return at the top of `known_playable_in_hands` is filtering
-  Cathy's deck[14] because `truth.card_identity(deck[14]) == Some(R2)` and
-  the leaf's `playable_mask` does not include R2 (i.e. R-stack has advanced
-  to 2 in some phantom-aware way), or
-- The `get_global_empathy` path returns 0 / a wider mask than expected.
+Cathy's deck[14] empathy `{R2, Y2, G2, B2, P2}` is not ⊆ `{R2, Y1, G2, B2,
+P1}` (Y2, P2 missing) → not counted. **This is the conservative-correct
+answer:** with 2 phantom plays into suits ⊆ {Y, G, P}, at most two of those
+suits' stacks have advanced; one of {Y2, P2} is genuinely not yet playable in
+any consistent extension. The team cannot confidently call this card known-
+playable.
 
-The eval has the term and weight `1.0`, but it's silent. If it fired correctly
-for Cathy's queued deck[14] in the PLAY-line leaf, +1.0 would close ~1 point of
-the gap — and probably more since the search would re-rank the inner Cathy-turn-8
-choice when the "Cathy plays deck[14]" sub-leaf is also credited with its own
-queued plays.
+**Attempted fix that didn't work:** expanding `playable_mask` by `phantom_plays`
+ranks per suit. Let `effective_mask = playable_mask ∪ {(s, r) : r ∈ stack[s]+1
+..stack[s]+phantom_plays}`. Result: leaf `known_playable` went up but the
+DISCARD line gained 5.0 while the PLAY line gained only 2.0 — the DISCARD line
+has MORE phantom plays (3 vs 2), so its effective mask is wider, and its
+leaf-hand cards (rank-2-style wide empathy) all gained credit. The fix
+**widened the wrong-direction gap from 9.7 to 12.7**.
+
+The expansion is unsound: extending the playable_mask by phantom_plays
+overestimates which cards each individual player believes are playable
+(phantom plays are shared resources — only ONE suit's stack advances per
+phantom, not all of them).
+
+Reverted. The silent zero is correct.
 
 ### Issue B — chop discards with wide empathy are free to the search
 
@@ -117,20 +124,50 @@ rollout horizon anyway — she pays nothing for deferring it.
 
 ## Ordering and plan
 
-Start with Issue A. The fix is local, the silent-zero is concrete, and fixing
-it likely closes the regression test without needing the broader chop-risk
-work in Issue B.
+**Issue A is investigated and ruled out** as a fixable cause — the silent
+zero is conservative-correct given how phantom plays interact with the leaf
+playable_mask. A naive "widen the mask by phantom_plays" fix actively
+worsens the regression. A correct phantom-aware fix would need per-suit
+phantom tracking (which suit's stack each phantom play "would have"
+advanced) and isn't a local change to this function.
 
-1. Add a focused diag test: construct the PLAY-line leaf state, call
-   `known_playable_in_hands`, assert it is >= 1 (because Cathy's deck[14]
-   should qualify).
-2. Walk the priority gates to find which one is filtering.
-3. Fix and re-run `should_play_known_playable` plus the wider suite.
+**Pivot to Issue B.** The actual lever for closing the gap on this test is
+the chop-discard pricing. The discard line wins because:
 
-If Issue A doesn't close the test alone, return to Issue B as a follow-up.
-Issue B is the conceptually right structural fix (chop discards should not be
-free when empathy is wide enough to plausibly cover criticals) but it touches
-the evaluator's penalty shape, which is more invasive.
+1. Alice's chop discard is "free" — `critical_exposure_penalty=0` on the
+   wide-empathy chop, so the eval doesn't see the expected cost of losing
+   P2 (a near-critical 2).
+2. Discarding adds +2 half-tokens, which fuels the rollout's longer play
+   cascade.
+3. The phantom-play accounting at the leaf means game_score reflects "total
+   plays in the rollout window," which the DISCARD line wins 4-to-3 because
+   it doesn't burn a clue token on Alice's turn 7.
+
+A targeted fix: `critical_exposure_penalty` (or a sibling term) should
+charge the actor an **expected criticality cost** when discarding a card
+whose empathy plausibly contains critical or near-critical cards. The
+chop's `get_global_empathy` is wide; the eval can compute
+`E[criticality] = Σ_{id ∈ empathy} P(card = id) · criticality(id)` and
+charge that as a discard cost.
+
+Even simpler first cut: charge `signal_ignored_penalty`-style for
+"discarding while holding a known-playable in own hand" — Alice's deck[2]
+is touched and known-playable; discarding deck[0] while deck[2] sits there
+deferred-to-the-future should not be free.
+
+The fallback from `draw_dilution_bias.md` ("extend `signal_ignored_penalty`
+so it also charges the actor for ignoring a touched known-playable in their
+own hand") is the smallest version of this and may close the test on its
+own.
+
+## Followup: also look at phantom-play Good-Touch reapply
+
+Separately worth investigating: the `if stack_advanced { reapply_good_touch }`
+gate in `apply_play`. Phantom plays do not commit to identity but DO inform
+the team that "some card in the played card's empathy is now trash." This
+could narrow other touched cards' empathy in the rollout. Not the cause of
+the current failure, but a real fidelity loss in the rollout state. File
+under "narrow empathy aggressively when phantom plays happen."
 
 ## What was ruled out / didn't apply
 
