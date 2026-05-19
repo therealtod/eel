@@ -819,6 +819,50 @@ mod tests {
         );
     }
 
+    #[test]
+    fn count_bad_touches_one_when_identity_clued_in_other_hand_via_multi_value_clue() {
+        // Regression: `already_clued_ids_mask` only checked singleton public empathy, so a
+        // card touched by a rank-1 clue (public empathy = all rank-1s, not a singleton) was
+        // invisible to the bad-touch check even when the truth POV knew its exact identity.
+        //
+        // Setup: card 20 (player 2) is Y1 and was touched by a rank-1 clue, but the deck
+        // empathy is NOT narrowed to a singleton (simulating a multi-value clue). The truth
+        // POV (player 0) knows card 20 is Y1 via visible_cards / inferred_identities.
+        // Card 10 (player 1, receiver) is also Y1 and known to the truth POV.
+        // Touching card 10 must be flagged as a bad touch.
+        use crate::game::card::CardIdentityMask;
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards;
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+
+        // Card 20 → player 2: clue-touched but NOT deck-revealed (public empathy stays wide).
+        table_state.active_player_index = 2;
+        table_state.update_with_draw_action(20);
+        table_state.clue_touched_cards |= 1 << 20;
+
+        // Card 10 → player 1 (receiver): also Y1.
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10);
+
+        // Truth POV (player 0) sees both cards as Y1.
+        let mut knowledge = knowledge_for_hand(&[]);
+        let y1_id = NoVarCards::Y1.as_variant_card_id();
+        let y1_mask = CardIdentityMask::from_bits(1 << y1_id);
+        knowledge.inferred_identities[20] = Some(y1_mask);
+        knowledge.visible_cards |= 1 << 20;
+        knowledge.inferred_identities[10] = Some(y1_mask);
+        knowledge.visible_cards |= 1 << 10;
+
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let truth = make_truth_pov(&knowledge, &team_knowledge, &table_state, &static_data);
+        assert_eq!(
+            super::count_bad_touches(&[10], 1, &truth, &table_state, &static_data),
+            1,
+            "Y1 touched by a multi-value clue in another hand must be detected as already-clued via truth POV"
+        );
+    }
+
     // ── is_minimal_clue_value_compliant ────────────────────────────────────
 
     #[test]
