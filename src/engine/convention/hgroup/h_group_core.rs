@@ -276,7 +276,32 @@ pub(crate) fn count_bad_touches(
     static_data: &StaticGameData,
 ) -> usize {
     let still_needed = still_needed_cards_mask(table_state, static_data);
-    let already_clued_other_hands = already_clued_ids_mask(receiver, table_state, static_data);
+
+    // Build the already-clued mask using truth identities when the searcher can see
+    // the card. `already_clued_ids_mask` uses only public singleton empathy, which
+    // misses cards touched by a multi-value clue (e.g. a rank-1 clue leaves Y1 with
+    // empathy {R1,Y1,G1,B1,P1}, so `known_card_id` returns None even though the
+    // searcher knows it is Y1). Using truth.card_identity first mirrors the same
+    // pattern used when scoring the `touched` cards below.
+    let num_players = static_data.number_of_players as usize;
+    let mut already_clued_other_hands: VariantCardsBitField = 0;
+    for p in 0..num_players {
+        if p == receiver {
+            continue;
+        }
+        for &idx in table_state.hands[p].cards() {
+            if table_state.clue_touched_cards & (1u64 << idx) != 0 {
+                let bits = match truth.card_identity(idx) {
+                    Some(id) => 1u64 << id,
+                    None => match table_state.deck.get_global_empathy(idx).known_card_id() {
+                        Some(id) => 1u64 << id,
+                        None => continue,
+                    },
+                };
+                already_clued_other_hands |= bits;
+            }
+        }
+    }
 
     // Identities already known-clued in the receiver's own hand, excluding cards
     // currently being touched by this clue. A second touch onto an identity the
@@ -288,9 +313,14 @@ pub(crate) fn count_bad_touches(
             continue;
         }
         if table_state.clue_touched_cards & (1u64 << idx) != 0 {
-            if let Some(id) = table_state.deck.get_global_empathy(idx).known_card_id() {
-                already_clued_receiver |= 1u64 << id;
-            }
+            let bits = match truth.card_identity(idx) {
+                Some(id) => 1u64 << id,
+                None => match table_state.deck.get_global_empathy(idx).known_card_id() {
+                    Some(id) => 1u64 << id,
+                    None => continue,
+                },
+            };
+            already_clued_receiver |= bits;
         }
     }
 
