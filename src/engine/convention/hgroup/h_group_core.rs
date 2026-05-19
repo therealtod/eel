@@ -1141,4 +1141,183 @@ mod tests {
             &pov
         ));
     }
+
+    // ── is_potential_bad_touch ─────────────────────────────────────────────
+
+    /// Common setup: 5-player no-variant game; giver = player 0 holds card 5 (clue-touched)
+    /// in their hand, narrowed by inference to `giver_inferred_mask`. Receiver = player 1
+    /// holds card 10 with truth = `receiver_truth`. Returns the pieces needed to invoke
+    /// `is_potential_bad_touch(&[10], 0, ...)`.
+    fn setup_pbt(
+        giver_inferred_mask: u64,
+        receiver_truth: crate::game::deck::unit_test_constants::novariant_constants::NoVarCards,
+        giver_card_touched: bool,
+        giver_play_signal: Option<VariantCardId>,
+    ) -> (StaticGameData, TableState, TeamKnowledge, PlayerKnowledge) {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+
+        // Giver (player 0) draws card 5.
+        table_state.active_player_index = 0;
+        table_state.update_with_draw_action(5);
+        if giver_card_touched {
+            table_state.clue_touched_cards |= 1 << 5;
+        }
+
+        // Receiver (player 1) draws card 10, revealed as the chosen truth identity.
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10);
+        table_state
+            .deck
+            .reveal_card(10, receiver_truth.as_variant_card_id(), &static_data.variant);
+
+        // Giver's knowledge: own_hand includes card 5; inferred identity set to the requested mask.
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        {
+            let giver_k = team_knowledge.player_mut(0);
+            giver_k.own_hand |= 1 << 5;
+            giver_k.inferred_identities[5] =
+                Some(crate::game::card::CardIdentityMask::from_bits(giver_inferred_mask));
+            if let Some(id) = giver_play_signal {
+                giver_k.add_signal(
+                    5,
+                    Signal::Play {
+                        card_deck_index: 5,
+                        committed_identity: id,
+                    },
+                );
+            }
+        }
+
+        // Empty truth-side PlayerKnowledge — `card_identity(10)` falls back to deck empathy,
+        // which was just narrowed to the singleton by `reveal_card`.
+        let truth_knowledge = knowledge_for_hand(&[]);
+
+        (static_data, table_state, team_knowledge, truth_knowledge)
+    }
+
+    #[test]
+    fn pbt_fires_when_giver_holds_clued_singleton_matching_touched() {
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards;
+        let r1_mask = 1u64 << NoVarCards::R1.as_variant_card_id();
+        let (static_data, table_state, team_knowledge, truth_knowledge) =
+            setup_pbt(r1_mask, NoVarCards::R1, /*touched=*/ true, None);
+        let truth = make_truth_pov(&truth_knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert!(super::is_potential_bad_touch(
+            &[10],
+            0,
+            &truth,
+            &table_state,
+            &static_data,
+            &team_knowledge,
+        ));
+    }
+
+    #[test]
+    fn pbt_fires_when_giver_holds_play_signaled_card_matching_touched() {
+        // Play-signaled (but not clue-touched) giver-hand card still contributes to mask B.
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards;
+        let r1_id = NoVarCards::R1.as_variant_card_id();
+        let r1_mask = 1u64 << r1_id;
+        let (static_data, table_state, team_knowledge, truth_knowledge) =
+            setup_pbt(r1_mask, NoVarCards::R1, /*touched=*/ false, Some(r1_id));
+        let truth = make_truth_pov(&truth_knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert!(super::is_potential_bad_touch(
+            &[10],
+            0,
+            &truth,
+            &table_state,
+            &static_data,
+            &team_knowledge,
+        ));
+    }
+
+    #[test]
+    fn pbt_does_not_fire_when_touched_id_is_trash() {
+        // R1 is played to the red stack → trash → filtered out of both masks even though
+        // the giver holds an R1-narrowed card and the clue touches an R1.
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards;
+        let r1_id = NoVarCards::R1.as_variant_card_id();
+        let r1_mask = 1u64 << r1_id;
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+
+        // Play R1 from a spare deck position to fill that slot of the red stack.
+        table_state.update_with_draw_action(0);
+        table_state.update_with_play_action_of_specific_card(0, r1_id, &static_data);
+
+        // Giver (player 0) draws card 5, marked clue-touched, narrowed to R1.
+        table_state.active_player_index = 0;
+        table_state.update_with_draw_action(5);
+        table_state.clue_touched_cards |= 1 << 5;
+
+        // Receiver (player 1) draws card 10, revealed as a second R1 (now trash).
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10);
+        table_state
+            .deck
+            .reveal_card(10, r1_id, &static_data.variant);
+
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        {
+            let giver_k = team_knowledge.player_mut(0);
+            giver_k.own_hand |= 1 << 5;
+            giver_k.inferred_identities[5] =
+                Some(crate::game::card::CardIdentityMask::from_bits(r1_mask));
+        }
+        let truth_knowledge = knowledge_for_hand(&[]);
+        let truth = make_truth_pov(&truth_knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert!(!super::is_potential_bad_touch(
+            &[10],
+            0,
+            &truth,
+            &table_state,
+            &static_data,
+            &team_knowledge,
+        ));
+    }
+
+    #[test]
+    fn pbt_does_not_fire_when_giver_hand_unclued_and_unsignaled() {
+        // Giver's only hand card is unclued and has no play signal → mask B is empty.
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards;
+        let r1_mask = 1u64 << NoVarCards::R1.as_variant_card_id();
+        // Provide a narrowed inferred set, but leave touched=false / signal=None — the
+        // gate should still skip this card and yield mask B = 0.
+        let (static_data, table_state, team_knowledge, truth_knowledge) =
+            setup_pbt(r1_mask, NoVarCards::R1, /*touched=*/ false, None);
+        let truth = make_truth_pov(&truth_knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert!(!super::is_potential_bad_touch(
+            &[10],
+            0,
+            &truth,
+            &table_state,
+            &static_data,
+            &team_knowledge,
+        ));
+    }
+
+    #[test]
+    fn pbt_does_not_fire_when_no_overlap_between_masks() {
+        // Giver's clued card is narrowed to R1; clue touches Y1 on receiver.
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards;
+        let r1_mask = 1u64 << NoVarCards::R1.as_variant_card_id();
+        let (static_data, table_state, team_knowledge, truth_knowledge) =
+            setup_pbt(r1_mask, NoVarCards::Y1, /*touched=*/ true, None);
+        let truth = make_truth_pov(&truth_knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert!(!super::is_potential_bad_touch(
+            &[10],
+            0,
+            &truth,
+            &table_state,
+            &static_data,
+            &team_knowledge,
+        ));
+    }
 }
