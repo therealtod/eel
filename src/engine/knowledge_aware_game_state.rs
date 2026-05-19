@@ -15,6 +15,14 @@ use crate::game::static_game_data::StaticGameData;
 use crate::game::variant::Variant;
 use smallvec::SmallVec;
 
+/// Outcome of applying an action, carrying search-relevant metadata.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ActionOutcome {
+    /// True when the play succeeded but its exact stack assignment was deferred
+    /// (known-playable but multiple candidate identities).
+    pub is_phantom_play: bool,
+}
+
 /// Collect hypotheses for `action` from `observer_pov`, respecting interpretation priority.
 ///
 /// Collects up to two priority tiers (primary = highest matching, fallback = next highest).
@@ -90,12 +98,6 @@ pub struct KnowledgeAwareGameState {
     history: Vec<GameStateSnapshot>,
     /// Monotonic counter for unique hypothesis ids.
     next_hypothesis_id: HypothesisId,
-    /// Successful plays whose identity was ambiguous (known-playable but multiple
-    /// candidate identities). Tracked here — not in `TableState` — because the
-    /// abstraction is engine/search-only: the score reflects that the play succeeded
-    /// without committing to a specific stack, so future ply reasoning about
-    /// playability and criticality of other ranks stays honest.
-    phantom_plays: u8,
 }
 
 impl KnowledgeAwareGameState {
@@ -110,7 +112,6 @@ impl KnowledgeAwareGameState {
             next_deck_index: 0,
             history: Vec::new(),
             next_hypothesis_id: 0,
-            phantom_plays: 0,
         }
     }
 
@@ -129,7 +130,6 @@ impl KnowledgeAwareGameState {
             next_deck_index,
             history: Vec::new(),
             next_hypothesis_id: 0,
-            phantom_plays: 0,
         }
     }
 
@@ -271,16 +271,15 @@ impl KnowledgeAwareGameState {
         action: &GameAction,
         convention_set: &dyn ConventionSet,
         truth: &dyn PlayerPOV,
-    ) {
+    ) -> ActionOutcome {
         let actor = self.table_state.active_player_index();
+        let mut outcome = ActionOutcome::default();
         let played_identity: Option<VariantCardId> = match action {
             GameAction::Play {
                 card_deck_index, ..
             } => {
-                let known = self.apply_play(*card_deck_index, convention_set, truth);
-                // Prefer truth's identity for resolve_pending: when the searcher can see
-                // the connecting card, identity-keyed triggers discriminate correctly even
-                // when the active player's empathy is ambiguous (phantom-play branch).
+                let (known, was_phantom) = self.apply_play(*card_deck_index, convention_set, truth);
+                outcome.is_phantom_play = was_phantom;
                 truth.card_identity(*card_deck_index).or(known)
             }
             GameAction::Discard {
@@ -324,6 +323,7 @@ impl KnowledgeAwareGameState {
                 );
             }
         }
+        outcome
     }
 
     fn apply_play(
@@ -331,7 +331,7 @@ impl KnowledgeAwareGameState {
         card_deck_index: CardDeckIndex,
         convention_set: &dyn ConventionSet,
         truth: &dyn PlayerPOV,
-    ) -> Option<VariantCardId> {
+    ) -> (Option<VariantCardId>, bool) {
         let p = self.table_state.active_player_index();
         let turn_counter = self.table_state.current_turn;
         let action = GameAction::Play {
@@ -409,6 +409,7 @@ impl KnowledgeAwareGameState {
             (id, has_play_signal)
         };
         let stack_advanced;
+        let mut is_phantom = false;
         if let Some(card_id) = known_id {
             let pre = self.table_state.playing_stacks.stack_size(
                 (card_id as usize) / self.static_data.variant.stacks_size as usize,
@@ -424,7 +425,7 @@ impl KnowledgeAwareGameState {
             stack_advanced = post > pre;
         } else if self.is_known_playable_play(p, card_deck_index, has_play_signal) {
             self.table_state.update_with_play_action(card_deck_index);
-            self.add_phantom_play();
+            is_phantom = true;
             stack_advanced = false;
         } else {
             self.table_state.update_with_play_action(card_deck_index);
@@ -477,7 +478,7 @@ impl KnowledgeAwareGameState {
                 &self.static_data.variant,
             );
         }
-        known_id
+        known_id.map(|id| (Some(id), is_phantom)).unwrap_or((None, is_phantom))
     }
 
     fn apply_discard(&mut self, card_deck_index: CardDeckIndex, truth: &dyn PlayerPOV) {
@@ -775,32 +776,21 @@ impl KnowledgeAwareGameState {
         &self.team_knowledge
     }
 
-    /// Number of successful plays whose stack assignment was deferred (engine-only).
-    /// Always zero outside the search.
+    /// Effective game score: real stack progress.
     #[must_use]
-    pub fn phantom_plays(&self) -> u8 {
-        self.phantom_plays
+    pub fn score(&self, variant: &Variant, phantom_plays: u8) -> u8 {
+        self.table_state.score(variant) + phantom_plays
     }
 
-    /// Effective game score: real stack progress plus successful-but-unattributed plays.
+    /// Pace adjusted for phantom plays.
     #[must_use]
-    pub fn score(&self, variant: &Variant) -> u8 {
-        self.table_state.score(variant) + self.phantom_plays
-    }
-
-    /// Pace adjusted for phantom plays: phantoms count as score progress.
-    #[must_use]
-    pub fn pace(&self) -> i32 {
-        self.table_state.pace(&self.static_data) + self.phantom_plays as i32
+    pub fn pace(&self, phantom_plays: u8) -> i32 {
+        self.table_state.pace(&self.static_data) + phantom_plays as i32
     }
 
     /// Required efficiency adjusted for phantom plays.
-    ///
-    /// Mirrors [`TableState::required_efficiency`] but treats phantom plays as already-played
-    /// cards: they reduce `still_to_play` and increase `spare_turns` (because the card has
-    /// already left a hand). The "live setups" term is taken from `TableState` unchanged.
     #[must_use]
-    pub fn required_efficiency(&self) -> f32 {
+    pub fn required_efficiency(&self, phantom_plays: u8) -> f32 {
         let variant = &self.static_data.variant;
         let max_score = (variant.number_of_suits * variant.stacks_size) as i32;
         let num_players = self.static_data.number_of_players as usize;
@@ -809,7 +799,7 @@ impl KnowledgeAwareGameState {
             .map(|h| h.cards().len() as i32)
             .sum();
         let remaining = self.table_state.deck.current_size as i32 + hand_cards;
-        let still_to_play = max_score - self.score(variant) as i32;
+        let still_to_play = max_score - self.score(variant, phantom_plays) as i32;
         let spare_turns = (remaining - still_to_play).max(0);
         if still_to_play <= 0 {
             return 0.0;
@@ -823,20 +813,12 @@ impl KnowledgeAwareGameState {
     }
 
     /// True once the team has reached the theoretical max score (counting phantom plays)
-    /// or struck out. Used by the search to detect terminal nodes without leaking the
-    /// phantom abstraction into `TableState`.
+    /// or struck out.
     #[must_use]
-    pub fn is_terminal(&self) -> bool {
+    pub fn is_terminal(&self, phantom_plays: u8) -> bool {
         let max_score =
             self.static_data.variant.number_of_suits * self.static_data.variant.stacks_size;
-        self.table_state.strike_tokens >= 3 || self.score(&self.static_data.variant) >= max_score
-    }
-
-    /// Record that a successful play has happened without committing to a specific stack.
-    /// The caller is responsible for also removing the played card from the relevant
-    /// table-state hand and team-knowledge own-hand bitmap (see [`apply_play`](Self::apply_play)).
-    fn add_phantom_play(&mut self) {
-        self.phantom_plays = self.phantom_plays.saturating_add(1);
+        self.table_state.strike_tokens >= 3 || self.score(&self.static_data.variant, phantom_plays) >= max_score
     }
 
     /// True when the active player knows the card at `card_deck_index` is playable, even though
@@ -1034,8 +1016,8 @@ mod tests {
             Some(CardIdentityMask::from_bits(ones_mask));
 
         let pre_stack_total = state.table_state.score(&state.static_data.variant);
-        let pre_score = state.score(&state.static_data.variant);
-        assert_eq!(state.phantom_plays(), 0);
+        let pre_score = state.score(&state.static_data.variant, 0);
+        assert_eq!(pre_score, state.table_state.score(&state.static_data.variant));
 
         let conventions = HGroupConventionSet::new(vec![]);
         let play_action = GameAction::Play {
@@ -1054,12 +1036,11 @@ mod tests {
             &table_clone,
             &static_clone,
         );
-        state.apply(&play_action, &conventions, &truth);
+        let outcome = state.apply(&play_action, &conventions, &truth);
 
-        assert_eq!(
-            state.phantom_plays(),
-            1,
-            "phantom_plays should increment for an ambiguous-but-playable play"
+        assert!(
+            outcome.is_phantom_play,
+            "apply should report phantom play for an ambiguous-but-playable play"
         );
         assert_eq!(
             state.table_state.score(&state.static_data.variant),
@@ -1067,7 +1048,7 @@ mod tests {
             "no concrete stack should advance for a phantom play"
         );
         assert_eq!(
-            state.score(&state.static_data.variant),
+            state.score(&state.static_data.variant, 1),
             pre_score + 1,
             "engine-effective score should reflect the phantom play"
         );
@@ -1101,7 +1082,7 @@ mod tests {
             &table_clone,
             &static_clone,
         );
-        state.apply(
+        let outcome = state.apply(
             &GameAction::Play {
                 player_index: 0,
                 card_deck_index: 0,
@@ -1111,9 +1092,9 @@ mod tests {
             &truth,
         );
 
-        assert_eq!(state.phantom_plays(), 0);
+        assert!(!outcome.is_phantom_play);
         assert_eq!(state.table_state.score(&state.static_data.variant), 1);
-        assert_eq!(state.score(&state.static_data.variant), 1);
+        assert_eq!(state.score(&state.static_data.variant, 0), 1);
     }
 
     #[test]
@@ -1179,7 +1160,7 @@ mod tests {
             &table_clone,
             &static_clone,
         );
-        state.apply(&action, &conv, &truth);
+        let _ = state.apply(&action, &conv, &truth);
 
         let alice = state.team_knowledge.player(0);
 
