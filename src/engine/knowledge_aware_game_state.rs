@@ -286,7 +286,7 @@ impl KnowledgeAwareGameState {
             GameAction::Discard {
                 card_deck_index, ..
             } => {
-                self.apply_discard(*card_deck_index);
+                self.apply_discard(*card_deck_index, truth);
                 None
             }
             GameAction::Clue {
@@ -480,37 +480,40 @@ impl KnowledgeAwareGameState {
         known_id
     }
 
-    fn apply_discard(&mut self, card_deck_index: CardDeckIndex) {
+    fn apply_discard(&mut self, card_deck_index: CardDeckIndex, truth: &dyn PlayerPOV) {
         let p = self.table_state.active_player_index();
         let num_players = self.static_data.number_of_players as usize;
-        // Prefer a spectator's inferred knowledge so that cards with known identities in other players'
-        // hands are correctly identified as critical. Fall back to global deck empathy.
-        let empathy = (0..num_players)
-            .filter(|&obs| obs != p)
-            .map(|obs| {
-                let pk = self.team_knowledge.player(obs);
-                pk.combined_possible_identities(
-                    card_deck_index,
-                    &self.table_state,
-                    &self.static_data.variant,
-                )
-            })
-            .find(|e| e.is_exactly_known())
-            .unwrap_or_else(|| self.table_state.deck.get_global_empathy(card_deck_index));
-        // Use add_card_with_id for the last copy so critical_in_discard scoring fires correctly.
-        // For non-critical cards use the generic path to avoid spuriously inflating
-        // critical_cards_in_hand for cards that only become critical during this search branch.
-        let is_last_copy = empathy.known_card_id().is_some_and(|card_id| {
-            let total = self.static_data.variant.card_copies_count_by_id[card_id];
-            let discarded = self.table_state.discard_pile.copies_of(card_id);
-            total > 0 && discarded == total - 1
+        // Identity resolution priority:
+        //  1. Truth POV: the root searcher sees teammates' hands, so an untouched card the
+        //     active player discards usually has a known identity from the searcher's view.
+        //     Without this, untouched discards never record per-id counts in the discard
+        //     pile — corrupting `max_achievable_score`, `critical_cards_in_hand`, and the
+        //     CriticalSave tech's reading of which copies remain.
+        //  2. Spectator inferred knowledge: convention-narrowed identity from another player.
+        //  3. Global deck empathy: fallback for cards no observer can pin down.
+        let known_id: Option<VariantCardId> = truth.card_identity(card_deck_index).or_else(|| {
+            (0..num_players)
+                .filter(|&obs| obs != p)
+                .map(|obs| {
+                    let pk = self.team_knowledge.player(obs);
+                    pk.combined_possible_identities(
+                        card_deck_index,
+                        &self.table_state,
+                        &self.static_data.variant,
+                    )
+                })
+                .find(|e| e.is_exactly_known())
+                .and_then(|e| e.known_card_id())
         });
-        if is_last_copy {
-            let card_id = empathy.known_card_id().unwrap();
-            self.table_state.hands[p].remove_card(card_deck_index);
-            self.table_state.discard_pile.add_card_with_id(card_id);
-            let bonus_tokens = self.static_data.variant.bonus_half_clue_tokens_for_discard;
-            self.table_state.clue_token_bank.add_tokens(bonus_tokens);
+        if let Some(card_id) = known_id {
+            // Identity known: record per-id count and reveal the slot. Bonus token handling
+            // is folded into `update_with_discard_action_of_specific_card`.
+            self.table_state
+                .update_with_discard_action_of_specific_card(
+                    card_deck_index,
+                    card_id,
+                    &self.static_data,
+                );
         } else {
             self.table_state
                 .update_with_discard_action(card_deck_index, &self.static_data);

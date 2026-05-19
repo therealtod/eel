@@ -199,7 +199,9 @@ impl TreeActionSelectionStrategy {
             0.0
         };
         let play_bonus = evaluator.play_progress_bonus(action, state_before, state_after);
-        clue_bonus + signal_penalty + play_bonus
+        let team_empathy_bonus =
+            evaluator.team_empathy_delta_bonus(action, state_before, state_after);
+        clue_bonus + signal_penalty + play_bonus + team_empathy_bonus
     }
 
     /// Recursively compute the best leaf score reachable from `state` within `depth` more turns.

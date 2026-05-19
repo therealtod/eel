@@ -103,14 +103,14 @@ fn delayed_play_clue_admits_full_rank2_union_on_focus() {
 
 #[test]
 fn should_play_known_playable() {
-    let action = engine_action_at_turn("should_play_known_playable.json", 55);
+    let action = engine_action_at_turn("should_play_known_playable.json", 15);
     if let GameAction::Play {
-        player_index: 1,
+        player_index: 0,
         ..
     } = action {
-        println!("Bob correctly chose action: {action:?}");
+        println!("Alice correctly chose action: {action:?}");
     } else {
-        panic!("Bob should have played a playable card on his slot 5, instead got: {action:?}");
+        panic!("Alice should have played a playable card on her slot 1, instead got: {action:?}");
     }
 }
 

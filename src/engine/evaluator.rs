@@ -1,6 +1,7 @@
 use crate::engine::convention::hgroup::h_group_core::{count_bad_touches, is_potential_bad_touch};
 use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::decision_tree::Score;
+use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
 use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
@@ -24,8 +25,9 @@ pub struct ScoreBreakdown {
     pub pace: f64,
     /// `efficiency_weight * required_efficiency` — remaining discard burden penalty.
     pub efficiency_penalty: f64,
-    /// `critical_in_hand_weight * critical_cards_in_hand` — reward for keeping critical cards safe.
-    pub critical_in_hand: f64,
+    /// `critical_exposure_weight * critical_exposure_score` — penalty for truth-critical cards
+    /// in hands, scaled by how close each one is to being discarded.
+    pub critical_exposure_penalty: f64,
     /// `lost_score_ceiling_weight * (theoretical_max − max_achievable)` — penalty for lost score ceiling.
     pub lost_ceiling_penalty: f64,
     /// `empathy_weight * empathy_precision` — reward for narrower identity ranges (disabled by default).
@@ -34,7 +36,10 @@ pub struct ScoreBreakdown {
     pub clue_tokens: f64,
     /// `known_playable_weight * known_playable_in_hands` — reward for cards known (by their owner) to be playable.
     pub known_playable: f64,
-    /// `team_empathy_weight * team_empathy_score` — reward for fraction of identity uncertainty eliminated across all own-hand cards.
+    /// `team_empathy_weight * Δ team_empathy_score` accumulated across clue actions on the
+    /// search line. Rewards clues that tighten team-wide identity uncertainty. Always 0.0 at
+    /// a pure leaf evaluation — the value is folded in by `team_empathy_delta_bonus` as the
+    /// search walks each ply.
     pub team_empathy: f64,
     /// `misinformation_weight * misinformed_card_count` — penalty for own-hand cards whose effective
     /// inferred mask excludes the card's true identity (convention breakdown / misinformation).
@@ -47,13 +52,13 @@ impl std::fmt::Display for ScoreBreakdown {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "total={:.2} [score={:.1} -strike={:.1} +pace={:.1} -eff={:.1} +crit={:.1} -ceil={:.1} +emp={:.1} +clue={:.1} +play={:.1} +team_emp={:.1} -misinfo={:.1}]",
+            "total={:.2} [score={:.1} -strike={:.1} +pace={:.1} -eff={:.1} -crit_exp={:.1} -ceil={:.1} +emp={:.1} +clue={:.1} +play={:.1} +team_emp={:.1} -misinfo={:.1}]",
             self.total,
             self.game_score,
             self.strike_penalty,
             self.pace,
             self.efficiency_penalty,
-            self.critical_in_hand,
+            self.critical_exposure_penalty,
             self.lost_ceiling_penalty,
             self.empathy_bonus,
             self.clue_tokens,
@@ -89,7 +94,7 @@ pub trait Evaluator: Send + Sync {
             strike_penalty: 0.0,
             pace: 0.0,
             efficiency_penalty: 0.0,
-            critical_in_hand: 0.0,
+            critical_exposure_penalty: 0.0,
             lost_ceiling_penalty: 0.0,
             empathy_bonus: 0.0,
             clue_tokens: 0.0,
@@ -150,6 +155,23 @@ pub trait Evaluator: Send + Sync {
         0.0
     }
 
+    /// Immediate bonus for a clue action that tightens team-wide empathy: the change in
+    /// `team_empathy_score` from before to after the clue, weighted by `team_empathy_weight`.
+    ///
+    /// Fires only on `GameAction::Clue`. Modeled as a delta rather than a leaf term because
+    /// the static leaf measurement penalises any line that draws a fresh card (the new card
+    /// has maximum uncertainty), creating a draw-dilution bias that punishes plays. Clueing
+    /// is the only action that meaningfully *adds* team identity information; rewarding the
+    /// delta at clue time captures the value without taxing plays/discards.
+    fn team_empathy_delta_bonus(
+        &self,
+        _action: &GameAction,
+        _pre_action_state: &KnowledgeAwareGameState,
+        _post_action_state: &KnowledgeAwareGameState,
+    ) -> Score {
+        0.0
+    }
+
     /// Optimistic upper bound on the best score reachable from `table_state` with `depth`
     /// more plies of search remaining (including accumulated immediate bonuses).
     ///
@@ -198,7 +220,7 @@ const HARMONIC_LUT: [f64; 9] = build_harmonic_lut();
 /// - `-strike_penalty(strikes)`                         — steep penalty near 3 strikes
 /// - `pace_weight * pace` (clamped)                     — reward breathing room
 /// - `-efficiency_weight * required_efficiency`         — penalise remaining discard burden
-/// - `critical_in_hand_weight * critical_in_hand`       — reward keeping critical cards safe
+/// - `-critical_exposure_weight * critical_exposure_score` — penalise truth-critical cards in hands, scaled by discard imminence
 /// - `-lost_score_ceiling_weight * lost_score_ceiling`  — penalise any reduction in max achievable score
 /// - `empathy_weight * empathy_precision`               — reward narrower inferred identity ranges on clued cards
 /// - `clue_token_weight * harmonic(n) * (1 + clue_demand_weight * demand)` — scarcity-weighted token value
@@ -221,8 +243,28 @@ pub struct DefaultEvaluator {
     pub pace_weight: f64,
     /// Multiplier for the required-efficiency penalty; higher values penalise states that demand many future discards.
     pub efficiency_weight: f64,
-    /// Multiplier for the critical-cards-in-hand bonus; rewards positions where critical cards are unlikely to be discarded.
-    pub critical_in_hand_weight: f64,
+    /// Multiplier for the per-card `critical_exposure_score`. The score for each truth-critical
+    /// card held in a player's hand is `1 / (1 + (rank_from_chop - 1) + 4 * buffer_count)`, where:
+    ///
+    /// - `rank_from_chop` is 1 if the card is the player's current chop-eligible card, 2 if the
+    ///   next chop-eligible slot to its left, etc. Only counts cards that are untouched and not
+    ///   known-trash (i.e., the discard order from the holder's perspective).
+    /// - `buffer_count` is the number of known-playables plus known-trash cards in the holder's
+    ///   hand. Each one represents an action (play or trash-discard) the holder will take before
+    ///   being forced to discard the critical card.
+    ///
+    /// Buffer dominates position (factor 4): one buffer action ≈ moving the card four slots
+    /// away from chop, so even the rightmost-but-buffered critical is safer than the
+    /// untouched-and-unbuffered slot-1 critical.
+    ///
+    /// Cards classified as **touched but not known-playable** (clued saves, prompts, …) are
+    /// neither buffer nor chop-eligible — the holder will keep them indefinitely; they
+    /// contribute zero to the score. Touched + known-playable counts as buffer.
+    ///
+    /// Truth identity comes from `truth: &dyn PlayerPOV`, so fresh draws (no truth identity)
+    /// contribute zero. This is intentional: the term reflects *known* critical risk, not
+    /// hypothetical risk from drawing into a fresh slot.
+    pub critical_exposure_weight: f64,
     /// Penalty per point of score ceiling lost (last copy discarded, or pace < 0).
     pub lost_score_ceiling_weight: f64,
     /// Reward for each bit of identity information gained on clued cards.
@@ -262,9 +304,14 @@ pub struct DefaultEvaluator {
     /// of the currently playable cards (or the card carries a `Signal::Play`). Captures
     /// the value of clues that set up plays the search depth may not reach.
     pub known_playable_weight: f64,
-    /// Reward proportional to the total fraction of identity uncertainty eliminated across
-    /// all own-hand cards for all players: `Σ (max_ids − popcount) / max_ids`.
-    /// Encourages states where the team knows more about every card, not just clued ones.
+    /// Reward proportional to the per-clue *change* in total fraction of identity uncertainty
+    /// eliminated across all own-hand cards for all players, `Σ (max_ids − popcount) / max_ids`.
+    ///
+    /// Applied as an immediate bonus on each clue action along the search line (see
+    /// `team_empathy_delta_bonus`) — not as a static leaf term. Measuring the absolute value
+    /// at the leaf created a draw-dilution bias: a freshly drawn card has near-maximum
+    /// uncertainty and lowers the sum, so any line with an extra play (= extra draw) looked
+    /// worse on this term even when it strictly improved the game state.
     pub team_empathy_weight: f64,
     /// Penalty applied to a non-Play action (or a Play of the wrong card) taken by an actor who
     /// holds an active `Signal::Play` on at least one untouched own-hand card. Captures the
@@ -308,7 +355,7 @@ impl Default for DefaultEvaluator {
             strike_penalties: [0.0_f64, 10.0_f64, 30.0_f64,1000.0_f64],
             pace_weight: 1.0_f64,
             efficiency_weight: 1.9_f64,
-            critical_in_hand_weight: 1.5_f64,
+            critical_exposure_weight: 3.0_f64,
             lost_score_ceiling_weight: 8.0_f64,
             empathy_weight: 0.0_f64,
             good_touch_penalty: 20.0_f64,
@@ -356,31 +403,91 @@ impl DefaultEvaluator {
         mask
     }
 
-    /// Weighted count of critical cards (last remaining copy of a still-needed card) in all hands.
+    /// Discard-imminence threat sum over every truth-critical card across all hands.
     ///
-    /// Each card contributes `overlap_bits / total_possibilities` where `overlap_bits` is the
-    /// number of critical identities in its empathy set. This captures partially-identified
-    /// critical cards (e.g. a card narrowed to [R5, B5] when both are critical contributes 1.0)
-    /// rather than only fully-resolved ones.
-    fn critical_cards_in_hand(table_state: &TableState, static_data: &StaticGameData) -> f64 {
-        let num_players = static_data.number_of_players as usize;
+    /// See [`Self::critical_exposure_weight`] for the formula and rationale. Returns 0 when no
+    /// card identity is currently critical, or when no critical cards live in any hand.
+    fn critical_exposure_score(
+        table_state: &TableState,
+        static_data: &StaticGameData,
+        team_knowledge: &TeamKnowledge,
+        truth: &dyn PlayerPOV,
+    ) -> f64 {
         let critical_mask = Self::critical_mask(table_state, static_data);
         if critical_mask == 0 {
             return 0.0;
         }
-
+        let num_players = static_data.number_of_players as usize;
+        let playable_mask = table_state.playable_cards(static_data);
         let mut total = 0.0f64;
-        for hand in table_state.hands[..num_players].iter() {
-            for &deck_idx in hand.cards() {
-                let empathy = table_state.deck.get_global_empathy(deck_idx);
-                let overlap = empathy.as_bits() & critical_mask;
-                if overlap != 0 {
-                    let possibilities = empathy.count_possibilities() as usize;
-                    total += overlap.count_ones() as f64 * RECIPROCAL_LUT[possibilities];
+        for p in 0..num_players {
+            let pk = team_knowledge.player(p);
+            let pov = LightweightPlayerPOV::new(p, pk, team_knowledge, table_state, static_data);
+            let hand = &table_state.hands[p];
+
+            // First pass: classify each slot from p's POV and build the chop-order list
+            // (right-to-left through the hand) of untouched-non-known-trash cards.
+            let mut buffer: u32 = 0;
+            let mut chop_eligible: smallvec::SmallVec<[CardDeckIndex; 6]> =
+                smallvec::SmallVec::new();
+            for &deck_idx in hand.cards().iter().rev() {
+                let known_trash = pov.is_known_trash(deck_idx);
+                let known_playable = Self::card_known_playable(
+                    pk,
+                    deck_idx,
+                    table_state,
+                    playable_mask,
+                );
+                if known_trash || known_playable {
+                    buffer += 1;
+                    continue;
                 }
+                if pov.is_touched(deck_idx) {
+                    continue; // touched non-playable: held indefinitely, not at risk
+                }
+                chop_eligible.push(deck_idx);
+            }
+
+            // Second pass: each truth-critical card in the chop-eligible list contributes
+            // a threat sized by buffer + rank-from-chop.
+            for (rank_from_chop, &deck_idx) in chop_eligible.iter().enumerate() {
+                let Some(id) = truth.card_identity(deck_idx) else {
+                    continue;
+                };
+                if (1u64 << id) & critical_mask == 0 {
+                    continue;
+                }
+                let r = rank_from_chop as f64; // 0 = chop
+                let threat = 1.0 / (1.0 + r + 4.0 * buffer as f64);
+                total += threat;
             }
         }
         total
+    }
+
+    /// True when `pk` regards `deck_idx` as known playable — by `Signal::Play`,
+    /// convention-inferred identity, or raw empathy fully inside `playable_mask`.
+    /// Mirrors the priority order used by [`Self::known_playable_in_hands`].
+    fn card_known_playable(
+        pk: &crate::engine::knowledge::player_knowledge::PlayerKnowledge,
+        deck_idx: CardDeckIndex,
+        table_state: &TableState,
+        playable_mask: VariantCardsBitField,
+    ) -> bool {
+        if pk.signals[deck_idx as usize]
+            .iter()
+            .any(|s| matches!(s, Signal::Play { .. }))
+        {
+            return true;
+        }
+        if let Some(inferred) = pk.inferred_identities[deck_idx as usize] {
+            let bits = inferred.as_bits();
+            if bits != 0 && (bits & playable_mask) == bits {
+                return true;
+            }
+        }
+        let bits = table_state.deck.get_global_empathy(deck_idx).as_bits();
+        bits != 0 && (bits & playable_mask) == bits
     }
 
     /// Maximum score still achievable given the current discard pile.
@@ -693,7 +800,7 @@ impl Evaluator for DefaultEvaluator {
                 strike_penalty,
                 pace: 0.0,
                 efficiency_penalty: 0.0,
-                critical_in_hand: 0.0,
+                critical_exposure_penalty: 0.0,
                 lost_ceiling_penalty: 0.0,
                 empathy_bonus: 0.0,
                 clue_tokens: 0.0,
@@ -706,8 +813,12 @@ impl Evaluator for DefaultEvaluator {
         let pace = self.pace_weight
             * (state.pace()).clamp(-10, static_data.number_of_players as i32) as f64;
         let efficiency_penalty = self.efficiency_weight * f64::from(state.required_efficiency());
-        let critical_in_hand =
-            self.critical_in_hand_weight * Self::critical_cards_in_hand(table_state, static_data);
+        let critical_exposure_penalty = if self.critical_exposure_weight != 0.0 {
+            self.critical_exposure_weight
+                * Self::critical_exposure_score(table_state, static_data, team_knowledge, truth)
+        } else {
+            0.0
+        };
         let theoretical_max =
             (static_data.variant.number_of_suits * static_data.variant.stacks_size) as f64;
         let lost_ceiling_penalty = self.lost_score_ceiling_weight
@@ -730,31 +841,29 @@ impl Evaluator for DefaultEvaluator {
         } else {
             0.0
         };
-        let team_empathy = if self.team_empathy_weight != 0.0 {
-            self.team_empathy_weight
-                * Self::team_empathy_score(static_data, team_knowledge, table_state)
-        } else {
-            0.0
-        };
+        // team_empathy is no longer a leaf term — it accumulates through clue actions via
+        // `team_empathy_delta_bonus`. The breakdown field is kept (zeroed here) so callers
+        // that aggregate per-line bonuses can record what the clue deltas contributed.
+        let team_empathy = 0.0;
         let misinformation_penalty = if self.misinformation_weight != 0.0 {
             self.misinformation_weight
                 * Self::misinformation_score(static_data, team_knowledge, table_state, truth)
         } else {
             0.0
         };
-        let total = game_score - strike_penalty + pace - efficiency_penalty + critical_in_hand
+        let total = game_score - strike_penalty + pace - efficiency_penalty
+            - critical_exposure_penalty
             - lost_ceiling_penalty
             + empathy_bonus
             + clue_tokens
             + known_playable
-            + team_empathy
             - misinformation_penalty;
         ScoreBreakdown {
             game_score,
             strike_penalty,
             pace,
             efficiency_penalty,
-            critical_in_hand,
+            critical_exposure_penalty,
             lost_ceiling_penalty,
             empathy_bonus,
             clue_tokens,
@@ -868,6 +977,32 @@ impl Evaluator for DefaultEvaluator {
         }
     }
 
+    fn team_empathy_delta_bonus(
+        &self,
+        action: &GameAction,
+        pre: &KnowledgeAwareGameState,
+        post: &KnowledgeAwareGameState,
+    ) -> Score {
+        if self.team_empathy_weight == 0.0 {
+            return 0.0;
+        }
+        let GameAction::Clue { .. } = action else {
+            return 0.0;
+        };
+        let static_data = pre.static_data();
+        let pre_score = Self::team_empathy_score(
+            static_data,
+            pre.team_knowledge(),
+            pre.table_state(),
+        );
+        let post_score = Self::team_empathy_score(
+            static_data,
+            post.team_knowledge(),
+            post.table_state(),
+        );
+        self.team_empathy_weight * (post_score - pre_score)
+    }
+
     fn upper_bound(
         &self,
         table_state: &TableState,
@@ -888,8 +1023,6 @@ impl Evaluator for DefaultEvaluator {
             .iter()
             .map(|h| h.cards().len())
             .sum();
-        // Optimistic: every card could be critical and held safely.
-        let max_critical = self.critical_in_hand_weight * total_cards as f64;
         // Optimistic: max clue tokens with max demand factor.
         let max_demand = if self.clue_demand_weight > 0.0 {
             1.0 + self.clue_demand_weight * total_cards as f64
@@ -899,17 +1032,17 @@ impl Evaluator for DefaultEvaluator {
         let max_clue_tokens =
             self.clue_token_weight * Self::harmonic(crate::game::MAX_CLUE_TOKEN_COUNT) * max_demand;
         let max_known_playable = self.known_playable_weight * total_cards as f64;
-        let max_team_empathy = self.team_empathy_weight * total_cards as f64;
-        // Optimistic: efficiency_penalty = 0, lost_ceiling_penalty = 0, misinformation = 0.
+        // Optimistic: efficiency_penalty = 0, lost_ceiling_penalty = 0, misinformation = 0,
+        // critical_exposure_penalty = 0 (no critical cards in any hand).
         let max_leaf = max_game_score - min_strike_penalty
             + max_pace
-            + max_critical
             + max_clue_tokens
-            + max_known_playable
-            + max_team_empathy;
-        // Immediate bonuses: per-ply max = play_progress + clue precision across all cards.
-        let max_immediate_per_ply =
-            self.play_progress_weight + self.clue_precision_weight * total_cards as f64;
+            + max_known_playable;
+        // Immediate bonuses: per-ply max = play_progress + clue precision across all cards
+        // + team-empathy delta (each clue can at most lift the whole-hand score by total_cards).
+        let max_immediate_per_ply = self.play_progress_weight
+            + self.clue_precision_weight * total_cards as f64
+            + self.team_empathy_weight * total_cards as f64;
         max_leaf + max_immediate_per_ply * depth as f64
     }
 }
@@ -1140,6 +1273,120 @@ mod tests {
         assert_eq!(
             score_correct, 0.0,
             "misinformation_score should be 0 when knowledge exactly matches truth"
+        );
+    }
+
+    /// Build a table state with a single hand-size-5 hand in player 0, whose deck slot 4
+    /// is card-id `id_at_chop` (the chop card under H-Group's rightmost-untouched rule).
+    /// All cards live at deck indices [0..5]. Truth identities are written via `reveal_card`.
+    fn make_chop_test_state(
+        ids_in_hand: [u8; 5],
+    ) -> (TableState, StaticGameData, TeamKnowledge) {
+        use crate::engine::knowledge::player_knowledge::knowledge_for_hand;
+        let static_data = StaticGameData {
+            number_of_players: 3,
+            variant: NO_VARIANT,
+        };
+        let mut deck = Deck::new(&NO_VARIANT);
+        for (slot, &id) in ids_in_hand.iter().enumerate() {
+            deck.reveal_card(slot as u8, id as usize, &NO_VARIANT);
+        }
+        let mut hands = Hand::empty_array();
+        hands[0] = Hand::new(&[0, 1, 2, 3, 4]);
+        let state = TableState::from_parts(
+            ClueTokenBank::new(10),
+            deck,
+            hands,
+            0,
+            0,
+            PlayingStacks::empty(),
+            0,
+            CopiesCountingCardCollection::empty(),
+        );
+        let mut tk = TeamKnowledge::new(3);
+        *tk.player_mut(0) = knowledge_for_hand(&[0, 1, 2, 3, 4]);
+        (state, static_data, tk)
+    }
+
+    /// Confirms the formula `1 / (1 + r + 4*b)` for the chop, no-buffer case:
+    /// a single truth-critical card on chop with no buffer in hand → threat = 1.0.
+    /// `Hand::new` takes oldest-first input, so array index 0 = chop, index 4 = slot 1.
+    /// Non-critical fillers are rank-3 cards: not playable from empty stacks (avoiding
+    /// the known-playable buffer effect) and not critical (2 copies, 0 discarded).
+    #[test]
+    fn critical_exposure_chop_no_buffer_is_one() {
+        // [chop=R5, Y3, G3, B3, slot1=P3]
+        let (state, static_data, tk) = make_chop_test_state([4, 7, 12, 17, 22]);
+        let truth = TruthFixture::new(&static_data);
+        let truth_pov = truth.pov(&state, &static_data);
+        let score = DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
+        assert!(
+            (score - 1.0).abs() < 1e-9,
+            "chop critical with no buffer should be exactly 1.0, got {score}"
+        );
+    }
+
+    /// Moving the critical card from chop to slot 1 (newest) reduces threat to
+    /// 1 / (1 + 4 + 0) = 0.2 (4 positions away from chop, no buffer).
+    #[test]
+    fn critical_exposure_slot1_lower_than_chop() {
+        // [chop=Y3, G3, B3, P3, slot1=R5]
+        let (state, static_data, tk) = make_chop_test_state([7, 12, 17, 22, 4]);
+        let truth = TruthFixture::new(&static_data);
+        let truth_pov = truth.pov(&state, &static_data);
+        let score = DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
+        let expected = 1.0 / (1.0 + 4.0);
+        assert!(
+            (score - expected).abs() < 1e-9,
+            "slot-1 critical with no buffer should be {expected}, got {score}"
+        );
+    }
+
+    /// Buffer dominates position (factor 4). Four known-playables in hand pushes the
+    /// chop critical's threat to 1 / (1 + 0 + 16) ≈ 0.059 — much smaller than even the
+    /// furthest no-buffer slot (0.2).
+    #[test]
+    fn critical_exposure_buffer_dominates_position() {
+        // [chop=R5, R1, Y1, G1, slot1=B1]. Each rank-1 is known-playable from empty stacks
+        // via revealed deck-empathy, so buffer = 4. R5 stays chop-eligible.
+        let (state, static_data, tk) = make_chop_test_state([4, 0, 5, 10, 15]);
+        let truth = TruthFixture::new(&static_data);
+        let truth_pov = truth.pov(&state, &static_data);
+        let score = DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
+        let expected = 1.0 / (1.0 + 0.0 + 4.0 * 4.0);
+        assert!(
+            (score - expected).abs() < 1e-9,
+            "chop critical with 4 buffer should be {expected}, got {score}"
+        );
+    }
+
+    /// When no critical mask exists (no card has remaining == 1), the term is zero.
+    #[test]
+    fn critical_exposure_zero_when_no_critical_mask() {
+        // Hand: [R1, Y1, G1, B1, P1]. None of these are critical at game start
+        // (each rank-1 has 3 copies, 0 discarded → remaining = 3).
+        let (state, static_data, tk) =
+            make_chop_test_state([0, 5, 10, 15, 20]);
+        let truth = TruthFixture::new(&static_data);
+        let truth_pov = truth.pov(&state, &static_data);
+        let score = DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
+        assert_eq!(score, 0.0, "no critical identities → zero exposure");
+    }
+
+    /// A touched (non-playable) critical card contributes zero — it is held indefinitely
+    /// and is not on the discard path.
+    #[test]
+    fn critical_exposure_zero_when_critical_is_touched() {
+        // [chop=R5, Y3, G3, B3, slot1=P3] — R5 at deck index 0.
+        let (mut state, static_data, tk) =
+            make_chop_test_state([4, 7, 12, 17, 22]);
+        state.clue_touched_cards |= 1u64 << 0;
+        let truth = TruthFixture::new(&static_data);
+        let truth_pov = truth.pov(&state, &static_data);
+        let score = DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
+        assert_eq!(
+            score, 0.0,
+            "touched non-playable critical should not contribute to exposure"
         );
     }
 }
