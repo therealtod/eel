@@ -47,7 +47,7 @@ impl DelayedPlayClue {
         (1..=away_value as usize).all(|offset| {
             let connecting_id = card_id - offset;
             let connecting_bit = 1u64 << connecting_id;
-            (0..num_players).any(|p| {
+            let found = (0..num_players).any(|p| {
                 let pk = pov.team_knowledge().player(p);
                 table_state.hands[p].cards().iter().any(|&idx| {
                     if !pov.is_touched(idx) {
@@ -87,7 +87,8 @@ impl DelayedPlayClue {
                         && (possibilities & !playable_mask) == 0
                         && (possibilities & connecting_bit) != 0
                 })
-            })
+            });
+            found
         })
     }
 }
