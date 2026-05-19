@@ -133,7 +133,11 @@ impl TreeActionSelectionStrategy {
         // turn is wasted. Drop all discards when a play is available — discarding is
         // mathematically forbidden at this point.
         let pace = pov.table_state().pace(pov.static_data());
-        if pace <= 0 && proposed.iter().any(|p| matches!(&p.action, GameAction::Play { .. })) {
+        if pace <= 0
+            && proposed
+                .iter()
+                .any(|p| matches!(&p.action, GameAction::Play { .. }))
+        {
             proposed.retain(|p| !matches!(&p.action, GameAction::Discard { .. }));
         }
 
@@ -201,7 +205,13 @@ impl TreeActionSelectionStrategy {
         } else {
             0.0
         };
-        let play_bonus = evaluator.play_progress_bonus(action, state_before, state_after, pre_phantom_plays, post_phantom_plays);
+        let play_bonus = evaluator.play_progress_bonus(
+            action,
+            state_before,
+            state_after,
+            pre_phantom_plays,
+            post_phantom_plays,
+        );
         let team_empathy_bonus =
             evaluator.team_empathy_delta_bonus(action, state_before, state_after);
         clue_bonus + signal_penalty + play_bonus + team_empathy_bonus
@@ -340,8 +350,8 @@ impl TreeActionSelectionStrategy {
                 }
             }
         }
-        let breakdown =
-            best_breakdown.unwrap_or_else(|| Self::leaf_breakdown(evaluator, state, truth, phantom_plays));
+        let breakdown = best_breakdown
+            .unwrap_or_else(|| Self::leaf_breakdown(evaluator, state, truth, phantom_plays));
         (best, breakdown)
     }
 }
@@ -409,7 +419,8 @@ impl TreeActionSelectionStrategy {
                     static_data,
                 );
                 let mut next = root_state.clone();
-                let outcome: ActionOutcome = next.apply(&proposed.action, convention_set, &truth_pov);
+                let outcome: ActionOutcome =
+                    next.apply(&proposed.action, convention_set, &truth_pov);
                 next.advance_turn();
                 let child_phantom = if outcome.is_phantom_play { 1 } else { 0 };
                 let immediate_bonus = Self::immediate_action_bonus(

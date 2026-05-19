@@ -3,10 +3,10 @@ use crate::engine::convention::hgroup::h_group_core::get_chop_index;
 use crate::engine::game_state_snapshot::GameStateSnapshot;
 use crate::engine::knowledge::knowledge_update::Hypothesis;
 use crate::engine::knowledge::player_pov::PlayerPOV;
+use crate::game::MAX_CLUE_TOKEN_COUNT;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::CardDeckIndex;
 use crate::game::state::PlayerIndex;
-use crate::game::MAX_CLUE_TOKEN_COUNT;
 use crate::impl_convention_tech_for_discard_tech;
 
 /// Discard the chop card: the oldest unclued card in the active player's hand.
@@ -79,7 +79,7 @@ mod tests {
             let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
             let mut table_state = initial_five_players_table_state();
             table_state.clue_token_bank.set_half_tokens(14); // 7 whole tokens (not max)
-            table_state.current_turn = 1; // Expected turn in action
+            table_state.current_turn = 2; // Expected turn in action
             // Hand for player 0: cards drawn oldest→newest = [10, 20, 30, 40, 50]
             for &idx in &[10u8, 20, 30, 40, 50] {
                 table_state.update_with_draw_action(idx);
@@ -101,7 +101,7 @@ mod tests {
                 vec![GameAction::Discard {
                     player_index: 0,
                     card_deck_index: 10,
-                    turn: 1,
+                    turn: 2,
                 }]
             );
         }
@@ -111,7 +111,7 @@ mod tests {
             let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
             let mut table_state = initial_five_players_table_state();
             table_state.clue_token_bank.set_half_tokens(14); // 7 whole tokens (not max)
-            table_state.current_turn = 2; // Expected turn in action
+            table_state.current_turn = 3; // Expected turn in action
             for &idx in &[10u8, 20, 30, 40, 50] {
                 table_state.update_with_draw_action(idx);
             }
@@ -135,7 +135,7 @@ mod tests {
                 vec![GameAction::Discard {
                     player_index: 0,
                     card_deck_index: 20,
-                    turn: 2
+                    turn: 3
                 }]
             );
         }
@@ -166,7 +166,7 @@ mod tests {
         fn returns_no_action_when_clue_tokens_at_max() {
             let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
             let mut table_state = initial_five_players_table_state();
-            table_state.current_turn = 1;
+            table_state.current_turn = 2;
             for &idx in &[10u8, 20, 30] {
                 table_state.update_with_draw_action(idx);
             }
@@ -203,7 +203,7 @@ mod tests {
             let chop_action = GameAction::Discard {
                 player_index: 0,
                 card_deck_index: 10,
-                turn: 5,
+                turn: 6,
             };
             assert!(DiscardChop.matches_action(&chop_action, &[], &pov));
         }
@@ -228,7 +228,7 @@ mod tests {
             let non_chop = GameAction::Discard {
                 player_index: 0,
                 card_deck_index: 30,
-                turn: 3,
+                turn: 4,
             };
             assert!(!DiscardChop.matches_action(&non_chop, &[], &pov));
         }

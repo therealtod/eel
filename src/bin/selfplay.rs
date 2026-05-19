@@ -64,7 +64,6 @@ struct Args {
     log_failures_below: Option<u8>,
 }
 
-
 /// Produce a shuffled list of all card IDs for NO_VARIANT (50 cards).
 fn shuffled_deck(rng: &mut SmallRng) -> Vec<VariantCardId> {
     let mut deck: Vec<VariantCardId> = NO_VARIANT

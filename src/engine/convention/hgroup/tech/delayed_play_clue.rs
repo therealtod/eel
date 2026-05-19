@@ -123,7 +123,7 @@ impl ClueTech for DelayedPlayClue {
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
     ) -> bool {
-        let Some(game_state_snapshot) = history.get(turn) else {
+        let Some(game_state_snapshot) = history.get(turn.saturating_sub(1)) else {
             return false;
         };
         let giver = game_state_snapshot.table_state.active_player_index;
@@ -154,19 +154,31 @@ impl ClueTech for DelayedPlayClue {
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
     ) -> Hypothesis {
-        let multi =
-            self.clue_knowledge_updates_multi(player_index, touched, clue, turn, history, observer_pov);
+        let multi = self.clue_knowledge_updates_multi(
+            player_index,
+            touched,
+            clue,
+            turn,
+            history,
+            observer_pov,
+        );
         let mut focus_card: Option<CardDeckIndex> = None;
         let mut mask: u64 = 0;
         for h in &multi {
             for u in &h.immediate {
-                if let KnowledgeUpdate::NarrowPossibilities { card_deck_index, mask: m } = u {
+                if let KnowledgeUpdate::NarrowPossibilities {
+                    card_deck_index,
+                    mask: m,
+                } = u
+                {
                     focus_card = Some(*card_deck_index);
                     mask |= m;
                 }
             }
         }
-        let Some(focus) = focus_card else { return Hypothesis::empty(); };
+        let Some(focus) = focus_card else {
+            return Hypothesis::empty();
+        };
         Hypothesis::unconditional(vec![KnowledgeUpdate::NarrowPossibilities {
             card_deck_index: focus,
             mask,
@@ -196,7 +208,7 @@ impl ClueTech for DelayedPlayClue {
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
     ) -> HypothesisSet {
-        let Some(snap) = history.get(turn) else {
+        let Some(snap) = history.get(turn.saturating_sub(1)) else {
             return HypothesisSet::new();
         };
         let giver = snap.table_state.active_player_index;
@@ -259,8 +271,9 @@ impl ClueTech for DelayedPlayClue {
                     }
                     let strict_match = giver_pov.is_identity_known_to_holder(idx)
                         && giver_pov.card_identity(idx) == Some(connecting_id);
-                    let possibilities =
-                        pk.combined_possible_identities(idx, table_state, variant).as_bits();
+                    let possibilities = pk
+                        .combined_possible_identities(idx, table_state, variant)
+                        .as_bits();
                     let ambiguous_match = possibilities != 0
                         && (possibilities & !playable_mask) == 0
                         && (possibilities & connecting_bit) != 0;
@@ -455,9 +468,21 @@ mod tests {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
         use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards::{P1, R1, Y1};
-        table_state.update_with_play_action_of_specific_card(0, R1.as_variant_card_id(), &static_data);
-        table_state.update_with_play_action_of_specific_card(0, Y1.as_variant_card_id(), &static_data);
-        table_state.update_with_play_action_of_specific_card(0, P1.as_variant_card_id(), &static_data);
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            R1.as_variant_card_id(),
+            &static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            Y1.as_variant_card_id(),
+            &static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            P1.as_variant_card_id(),
+            &static_data,
+        );
 
         // p=0 draws deck[10] and it is touched; from p=0's perspective it could be R2, Y2, or P2.
         table_state.active_player_index = 0;
@@ -495,9 +520,21 @@ mod tests {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
         use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards::{P1, R1, Y1};
-        table_state.update_with_play_action_of_specific_card(0, R1.as_variant_card_id(), &static_data);
-        table_state.update_with_play_action_of_specific_card(0, Y1.as_variant_card_id(), &static_data);
-        table_state.update_with_play_action_of_specific_card(0, P1.as_variant_card_id(), &static_data);
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            R1.as_variant_card_id(),
+            &static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            Y1.as_variant_card_id(),
+            &static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            P1.as_variant_card_id(),
+            &static_data,
+        );
 
         table_state.active_player_index = 0;
         table_state.update_with_draw_action(10);
@@ -522,7 +559,13 @@ mod tests {
         // clue targeting p=1 must be proposed.
         let actions = DelayedPlayClue.game_actions(&pov);
         assert!(
-            actions.iter().any(|a| matches!(a, GameAction::Clue { player_index: 1, .. })),
+            actions.iter().any(|a| matches!(
+                a,
+                GameAction::Clue {
+                    player_index: 1,
+                    ..
+                }
+            )),
             "must propose a delayed play clue to p=1 when giver's own card is exactly-known P2"
         );
     }
@@ -551,8 +594,9 @@ mod tests {
         let knowledge = knowledge_with_visible(0, &[(10, B2_MASK), (20, R1_MASK)]);
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(2).own_hand |= 1 << 20;
-        team_knowledge.player_mut(2).inferred_identities[20] =
-            Some(CardIdentityMask::from_bits(R1_MASK | Y1_MASK | G1_MASK | B1_MASK | P1_MASK));
+        team_knowledge.player_mut(2).inferred_identities[20] = Some(CardIdentityMask::from_bits(
+            R1_MASK | Y1_MASK | G1_MASK | B1_MASK | P1_MASK,
+        ));
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
@@ -644,7 +688,7 @@ mod tests {
                 clue_type: ClueType::Color,
                 clue_value: 0,
             }, // red clue
-            turn: 0,
+            turn: 1,
         };
         assert!(DelayedPlayClue.matches_action(&clue, &[snapshot], &pov));
     }
@@ -674,7 +718,7 @@ mod tests {
                 clue_type: ClueType::Rank,
                 clue_value: 1,
             },
-            turn: 0,
+            turn: 1,
         };
         assert!(!DelayedPlayClue.matches_action(&clue, &[snapshot], &pov));
     }
@@ -704,7 +748,7 @@ mod tests {
                 clue_type: ClueType::Color,
                 clue_value: 0,
             },
-            turn: 0,
+            turn: 1,
         };
         assert!(!DelayedPlayClue.matches_action(&clue, &[snapshot], &pov));
     }
@@ -774,7 +818,7 @@ mod tests {
                     clue_type: ClueType::Color,
                     clue_value: 0,
                 },
-                turn: 0,
+                turn: 1,
             },
             &[snapshot],
             &pov,
@@ -824,7 +868,7 @@ mod tests {
                             clue_type: ClueType::Color,
                             clue_value: 0
                         },
-                        turn: 0
+                        turn: 1
                     },
                     &[snapshot],
                     &pov
@@ -865,7 +909,7 @@ mod tests {
                             clue_type: ClueType::Color,
                             clue_value: 0
                         },
-                        turn: 0
+                        turn: 1
                     },
                     &[snapshot],
                     &pov
@@ -931,8 +975,13 @@ mod tests {
         let mut p1_knowledge = PlayerKnowledge::new(1);
         p1_knowledge.own_hand = 1u64 << 40;
         p1_knowledge.inferred_identities[40] = Some(CardIdentityMask::from_bits(rank2_mask));
-        let pov =
-            LightweightPlayerPOV::new(1, &p1_knowledge, &team_knowledge, &table_state, &static_data);
+        let pov = LightweightPlayerPOV::new(
+            1,
+            &p1_knowledge,
+            &team_knowledge,
+            &table_state,
+            &static_data,
+        );
 
         let updates = DelayedPlayClue.knowledge_updates(
             &GameAction::Clue {
@@ -942,7 +991,7 @@ mod tests {
                     clue_type: ClueType::Rank,
                     clue_value: 2,
                 },
-                turn: 0,
+                turn: 1,
             },
             &[snapshot],
             &pov,
@@ -960,8 +1009,16 @@ mod tests {
             assert_ne!(mask & G2_MASK, 0, "G2 should be in the delayed-play mask");
             // B2 and P2 are already directly playable (away=0), so they are not
             // delayed — DelayedPlayClue must not include them.
-            assert_eq!(mask & B2_MASK, 0, "B2 (directly playable) must not be in delayed mask");
-            assert_eq!(mask & P2_MASK, 0, "P2 (directly playable) must not be in delayed mask");
+            assert_eq!(
+                mask & B2_MASK,
+                0,
+                "B2 (directly playable) must not be in delayed mask"
+            );
+            assert_eq!(
+                mask & P2_MASK,
+                0,
+                "P2 (directly playable) must not be in delayed mask"
+            );
         } else {
             panic!("expected NarrowPossibilities");
         }
@@ -1072,7 +1129,10 @@ mod tests {
                     ..
                 }) => {
                     assert_eq!(*player, 0, "trigger should fire on player 0 playing");
-                    assert_eq!(*expected_card, 10, "trigger should key on connecting deck idx");
+                    assert_eq!(
+                        *expected_card, 10,
+                        "trigger should key on connecting deck idx"
+                    );
                     assert!(
                         expected_identity.is_some(),
                         "trigger must be identity-keyed for selective rejection"

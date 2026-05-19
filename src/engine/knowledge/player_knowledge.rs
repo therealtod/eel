@@ -248,15 +248,20 @@ impl PlayerKnowledge {
         let mut keep_with_trigger_cleared: Vec<HypothesisId> = Vec::new();
         let mut rejected_ids: Vec<HypothesisId> = Vec::new();
         // Snapshot id+cohort+alt_group+trigger to decide outcomes without holding a borrow.
-        let triggers: Vec<(HypothesisId, HypothesisId, Option<AltGroupKey>, PendingTrigger)> =
-            self.hypotheses
-                .iter()
-                .filter_map(|h| {
-                    h.trigger
-                        .clone()
-                        .map(|t| (h.id, h.cohort_id, h.alt_group, t))
-                })
-                .collect();
+        let triggers: Vec<(
+            HypothesisId,
+            HypothesisId,
+            Option<AltGroupKey>,
+            PendingTrigger,
+        )> = self
+            .hypotheses
+            .iter()
+            .filter_map(|h| {
+                h.trigger
+                    .clone()
+                    .map(|t| (h.id, h.cohort_id, h.alt_group, t))
+            })
+            .collect();
         for (id, cohort_id, alt_group, trigger) in triggers {
             match trigger {
                 PendingTrigger::BlindPlay {

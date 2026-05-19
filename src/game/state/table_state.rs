@@ -293,7 +293,7 @@ pub mod unit_test_constants {
                 deck,
                 hands,
                 0, // active_player_index
-                0, // turn_counter
+                1, // turn_counter
                 playing_stacks,
                 strike_tokens,
                 discard_pile,
@@ -321,7 +321,7 @@ pub mod unit_test_constants {
                     .fold(0u64, |acc, i| acc | (1 << i)),
                 hands,
                 active_player_index,
-                current_turn: 0,
+                current_turn: 1,
                 playing_stacks,
                 strike_tokens: 0,
                 discard_pile,
@@ -353,7 +353,7 @@ pub mod unit_test_constants {
                     .fold(0u64, |acc, i| acc | (1 << i)),
                 hands,
                 active_player_index,
-                current_turn: 0,
+                current_turn: 1,
                 playing_stacks,
                 strike_tokens: 0,
                 discard_pile,

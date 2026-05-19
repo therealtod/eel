@@ -94,7 +94,7 @@ impl ClueTech for TwoSave {
         if *clue != RANK_2_CLUE {
             return false;
         }
-        let Some(snap) = history.get(turn) else {
+        let Some(snap) = history.get(turn.saturating_sub(1)) else {
             return false;
         };
         let giver = snap.table_state.active_player_index;
@@ -121,7 +121,7 @@ impl ClueTech for TwoSave {
         history: &[GameStateSnapshot],
         player_pov: &dyn PlayerPOV,
     ) -> Hypothesis {
-        let Some(snap) = history.get(turn) else {
+        let Some(snap) = history.get(turn.saturating_sub(1)) else {
             return Hypothesis::empty();
         };
         let giver = snap.table_state.active_player_index;
@@ -178,7 +178,7 @@ mod tests {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
         table_state.active_player_index = 1;
-        table_state.current_turn = 2; // Expected turn in action
+        table_state.current_turn = 3; // Expected turn in action
         table_state.update_with_draw_action(10); // R2
         table_state.active_player_index = 0;
 
@@ -194,7 +194,7 @@ mod tests {
                 player_index: 1,
                 touched_card_deck_indexes: smallvec::smallvec![10],
                 clue: RANK_2_CLUE,
-                turn: 2,
+                turn: 3,
             }]
         );
     }
@@ -309,7 +309,7 @@ mod tests {
             player_index: 1,
             touched_card_deck_indexes: smallvec::smallvec![10],
             clue: RANK_2_CLUE,
-            turn: 0,
+            turn: 1,
         };
         assert!(TwoSave.matches_action(&action, &[snapshot], &pov));
     }
@@ -337,7 +337,7 @@ mod tests {
             player_index: 1,
             touched_card_deck_indexes: smallvec::smallvec![10],
             clue: RANK_2_CLUE,
-            turn: 0,
+            turn: 1,
         };
         assert!(!TwoSave.matches_action(&action, &[snapshot], &pov));
     }
@@ -355,7 +355,7 @@ mod tests {
             &GameAction::Play {
                 player_index: 0,
                 card_deck_index: 5,
-                turn: 2,
+                turn: 3,
             },
             &[],
             &pov
@@ -387,7 +387,7 @@ mod tests {
                     clue_type: ClueType::Rank,
                     clue_value: 2,
                 },
-                turn: 0,
+                turn: 1,
             },
             &[snapshot],
             &pov,
@@ -438,7 +438,7 @@ mod tests {
                     clue_type: ClueType::Rank,
                     clue_value: 2,
                 },
-                turn: 0,
+                turn: 1,
             },
             &[snapshot],
             &pov,
@@ -474,7 +474,7 @@ mod tests {
                             clue_type: ClueType::Rank,
                             clue_value: 2
                         },
-                        turn: 0,
+                        turn: 1,
                     },
                     &[snapshot],
                     &pov
@@ -503,7 +503,7 @@ mod tests {
                 player_index: 1,
                 touched_card_deck_indexes: smallvec![10],
                 clue: RANK_2_CLUE,
-                turn: 0,
+                turn: 1,
             },
             &[],
             &pov,
@@ -528,7 +528,7 @@ mod tests {
                     clue_type: ClueType::Rank,
                     clue_value: 2,
                 },
-                turn: 0,
+                turn: 1,
             },
             &[],
             &pov,
@@ -564,7 +564,7 @@ mod tests {
                             clue_type: ClueType::Rank,
                             clue_value: 2
                         },
-                        turn: 0,
+                        turn: 1,
                     },
                     &[snapshot],
                     &pov

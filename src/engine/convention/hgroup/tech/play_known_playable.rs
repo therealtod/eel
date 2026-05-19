@@ -27,7 +27,9 @@ impl PlayTech for PlayKnownPlayable {
             let has_play_signal = knowledge.signals[card_deck_index as usize]
                 .iter()
                 .any(|s| matches!(s, Signal::Play { .. }));
-            let bits = active_player_pov.inferred_identities(card_deck_index).as_bits();
+            let bits = active_player_pov
+                .inferred_identities(card_deck_index)
+                .as_bits();
             let empathy_playable = bits != 0 && bits & playable == bits;
             if empathy_playable && !has_play_signal {
                 actions.push(GameAction::Play {
@@ -108,7 +110,7 @@ mod tests {
     fn plays_empathy_playable_card() {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.current_turn = 2; // Expected turn in action
+        table_state.current_turn = 3; // Expected turn in action
         table_state.update_with_draw_action(10);
         table_state.active_player_index = 0;
 
@@ -129,7 +131,7 @@ mod tests {
             vec![GameAction::Play {
                 player_index: 0,
                 card_deck_index: 10,
-                turn: 2,
+                turn: 3,
             }]
         );
     }
@@ -189,7 +191,7 @@ mod tests {
             &GameAction::Play {
                 player_index: 0,
                 card_deck_index: 10,
-                turn: 2,
+                turn: 3,
             },
             &[],
             &pov

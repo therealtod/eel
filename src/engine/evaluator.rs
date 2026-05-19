@@ -80,7 +80,12 @@ pub trait Evaluator: Send + Sync {
     /// Score the leaf state. Receives a full [`KnowledgeAwareGameState`] so the evaluator
     /// can consult engine-only signals like phantom plays (successful plays whose stack
     /// assignment was deferred). `phantom_plays` is the accumulated count from the search path.
-    fn score(&self, state: &KnowledgeAwareGameState, truth: &dyn PlayerPOV, phantom_plays: u8) -> Score;
+    fn score(
+        &self,
+        state: &KnowledgeAwareGameState,
+        truth: &dyn PlayerPOV,
+        phantom_plays: u8,
+    ) -> Score;
 
     /// Per-term breakdown of the score. The default implementation returns only the total;
     /// override this to expose individual contributions for debugging.
@@ -355,7 +360,7 @@ impl Default for DefaultEvaluator {
     fn default() -> Self {
         DefaultEvaluator {
             score_weight: 10.0_f64,
-            strike_penalties: [0.0_f64, 10.0_f64, 30.0_f64,1000.0_f64],
+            strike_penalties: [0.0_f64, 10.0_f64, 30.0_f64, 1000.0_f64],
             pace_weight: 1.0_f64,
             efficiency_weight: 1.9_f64,
             critical_exposure_weight: 3.0_f64,
@@ -435,12 +440,8 @@ impl DefaultEvaluator {
                 smallvec::SmallVec::new();
             for &deck_idx in hand.cards().iter().rev() {
                 let known_trash = pov.is_known_trash(deck_idx);
-                let known_playable = Self::card_known_playable(
-                    pk,
-                    deck_idx,
-                    table_state,
-                    playable_mask,
-                );
+                let known_playable =
+                    Self::card_known_playable(pk, deck_idx, table_state, playable_mask);
                 if known_trash || known_playable {
                     buffer += 1;
                     continue;
@@ -777,7 +778,12 @@ impl DefaultEvaluator {
 }
 
 impl Evaluator for DefaultEvaluator {
-    fn score(&self, state: &KnowledgeAwareGameState, truth: &dyn PlayerPOV, phantom_plays: u8) -> Score {
+    fn score(
+        &self,
+        state: &KnowledgeAwareGameState,
+        truth: &dyn PlayerPOV,
+        phantom_plays: u8,
+    ) -> Score {
         self.score_breakdown(state, truth, phantom_plays).total
     }
 
@@ -790,7 +796,8 @@ impl Evaluator for DefaultEvaluator {
         let table_state = state.table_state();
         let static_data = state.static_data();
         let team_knowledge = state.team_knowledge();
-        let game_score = self.score_weight * state.score(&static_data.variant, phantom_plays) as f64;
+        let game_score =
+            self.score_weight * state.score(&static_data.variant, phantom_plays) as f64;
         let strikes = table_state.strike_tokens as usize;
         let strike_penalty = self.strike_penalties.get(strikes).copied().unwrap_or(0.0);
         if table_state.is_terminal(static_data) {
@@ -811,7 +818,8 @@ impl Evaluator for DefaultEvaluator {
         }
         let pace = self.pace_weight
             * (state.pace(phantom_plays)).clamp(-10, static_data.number_of_players as i32) as f64;
-        let efficiency_penalty = self.efficiency_weight * f64::from(state.required_efficiency(phantom_plays));
+        let efficiency_penalty =
+            self.efficiency_weight * f64::from(state.required_efficiency(phantom_plays));
         let critical_exposure_penalty = if self.critical_exposure_weight != 0.0 {
             self.critical_exposure_weight
                 * Self::critical_exposure_score(table_state, static_data, team_knowledge, truth)
@@ -850,7 +858,8 @@ impl Evaluator for DefaultEvaluator {
         } else {
             0.0
         };
-        let total = game_score - strike_penalty + pace - efficiency_penalty
+        let total = game_score - strike_penalty + pace
+            - efficiency_penalty
             - critical_exposure_penalty
             - lost_ceiling_penalty
             + empathy_bonus
@@ -906,11 +915,22 @@ impl Evaluator for DefaultEvaluator {
         let bad_touch_count = count_bad_touches(touched, receiver, truth, table_state, static_data);
 
         let potential_bad_touch = self.potential_bad_touch_penalty != 0.0
-            && is_potential_bad_touch(touched, giver, truth, table_state, static_data, team_knowledge);
+            && is_potential_bad_touch(
+                touched,
+                giver,
+                truth,
+                table_state,
+                static_data,
+                team_knowledge,
+            );
 
         precision_bonus
             - bad_touch_count as f64 * self.good_touch_penalty
-            - if potential_bad_touch { self.potential_bad_touch_penalty } else { 0.0 }
+            - if potential_bad_touch {
+                self.potential_bad_touch_penalty
+            } else {
+                0.0
+            }
     }
 
     fn signal_ignored_penalty(
@@ -991,16 +1011,10 @@ impl Evaluator for DefaultEvaluator {
             return 0.0;
         };
         let static_data = pre.static_data();
-        let pre_score = Self::team_empathy_score(
-            static_data,
-            pre.team_knowledge(),
-            pre.table_state(),
-        );
-        let post_score = Self::team_empathy_score(
-            static_data,
-            post.team_knowledge(),
-            post.table_state(),
-        );
+        let pre_score =
+            Self::team_empathy_score(static_data, pre.team_knowledge(), pre.table_state());
+        let post_score =
+            Self::team_empathy_score(static_data, post.team_knowledge(), post.table_state());
         self.team_empathy_weight * (post_score - pre_score)
     }
 
@@ -1035,10 +1049,8 @@ impl Evaluator for DefaultEvaluator {
         let max_known_playable = self.known_playable_weight * total_cards as f64;
         // Optimistic: efficiency_penalty = 0, lost_ceiling_penalty = 0, misinformation = 0,
         // critical_exposure_penalty = 0 (no critical cards in any hand).
-        let max_leaf = max_game_score - min_strike_penalty
-            + max_pace
-            + max_clue_tokens
-            + max_known_playable;
+        let max_leaf =
+            max_game_score - min_strike_penalty + max_pace + max_clue_tokens + max_known_playable;
         // Immediate bonuses: per-ply max = play_progress + clue precision across all cards
         // + team-empathy delta (each clue can at most lift the whole-hand score by total_cards).
         let max_immediate_per_ply = self.play_progress_weight
@@ -1149,7 +1161,7 @@ mod tests {
         let discard = GameAction::Discard {
             player_index: 0,
             card_deck_index: 5,
-            turn: 0,
+            turn: 1,
         };
         let pen = evaluator.signal_ignored_penalty(&discard, 0, &static_data, &tk, &table_state);
         assert_eq!(pen, -evaluator.signal_ignored_penalty_weight);
@@ -1162,7 +1174,7 @@ mod tests {
                 clue_type: crate::game::clue_type::ClueType::Rank,
                 clue_value: 1,
             },
-            turn: 0,
+            turn: 1,
         };
         let pen = evaluator.signal_ignored_penalty(&clue, 0, &static_data, &tk, &table_state);
         assert_eq!(pen, -evaluator.signal_ignored_penalty_weight);
@@ -1171,7 +1183,7 @@ mod tests {
         let play = GameAction::Play {
             player_index: 0,
             card_deck_index: 5,
-            turn: 0,
+            turn: 1,
         };
         let pen = evaluator.signal_ignored_penalty(&play, 0, &static_data, &tk, &table_state);
         assert_eq!(pen, 0.0);
@@ -1188,7 +1200,7 @@ mod tests {
         let discard = GameAction::Discard {
             player_index: 0,
             card_deck_index: 5,
-            turn: 0,
+            turn: 1,
         };
         let pen = evaluator.signal_ignored_penalty(&discard, 0, &static_data, &tk, &table_state);
         assert_eq!(pen, 0.0);
@@ -1213,7 +1225,7 @@ mod tests {
         let discard = GameAction::Discard {
             player_index: 0,
             card_deck_index: 5,
-            turn: 0,
+            turn: 1,
         };
         let pen = evaluator.signal_ignored_penalty(&discard, 0, &static_data, &tk, &table_state);
         assert_eq!(pen, 0.0);
@@ -1280,9 +1292,7 @@ mod tests {
     /// Build a table state with a single hand-size-5 hand in player 0, whose deck slot 4
     /// is card-id `id_at_chop` (the chop card under H-Group's rightmost-untouched rule).
     /// All cards live at deck indices [0..5]. Truth identities are written via `reveal_card`.
-    fn make_chop_test_state(
-        ids_in_hand: [u8; 5],
-    ) -> (TableState, StaticGameData, TeamKnowledge) {
+    fn make_chop_test_state(ids_in_hand: [u8; 5]) -> (TableState, StaticGameData, TeamKnowledge) {
         use crate::engine::knowledge::player_knowledge::knowledge_for_hand;
         let static_data = StaticGameData {
             number_of_players: 3,
@@ -1320,7 +1330,8 @@ mod tests {
         let (state, static_data, tk) = make_chop_test_state([4, 7, 12, 17, 22]);
         let truth = TruthFixture::new(&static_data);
         let truth_pov = truth.pov(&state, &static_data);
-        let score = DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
+        let score =
+            DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
         assert!(
             (score - 1.0).abs() < 1e-9,
             "chop critical with no buffer should be exactly 1.0, got {score}"
@@ -1335,7 +1346,8 @@ mod tests {
         let (state, static_data, tk) = make_chop_test_state([7, 12, 17, 22, 4]);
         let truth = TruthFixture::new(&static_data);
         let truth_pov = truth.pov(&state, &static_data);
-        let score = DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
+        let score =
+            DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
         let expected = 1.0 / (1.0 + 4.0);
         assert!(
             (score - expected).abs() < 1e-9,
@@ -1353,7 +1365,8 @@ mod tests {
         let (state, static_data, tk) = make_chop_test_state([4, 0, 5, 10, 15]);
         let truth = TruthFixture::new(&static_data);
         let truth_pov = truth.pov(&state, &static_data);
-        let score = DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
+        let score =
+            DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
         let expected = 1.0 / (1.0 + 0.0 + 4.0 * 4.0);
         assert!(
             (score - expected).abs() < 1e-9,
@@ -1366,11 +1379,11 @@ mod tests {
     fn critical_exposure_zero_when_no_critical_mask() {
         // Hand: [R1, Y1, G1, B1, P1]. None of these are critical at game start
         // (each rank-1 has 3 copies, 0 discarded → remaining = 3).
-        let (state, static_data, tk) =
-            make_chop_test_state([0, 5, 10, 15, 20]);
+        let (state, static_data, tk) = make_chop_test_state([0, 5, 10, 15, 20]);
         let truth = TruthFixture::new(&static_data);
         let truth_pov = truth.pov(&state, &static_data);
-        let score = DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
+        let score =
+            DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
         assert_eq!(score, 0.0, "no critical identities → zero exposure");
     }
 
@@ -1379,12 +1392,12 @@ mod tests {
     #[test]
     fn critical_exposure_zero_when_critical_is_touched() {
         // [chop=R5, Y3, G3, B3, slot1=P3] — R5 at deck index 0.
-        let (mut state, static_data, tk) =
-            make_chop_test_state([4, 7, 12, 17, 22]);
+        let (mut state, static_data, tk) = make_chop_test_state([4, 7, 12, 17, 22]);
         state.clue_touched_cards |= 1u64 << 0;
         let truth = TruthFixture::new(&static_data);
         let truth_pov = truth.pov(&state, &static_data);
-        let score = DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
+        let score =
+            DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
         assert_eq!(
             score, 0.0,
             "touched non-playable critical should not contribute to exposure"

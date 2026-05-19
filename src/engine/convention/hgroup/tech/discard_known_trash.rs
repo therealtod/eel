@@ -2,10 +2,10 @@ use crate::engine::convention::convention_tech::DiscardTech;
 use crate::engine::game_state_snapshot::GameStateSnapshot;
 use crate::engine::knowledge::knowledge_update::Hypothesis;
 use crate::engine::knowledge::player_pov::PlayerPOV;
+use crate::game::MAX_CLUE_TOKEN_COUNT;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::CardDeckIndex;
 use crate::game::state::PlayerIndex;
-use crate::game::MAX_CLUE_TOKEN_COUNT;
 use crate::impl_convention_tech_for_discard_tech;
 
 /// Discard the leftmost (newest, slot 1) known trash card in the active player's hand.
@@ -77,27 +77,21 @@ mod tests {
         use crate::engine::knowledge::team_knowledge::TeamKnowledge;
         use crate::game::action::game_action::GameAction;
         use crate::game::card::{CardIdentityMask, DeckCardsBitField};
+        use crate::game::deck::unit_test_constants::novariant_constants::{NoVarCards, R1_MASK};
         use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
             NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
-        };
-        use crate::game::deck::unit_test_constants::novariant_constants::{
-            NoVarCards, R1_MASK,
         };
 
         /// Build a knowledge where every card in `hand_cards` is in `own_hand`, and
         /// cards listed in `trash_empathy` have their `inferred_identities` set to the
         /// provided mask (used to mark them as known trash when that mask is fully played).
-        fn make_knowledge(
-            hand_cards: &[u8],
-            trash_empathy: &[(u8, u64)],
-        ) -> PlayerKnowledge {
+        fn make_knowledge(hand_cards: &[u8], trash_empathy: &[(u8, u64)]) -> PlayerKnowledge {
             let mut k = PlayerKnowledge::new(0);
             for &idx in hand_cards {
                 k.own_hand |= 1u64 << idx;
             }
             for &(idx, mask) in trash_empathy {
-                k.inferred_identities[idx as usize] =
-                    Some(CardIdentityMask::from_bits(mask));
+                k.inferred_identities[idx as usize] = Some(CardIdentityMask::from_bits(mask));
             }
             k
         }
@@ -119,7 +113,7 @@ mod tests {
         fn returns_no_action_when_no_known_trash_in_hand() {
             let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
             let mut table_state = initial_five_players_table_state();
-            table_state.current_turn = 1;
+            table_state.current_turn = 2;
             for &idx in &[10u8, 20, 30] {
                 table_state.update_with_draw_action(idx);
             }
@@ -143,7 +137,7 @@ mod tests {
             let mut table_state = initial_five_players_table_state();
             play_r1(&mut table_state, &static_data);
             table_state.clue_token_bank.set_half_tokens(14); // 7 whole tokens (not max)
-            table_state.current_turn = 2;
+            table_state.current_turn = 3;
             // Draw hand cards: oldest→newest = [10, 20].
             for &idx in &[10u8, 20] {
                 table_state.update_with_draw_action(idx);
@@ -166,7 +160,7 @@ mod tests {
                 vec![GameAction::Discard {
                     player_index: 0,
                     card_deck_index: 10,
-                    turn: 2,
+                    turn: 3,
                 }]
             );
         }
@@ -177,7 +171,7 @@ mod tests {
             let mut table_state = initial_five_players_table_state();
             play_r1(&mut table_state, &static_data);
             table_state.clue_token_bank.set_half_tokens(14); // 7 whole tokens (not max)
-            table_state.current_turn = 3;
+            table_state.current_turn = 4;
             // Draw hand: oldest→newest = [10, 20, 30].
             for &idx in &[10u8, 20, 30] {
                 table_state.update_with_draw_action(idx);
@@ -200,7 +194,7 @@ mod tests {
                 vec![GameAction::Discard {
                     player_index: 0,
                     card_deck_index: 20,
-                    turn: 3,
+                    turn: 4,
                 }]
             );
         }
@@ -211,7 +205,7 @@ mod tests {
             let mut table_state = initial_five_players_table_state();
             play_r1(&mut table_state, &static_data);
             table_state.clue_token_bank.set_half_tokens(14); // 7 whole tokens (not max)
-            table_state.current_turn = 4;
+            table_state.current_turn = 5;
             // Hand: oldest→newest = [10, 20]. Both trash.
             for &idx in &[10u8, 20] {
                 table_state.update_with_draw_action(idx);
@@ -233,7 +227,7 @@ mod tests {
                 vec![GameAction::Discard {
                     player_index: 0,
                     card_deck_index: 20,
-                    turn: 4,
+                    turn: 5,
                 }]
             );
         }
@@ -244,7 +238,7 @@ mod tests {
             let mut table_state = initial_five_players_table_state();
             play_r1(&mut table_state, &static_data);
             // Clue tokens at max (16 half-tokens = 8 whole)
-            table_state.current_turn = 2;
+            table_state.current_turn = 3;
             for &idx in &[10u8, 20] {
                 table_state.update_with_draw_action(idx);
             }
@@ -282,7 +276,7 @@ mod tests {
             let action = GameAction::Discard {
                 player_index: 0,
                 card_deck_index: 10,
-                turn: 5,
+                turn: 6,
             };
             assert!(DiscardKnownTrash.matches_action(&action, &[], &pov));
         }
@@ -309,7 +303,7 @@ mod tests {
             let action = GameAction::Discard {
                 player_index: 0,
                 card_deck_index: 20,
-                turn: 5,
+                turn: 6,
             };
             assert!(!DiscardKnownTrash.matches_action(&action, &[], &pov));
         }

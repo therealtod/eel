@@ -66,7 +66,7 @@ impl ClueTech for FiveSave {
         if *clue != RANK_5_CLUE {
             return false;
         }
-        let Some(snap) = history.get(turn) else {
+        let Some(snap) = history.get(turn.saturating_sub(1)) else {
             return false;
         };
         let giver = snap.table_state.active_player_index;
@@ -91,7 +91,7 @@ impl ClueTech for FiveSave {
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
     ) -> Hypothesis {
-        let Some(snap) = history.get(turn) else {
+        let Some(snap) = history.get(turn.saturating_sub(1)) else {
             return Hypothesis::empty();
         };
         let giver = snap.table_state.active_player_index;
@@ -147,7 +147,7 @@ mod tests {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
         table_state.active_player_index = 1;
-        table_state.current_turn = 2; // Expected turn in action
+        table_state.current_turn = 3; // Expected turn in action
         table_state.update_with_draw_action(10); // chop = R5
         table_state.active_player_index = 0;
 
@@ -167,7 +167,7 @@ mod tests {
                     clue_type: ClueType::Rank,
                     clue_value: 5
                 },
-                turn: 2,
+                turn: 3,
             }]
         );
     }
@@ -241,7 +241,7 @@ mod tests {
                 clue_type: ClueType::Rank,
                 clue_value: 5,
             },
-            turn: 0,
+            turn: 1,
         };
         assert!(FiveSave.matches_action(&action, &[snapshot], &pov));
     }
@@ -267,7 +267,7 @@ mod tests {
                 clue_type: ClueType::Rank,
                 clue_value: 5,
             },
-            turn: 0,
+            turn: 1,
         };
         assert!(!FiveSave.matches_action(&action, &[snapshot], &pov));
     }

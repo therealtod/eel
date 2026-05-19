@@ -118,7 +118,7 @@ impl ClueTech for SimplePrompt {
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
     ) -> bool {
-        let Some(game_state_snapshot) = history.get(turn) else {
+        let Some(game_state_snapshot) = history.get(turn.saturating_sub(1)) else {
             return false;
         };
         let giver = game_state_snapshot.table_state.active_player_index;
@@ -155,7 +155,7 @@ impl ClueTech for SimplePrompt {
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
     ) -> Hypothesis {
-        let Some(snap) = history.get(turn) else {
+        let Some(snap) = history.get(turn.saturating_sub(1)) else {
             return Hypothesis::empty();
         };
         let giver = snap.table_state.active_player_index;
@@ -438,7 +438,7 @@ mod tests {
                 clue_type: ClueType::Color,
                 clue_value: 0,
             },
-            turn: 0,
+            turn: 1,
         };
         assert!(SimplePrompt.matches_action(&clue, &[snapshot], &pov));
     }
@@ -456,7 +456,7 @@ mod tests {
                 clue_type: ClueType::Rank,
                 clue_value: 1,
             },
-            turn: 0,
+            turn: 1,
         };
         assert!(!SimplePrompt.matches_action(&clue, &[], &pov));
     }
@@ -473,7 +473,7 @@ mod tests {
             &GameAction::Play {
                 player_index: 0,
                 card_deck_index: 5,
-                turn: 0,
+                turn: 1,
             },
             &[],
             &pov
@@ -503,7 +503,7 @@ mod tests {
                     clue_type: ClueType::Color,
                     clue_value: 0,
                 },
-                turn: 0,
+                turn: 1,
             },
             &[snapshot],
             &pov,
@@ -556,7 +556,7 @@ mod tests {
                     clue_type: ClueType::Color,
                     clue_value: 0,
                 },
-                turn: 0,
+                turn: 1,
             },
             &[snapshot],
             &pov,
@@ -595,7 +595,7 @@ mod tests {
                             clue_type: ClueType::Color,
                             clue_value: 0
                         },
-                        turn: 0
+                        turn: 1
                     },
                     &[],
                     &pov

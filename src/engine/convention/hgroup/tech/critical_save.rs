@@ -74,7 +74,7 @@ fn critical_save_knowledge_updates(
     history: &[GameStateSnapshot],
     observer_pov: &dyn PlayerPOV,
 ) -> Hypothesis {
-    let Some(snap) = history.get(turn) else {
+    let Some(snap) = history.get(turn.saturating_sub(1)) else {
         return Hypothesis::empty();
     };
     let giver = snap.table_state.active_player_index;
@@ -119,7 +119,7 @@ fn critical_save_matches(
     if clue.clue_type != clue_type {
         return false;
     }
-    let Some(snap) = history.get(turn) else {
+    let Some(snap) = history.get(turn.saturating_sub(1)) else {
         return false;
     };
     let giver = snap.table_state.active_player_index;
@@ -338,7 +338,7 @@ mod tests {
                 clue_type: ClueType::Color,
                 clue_value: 0,
             },
-            turn: 0,
+            turn: 1,
         };
         assert!(ColorCriticalSave.matches_action(&action, &[snapshot], &pov));
     }
@@ -366,7 +366,7 @@ mod tests {
                 clue_type: ClueType::Color,
                 clue_value: 0,
             },
-            turn: 0,
+            turn: 1,
         };
         assert!(!ColorCriticalSave.matches_action(&action, &[], &pov));
         assert!(!RankCriticalSave.matches_action(&action, &[], &pov));
@@ -390,7 +390,7 @@ mod tests {
                     clue_type: ClueType::Color,
                     clue_value: 0,
                 },
-                turn: 0,
+                turn: 1,
             },
             &[],
             &pov,
@@ -419,7 +419,7 @@ mod tests {
                 clue_type: ClueType::Color,
                 clue_value: 1,
             },
-            turn: 0,
+            turn: 1,
         };
         assert!(!ColorCriticalSave.matches_action(&action, &[snapshot], &pov));
     }

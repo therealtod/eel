@@ -815,9 +815,11 @@ mod tests {
         // Draw card 10 for player 1 and mark it as R1 in the deck.
         table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
-        table_state
-            .deck
-            .reveal_card(10, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
+        table_state.deck.reveal_card(
+            10,
+            NoVarCards::R1.as_variant_card_id(),
+            &static_data.variant,
+        );
 
         let knowledge = knowledge_for_hand(&[]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -841,9 +843,11 @@ mod tests {
         // Card 20 → player 2, revealed as R1, marked as clue-touched.
         table_state.active_player_index = 2;
         table_state.update_with_draw_action(20);
-        table_state
-            .deck
-            .reveal_card(20, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
+        table_state.deck.reveal_card(
+            20,
+            NoVarCards::R1.as_variant_card_id(),
+            &static_data.variant,
+        );
         table_state.clue_touched_cards |= 1 << 20;
 
         // Card 10 → player 1 (receiver) with fresh deck empathy (all IDs possible).
@@ -928,13 +932,17 @@ mod tests {
 
         table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
-        table_state
-            .deck
-            .reveal_card(10, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
+        table_state.deck.reveal_card(
+            10,
+            NoVarCards::R1.as_variant_card_id(),
+            &static_data.variant,
+        );
         table_state.update_with_draw_action(11);
-        table_state
-            .deck
-            .reveal_card(11, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
+        table_state.deck.reveal_card(
+            11,
+            NoVarCards::R1.as_variant_card_id(),
+            &static_data.variant,
+        );
 
         let knowledge = knowledge_for_hand(&[]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -958,15 +966,19 @@ mod tests {
 
         table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
-        table_state
-            .deck
-            .reveal_card(10, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
+        table_state.deck.reveal_card(
+            10,
+            NoVarCards::R1.as_variant_card_id(),
+            &static_data.variant,
+        );
         table_state.clue_touched_cards |= 1 << 10;
 
         table_state.update_with_draw_action(11);
-        table_state
-            .deck
-            .reveal_card(11, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
+        table_state.deck.reveal_card(
+            11,
+            NoVarCards::R1.as_variant_card_id(),
+            &static_data.variant,
+        );
 
         let knowledge = knowledge_for_hand(&[]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -1113,12 +1125,16 @@ mod tests {
         table_state.update_with_draw_action(10); // R1
         table_state.update_with_draw_action(11); // R2
         // Reveal card identities in deck.
-        table_state
-            .deck
-            .reveal_card(10, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
-        table_state
-            .deck
-            .reveal_card(11, NoVarCards::R2.as_variant_card_id(), &static_data.variant);
+        table_state.deck.reveal_card(
+            10,
+            NoVarCards::R1.as_variant_card_id(),
+            &static_data.variant,
+        );
+        table_state.deck.reveal_card(
+            11,
+            NoVarCards::R2.as_variant_card_id(),
+            &static_data.variant,
+        );
 
         // Observer knows both cards.
         let knowledge = knowledge_with_visible(0, &[(10, R1_MASK), (11, R2_MASK)]);
@@ -1144,12 +1160,16 @@ mod tests {
         let mut table_state = initial_five_players_table_state();
         table_state.update_with_draw_action(10); // R1
         table_state.update_with_draw_action(11); // R2
-        table_state
-            .deck
-            .reveal_card(10, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
-        table_state
-            .deck
-            .reveal_card(11, NoVarCards::R2.as_variant_card_id(), &static_data.variant);
+        table_state.deck.reveal_card(
+            10,
+            NoVarCards::R1.as_variant_card_id(),
+            &static_data.variant,
+        );
+        table_state.deck.reveal_card(
+            11,
+            NoVarCards::R2.as_variant_card_id(),
+            &static_data.variant,
+        );
 
         let knowledge = knowledge_with_visible(0, &[(10, R1_MASK), (11, R2_MASK)]);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
@@ -1171,9 +1191,11 @@ mod tests {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
         table_state.update_with_draw_action(10); // R1
-        table_state
-            .deck
-            .reveal_card(10, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
+        table_state.deck.reveal_card(
+            10,
+            NoVarCards::R1.as_variant_card_id(),
+            &static_data.variant,
+        );
         // Mark the only card as clued.
         table_state.clue_touched_cards |= 1 << 10;
 
@@ -1221,15 +1243,21 @@ mod tests {
         table_state.update_with_draw_action(10); // R1
         table_state.update_with_draw_action(11); // R2
         table_state.update_with_draw_action(12); // R3
-        table_state
-            .deck
-            .reveal_card(10, NoVarCards::R1.as_variant_card_id(), &static_data.variant);
-        table_state
-            .deck
-            .reveal_card(11, NoVarCards::R2.as_variant_card_id(), &static_data.variant);
-        table_state
-            .deck
-            .reveal_card(12, NoVarCards::R3.as_variant_card_id(), &static_data.variant);
+        table_state.deck.reveal_card(
+            10,
+            NoVarCards::R1.as_variant_card_id(),
+            &static_data.variant,
+        );
+        table_state.deck.reveal_card(
+            11,
+            NoVarCards::R2.as_variant_card_id(),
+            &static_data.variant,
+        );
+        table_state.deck.reveal_card(
+            12,
+            NoVarCards::R3.as_variant_card_id(),
+            &static_data.variant,
+        );
         // Clue R1 and R2, leaving R3 as the only unclued card.
         table_state.clue_touched_cards |= (1 << 10) | (1 << 11);
 
@@ -1276,17 +1304,20 @@ mod tests {
         // Receiver (player 1) draws card 10, revealed as the chosen truth identity.
         table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
-        table_state
-            .deck
-            .reveal_card(10, receiver_truth.as_variant_card_id(), &static_data.variant);
+        table_state.deck.reveal_card(
+            10,
+            receiver_truth.as_variant_card_id(),
+            &static_data.variant,
+        );
 
         // Giver's knowledge: own_hand includes card 5; inferred identity set to the requested mask.
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         {
             let giver_k = team_knowledge.player_mut(0);
             giver_k.own_hand |= 1 << 5;
-            giver_k.inferred_identities[5] =
-                Some(crate::game::card::CardIdentityMask::from_bits(giver_inferred_mask));
+            giver_k.inferred_identities[5] = Some(crate::game::card::CardIdentityMask::from_bits(
+                giver_inferred_mask,
+            ));
             if let Some(id) = giver_play_signal {
                 giver_k.add_signal(
                     5,
@@ -1311,7 +1342,12 @@ mod tests {
         let r1_mask = 1u64 << NoVarCards::R1.as_variant_card_id();
         let (static_data, table_state, team_knowledge, truth_knowledge) =
             setup_pbt(r1_mask, NoVarCards::R1, /*touched=*/ true, None);
-        let truth = make_truth_pov(&truth_knowledge, &team_knowledge, &table_state, &static_data);
+        let truth = make_truth_pov(
+            &truth_knowledge,
+            &team_knowledge,
+            &table_state,
+            &static_data,
+        );
 
         assert!(super::is_potential_bad_touch(
             &[10],
@@ -1329,9 +1365,18 @@ mod tests {
         use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards;
         let r1_id = NoVarCards::R1.as_variant_card_id();
         let r1_mask = 1u64 << r1_id;
-        let (static_data, table_state, team_knowledge, truth_knowledge) =
-            setup_pbt(r1_mask, NoVarCards::R1, /*touched=*/ false, Some(r1_id));
-        let truth = make_truth_pov(&truth_knowledge, &team_knowledge, &table_state, &static_data);
+        let (static_data, table_state, team_knowledge, truth_knowledge) = setup_pbt(
+            r1_mask,
+            NoVarCards::R1,
+            /*touched=*/ false,
+            Some(r1_id),
+        );
+        let truth = make_truth_pov(
+            &truth_knowledge,
+            &team_knowledge,
+            &table_state,
+            &static_data,
+        );
 
         assert!(super::is_potential_bad_touch(
             &[10],
@@ -1378,7 +1423,12 @@ mod tests {
                 Some(crate::game::card::CardIdentityMask::from_bits(r1_mask));
         }
         let truth_knowledge = knowledge_for_hand(&[]);
-        let truth = make_truth_pov(&truth_knowledge, &team_knowledge, &table_state, &static_data);
+        let truth = make_truth_pov(
+            &truth_knowledge,
+            &team_knowledge,
+            &table_state,
+            &static_data,
+        );
 
         assert!(!super::is_potential_bad_touch(
             &[10],
@@ -1399,7 +1449,12 @@ mod tests {
         // gate should still skip this card and yield mask B = 0.
         let (static_data, table_state, team_knowledge, truth_knowledge) =
             setup_pbt(r1_mask, NoVarCards::R1, /*touched=*/ false, None);
-        let truth = make_truth_pov(&truth_knowledge, &team_knowledge, &table_state, &static_data);
+        let truth = make_truth_pov(
+            &truth_knowledge,
+            &team_knowledge,
+            &table_state,
+            &static_data,
+        );
 
         assert!(!super::is_potential_bad_touch(
             &[10],
@@ -1418,7 +1473,12 @@ mod tests {
         let r1_mask = 1u64 << NoVarCards::R1.as_variant_card_id();
         let (static_data, table_state, team_knowledge, truth_knowledge) =
             setup_pbt(r1_mask, NoVarCards::Y1, /*touched=*/ true, None);
-        let truth = make_truth_pov(&truth_knowledge, &team_knowledge, &table_state, &static_data);
+        let truth = make_truth_pov(
+            &truth_knowledge,
+            &team_knowledge,
+            &table_state,
+            &static_data,
+        );
 
         assert!(!super::is_potential_bad_touch(
             &[10],

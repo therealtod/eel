@@ -69,7 +69,7 @@ impl<'a> ReplayRunner<'a> {
     ///
     /// Asserts that `options.variant == "No Variant"` and refuses anything else.
     /// Deals the initial hands; the runner is positioned before the first action
-    /// (`current_turn() == 0`).
+    /// (`current_turn() == 1`).
     pub fn from_hanablive(
         game: &crate::external::hanablive::Game,
         convention_set: &'a dyn ConventionSet,
@@ -228,16 +228,16 @@ impl<'a> ReplayRunner<'a> {
     /// Errors if `target_turn` exceeds the replay length or is less than
     /// `current_turn()` (backwards seek is not supported; runners are forward-only).
     pub fn step_to_turn(&mut self, target_turn: usize) -> Result<(), ReplayError> {
-        if target_turn > self.total_turns() {
+        if target_turn > self.total_turns() + 1 {
             return Err(ReplayError::PastEnd);
         }
-        if target_turn < self.cursor {
+        if target_turn < self.cursor + 1 {
             return Err(ReplayError::BackwardsStep {
-                from: self.cursor,
+                from: self.cursor + 1,
                 to: target_turn,
             });
         }
-        while self.cursor < target_turn {
+        while self.cursor + 1 < target_turn {
             self.step()?;
         }
         Ok(())
@@ -248,9 +248,9 @@ impl<'a> ReplayRunner<'a> {
         self.actions.len()
     }
 
-    /// Current turn number (equals the number of actions applied so far).
+    /// Current turn number (1-based; equals the number of actions applied so far plus one).
     pub fn current_turn(&self) -> usize {
-        self.cursor
+        self.cursor + 1
     }
 
     /// Ask the engine what it would play at the current position.
@@ -611,11 +611,11 @@ mod tests {
         let conv = HGroupConventionSet::default();
         let mut runner = ReplayRunner::from_hanablive(&game, &conv).unwrap();
 
-        assert_eq!(runner.current_turn(), 0);
-        runner.step().unwrap(); // apply play
         assert_eq!(runner.current_turn(), 1);
-        runner.step().unwrap(); // apply discard
+        runner.step().unwrap(); // apply play
         assert_eq!(runner.current_turn(), 2);
+        runner.step().unwrap(); // apply discard
+        assert_eq!(runner.current_turn(), 3);
 
         // R1 was played → red stack has 1 card.
         let stacks = &runner.game.table_state.playing_stacks;
@@ -638,10 +638,10 @@ mod tests {
         let mut runner_a = ReplayRunner::from_hanablive(&game, &conv).unwrap();
         let mut runner_b = ReplayRunner::from_hanablive(&game, &conv).unwrap();
 
-        runner_a.step_to_turn(2).unwrap();
-        runner_b.step_to_turn(2).unwrap();
+        runner_a.step_to_turn(3).unwrap();
+        runner_b.step_to_turn(3).unwrap();
 
-        // Both runners should have the same table state at turn 2.
+        // Both runners should have the same table state at turn 3.
         assert_eq!(
             runner_a.game.table_state.playing_stacks,
             runner_b.game.table_state.playing_stacks
@@ -650,8 +650,8 @@ mod tests {
             runner_a.game.table_state.current_turn,
             runner_b.game.table_state.current_turn
         );
-        assert_eq!(runner_a.current_turn(), 2);
-        assert_eq!(runner_b.current_turn(), 2);
+        assert_eq!(runner_a.current_turn(), 3);
+        assert_eq!(runner_b.current_turn(), 3);
     }
 
     #[test]
@@ -678,7 +678,7 @@ mod tests {
 
         // from_hanablive path
         let mut runner_hl = ReplayRunner::from_hanablive(&game, &conv).unwrap();
-        runner_hl.step_to_turn(2).unwrap();
+        runner_hl.step_to_turn(3).unwrap();
 
         // from_deck + apply_strategy_action path
         let actual_deck_ids: Vec<VariantCardId> = deck
@@ -694,12 +694,12 @@ mod tests {
         let play0 = GameAction::Play {
             player_index: 0,
             card_deck_index: 0,
-            turn: 0,
+            turn: 1,
         };
         let play1 = GameAction::Play {
             player_index: 1,
             card_deck_index: 5,
-            turn: 0,
+            turn: 3,
         };
         runner_sd.apply_strategy_action(&play0);
         runner_sd.game.advance_turn();

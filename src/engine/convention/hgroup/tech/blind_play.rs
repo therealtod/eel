@@ -134,7 +134,7 @@ mod tests {
             vec![GameAction::Play {
                 player_index: 0,
                 card_deck_index: 5,
-                turn: 0
+                turn: 1
             }]
         );
     }
@@ -154,7 +154,7 @@ mod tests {
             vec![GameAction::Play {
                 player_index: 0,
                 card_deck_index: 5,
-                turn: 0
+                turn: 1
             }]
         );
     }
@@ -188,7 +188,7 @@ mod tests {
             &GameAction::Play {
                 player_index: 0,
                 card_deck_index: 5,
-                turn: 0
+                turn: 1
             },
             &[],
             &pov
@@ -206,7 +206,7 @@ mod tests {
             &GameAction::Play {
                 player_index: 0,
                 card_deck_index: 5,
-                turn: 0
+                turn: 1
             },
             &[],
             &pov
@@ -231,7 +231,7 @@ mod tests {
             &GameAction::Play {
                 player_index: 0,
                 card_deck_index: 5,
-                turn: 0
+                turn: 1
             },
             &[],
             &pov
@@ -249,7 +249,7 @@ mod tests {
             &GameAction::Play {
                 player_index: 0,
                 card_deck_index: 5,
-                turn: 0,
+                turn: 1,
             },
             &[],
             &pov,

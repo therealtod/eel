@@ -86,7 +86,7 @@ impl ClueTech for SimpleFinesse {
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
     ) -> bool {
-        let Some(snap) = history.get(turn) else {
+        let Some(snap) = history.get(turn.saturating_sub(1)) else {
             return false;
         };
         let giver = snap.table_state.active_player_index;
@@ -130,7 +130,7 @@ impl ClueTech for SimpleFinesse {
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
     ) -> Hypothesis {
-        let Some(snap) = history.get(turn) else {
+        let Some(snap) = history.get(turn.saturating_sub(1)) else {
             return Hypothesis::empty();
         };
         let giver = snap.table_state.active_player_index;
@@ -304,7 +304,7 @@ mod tests {
                     clue_type: ClueType::Color,
                     clue_value: 0,
                 },
-                turn: 0,
+                turn: 1,
             },
             &[snapshot],
             &pov,
@@ -357,7 +357,7 @@ mod tests {
                             clue_type: ClueType::Color,
                             clue_value: 0
                         },
-                        turn: 0,
+                        turn: 1,
                     },
                     &[],
                     &pov
@@ -398,7 +398,7 @@ mod tests {
                             clue_type: ClueType::Color,
                             clue_value: 0
                         },
-                        turn: 0,
+                        turn: 1,
                     },
                     &[],
                     &pov
@@ -438,7 +438,7 @@ mod tests {
                             clue_type: ClueType::Color,
                             clue_value: 0
                         },
-                        turn: 0,
+                        turn: 1,
                     },
                     &[],
                     &pov
@@ -493,7 +493,7 @@ mod tests {
                     clue_type: ClueType::Color,
                     clue_value: 0,
                 },
-                turn: 0,
+                turn: 1,
             },
             &[snapshot],
             &pov,

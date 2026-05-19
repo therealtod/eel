@@ -411,17 +411,19 @@ impl KnowledgeAwareGameState {
         let stack_advanced;
         let mut is_phantom = false;
         if let Some(card_id) = known_id {
-            let pre = self.table_state.playing_stacks.stack_size(
-                (card_id as usize) / self.static_data.variant.stacks_size as usize,
-            );
+            let pre = self
+                .table_state
+                .playing_stacks
+                .stack_size((card_id as usize) / self.static_data.variant.stacks_size as usize);
             self.table_state.update_with_play_action_of_specific_card(
                 card_deck_index,
                 card_id,
                 &self.static_data,
             );
-            let post = self.table_state.playing_stacks.stack_size(
-                (card_id as usize) / self.static_data.variant.stacks_size as usize,
-            );
+            let post = self
+                .table_state
+                .playing_stacks
+                .stack_size((card_id as usize) / self.static_data.variant.stacks_size as usize);
             stack_advanced = post > pre;
         } else if self.is_known_playable_play(p, card_deck_index, has_play_signal) {
             self.table_state.update_with_play_action(card_deck_index);
@@ -478,7 +480,9 @@ impl KnowledgeAwareGameState {
                 &self.static_data.variant,
             );
         }
-        known_id.map(|id| (Some(id), is_phantom)).unwrap_or((None, is_phantom))
+        known_id
+            .map(|id| (Some(id), is_phantom))
+            .unwrap_or((None, is_phantom))
     }
 
     fn apply_discard(&mut self, card_deck_index: CardDeckIndex, truth: &dyn PlayerPOV) {
@@ -612,15 +616,16 @@ impl KnowledgeAwareGameState {
         //   clue mask imposes. DelayedPlayClue needs this to recognise when a connecting
         //   card becomes uniquely known *because of* the clue, and DirectPlayClue needs
         //   it to detect good-touch duplicates introduced by the same clue.
-        let tech_snapshot = GameStateSnapshot::new(pre_clue_table_state, self.team_knowledge.clone());
+        let tech_snapshot =
+            GameStateSnapshot::new(pre_clue_table_state, self.team_knowledge.clone());
         let action_turn = match action {
             GameAction::Clue { turn, .. } => *turn,
             _ => 0,
         };
-        // Techs only consult `history.get(turn)` (the clue being interpreted); padding to
-        // `action_turn + 1` covers search's nonzero turn indices without copying the full
+        // Techs only consult `history.get(turn - 1)` (the clue being interpreted); padding to
+        // `action_turn` covers search's nonzero turn indices without copying the full
         // `self.history`.
-        let local_history = vec![tech_snapshot; action_turn + 1];
+        let local_history = vec![tech_snapshot; action_turn];
         let knowledge_history: &[GameStateSnapshot] = &local_history;
 
         // Receiver: collect all matching techs' hypotheses from the receiver's own POV.
@@ -735,11 +740,8 @@ impl KnowledgeAwareGameState {
         let num_players = self.static_data.number_of_players as usize;
         let touched = self.table_state.clue_touched_cards;
         for p in 0..num_players {
-            let slots: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = self.table_state.hands[p]
-                .cards()
-                .iter()
-                .copied()
-                .collect();
+            let slots: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> =
+                self.table_state.hands[p].cards().iter().copied().collect();
             for idx in slots {
                 if touched & (1u64 << idx) == 0 {
                     continue;
@@ -818,7 +820,8 @@ impl KnowledgeAwareGameState {
     pub fn is_terminal(&self, phantom_plays: u8) -> bool {
         let max_score =
             self.static_data.variant.number_of_suits * self.static_data.variant.stacks_size;
-        self.table_state.strike_tokens >= 3 || self.score(&self.static_data.variant, phantom_plays) >= max_score
+        self.table_state.strike_tokens >= 3
+            || self.score(&self.static_data.variant, phantom_plays) >= max_score
     }
 
     /// True when the active player knows the card at `card_deck_index` is playable, even though
@@ -868,7 +871,7 @@ impl KnowledgeAwareGameState {
         self.history.push(self.snapshot());
     }
 
-    /// Retrieve the POV of `player_index` as it looked at the start of turn `turn`.
+    /// Retrieve the POV of `player_index` as it looked at the start of turn `turn` (1-based).
     ///
     /// Returns `None` if `turn` is out of range (no snapshot was recorded for it)
     /// or `player_index` is invalid.
@@ -877,7 +880,7 @@ impl KnowledgeAwareGameState {
     /// [`LightweightPlayerPOV`] from the returned snapshot.
     #[must_use]
     pub fn pov_at_turn(&self, turn: usize, player_index: usize) -> Option<PlayerPOVSnapshot> {
-        let snapshot = self.history.get(turn)?.clone();
+        let snapshot = self.history.get(turn.saturating_sub(1))?.clone();
         if player_index >= self.static_data.number_of_players as usize {
             return None;
         }
@@ -1017,13 +1020,16 @@ mod tests {
 
         let pre_stack_total = state.table_state.score(&state.static_data.variant);
         let pre_score = state.score(&state.static_data.variant, 0);
-        assert_eq!(pre_score, state.table_state.score(&state.static_data.variant));
+        assert_eq!(
+            pre_score,
+            state.table_state.score(&state.static_data.variant)
+        );
 
         let conventions = HGroupConventionSet::new(vec![]);
         let play_action = GameAction::Play {
             player_index: 0,
             card_deck_index: 0,
-            turn: 0,
+            turn: 1,
         };
         let knowledge_clone = state.team_knowledge.player(0).clone();
         let team_clone = state.team_knowledge.clone();
@@ -1086,7 +1092,7 @@ mod tests {
             &GameAction::Play {
                 player_index: 0,
                 card_deck_index: 0,
-                turn: 0,
+                turn: 1,
             },
             &conventions,
             &truth,
@@ -1144,7 +1150,7 @@ mod tests {
             player_index: 0,
             touched_card_deck_indexes: smallvec::smallvec![0, 1],
             clue,
-            turn: 0,
+            turn: 1,
         };
 
         // Convention set with only DirectPlayClue so the test is self-contained.
@@ -1173,8 +1179,7 @@ mod tests {
             .combined_possible_identities(0, &state.table_state, &state.static_data.variant)
             .as_bits();
         assert_eq!(
-            deck0_empathy,
-            1u64,
+            deck0_empathy, 1u64,
             "chop (deck[0]=R1) should be narrowed to {{R1}} by DirectPlayClue as focus; \
              got {deck0_empathy:025b}"
         );

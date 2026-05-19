@@ -10,7 +10,7 @@ use crate::game::state::PlayerIndex;
 ///
 /// For clue actions, `matches_action` checks if this tech could explain the observed action.
 /// The check is performed from the clue giver's POV at the time the action was performed,
-/// reconstructed via `history[action.turn()]`.
+/// reconstructed via `history[action.turn() - 1]`.
 pub trait ConventionTech: Sync {
     fn name(&self) -> &'static str;
     fn interpretation_priority(&self) -> u8;
@@ -18,7 +18,7 @@ pub trait ConventionTech: Sync {
 
     /// Check whether this tech explains the observed action.
     ///
-    /// `history[turn]` is the game state captured immediately *before* the action on that turn,
+    /// `history[turn - 1]` is the game state captured immediately *before* the action on that turn,
     /// from which the actor's POV can be reconstructed exactly as it was at decision time.
     /// Pass `&[]` when no history has been recorded (e.g. in isolated unit tests).
     fn matches_action(
@@ -80,8 +80,8 @@ pub trait ClueTech: Sync {
 
     /// Check if this tech could explain an observed clue action.
     ///
-    /// `history[turn]` is the full game state captured immediately before the clue was given.
-    /// Use `history[turn].player_pov(giver, static_data)` to reconstruct the exact POV the
+    /// `history[turn - 1]` is the full game state captured immediately before the clue was given.
+    /// Use `history[turn - 1].player_pov(giver, static_data)` to reconstruct the exact POV the
     /// clue giver had at decision time — in particular to correctly compute the chop and focus.
     fn matches_clue(
         &self,
@@ -145,14 +145,8 @@ pub trait ClueTech: Sync {
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
     ) -> HypothesisSet {
-        let h = self.clue_knowledge_updates(
-            player_index,
-            touched,
-            clue,
-            turn,
-            history,
-            observer_pov,
-        );
+        let h =
+            self.clue_knowledge_updates(player_index, touched, clue, turn, history, observer_pov);
         if h.is_empty() {
             HypothesisSet::new()
         } else {

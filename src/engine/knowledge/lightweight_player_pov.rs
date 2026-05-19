@@ -3,12 +3,12 @@ use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::knowledge::player_knowledge::PlayerKnowledge;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
-use crate::game::{MAX_CLUE_TOKEN_COUNT, MAX_UNIQUE_CARDS_IN_DECK};
 use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, CardIdentityMask, DeckCardsBitField, VariantCardId};
 use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
+use crate::game::{MAX_CLUE_TOKEN_COUNT, MAX_UNIQUE_CARDS_IN_DECK};
 use std::cell::OnceCell;
 
 /// Lightweight, read-only view that combines shared game state with player-specific knowledge.
@@ -48,7 +48,9 @@ impl<'a> LightweightPlayerPOV<'a> {
     /// observable perspective: played stacks + discard pile + visible copies in other hands.
     /// Cached on first call — the inputs are immutable for the POV's lifetime.
     fn observable_identity_mask(&self) -> u64 {
-        *self.observable_mask.get_or_init(|| self.compute_observable_identity_mask())
+        *self
+            .observable_mask
+            .get_or_init(|| self.compute_observable_identity_mask())
     }
 
     fn compute_observable_identity_mask(&self) -> u64 {
@@ -68,8 +70,8 @@ impl<'a> LightweightPlayerPOV<'a> {
         let mut bits = visible_in_others;
         while bits != 0 {
             let idx = bits.trailing_zeros() as usize;
-            if let Some(id) = self.knowledge.inferred_identities[idx]
-                .and_then(|m| m.known_card_id())
+            if let Some(id) =
+                self.knowledge.inferred_identities[idx].and_then(|m| m.known_card_id())
             {
                 seen_in_others[id] += 1;
             }
@@ -83,7 +85,10 @@ impl<'a> LightweightPlayerPOV<'a> {
                 let card_id = suit * stacks_size + rank_idx;
                 let total = variant.card_copies_count_by_id[card_id];
                 let played = if rank_idx < stack_top { 1u8 } else { 0u8 };
-                let discarded = self.table_state.discard_pile.copies_of(card_id as VariantCardId);
+                let discarded = self
+                    .table_state
+                    .discard_pile
+                    .copies_of(card_id as VariantCardId);
                 if played + discarded + seen_in_others[card_id] < total {
                     result |= 1u64 << card_id;
                 }

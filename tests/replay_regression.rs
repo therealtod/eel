@@ -61,13 +61,16 @@ fn engine_action_at_turn(replay_path: &str, turn: usize) -> GameAction {
 
 #[test]
 fn should_understand_delayed_play_clue() {
-    let action = engine_action_at_turn("should_understand_delayed_play_clue.json", 6);
+    let action = engine_action_at_turn("should_understand_delayed_play_clue.json", 7);
     if let GameAction::Play {
         player_index: 0,
         card_deck_index: 3,
         ..
-    } = action {
-        panic!("Alice should not play her clued 2 before playing her clued 1. Instead she chose: {action:?}");
+    } = action
+    {
+        panic!(
+            "Alice should not play her clued 2 before playing her clued 1. Instead she chose: {action:?}"
+        );
     }
 }
 
@@ -83,7 +86,7 @@ fn delayed_play_clue_admits_full_rank2_union_on_focus() {
     let game = Game::from_json(&json).expect("parse replay");
     let conv = HGroupConventionSet::default();
     let mut runner = ReplayRunner::from_hanablive(&game, &conv).expect("build runner");
-    runner.step_to_turn(6).expect("step to turn 6");
+    runner.step_to_turn(7).expect("step to turn 7");
 
     let active = runner.game.table_state.active_player_index;
     assert_eq!(active, 0, "Alice (player 0) should be on turn");
@@ -103,11 +106,11 @@ fn delayed_play_clue_admits_full_rank2_union_on_focus() {
 
 #[test]
 fn should_play_known_playable() {
-    let action = engine_action_at_turn("should_play_known_playable.json", 15);
+    let action = engine_action_at_turn("should_play_known_playable.json", 16);
     if let GameAction::Play {
-        player_index: 0,
-        ..
-    } = action {
+        player_index: 0, ..
+    } = action
+    {
         println!("Alice correctly chose action: {action:?}");
     } else {
         panic!("Alice should have played a playable card on her slot 1, instead got: {action:?}");
@@ -116,11 +119,13 @@ fn should_play_known_playable() {
 
 #[test]
 fn should_not_play_known_trash() {
-    let action = engine_action_at_turn("should_not_play_known_trash.json", 33);
+    let action = engine_action_at_turn("should_not_play_known_trash.json", 34);
     if let GameAction::Play {
-        player_index: 0,
-        ..
-    } = action {
-        panic!("Alice has enough empathy on her slot 5 to know it's a trash card (either r3 or r4), So she should not play it. Instead got: {action:?}");
+        player_index: 0, ..
+    } = action
+    {
+        panic!(
+            "Alice has enough empathy on her slot 5 to know it's a trash card (either r3 or r4), So she should not play it. Instead got: {action:?}"
+        );
     }
 }
