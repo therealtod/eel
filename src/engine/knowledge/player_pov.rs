@@ -67,9 +67,22 @@ pub trait PlayerPOV {
     /// Returns true if the card is known to be trash from this POV
     fn is_known_trash(&self, card_deck_index: CardDeckIndex) -> bool;
 
-    /// Get the inferred identities for a card from this player's POV: convention-derived
-    /// narrowing (GTP, clue interpretation) intersected with observable empathy.
-    /// Falls back to observable empathy when the two contradict.
+    /// Best mask of possible identities for a card from this player's POV.
+    ///
+    /// Combines three layers:
+    /// - public clue empathy (baseline)
+    /// - convention-derived narrowing (GTP, clue interpretation, live hypotheses)
+    /// - observable narrowing — only applied to the player's own (unseen) cards:
+    ///   identities whose copies are all accounted for in visible positions
+    ///   (other players' hands + played stacks + discard pile) are excluded.
+    ///
+    /// Cards in other players' hands skip the observable step: their identity is
+    /// already pinned to a visible singleton by `combined_possible_identities`, and
+    /// the observable mask counts those same copies, which would spuriously contradict.
+    ///
+    /// On contradiction between convention-narrowing and observable, falls back to
+    /// `baseline ∩ observable` (or `observable` alone if that too is empty) — the
+    /// convention reasoning is dropped but public clue constraints are preserved.
     fn inferred_identities(&self, card_deck_index: CardDeckIndex) -> CardIdentityMask;
 
     #[must_use]

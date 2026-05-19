@@ -9,6 +9,7 @@ use crate::game::card::{CardDeckIndex, CardIdentityMask, DeckCardsBitField, Vari
 use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
+use std::cell::OnceCell;
 
 /// Lightweight, read-only view that combines shared game state with player-specific knowledge.
 ///
@@ -21,6 +22,7 @@ pub struct LightweightPlayerPOV<'a> {
     team_knowledge: &'a TeamKnowledge,
     table_state: &'a TableState,
     static_data: &'a StaticGameData,
+    observable_mask: OnceCell<u64>,
 }
 
 impl<'a> LightweightPlayerPOV<'a> {
@@ -38,12 +40,18 @@ impl<'a> LightweightPlayerPOV<'a> {
             team_knowledge,
             table_state,
             static_data,
+            observable_mask: OnceCell::new(),
         }
     }
 
     /// Bitmask of variant card IDs that are not fully accounted for from this player's
     /// observable perspective: played stacks + discard pile + visible copies in other hands.
+    /// Cached on first call — the inputs are immutable for the POV's lifetime.
     fn observable_identity_mask(&self) -> u64 {
+        *self.observable_mask.get_or_init(|| self.compute_observable_identity_mask())
+    }
+
+    fn compute_observable_identity_mask(&self) -> u64 {
         let variant = &self.static_data.variant;
         let num_players = self.static_data.number_of_players as usize;
         let stacks_size = variant.stacks_size as usize;
@@ -115,13 +123,7 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
     }
 
     fn card_identity(&self, card_deck_index: CardDeckIndex) -> Option<VariantCardId> {
-        // Use combined empathy: game-rule from Deck + convention-inferred from techs
-        let combined = self.knowledge.combined_possible_identities(
-            card_deck_index,
-            self.table_state,
-            &self.static_data.variant,
-        );
-        combined.known_card_id()
+        self.inferred_identities(card_deck_index).known_card_id()
     }
 
     fn own_playable_cards(&self) -> DeckCardsBitField {
@@ -131,15 +133,8 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
         let mut hand_mask = own_hand;
         while hand_mask != 0 {
             let card_deck_index = hand_mask.trailing_zeros() as CardDeckIndex;
-            // Use combined empathy: game-rule from Deck + convention-inferred from techs
-            let possible = self.knowledge.combined_possible_identities(
-                card_deck_index,
-                self.table_state,
-                &self.static_data.variant,
-            );
-            // A card is playable if ALL its possible identities are playable (empathy-based),
-            // OR if it has a Signal::Play (convention-inferred identity).
-            let empathy_playable = (possible.as_bits() & playable_cards) == possible.as_bits();
+            let possible_bits = self.inferred_identities(card_deck_index).as_bits();
+            let empathy_playable = (possible_bits & playable_cards) == possible_bits;
             let signal_playable = self.knowledge.signals[card_deck_index as usize]
                 .iter()
                 .any(|s| matches!(s, Signal::Play { .. }));
@@ -153,12 +148,8 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
 
     fn is_playable(&self, card_deck_index: CardDeckIndex) -> bool {
         let playable_cards = self.table_state.playable_cards(self.static_data);
-        let possible = self.knowledge.combined_possible_identities(
-            card_deck_index,
-            self.table_state,
-            &self.static_data.variant,
-        );
-        let empathy_playable = (possible.as_bits() & playable_cards) == possible.as_bits();
+        let possible_bits = self.inferred_identities(card_deck_index).as_bits();
+        let empathy_playable = (possible_bits & playable_cards) == possible_bits;
         let signal_playable = self.knowledge.signals[card_deck_index as usize]
             .iter()
             .any(|s| matches!(s, Signal::Play { .. }));
@@ -187,15 +178,12 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
             {
                 return true;
             }
-            // Known via empathy: the holder's own combined possibilities narrow to a
-            // singleton (e.g. via clue mask intersection across multiple clues).
-            pk.combined_possible_identities(
-                card_deck_index,
-                self.table_state,
-                &self.static_data.variant,
-            )
-            .known_card_id()
-            .is_some()
+            // Known via inferred identities (clue narrowing + convention + observable)
+            // collapsing to a singleton.
+            self.as_player_pov(p)
+                .inferred_identities(card_deck_index)
+                .known_card_id()
+                .is_some()
         })
     }
 
@@ -229,12 +217,7 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
     }
 
     fn is_known_trash(&self, card_deck_index: CardDeckIndex) -> bool {
-        let possible_identities = self.knowledge.combined_possible_identities(
-            card_deck_index,
-            self.table_state,
-            &self.static_data.variant,
-        );
-        let possible_bits = possible_identities.as_bits();
+        let possible_bits = self.inferred_identities(card_deck_index).as_bits();
 
         let played_cards = self.table_state.playing_stacks.as_bitfield();
         if possible_bits & !played_cards == 0 {
@@ -270,19 +253,32 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
 
         let is_own_hand = (self.knowledge.own_hand >> card_deck_index) & 1 != 0;
 
+        // Observable narrowing is only valid for cards the player can't see directly.
+        // For other players' cards we already have the singleton visible identity via
+        // `combined_possible_identities`, and intersecting that against observable
+        // (which counts those very visible copies) would spuriously contradict.
         if !is_own_hand {
             return effective;
         }
 
-        // Cross-check the GTP-narrowed inferred mask against what this player can
+        // Cross-check the convention-narrowed mask against what this player can
         // directly observe: if every copy of an identity is already accounted for in
         // visible positions (other players' hands + played stacks + discard pile),
-        // that identity is impossible for this unseen card regardless of GTP reasoning.
-        // When the intersection is empty (contradiction), fall back to the observable
-        // constraint so the player doesn't blindly play a card that is known trash.
+        // that identity is impossible for this unseen card regardless of convention
+        // reasoning. On contradiction (intersection empty), convention inference is
+        // unsound — fall back to baseline-clue ∩ observable so we keep the public
+        // clue constraints rather than discarding them along with the bad inference.
         let observable = self.observable_identity_mask();
         if let Some(constrained) = effective.narrow(observable) {
-            constrained
+            return constrained;
+        }
+        let baseline_bits = self
+            .knowledge
+            .possible_identities(card_deck_index)
+            .map_or(u64::MAX, |m| m.as_bits());
+        let safe = baseline_bits & observable;
+        if safe != 0 {
+            CardIdentityMask::from_bits(safe)
         } else {
             CardIdentityMask::from_bits(observable)
         }
@@ -664,6 +660,50 @@ mod tests {
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         assert!(!pov.is_known_trash(42));
+    }
+
+    #[test]
+    fn is_known_trash_uses_observable_narrowing() {
+        // Card 42 in player 0's hand is convention-narrowed to {R3, R4} (e.g. a "red"
+        // play interpretation). R3 has been played and R4 would be playable. Using
+        // only the combined empathy, the card looks like it could still be R4 (so it
+        // is not yet known trash). However, P0 can directly see both R4 copies in
+        // P1's hand, so observable narrowing rules out R4 — and the only remaining
+        // candidate (R3) is already on the stack. The card is therefore actually
+        // known trash.
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_draw_action(0);
+        table_state.update_with_draw_action(1);
+        table_state.update_with_draw_action(1);
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            R1.as_variant_card_id(),
+            &static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            R2.as_variant_card_id(),
+            &static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            R3.as_variant_card_id(),
+            &static_data,
+        );
+
+        let mut knowledge = knowledge_with_empathy(42, R3_MASK | R4_MASK);
+        knowledge.own_hand |= 1 << 42;
+        knowledge.update_with_revealed_card(0, R4.as_variant_card_id());
+        knowledge.update_with_revealed_card(1, R4.as_variant_card_id());
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(0).own_hand |= 1 << 42;
+        team_knowledge.player_mut(1).own_hand |= (1 << 0) | (1 << 1);
+
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert!(pov.is_known_trash(42));
     }
 
     #[test]
