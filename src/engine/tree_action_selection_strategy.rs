@@ -129,6 +129,14 @@ impl TreeActionSelectionStrategy {
             proposed.retain(|p| p.tech_name != "DiscardChop");
         }
 
+        // Endgame pace constraint: when pace ≤ 0 the team cannot reach max score if any
+        // turn is wasted. Drop all discards when a play is available — discarding is
+        // mathematically forbidden at this point.
+        let pace = pov.table_state().pace(pov.static_data());
+        if pace <= 0 && proposed.iter().any(|p| matches!(&p.action, GameAction::Play { .. })) {
+            proposed.retain(|p| !matches!(&p.action, GameAction::Discard { .. }));
+        }
+
         // Move ordering: Play > Clue > Discard.
         proposed.sort_by_key(|p| match &p.action {
             GameAction::Play { .. } => 0,

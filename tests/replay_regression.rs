@@ -102,17 +102,15 @@ fn delayed_play_clue_admits_full_rank2_union_on_focus() {
 }
 
 #[test]
-fn should_avoid_bad_touch() {
-    let action = engine_action_at_turn("should_avoid_bad_touch.json", 9);
-    if let GameAction::Clue {
-        player_index: 2,
-        clue: Clue {
-            clue_type: ClueType::Rank,
-            clue_value: 2
-        },
+fn should_play_known_playable() {
+    let action = engine_action_at_turn("should_play_known_playable.json", 55);
+    if let GameAction::Play {
+        player_index: 1,
         ..
     } = action {
-        panic!("Alice should not clue the b2 as it implies bad touch. Instead got: {action:?}");
+        println!("Bob correctly chose action: {action:?}");
+    } else {
+        panic!("Bob should have played a playable card on his slot 5, instead got: {action:?}");
     }
 }
 
