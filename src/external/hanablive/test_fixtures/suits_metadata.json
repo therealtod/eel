@@ -1,0 +1,36 @@
+[
+  {
+    "name": "Red",
+    "id": "red",
+    "displayName": "Red",
+    "abbreviation": "r",
+    "fill": "#d44456",
+    "fillColors": [],
+    "clueColors": ["Red"],
+    "createVariants": true,
+    "pip": "pip-stddot",
+    "prism": false,
+    "oneOfEach": false,
+    "allClueColors": false,
+    "allClueRanks": false,
+    "noClueColors": false,
+    "noClueRanks": false
+  },
+  {
+    "name": "Yellow",
+    "id": "yellow",
+    "displayName": "Yellow",
+    "abbreviation": "y",
+    "fill": "#e1a719",
+    "fillColors": [],
+    "clueColors": ["Yellow"],
+    "createVariants": true,
+    "pip": "pip-stddot",
+    "prism": false,
+    "oneOfEach": false,
+    "allClueColors": false,
+    "allClueRanks": false,
+    "noClueColors": false,
+    "noClueRanks": false
+  }
+]

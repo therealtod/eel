@@ -1,0 +1,38 @@
+[
+  {
+    "id": 12345,
+    "name": "Test Table",
+    "passwordProtected": false,
+    "joined": false,
+    "numPlayers": 3,
+    "startingPlayer": 0,
+    "owned": false,
+    "running": false,
+    "variant": "No Variant",
+    "options": {
+      "numPlayers": 3,
+      "startingPlayer": 0,
+      "variantID": 0,
+      "variantName": "No Variant",
+      "timed": false,
+      "timeBase": 0,
+      "timePerTurn": 0,
+      "speedrun": false,
+      "cardCycle": false,
+      "deckPlays": false,
+      "emptyClues": false,
+      "oneExtraCard": false,
+      "oneLessCard": false,
+      "allOrNothing": false,
+      "detrimentalCharacters": false
+    },
+    "timed": false,
+    "timeBase": 0,
+    "timePerTurn": 0,
+    "sharedReplay": true,
+    "progress": 0,
+    "players": ["Alice", "Bob", "Cathy"],
+    "spectators": [],
+    "maxPlayers": 5
+  }
+]

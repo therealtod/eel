@@ -1,0 +1,43 @@
+{
+  "tableID": 37956,
+  "playerNames": [
+    "Alice",
+    "Bob",
+    "Cathy"
+  ],
+  "ourPlayerIndex": 0,
+  "spectating": true,
+  "shadowing": false,
+  "replay": false,
+  "databaseID": -1,
+  "hasCustomSeed": false,
+  "seed": "p3v2s14",
+  "datetimeStarted": "2024-12-17T17:02:26.856462098Z",
+  "datetimeFinished": "0001-01-01T00:00:00Z",
+  "options": {
+    "numPlayers": 3,
+    "startingPlayer": 0,
+    "variantID": 0,
+    "variantName": "6 Suits",
+    "timed": false,
+    "timeBase": 0,
+    "timePerTurn": 0,
+    "speedrun": false,
+    "cardCycle": false,
+    "deckPlays": false,
+    "emptyClues": false,
+    "oneExtraCard": false,
+    "oneLessCard": false,
+    "allOrNothing": false,
+    "detrimentalCharacters": false
+  },
+  "characterAssignments": [],
+  "characterMetadata": [],
+  "sharedReplay": false,
+  "sharedReplayLeader": "awwest2",
+  "sharedReplaySegment": 35,
+  "sharedReplayEffMod": 0,
+  "paused": false,
+  "pausePlayerIndex": -1,
+  "pauseQueued": false
+}
