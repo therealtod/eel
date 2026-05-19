@@ -156,8 +156,16 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
         empathy_playable || signal_playable
     }
 
-    fn is_touched(&self, card_deck_index: CardDeckIndex) -> bool {
+    fn is_clue_touched(&self, card_deck_index: CardDeckIndex) -> bool {
         self.table_state.clue_touched_cards & (1 << card_deck_index) != 0
+    }
+
+    fn is_signal_touched(&self, card_deck_index: CardDeckIndex) -> bool {
+        let num_players = self.static_data.number_of_players as usize;
+        (0..num_players).any(|p| {
+            let pk = self.team_knowledge.player(p);
+            pk.own_hand & (1 << card_deck_index) != 0 && pk.has_play_signal(card_deck_index)
+        })
     }
 
     fn is_identity_known_to_holder(&self, card_deck_index: CardDeckIndex) -> bool {
@@ -327,16 +335,9 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
         let mut bits: u64 = 0;
         for player_index in 0..num_players {
             let player_hand = &self.table_state.hands[player_index];
-            // Play signals on a card live in that card holder's own knowledge: the
-            // third-party apply_clue filter only keeps AddSignal updates targeting the
-            // observer's own hand, so the observer's own `self.knowledge` does not
-            // carry play signals for other players' cards.
-            let holder_knowledge = self.team_knowledge.player(player_index);
             for &card_deck_index in player_hand.cards() {
                 if let Some(card_identity) = self.card_identity(card_deck_index) {
-                    if self.is_touched(card_deck_index)
-                        || holder_knowledge.has_play_signal(card_deck_index)
-                    {
+                    if self.is_touched(card_deck_index) {
                         bits |= 1 << card_identity
                     }
                 }

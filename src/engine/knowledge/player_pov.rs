@@ -30,7 +30,18 @@ pub trait PlayerPOV {
 
     fn is_playable(&self, card_deck_index: CardDeckIndex) -> bool;
 
-    fn is_touched(&self, card_deck_index: CardDeckIndex) -> bool;
+    /// Touched by a clue: the card has at least one positive clue mark on it
+    /// (i.e. the bit is set in `table_state.clue_touched_cards`).
+    fn is_clue_touched(&self, card_deck_index: CardDeckIndex) -> bool;
+
+    /// Touched by a convention play signal: the card's holder carries a
+    /// `Signal::Play` on this deck index.
+    fn is_signal_touched(&self, card_deck_index: CardDeckIndex) -> bool;
+
+    /// Touched in any sense — clue-touched OR signal-touched.
+    fn is_touched(&self, card_deck_index: CardDeckIndex) -> bool {
+        self.is_clue_touched(card_deck_index) || self.is_signal_touched(card_deck_index)
+    }
 
     /// Returns true if the holder of this card knows its exact identity
     /// (i.e. it is in their `visible_cards`, meaning it was revealed to them via a clue or inference).

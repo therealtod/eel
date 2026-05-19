@@ -27,7 +27,7 @@ impl PlayTech for BlindPlay {
             let has_play_signal = knowledge.signals[card_deck_index as usize]
                 .iter()
                 .any(|s| matches!(s, Signal::Play { .. }));
-            if has_play_signal && !pov.is_touched(card_deck_index) {
+            if has_play_signal {
                 actions.push(GameAction::Play {
                     player_index,
                     card_deck_index,
@@ -51,7 +51,7 @@ impl PlayTech for BlindPlay {
         let has_play_signal = knowledge.signals[card as usize]
             .iter()
             .any(|s| matches!(s, Signal::Play { .. }));
-        has_play_signal && !observer_pov.is_touched(card)
+        has_play_signal
     }
 
     fn play_knowledge_updates(
@@ -140,13 +140,23 @@ mod tests {
     }
 
     #[test]
-    fn no_action_for_touched_card_with_play_signal() {
+    fn generates_play_action_for_clue_touched_card_with_play_signal() {
+        // A play signal alone triggers BlindPlay regardless of clue-touched state:
+        // if a card already carries a Play signal and is later clue-touched, the
+        // commitment to play it stands.
         let (table_state, knowledge, team_knowledge, static_data) =
             pov_with_signal(5, play_signal(5), true);
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
-        assert!(BlindPlay.game_actions(&pov).is_empty());
+        assert_eq!(
+            BlindPlay.game_actions(&pov),
+            vec![GameAction::Play {
+                player_index: 0,
+                card_deck_index: 5,
+                turn: 0
+            }]
+        );
     }
 
     #[test]
@@ -186,13 +196,13 @@ mod tests {
     }
 
     #[test]
-    fn matches_play_false_for_touched_card_with_play_signal() {
+    fn matches_play_true_for_clue_touched_card_with_play_signal() {
         let (table_state, knowledge, team_knowledge, static_data) =
             pov_with_signal(5, play_signal(5), true);
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
-        assert!(!BlindPlay.matches_action(
+        assert!(BlindPlay.matches_action(
             &GameAction::Play {
                 player_index: 0,
                 card_deck_index: 5,

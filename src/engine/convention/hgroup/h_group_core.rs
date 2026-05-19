@@ -385,9 +385,7 @@ pub(crate) fn is_potential_bad_touch(
     let giver_knowledge = team_knowledge.player(giver);
     let mut giver_held: VariantCardsBitField = 0;
     for &giver_card_idx in table_state.hands[giver].cards() {
-        let is_touched = (table_state.clue_touched_cards >> giver_card_idx) & 1 != 0;
-        let has_play_signal = giver_knowledge.has_play_signal(giver_card_idx);
-        if !is_touched && !has_play_signal {
+        if !truth.is_touched(giver_card_idx) {
             continue;
         }
         let inferred = giver_knowledge
