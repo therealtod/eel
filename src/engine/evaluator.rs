@@ -207,9 +207,10 @@ const HARMONIC_LUT: [f64; 9] = build_harmonic_lut();
 pub struct DefaultEvaluator {
     /// Multiplier for the Hanabi game score term; dominates the total and keeps score progress as the primary objective.
     pub score_weight: f64,
-    /// Per-strike penalty values indexed by strike count (0, 1, 2).
-    /// Strike 3 is terminal and handled by the search, not the evaluator.
-    pub strike_penalties: [f64; 3],
+    /// Per-strike penalty values indexed by strike count (0, 1, 2, 3).
+    /// Index 3 applies to the terminal 3-strike game-over state and must be large enough
+    /// that any continuing game scores higher than a struck-out one.
+    pub strike_penalties: [f64; 4],
     /// Multiplier for the pace term (`pace = clues_left + cards_left − cards_needed`), clamped to −10 from below.
     pub pace_weight: f64,
     /// Multiplier for the required-efficiency penalty; higher values penalise states that demand many future discards.
@@ -289,7 +290,7 @@ impl Default for DefaultEvaluator {
     fn default() -> Self {
         DefaultEvaluator {
             score_weight: 10.0_f64,
-            strike_penalties: [0.0_f64, 8.0_f64, 25.0_f64],
+            strike_penalties: [0.0_f64, 8.0_f64, 25.0_f64,1000.0_f64],
             pace_weight: 1.0_f64,
             efficiency_weight: 1.9_f64,
             critical_in_hand_weight: 1.5_f64,
