@@ -561,6 +561,117 @@ mod tests {
         assert_eq!(get_clue_focus(0, &[20, 30], &pov), Some(30));
     }
 
+    #[test]
+    fn focus_skips_signal_touched_cards_when_finding_newest_new_touch() {
+        // Hand oldest→newest: [10, 20, 30, 40, 50]. Chop = 10.
+        // Card 50 carries a Play signal (signal-touched) but is NOT clue-touched.
+        // Clue touches 20 and 50. 50 is signal-touched so it counts as "already touched",
+        // making 20 the focus (newest new touch).
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        for &idx in &[10u8, 20, 30, 40, 50] {
+            table_state.update_with_draw_action(idx);
+        }
+        let knowledge = knowledge_for_hand(&[10, 20, 30, 40, 50]);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let tk = team_knowledge.player_mut(0);
+        tk.own_hand |= 1 << 50;
+        tk.add_signal(
+            50,
+            Signal::Play {
+                card_deck_index: 50,
+                committed_identity: 0,
+            },
+        );
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert_eq!(get_clue_focus(0, &[20, 50], &pov), Some(20));
+    }
+
+    #[test]
+    fn focus_is_newest_new_touch_when_chop_is_signal_touched_but_not_clue_touched() {
+        // Hand oldest→newest: [10, 20, 30]. Card 10 carries a Play signal (signal-touched)
+        // but is NOT clue-touched, so chop becomes 20.
+        // Clue touches 10 and 30. Since 10 is signal-touched (already touched),
+        // focus = 30 (newest new touch).
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        for &idx in &[10u8, 20, 30] {
+            table_state.update_with_draw_action(idx);
+        }
+        let knowledge = knowledge_for_hand(&[10, 20, 30]);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let tk = team_knowledge.player_mut(0);
+        tk.own_hand |= 1 << 10;
+        tk.add_signal(
+            10,
+            Signal::Play {
+                card_deck_index: 10,
+                committed_identity: 0,
+            },
+        );
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert_eq!(get_clue_focus(0, &[10, 30], &pov), Some(30));
+    }
+
+    #[test]
+    fn chop_skips_signal_touched_cards() {
+        // Hand oldest→newest: [10, 20, 30]. Card 10 has a Play signal (signal-touched).
+        // Chop should be 20, not 10, because signal-touched cards are considered touched.
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        for &idx in &[10u8, 20, 30] {
+            table_state.update_with_draw_action(idx);
+        }
+        let knowledge = knowledge_for_hand(&[10, 20, 30]);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let tk = team_knowledge.player_mut(0);
+        tk.own_hand |= 1 << 10;
+        tk.add_signal(
+            10,
+            Signal::Play {
+                card_deck_index: 10,
+                committed_identity: 0,
+            },
+        );
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert_eq!(get_chop_index(0, &pov), Some(20));
+    }
+
+    #[test]
+    fn focus_is_signal_touched_card_when_all_other_touched_are_clue_touched() {
+        // Hand oldest→newest: [10, 20, 30]. Chop = 10.
+        // Card 30 is signal-touched (Play signal), card 20 is already clue-touched.
+        // Clue touches 20 and 30. 20 is clue-touched, 30 is signal-touched — both
+        // count as "already touched", so focus falls back to leftmost touched = 30.
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        for &idx in &[10u8, 20, 30] {
+            table_state.update_with_draw_action(idx);
+        }
+        table_state.clue_touched_cards |= 1 << 20;
+        let knowledge = knowledge_for_hand(&[10, 20, 30]);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let tk = team_knowledge.player_mut(0);
+        tk.own_hand |= 1 << 30;
+        tk.add_signal(
+            30,
+            Signal::Play {
+                card_deck_index: 30,
+                committed_identity: 0,
+            },
+        );
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert_eq!(get_clue_focus(0, &[20, 30], &pov), Some(30));
+    }
+
     // ── clues_for_player_with_focus ────────────────────────────────────────
 
     #[test]
