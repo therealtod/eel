@@ -99,6 +99,33 @@ cargo build                         # debug
 cargo build --release               # optimised
 ```
 
+## Docker
+
+### Build the image
+
+```bash
+docker build -t eel .
+```
+
+### Run
+
+```bash
+docker run eel --name <name> [--count <count>]
+```
+
+### Run with logging
+
+```bash
+docker run -e RUST_LOG=eel::search=debug eel --name <name>
+```
+
+### Run tests in a container
+
+```bash
+docker build -t eel-builder --target builder .
+docker run --rm eel-builder cargo test
+```
+
 ## Debugging the decision tree
 
 `TreeActionSelectionStrategy::scored_actions()` returns `Vec<ScoredNode>` sorted best-first. Each `ScoredNode` implements `Display` and shows the total score, principal variation (the full action line), and the leaf-state breakdown:
