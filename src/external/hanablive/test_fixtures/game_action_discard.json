@@ -1,0 +1,11 @@
+{
+  "tableID": 12345,
+  "action": {
+    "type": "discard",
+    "playerIndex": 2,
+    "order": 10,
+    "suitIndex": 1,
+    "rank": 3,
+    "failed": false
+  }
+}

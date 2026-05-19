@@ -1,0 +1,9 @@
+{
+  "msg": "!join",
+  "who": "someuser",
+  "discord": false,
+  "server": false,
+  "datetime": "2024-12-17T17:02:26.856462098Z",
+  "room": "lobby",
+  "recipient": ""
+}

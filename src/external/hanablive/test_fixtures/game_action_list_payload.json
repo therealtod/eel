@@ -1,0 +1,24 @@
+{
+  "tableID": 37956,
+  "list": [
+    {
+      "type": "draw",
+      "playerIndex": 0,
+      "order": 0,
+      "suitIndex": 4,
+      "rank": 4
+    },
+    {
+      "type": "draw",
+      "playerIndex": 1,
+      "order": 5,
+      "suitIndex": 0,
+      "rank": 4
+    },
+    {
+      "type": "turn",
+      "num": 10,
+      "currentPlayerIndex": 2
+    }
+  ]
+}

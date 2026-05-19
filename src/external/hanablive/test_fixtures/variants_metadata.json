@@ -1,0 +1,22 @@
+[
+  {
+    "id": 0,
+    "newID": "no_variant",
+    "name": "No Variant",
+    "suits": ["Red", "Yellow", "Green", "Blue", "Purple"],
+    "clueColors": ["Red", "Yellow", "Green", "Blue", "Purple"],
+    "specialRank": 5,
+    "stackSize": 5,
+    "clueRanks": [1, 2, 3, 4, 5]
+  },
+  {
+    "id": 1,
+    "newID": "six_suits",
+    "name": "6 Suits",
+    "suits": ["Red", "Yellow", "Green", "Blue", "Purple", "Pink"],
+    "clueColors": ["Red", "Yellow", "Green", "Blue", "Purple", "Pink"],
+    "specialRank": 5,
+    "stackSize": 5,
+    "clueRanks": [1, 2, 3, 4, 5]
+  }
+]

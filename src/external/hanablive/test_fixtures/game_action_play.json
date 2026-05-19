@@ -1,0 +1,10 @@
+{
+  "tableID": 12345,
+  "action": {
+    "type": "play",
+    "playerIndex": 1,
+    "order": 42,
+    "suitIndex": 2,
+    "rank": 2
+  }
+}
