@@ -7,7 +7,7 @@ use crate::engine::decision_tree::{LineStep, Score, ScoredNode};
 use crate::engine::evaluator::{DefaultEvaluator, Evaluator, ScoreBreakdown};
 use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 use crate::engine::knowledge::player_pov::PlayerPOV;
-use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
+use crate::engine::knowledge_aware_game_state::{ActionOutcome, KnowledgeAwareGameState};
 use crate::game::action::game_action::GameAction;
 use crate::game::static_game_data::StaticGameData;
 
@@ -151,8 +151,9 @@ impl TreeActionSelectionStrategy {
         evaluator: &dyn Evaluator,
         state: &KnowledgeAwareGameState,
         truth: &dyn PlayerPOV,
+        phantom_plays: u8,
     ) -> ScoreBreakdown {
-        evaluator.score_breakdown(state, truth)
+        evaluator.score_breakdown(state, truth, phantom_plays)
     }
 
     /// Per-action bonus applied along the search path.
@@ -171,6 +172,8 @@ impl TreeActionSelectionStrategy {
         state_after: &KnowledgeAwareGameState,
         static_data: &StaticGameData,
         truth: &dyn PlayerPOV,
+        pre_phantom_plays: u8,
+        post_phantom_plays: u8,
     ) -> Score {
         let actor = state_before.table_state().active_player_index;
         let signal_penalty = evaluator.signal_ignored_penalty(
@@ -198,8 +201,10 @@ impl TreeActionSelectionStrategy {
         } else {
             0.0
         };
-        let play_bonus = evaluator.play_progress_bonus(action, state_before, state_after);
-        clue_bonus + signal_penalty + play_bonus
+        let play_bonus = evaluator.play_progress_bonus(action, state_before, state_after, pre_phantom_plays, post_phantom_plays);
+        let team_empathy_bonus =
+            evaluator.team_empathy_delta_bonus(action, state_before, state_after);
+        clue_bonus + signal_penalty + play_bonus + team_empathy_bonus
     }
 
     /// Recursively compute the best leaf score reachable from `state` within `depth` more turns.
@@ -240,9 +245,10 @@ impl TreeActionSelectionStrategy {
         depth: usize,
         pv_table: &mut PvTable,
         truth: &dyn PlayerPOV,
+        phantom_plays: u8,
     ) -> (Score, ScoreBreakdown) {
         if depth == 0 || state.table_state.is_terminal(static_data) {
-            let breakdown = Self::leaf_breakdown(evaluator, state, truth);
+            let breakdown = Self::leaf_breakdown(evaluator, state, truth, phantom_plays);
             tracing::trace!(
                 target: "eel::search",
                 depth = 0,
@@ -250,7 +256,6 @@ impl TreeActionSelectionStrategy {
                 leaf = %breakdown,
                 "leaf_reached",
             );
-            // Clear so the parent sees an empty child PV when calling set_pv.
             pv_table.rows[depth].clear();
             return (breakdown.total, breakdown);
         }
@@ -268,13 +273,12 @@ impl TreeActionSelectionStrategy {
         let _guard = span.enter();
         let mut best = f64::NEG_INFINITY;
         let mut best_breakdown: Option<ScoreBreakdown> = None;
-        // Precompute the theoretical ceiling for this node so we can exit early once
-        // we've already found a line that cannot be improved upon.
         let node_ceiling = evaluator.upper_bound(state.table_state(), static_data, depth);
         for proposed in candidates {
             let mut next = state.clone();
-            next.apply(&proposed.action, convention_set, truth);
+            let outcome: ActionOutcome = next.apply(&proposed.action, convention_set, truth);
             next.advance_turn();
+            let child_phantom = phantom_plays + if outcome.is_phantom_play { 1 } else { 0 };
             let immediate = Self::immediate_action_bonus(
                 &proposed.action,
                 evaluator,
@@ -282,9 +286,9 @@ impl TreeActionSelectionStrategy {
                 &next,
                 static_data,
                 truth,
+                phantom_plays,
+                child_phantom,
             );
-            // Branch-and-bound: skip this candidate if its optimistic upper bound cannot
-            // beat the best score we have already secured at this node.
             let candidate_ceiling =
                 evaluator.upper_bound(next.table_state(), static_data, depth - 1) + immediate;
             if candidate_ceiling <= best {
@@ -306,6 +310,7 @@ impl TreeActionSelectionStrategy {
                 depth - 1,
                 pv_table,
                 truth,
+                child_phantom,
             );
             let score = subtree_score + immediate;
             let improved = score > best;
@@ -330,17 +335,13 @@ impl TreeActionSelectionStrategy {
                     },
                 );
                 best_breakdown = Some(leaf_bd);
-                // Early exit: already reached the theoretical ceiling for this node.
                 if best >= node_ceiling {
                     break;
                 }
             }
         }
-        // `best_breakdown` is set whenever the candidate loop ran. If no candidates were
-        // produced (extremely rare — the fallback in `candidate_actions_with_provenance`
-        // makes this near-impossible), score the current state as the leaf.
         let breakdown =
-            best_breakdown.unwrap_or_else(|| Self::leaf_breakdown(evaluator, state, truth));
+            best_breakdown.unwrap_or_else(|| Self::leaf_breakdown(evaluator, state, truth, phantom_plays));
         (best, breakdown)
     }
 }
@@ -399,8 +400,6 @@ impl TreeActionSelectionStrategy {
             .into_par_iter()
             .map(|proposed| {
                 let _guard = span.clone().entered();
-                // Truth POV: the root searcher, reconstructed against root_state. Held fixed
-                // across recursion so play resolution uses the searcher's visible-card truth.
                 let root_knowledge = root_state.team_knowledge.player(root_player).clone();
                 let truth_pov = LightweightPlayerPOV::new(
                     root_player,
@@ -410,8 +409,9 @@ impl TreeActionSelectionStrategy {
                     static_data,
                 );
                 let mut next = root_state.clone();
-                next.apply(&proposed.action, convention_set, &truth_pov);
+                let outcome: ActionOutcome = next.apply(&proposed.action, convention_set, &truth_pov);
                 next.advance_turn();
+                let child_phantom = if outcome.is_phantom_play { 1 } else { 0 };
                 let immediate_bonus = Self::immediate_action_bonus(
                     &proposed.action,
                     evaluator,
@@ -419,8 +419,9 @@ impl TreeActionSelectionStrategy {
                     &next,
                     static_data,
                     &truth_pov,
+                    0,
+                    child_phantom,
                 );
-                // Allocate once per root candidate (outside the recursive hot path).
                 let mut pv_table = PvTable::new(subtree_depth);
                 let (leaf_score, leaf_breakdown) = Self::best_score_at_depth(
                     &next,
@@ -430,6 +431,7 @@ impl TreeActionSelectionStrategy {
                     subtree_depth,
                     &mut pv_table,
                     &truth_pov,
+                    child_phantom,
                 );
                 let total = leaf_score + immediate_bonus;
                 let pv = pv_table.pv_at(subtree_depth);

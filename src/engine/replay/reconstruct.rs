@@ -211,7 +211,7 @@ impl<'a> ReplayRunner<'a> {
                     &table_clone,
                     &static_data_clone,
                 );
-                self.game.apply(&game_action, self.convention_set, &truth);
+                let _ = self.game.apply(&game_action, self.convention_set, &truth);
                 AppliedAction::Clue
             }
             ActionType::EndGame => unreachable!("EndGame filtered in from_hanablive"),
@@ -332,7 +332,7 @@ impl<'a> ReplayRunner<'a> {
                     &table_clone,
                     &static_data_clone,
                 );
-                self.game.apply(action, self.convention_set, &truth);
+                let _ = self.game.apply(action, self.convention_set, &truth);
             }
             GameAction::Draw { .. } => {}
         }

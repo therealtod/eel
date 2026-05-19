@@ -74,8 +74,8 @@ impl std::fmt::Display for ScoreBreakdown {
 pub trait Evaluator: Send + Sync {
     /// Score the leaf state. Receives a full [`KnowledgeAwareGameState`] so the evaluator
     /// can consult engine-only signals like phantom plays (successful plays whose stack
-    /// assignment was deferred).
-    fn score(&self, state: &KnowledgeAwareGameState, truth: &dyn PlayerPOV) -> Score;
+    /// assignment was deferred). `phantom_plays` is the accumulated count from the search path.
+    fn score(&self, state: &KnowledgeAwareGameState, truth: &dyn PlayerPOV, phantom_plays: u8) -> Score;
 
     /// Per-term breakdown of the score. The default implementation returns only the total;
     /// override this to expose individual contributions for debugging.
@@ -83,6 +83,7 @@ pub trait Evaluator: Send + Sync {
         &self,
         state: &KnowledgeAwareGameState,
         truth: &dyn PlayerPOV,
+        phantom_plays: u8,
     ) -> ScoreBreakdown {
         ScoreBreakdown {
             game_score: 0.0,
@@ -96,7 +97,7 @@ pub trait Evaluator: Send + Sync {
             known_playable: 0.0,
             team_empathy: 0.0,
             misinformation_penalty: 0.0,
-            total: self.score(state, truth),
+            total: self.score(state, truth, phantom_plays),
         }
     }
 
@@ -142,6 +143,18 @@ pub trait Evaluator: Send + Sync {
     /// `game_score` term (which is symmetric for lines that reach the same total). Misplays
     /// (strikes) get 0 here; the strike penalty in the leaf already handles them.
     fn play_progress_bonus(
+        &self,
+        _action: &GameAction,
+        _pre_action_state: &KnowledgeAwareGameState,
+        _post_action_state: &KnowledgeAwareGameState,
+        _pre_phantom_plays: u8,
+        _post_phantom_plays: u8,
+    ) -> Score {
+        0.0
+    }
+
+    /// Immediate bonus for a clue action that tightens team-wide empathy.
+    fn team_empathy_delta_bonus(
         &self,
         _action: &GameAction,
         _pre_action_state: &KnowledgeAwareGameState,
@@ -667,26 +680,22 @@ impl DefaultEvaluator {
 }
 
 impl Evaluator for DefaultEvaluator {
-    fn score(&self, state: &KnowledgeAwareGameState, truth: &dyn PlayerPOV) -> Score {
-        self.score_breakdown(state, truth).total
+    fn score(&self, state: &KnowledgeAwareGameState, truth: &dyn PlayerPOV, phantom_plays: u8) -> Score {
+        self.score_breakdown(state, truth, phantom_plays).total
     }
 
     fn score_breakdown(
         &self,
         state: &KnowledgeAwareGameState,
         truth: &dyn PlayerPOV,
+        phantom_plays: u8,
     ) -> ScoreBreakdown {
         let table_state = state.table_state();
         let static_data = state.static_data();
         let team_knowledge = state.team_knowledge();
-        let game_score = self.score_weight * state.score(&static_data.variant) as f64;
+        let game_score = self.score_weight * state.score(&static_data.variant, phantom_plays) as f64;
         let strikes = table_state.strike_tokens as usize;
         let strike_penalty = self.strike_penalties.get(strikes).copied().unwrap_or(0.0);
-        // Terminal states (max score reached or struck out) are end-of-game: in-flight
-        // heuristics like misinformation, team empathy, pace, and critical-in-hand model
-        // future risk that no longer applies. Returning just game_score - strike_penalty
-        // keeps the search from preferring a delayed win over an immediate one because
-        // intermediate draws happen to mask cards from soft-term counting.
         if table_state.is_terminal(static_data) {
             return ScoreBreakdown {
                 game_score,
@@ -704,8 +713,8 @@ impl Evaluator for DefaultEvaluator {
             };
         }
         let pace = self.pace_weight
-            * (state.pace()).clamp(-10, static_data.number_of_players as i32) as f64;
-        let efficiency_penalty = self.efficiency_weight * f64::from(state.required_efficiency());
+            * (state.pace(phantom_plays)).clamp(-10, static_data.number_of_players as i32) as f64;
+        let efficiency_penalty = self.efficiency_weight * f64::from(state.required_efficiency(phantom_plays));
         let critical_in_hand =
             self.critical_in_hand_weight * Self::critical_cards_in_hand(table_state, static_data);
         let theoretical_max =
@@ -853,6 +862,8 @@ impl Evaluator for DefaultEvaluator {
         action: &GameAction,
         pre: &KnowledgeAwareGameState,
         post: &KnowledgeAwareGameState,
+        pre_phantom_plays: u8,
+        post_phantom_plays: u8,
     ) -> Score {
         if self.play_progress_weight == 0.0 {
             return 0.0;
@@ -861,7 +872,7 @@ impl Evaluator for DefaultEvaluator {
             return 0.0;
         };
         let variant = &pre.static_data().variant;
-        if post.score(variant) > pre.score(variant) {
+        if post.score(variant, post_phantom_plays) > pre.score(variant, pre_phantom_plays) {
             self.play_progress_weight
         } else {
             0.0
@@ -993,8 +1004,8 @@ mod tests {
         let p0 = truth.pov(s0.table_state(), s0.static_data());
         let p1 = truth.pov(s1.table_state(), s1.static_data());
         let p2 = truth.pov(s2.table_state(), s2.static_data());
-        assert!(evaluator.score(&s0, &p0) > evaluator.score(&s1, &p1));
-        assert!(evaluator.score(&s1, &p1) > evaluator.score(&s2, &p2));
+        assert!(evaluator.score(&s0, &p0, 0) > evaluator.score(&s1, &p1, 0));
+        assert!(evaluator.score(&s1, &p1, 0) > evaluator.score(&s2, &p2, 0));
     }
 
     #[test]
