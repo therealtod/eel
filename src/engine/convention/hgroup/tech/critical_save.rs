@@ -137,7 +137,7 @@ fn critical_save_matches(
     let total_ids =
         static_data.variant.number_of_suits as usize * static_data.variant.stacks_size as usize;
     let clue_mask = static_data.variant.empathy_for_clue(clue).as_bits();
-    let candidates = observer_pov.empathy(chop).as_bits() & clue_mask;
+    let candidates = observer_pov.inferred_identities(chop).as_bits() & clue_mask;
     (0..total_ids).any(|id| (candidates & (1u64 << id)) != 0 && is_critical_save_id(id, &giver_pov))
 }
 

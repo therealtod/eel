@@ -3,7 +3,7 @@ use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::knowledge::player_knowledge::PlayerKnowledge;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
-use crate::game::MAX_CLUE_TOKEN_COUNT;
+use crate::game::{MAX_CLUE_TOKEN_COUNT, MAX_UNIQUE_CARDS_IN_DECK};
 use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, CardIdentityMask, DeckCardsBitField, VariantCardId};
 use crate::game::state::PlayerIndex;
@@ -39,6 +39,49 @@ impl<'a> LightweightPlayerPOV<'a> {
             table_state,
             static_data,
         }
+    }
+
+    /// Bitmask of variant card IDs that are not fully accounted for from this player's
+    /// observable perspective: played stacks + discard pile + visible copies in other hands.
+    fn observable_identity_mask(&self) -> u64 {
+        let variant = &self.static_data.variant;
+        let num_players = self.static_data.number_of_players as usize;
+        let stacks_size = variant.stacks_size as usize;
+
+        let mut other_hands: u64 = 0;
+        for p in 0..num_players {
+            if p != self.player_index {
+                other_hands |= self.team_knowledge.player(p).own_hand;
+            }
+        }
+        let visible_in_others = self.knowledge.visible_cards & other_hands;
+
+        let mut seen_in_others = [0u8; MAX_UNIQUE_CARDS_IN_DECK];
+        let mut bits = visible_in_others;
+        while bits != 0 {
+            let idx = bits.trailing_zeros() as usize;
+            if let Some(id) = self.knowledge.inferred_identities[idx]
+                .and_then(|m| m.known_card_id())
+            {
+                seen_in_others[id] += 1;
+            }
+            bits &= bits - 1;
+        }
+
+        let mut result: u64 = 0;
+        for suit in 0..variant.number_of_suits as usize {
+            let stack_top = self.table_state.playing_stacks.stack_size(suit) as usize;
+            for rank_idx in 0..stacks_size {
+                let card_id = suit * stacks_size + rank_idx;
+                let total = variant.card_copies_count_by_id[card_id];
+                let played = if rank_idx < stack_top { 1u8 } else { 0u8 };
+                let discarded = self.table_state.discard_pile.copies_of(card_id as VariantCardId);
+                if played + discarded + seen_in_others[card_id] < total {
+                    result |= 1u64 << card_id;
+                }
+            }
+        }
+        result
     }
 }
 
@@ -218,12 +261,31 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
         false
     }
 
-    fn empathy(&self, card_deck_index: CardDeckIndex) -> CardIdentityMask {
-        self.knowledge.combined_possible_identities(
+    fn inferred_identities(&self, card_deck_index: CardDeckIndex) -> CardIdentityMask {
+        let effective = self.knowledge.combined_possible_identities(
             card_deck_index,
             self.table_state,
             &self.static_data.variant,
-        )
+        );
+
+        let is_own_hand = (self.knowledge.own_hand >> card_deck_index) & 1 != 0;
+
+        if !is_own_hand {
+            return effective;
+        }
+
+        // Cross-check the GTP-narrowed inferred mask against what this player can
+        // directly observe: if every copy of an identity is already accounted for in
+        // visible positions (other players' hands + played stacks + discard pile),
+        // that identity is impossible for this unseen card regardless of GTP reasoning.
+        // When the intersection is empty (contradiction), fall back to the observable
+        // constraint so the player doesn't blindly play a card that is known trash.
+        let observable = self.observable_identity_mask();
+        if let Some(constrained) = effective.narrow(observable) {
+            constrained
+        } else {
+            CardIdentityMask::from_bits(observable)
+        }
     }
 
     fn valid_actions(&self) -> Vec<GameAction> {

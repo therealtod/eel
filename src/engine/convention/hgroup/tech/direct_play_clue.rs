@@ -92,7 +92,7 @@ impl ClueTech for DirectPlayClue {
             .map(|id| 1u64 << id)
             .unwrap_or(0);
         let external_gotten = gotten & !focus_own_gotten;
-        (observer_pov.empathy(focus_idx).as_bits() & clue_mask & playable & !external_gotten) != 0
+        (observer_pov.inferred_identities(focus_idx).as_bits() & clue_mask & playable & !external_gotten) != 0
     }
 
     fn clue_knowledge_updates(

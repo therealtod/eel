@@ -91,7 +91,7 @@ fn delayed_play_clue_admits_full_rank2_union_on_focus() {
     // NO_VARIANT id layout: suit_idx * 5 + (rank - 1).
     // R2=1, Y2=6, G2=11, B2=16, P2=21.
     let expected_rank2_union: u64 = (1 << 1) | (1 << 6) | (1 << 11) | (1 << 16) | (1 << 21);
-    let focus_empathy = pov.empathy(3).as_bits();
+    let focus_empathy = pov.inferred_identities(3).as_bits();
     assert_eq!(
         focus_empathy & expected_rank2_union,
         expected_rank2_union,
@@ -113,5 +113,16 @@ fn should_avoid_bad_touch() {
         ..
     } = action {
         panic!("Alice should not use a rank-1 clue to get r1 because it bad touches y1. Instead got: {action:?}");
+    }
+}
+
+#[test]
+fn should_not_play_known_trash() {
+    let action = engine_action_at_turn("should_not_play_known_trash.json", 33);
+    if let GameAction::Play {
+        player_index: 0,
+        ..
+    } = action {
+        panic!("Alice has enough empathy on her slot 5 to know it's a trash card (either r3 or r4), So she should not play it. Instead got: {action:?}");
     }
 }

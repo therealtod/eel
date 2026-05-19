@@ -67,8 +67,10 @@ pub trait PlayerPOV {
     /// Returns true if the card is known to be trash from this POV
     fn is_known_trash(&self, card_deck_index: CardDeckIndex) -> bool;
 
-    /// Get the empathy that this player has for the given card.
-    fn empathy(&self, card_deck_index: CardDeckIndex) -> CardIdentityMask;
+    /// Get the inferred identities for a card from this player's POV: convention-derived
+    /// narrowing (GTP, clue interpretation) intersected with observable empathy.
+    /// Falls back to observable empathy when the two contradict.
+    fn inferred_identities(&self, card_deck_index: CardDeckIndex) -> CardIdentityMask;
 
     #[must_use]
     fn valid_actions(&self) -> Vec<GameAction>;

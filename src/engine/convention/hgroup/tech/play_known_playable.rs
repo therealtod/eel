@@ -27,13 +27,7 @@ impl PlayTech for PlayKnownPlayable {
             let has_play_signal = knowledge.signals[card_deck_index as usize]
                 .iter()
                 .any(|s| matches!(s, Signal::Play { .. }));
-            // Use global empathy from Deck (game-rule based) merged with inferred identities
-            let combined = knowledge.combined_possible_identities(
-                card_deck_index,
-                table_state,
-                &active_player_pov.static_data().variant,
-            );
-            let bits = combined.as_bits();
+            let bits = active_player_pov.inferred_identities(card_deck_index).as_bits();
             let empathy_playable = bits != 0 && bits & playable == bits;
             if empathy_playable && !has_play_signal {
                 actions.push(GameAction::Play {

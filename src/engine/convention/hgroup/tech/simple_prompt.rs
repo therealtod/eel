@@ -130,7 +130,7 @@ impl ClueTech for SimplePrompt {
         let total_ids =
             static_data.variant.number_of_suits as usize * static_data.variant.stacks_size as usize;
         let clue_mask = static_data.variant.empathy_for_clue(clue).as_bits();
-        let candidates = observer_pov.empathy(focus).as_bits() & clue_mask;
+        let candidates = observer_pov.inferred_identities(focus).as_bits() & clue_mask;
         let num_players = static_data.number_of_players as usize;
         (0..total_ids).any(|focus_id| {
             if (candidates & (1u64 << focus_id)) == 0 {

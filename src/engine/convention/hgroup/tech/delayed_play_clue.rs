@@ -139,7 +139,7 @@ impl ClueTech for DelayedPlayClue {
         let total_ids =
             static_data.variant.number_of_suits as usize * static_data.variant.stacks_size as usize;
         let clue_mask = static_data.variant.empathy_for_clue(clue).as_bits();
-        let candidates = observer_pov.empathy(focus).as_bits() & clue_mask;
+        let candidates = observer_pov.inferred_identities(focus).as_bits() & clue_mask;
         (0..total_ids).any(|id| {
             (candidates & (1u64 << id)) != 0 && Self::is_delayed_play_situation(id, &giver_pov)
         })
@@ -210,7 +210,7 @@ impl ClueTech for DelayedPlayClue {
         let variant = &static_data.variant;
         let total_ids = variant.number_of_suits as usize * variant.stacks_size as usize;
         let clue_mask = variant.empathy_for_clue(clue).as_bits();
-        let observer_focus_empathy = observer_pov.empathy(focus).as_bits();
+        let observer_focus_empathy = observer_pov.inferred_identities(focus).as_bits();
         let candidates = observer_focus_empathy & clue_mask;
         let table_state = giver_pov.table_state();
         let playable_mask = table_state.playable_cards(static_data);

@@ -79,7 +79,7 @@ impl ClueTech for FiveSave {
         // empathy is a singleton (they see the chop); for the receiver it's wider.
         let static_data = observer_pov.static_data();
         let rank5_mask = static_data.variant.empathy_for_clue(&RANK_5_CLUE).as_bits();
-        (observer_pov.empathy(chop).as_bits() & rank5_mask) != 0
+        (observer_pov.inferred_identities(chop).as_bits() & rank5_mask) != 0
     }
 
     fn clue_knowledge_updates(
