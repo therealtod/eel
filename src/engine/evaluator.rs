@@ -1,4 +1,4 @@
-use crate::engine::convention::hgroup::h_group_core::count_bad_touches;
+use crate::engine::convention::hgroup::h_group_core::{count_bad_touches, is_potential_bad_touch};
 use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::decision_tree::Score;
 use crate::engine::knowledge::player_pov::PlayerPOV;
@@ -100,12 +100,15 @@ pub trait Evaluator: Send + Sync {
         }
     }
 
-    /// Immediate bonus for a clue action based on empathy narrowing of the touched cards.
-    /// `touched` are the deck indices touched by the clue; `receiver` is the clue target.
+    /// Immediate bonus/penalty for a clue action.
+    ///
+    /// `touched` are the deck indices directly touched by the clue.
+    /// `receiver` is the clue target; `giver` is the acting player.
     fn clue_precision_bonus(
         &self,
         _touched: &[u8],
         _receiver: usize,
+        _giver: usize,
         _truth: &dyn PlayerPOV,
         _static_data: &StaticGameData,
         _team_knowledge: &TeamKnowledge,
@@ -204,6 +207,9 @@ const HARMONIC_LUT: [f64; 9] = build_harmonic_lut();
 /// - `empathy_weight * resolved_touched_cards`          — precision bonus for clues that fully resolve touched cards
 /// - `-good_touch_penalty * bad_touch_count`            — penalty for each touched card with no overlap with still-needed
 ///                                                        cards (good-touch principle violation)
+/// - `-potential_bad_touch_penalty`                     — flat penalty when a touched-on-receiver still-needed
+///                                                        identity overlaps with an identity the giver likely
+///                                                        already holds (potential duplicate)
 pub struct DefaultEvaluator {
     /// Multiplier for the Hanabi game score term; dominates the total and keeps score progress as the primary objective.
     pub score_weight: f64,
@@ -284,6 +290,15 @@ pub struct DefaultEvaluator {
     ///
     /// Set to 0 to disable.
     pub play_progress_weight: f64,
+    /// Flat penalty applied when the clue may duplicate, in the receiver's hand, a still-needed
+    /// identity the giver likely already holds.
+    ///
+    /// Fires when the OR of touched-on-receiver truth identities intersects the OR of inferred
+    /// identities of the giver's own-hand cards that are themselves touched or play-signaled,
+    /// after filtering trash from both sides.
+    ///
+    /// Set to 0 to disable.
+    pub potential_bad_touch_penalty: f64,
 }
 
 impl Default for DefaultEvaluator {
@@ -305,6 +320,7 @@ impl Default for DefaultEvaluator {
             signal_ignored_penalty_weight: 5.0_f64,
             misinformation_weight: 3.0_f64,
             play_progress_weight: 1.0_f64,
+            potential_bad_touch_penalty: 5.0_f64,
         }
     }
 }
@@ -753,6 +769,7 @@ impl Evaluator for DefaultEvaluator {
         &self,
         touched: &[u8],
         receiver: usize,
+        giver: usize,
         truth: &dyn PlayerPOV,
         static_data: &StaticGameData,
         team_knowledge: &TeamKnowledge,
@@ -780,7 +797,12 @@ impl Evaluator for DefaultEvaluator {
 
         let bad_touch_count = count_bad_touches(touched, receiver, truth, table_state, static_data);
 
-        precision_bonus - bad_touch_count as f64 * self.good_touch_penalty
+        let potential_bad_touch = self.potential_bad_touch_penalty != 0.0
+            && is_potential_bad_touch(touched, giver, truth, table_state, static_data, team_knowledge);
+
+        precision_bonus
+            - bad_touch_count as f64 * self.good_touch_penalty
+            - if potential_bad_touch { self.potential_bad_touch_penalty } else { 0.0 }
     }
 
     fn signal_ignored_penalty(

@@ -181,6 +181,7 @@ impl TreeActionSelectionStrategy {
             evaluator.clue_precision_bonus(
                 touched_card_deck_indexes,
                 *player_index,
+                actor,
                 truth,
                 static_data,
                 &state_after.team_knowledge,

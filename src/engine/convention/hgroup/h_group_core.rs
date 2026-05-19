@@ -1,5 +1,6 @@
 use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::knowledge::player_pov::PlayerPOV;
+use crate::engine::knowledge::team_knowledge::TeamKnowledge;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, VariantCardId, VariantCardsBitField};
 use crate::game::clue::Clue;
@@ -347,6 +348,55 @@ pub(crate) fn count_bad_touches(
         }
     }
     count
+}
+
+/// True when the clue may duplicate (in the receiver's hand) an identity the giver
+/// likely already holds.
+///
+/// Two masks are built, each restricted to still-needed identities (trash filtered
+/// out, since touching trash is already handled by `good_touch_penalty`):
+///   - `touched_on_receiver`: truth identities of the cards touched by this clue on
+///     the receiver's hand (giver sees these directly).
+///   - `giver_held`: union of inferred identities of cards in the giver's own hand
+///     that are either touched (clued previously) or carry a Play signal.
+///
+/// Fires (returns true) iff the two masks intersect.
+pub(crate) fn is_potential_bad_touch(
+    touched: &[CardDeckIndex],
+    giver: PlayerIndex,
+    truth: &dyn PlayerPOV,
+    table_state: &TableState,
+    static_data: &StaticGameData,
+    team_knowledge: &TeamKnowledge,
+) -> bool {
+    let still_needed = still_needed_cards_mask(table_state, static_data);
+
+    let mut touched_on_receiver: VariantCardsBitField = 0;
+    for &idx in touched {
+        if let Some(id) = truth.card_identity(idx) {
+            touched_on_receiver |= 1u64 << id;
+        }
+    }
+    touched_on_receiver &= still_needed;
+    if touched_on_receiver == 0 {
+        return false;
+    }
+
+    let giver_knowledge = team_knowledge.player(giver);
+    let mut giver_held: VariantCardsBitField = 0;
+    for &giver_card_idx in table_state.hands[giver].cards() {
+        let is_touched = (table_state.clue_touched_cards >> giver_card_idx) & 1 != 0;
+        let has_play_signal = giver_knowledge.has_play_signal(giver_card_idx);
+        if !is_touched && !has_play_signal {
+            continue;
+        }
+        let inferred = giver_knowledge
+            .combined_possible_identities(giver_card_idx, table_state, &static_data.variant)
+            .as_bits();
+        giver_held |= inferred & still_needed;
+    }
+
+    touched_on_receiver & giver_held != 0
 }
 
 pub fn is_good_touch_principle_compliant(
