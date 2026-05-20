@@ -118,7 +118,6 @@ fn should_discard_less_aggressively() {
 }
 
 #[test]
-#[ignore]
 fn should_choose_finesse_over_direct_play_clue() {
     let action = engine_action_at_turn("should_choose_finesse_over_direct_play_clue.json", 13);
     if let GameAction::Clue {
@@ -148,5 +147,24 @@ fn should_wait_for_r2() {
     } = action
     {
         panic!("Bob should entertain that the rank-3 clue is a prompt on Cathy and should not play his slot 1. Instead got: {action:?}")
+    }
+}
+
+#[test]
+#[ignore]
+fn should_clue_rank_3_instead_of_red() {
+    let action = engine_action_at_turn("should_clue_rank_3_instead_of_red.json", 35);
+    if let GameAction::Clue {
+        player_index: 0,
+        clue: Clue{
+            clue_type: ClueType::Rank,
+            clue_value: 3
+        },
+        ..
+    } = action
+    {
+        println!("Bob chose correctly")
+    } else {
+        panic!("Bob should prefer a rank-3 clue over a red clue Because the red clue would look like a r4 save. Instead got: {action:?}")
     }
 }

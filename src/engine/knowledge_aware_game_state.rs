@@ -624,8 +624,9 @@ impl KnowledgeAwareGameState {
         };
         // Techs only consult `history.get(turn - 1)` (the clue being interpreted); padding to
         // `action_turn` covers search's nonzero turn indices without copying the full
-        // `self.history`.
-        let local_history = vec![tech_snapshot; action_turn];
+        // `self.history`. We pad to at least 1 entry so techs can also access the giver's
+        // pre-clue snapshot when `action_turn == 0` (scenarios that start mid-game at turn 0).
+        let local_history = vec![tech_snapshot; action_turn.max(1)];
         let knowledge_history: &[GameStateSnapshot] = &local_history;
 
         // Receiver: collect all matching techs' hypotheses from the receiver's own POV.
