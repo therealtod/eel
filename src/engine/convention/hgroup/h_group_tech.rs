@@ -4,10 +4,16 @@ use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
 
 /// H-Group interpretation priority tiers. Lower value = higher priority.
+///
+/// `PROMPT` is intentionally equal to `SIMPLE_PLAY_CLUE` so that when both a direct-play
+/// and a prompt interpretation match the same clue (e.g. a rank-3 clue touching a slot that
+/// could be B3 directly or R3 via a teammate's touched R2), both contribute to the tier-0
+/// union. This leaves the receiver with an ambiguous empathy ({B3 ∪ R3}) instead of
+/// collapsing to B3, correctly preventing an immediate play until the prompt resolves.
 pub mod priority {
     pub const SAVE: u8 = 0;
     pub const SIMPLE_PLAY_CLUE: u8 = 1;
-    pub const PROMPT: u8 = 2;
+    pub const PROMPT: u8 = 1;
     pub const FINESSE: u8 = 3;
 }
 

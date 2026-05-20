@@ -137,3 +137,16 @@ fn should_choose_finesse_over_direct_play_clue() {
         );
     }
 }
+
+#[test]
+fn should_wait_for_r2() {
+    let action = engine_action_at_turn("should_wait_for_r2.json", 29);
+    if let GameAction::Play {
+        player_index: 1,
+        card_deck_index: 27,
+        ..
+    } = action
+    {
+        panic!("Bob should entertain that the rank-3 clue is a prompt on Cathy and should not play his slot 1. Instead got: {action:?}")
+    }
+}
