@@ -797,15 +797,19 @@ impl DefaultEvaluator {
 
     /// Bottom Deck Risk score for discarding `discarded_deck_idx` from `table_state`.
     ///
-    /// For every candidate identity `id` in the card's global empathy:
+    /// When the truth player can resolve the discarded card to a known identity (it is visible
+    /// in another player's hand), that singleton is used directly. Otherwise the full global
+    /// empathy distribution is iterated and each candidate identity is weighted by `1/popcount`.
+    ///
+    /// For every candidate identity `id`:
     ///   - skip if `id` has only one total copy (terminal — already critical) or its rank
     ///     is the top of the stack (BDR is conceptually about non-terminal cards);
-    ///   - skip if the suit's stack already includes `id` (the card is already trash, not at risk);
+    ///   - skip if the suit's stack already includes `id` (the card is already trash, no BDR);
     ///   - skip if discarding doesn't drive remaining copies to exactly 1;
     ///   - skip if any other player's hand visibly holds a copy of `id` (truth POV) — the
     ///     surviving copy is observed, hence not bottom-decked;
     ///   - otherwise contribute `(stacks_size − rank_idx) / popcount`, the ceiling loss if
-    ///     the surviving copy is bottom-decked, weighted by the uniform empathy probability.
+    ///     the surviving copy is bottom-decked, weighted by the empathy probability.
     fn bottom_deck_risk_score(
         discarded_deck_idx: CardDeckIndex,
         table_state: &TableState,
@@ -814,14 +818,22 @@ impl DefaultEvaluator {
     ) -> f64 {
         let variant = &static_data.variant;
         let stacks_size = variant.stacks_size as usize;
-        let empathy = table_state
-            .deck
-            .get_global_empathy(discarded_deck_idx)
-            .as_bits();
-        if empathy == 0 {
-            return 0.0;
-        }
-        let popcount = empathy.count_ones() as f64;
+        // When the truth player can see the discarded card (it's in another player's hand),
+        // use the resolved singleton identity instead of the public empathy distribution.
+        // This prevents spurious BDR charges for cards the truth player knows are safe
+        // (e.g. a known trash card, or a card whose surviving copy is visibly held).
+        let (empathy, popcount) = if let Some(known_id) = truth.card_identity(discarded_deck_idx) {
+            (1u64 << known_id, 1.0f64)
+        } else {
+            let e = table_state
+                .deck
+                .get_global_empathy(discarded_deck_idx)
+                .as_bits();
+            if e == 0 {
+                return 0.0;
+            }
+            (e, e.count_ones() as f64)
+        };
         let num_players = static_data.number_of_players as usize;
         let mut visible_ids: VariantCardsBitField = 0;
         for hand in table_state.hands[..num_players].iter() {

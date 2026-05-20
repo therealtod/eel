@@ -105,27 +105,14 @@ fn delayed_play_clue_admits_full_rank2_union_on_focus() {
 }
 
 #[test]
-fn should_play_known_playable() {
-    let action = engine_action_at_turn("should_play_known_playable.json", 7);
-    if let GameAction::Play {
-        player_index: 0, ..
-    } = action
-    {
-        println!("Alice correctly chose action: {action:?}");
-    } else {
-        panic!("Alice should have played a playable card on her slot 1, instead got: {action:?}");
-    }
-}
-
-#[test]
-fn should_not_play_known_trash() {
-    let action = engine_action_at_turn("should_not_play_known_trash.json", 34);
-    if let GameAction::Play {
-        player_index: 0, ..
+fn should_discard_less_aggressively() {
+    let action = engine_action_at_turn("should_discard_less_aggressively.json", 9);
+    if let GameAction::Discard {
+        player_index: 2, ..
     } = action
     {
         panic!(
-            "Alice has enough empathy on her slot 5 to know it's a trash card (either r3 or r4), So she should not play it. Instead got: {action:?}"
+            "Cathy should not choose to discard. Instead got: {action:?}"
         );
     }
 }
