@@ -17,7 +17,7 @@
   "player_on_turn": 0,
   "hands": [
     ["x", "x", "x", "x", "x"],
-    [{"id": "p1", "positive":  ["purple"], "inferred": "p1"}, "g4", {"id":  "p4", "positive": ["purple"], "inferred": "p2p3p4p5"}, "y5", "g4"],
+    [{"id": "p1", "positive":  ["purple"], "inferred": "p1"}, "g1", {"id":  "p4", "positive": ["purple"], "inferred": "p2p3p4p5"}, "y5", "g4"],
     ["y1", "r1", "p3", "b5", "g1"]
   ]
 }
