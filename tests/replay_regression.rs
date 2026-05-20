@@ -116,3 +116,24 @@ fn should_discard_less_aggressively() {
         );
     }
 }
+
+#[test]
+#[ignore]
+fn should_choose_finesse_over_direct_play_clue() {
+    let action = engine_action_at_turn("should_choose_finesse_over_direct_play_clue.json", 13);
+    if let GameAction::Clue {
+        player_index: 2,
+        clue: Clue{
+            clue_type: ClueType::Color,
+            clue_value: 1
+        },
+        ..
+    } = action
+    {
+        println!("Alice chose correctly")
+    } else {
+        panic!(
+            "Alice should give a finesse to get both y1 and y2. Instead got: {action:?}"
+        );
+    }
+}

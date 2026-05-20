@@ -164,8 +164,11 @@ pub fn clues_for_player_with_focus(
 
 /// https://hanabi.github.io/beginner/minimum-clue-value-principle/
 ///
-/// A clue is MCVP-compliant if at least one of the touched cards was not previously clued.
-/// A clue where every touched card was already touched is a Tempo Clue and must be rejected.
+/// A clue is MCVP-compliant if either:
+/// 1. It touches at least one card whose identity is not yet gotten (touched with known identity
+///    anywhere on the team), OR
+/// 2. It causes more than one gotten card to transition from non-playing to playing, where
+///    "playing" means the card is immediately playable or reachable via a fully-gotten chain.
 pub fn is_minimal_clue_value_compliant(
     _clue: &Clue,
     _clue_receiver_player_index: &PlayerIndex,
@@ -173,10 +176,70 @@ pub fn is_minimal_clue_value_compliant(
     player_pov: &dyn PlayerPOV,
 ) -> bool {
     debug_assert!(!touched_cards.is_empty(), "No touched cards");
-    let already_touched = player_pov.table_state().clue_touched_cards;
-    touched_cards
+
+    // Condition 1: at least one touched card has an identity not yet in the gotten set.
+    if touched_cards
         .iter()
-        .any(|&idx| already_touched & (1u64 << idx) == 0)
+        .any(|&idx| player_pov.card_identity(idx).map_or(true, |id| !player_pov.is_gotten(id)))
+    {
+        return true;
+    }
+
+    // Condition 2: more than one gotten card goes from non-playing to playing.
+    count_newly_playing_gotten(touched_cards, player_pov) > 1
+}
+
+/// Returns how many gotten cards transition from non-playing to chain-playable as a result of
+/// touching `touched_cards` (which may add new identities to the gotten set).
+fn count_newly_playing_gotten(touched_cards: &[CardDeckIndex], pov: &dyn PlayerPOV) -> usize {
+    let pre_gotten = pov.gotten_cards().as_bits();
+
+    // Build post-clue gotten set: add newly-touched cards with known identities.
+    let mut post_gotten = pre_gotten;
+    for &idx in touched_cards {
+        if !pov.is_touched(idx) {
+            if let Some(id) = pov.card_identity(idx) {
+                post_gotten |= 1u64 << id;
+            }
+        }
+    }
+
+    if post_gotten == pre_gotten {
+        return 0;
+    }
+
+    let variant = &pov.static_data().variant;
+    let total_ids = variant.number_of_suits as usize * variant.stacks_size as usize;
+
+    (0..total_ids)
+        .filter(|&id| {
+            (post_gotten >> id) & 1 != 0
+                && !is_chain_playable(id, pre_gotten, pov)
+                && is_chain_playable(id, post_gotten, pov)
+        })
+        .count()
+}
+
+/// Returns true if `id` will eventually be played: either immediately playable (away = 0) or
+/// every prerequisite down to the stack top is present in `gotten_bits`.
+fn is_chain_playable(id: usize, gotten_bits: u64, pov: &dyn PlayerPOV) -> bool {
+    let variant = &pov.static_data().variant;
+    let mut current = id;
+    loop {
+        match pov.away_value(current) {
+            None => return false,
+            Some(0) => return true,
+            Some(_) => match variant.prerequisite(current) {
+                None => return false,
+                Some(prereq) => {
+                    if (gotten_bits >> prereq) & 1 == 0 {
+                        return false;
+                    }
+                    current = prereq;
+                }
+            },
+        }
+    }
 }
 
 /// Bitmask of variant card IDs still needed to complete the stacks.
@@ -1037,19 +1100,24 @@ mod tests {
     // ── is_minimal_clue_value_compliant ────────────────────────────────────
 
     #[test]
-    fn mcvp_passes_when_at_least_one_touched_card_is_new() {
+    fn mcvp_passes_when_at_least_one_touched_card_is_not_yet_gotten() {
+        // Card 10 (R1) already gotten (clue-touched + known). Card 20 (R2) is new: its
+        // identity R2 is not yet in gotten_cards → condition 1 passes.
         use crate::game::clue::Clue;
+        use crate::game::deck::unit_test_constants::novariant_constants::{R1_MASK, R2_MASK};
         use smallvec::smallvec;
 
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.update_with_draw_action(10);
-        table_state.update_with_draw_action(20);
-        // Card 10 was already touched; card 20 is new.
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10); // R1
+        table_state.update_with_draw_action(20); // R2
+        table_state.active_player_index = 0;
         table_state.clue_touched_cards |= 1 << 10;
 
-        let knowledge = knowledge_with_visible(0, &[]);
-        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let knowledge = knowledge_with_visible(0, &[(10, R1_MASK), (20, R2_MASK)]);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(1).own_hand |= (1 << 10) | (1 << 20);
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
@@ -1063,19 +1131,25 @@ mod tests {
     }
 
     #[test]
-    fn mcvp_fails_when_all_touched_cards_were_already_clued() {
+    fn mcvp_fails_when_all_touched_identities_already_gotten() {
+        // Both cards are clue-touched and their identities (R1, R2) are known to the giver.
+        // R1 and R2 are already in gotten_cards → condition 1 fails.
+        // No new playing cards are created → condition 2 also fails.
         use crate::game::clue::Clue;
+        use crate::game::deck::unit_test_constants::novariant_constants::{R1_MASK, R2_MASK};
         use smallvec::smallvec;
 
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.update_with_draw_action(10);
-        table_state.update_with_draw_action(20);
-        // Both cards already touched — this is a tempo clue.
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10); // R1
+        table_state.update_with_draw_action(20); // R2
+        table_state.active_player_index = 0;
         table_state.clue_touched_cards |= (1 << 10) | (1 << 20);
 
-        let knowledge = knowledge_with_visible(0, &[]);
-        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let knowledge = knowledge_with_visible(0, &[(10, R1_MASK), (20, R2_MASK)]);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(1).own_hand |= (1 << 10) | (1 << 20);
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
@@ -1089,16 +1163,61 @@ mod tests {
     }
 
     #[test]
-    fn mcvp_passes_for_single_untouched_card() {
+    fn mcvp_fails_when_touching_only_signal_touched_gotten_card() {
+        // Card 10 (R1) carries a Signal::Play → it is signal-touched, and its identity is
+        // known to the giver. Under the new definition R1 is already gotten even though it
+        // was never clue-touched. Re-touching it with a clue fails condition 1.
+        use crate::engine::convention::hgroup::signal::Signal;
         use crate::game::clue::Clue;
+        use crate::game::deck::unit_test_constants::novariant_constants::{NoVarCards, R1_MASK};
         use smallvec::smallvec;
 
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.update_with_draw_action(10);
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10); // R1
+        table_state.active_player_index = 0;
+        // Card 10 is NOT clue-touched, but carries a Signal::Play (signal-touched).
 
-        let knowledge = knowledge_with_visible(0, &[]);
-        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let knowledge = knowledge_with_visible(0, &[(10, R1_MASK)]);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let pk = team_knowledge.player_mut(1);
+        pk.own_hand |= 1 << 10;
+        pk.add_signal(
+            10,
+            Signal::Play {
+                card_deck_index: 10,
+                committed_identity: NoVarCards::R1.as_variant_card_id(),
+            },
+        );
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let clue = Clue {
+            clue_type: ClueType::Color,
+            clue_value: 0, // red
+        };
+        let touched: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = smallvec::smallvec![10];
+
+        assert!(!is_minimal_clue_value_compliant(&clue, &0, &touched, &pov));
+    }
+
+    #[test]
+    fn mcvp_passes_for_single_untouched_card() {
+        // Card 10 (R1) is not yet touched at all — its identity R1 is not gotten → passes.
+        use crate::game::clue::Clue;
+        use crate::game::deck::unit_test_constants::novariant_constants::R1_MASK;
+        use smallvec::smallvec;
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10);
+        table_state.active_player_index = 0;
+
+        let knowledge = knowledge_with_visible(0, &[(10, R1_MASK)]);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(1).own_hand |= 1 << 10;
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
@@ -1109,6 +1228,72 @@ mod tests {
         let touched: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = smallvec::smallvec![10];
 
         assert!(is_minimal_clue_value_compliant(&clue, &0, &touched, &pov));
+    }
+
+    #[test]
+    fn mcvp_passes_via_condition2_when_clue_makes_two_gotten_cards_chain_playable() {
+        // Stacks: R1 played. Player 1 has R2 (card 10, gotten: clue-touched+known).
+        // Player 2 has R3 (card 20, gotten: clue-touched+known).
+        // Neither R2 nor R3 is "playing" yet because their chain is incomplete.
+        // Giver (player 0) touches card 30 (R1, already in gotten set via another card?).
+        //
+        // Actually: we set up R2 and R3 as gotten-but-not-playing by having them clue-touched.
+        // Then the giver clues card 30 (R2) in player 3's hand — R2 identity already gotten
+        // from card 10, so condition 1 fails. But touching card 30 (another R2) doesn't add
+        // new gotten. Condition 2 also doesn't fire. This test verifies the logic holds.
+        //
+        // Realistic condition-2 scenario: R1 is not yet on the stacks and not gotten.
+        // Giver clues card 30 = R1 (new touch, condition 1 passes) → R2 and R3 both become
+        // chain-playable. That's 2 newly-playing gotten cards. Condition 2 = 2 > 1 → passes.
+        // But condition 1 already passed first (R1 was not gotten), so we verify the count.
+        use crate::game::clue::Clue;
+        use crate::game::deck::unit_test_constants::novariant_constants::{
+            NoVarCards, R1_MASK, R2_MASK, R3_MASK,
+        };
+        use smallvec::smallvec;
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        // No stacks played — R1 is 1-away (away=0), R2 is 1-away, R3 is 2-away.
+        // Player 1: card 10 = R2, already gotten.
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10);
+        // Player 2: card 20 = R3, already gotten.
+        table_state.active_player_index = 2;
+        table_state.update_with_draw_action(20);
+        // Player 3: card 30 = R1, NOT yet gotten (this is the new clue target).
+        table_state.active_player_index = 3;
+        table_state.update_with_draw_action(30);
+        table_state.active_player_index = 0;
+        // Cards 10 and 20 are already clue-touched (gotten).
+        table_state.clue_touched_cards |= (1 << 10) | (1 << 20);
+
+        let knowledge =
+            knowledge_with_visible(0, &[(10, R2_MASK), (20, R3_MASK), (30, R1_MASK)]);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(1).own_hand |= 1 << 10;
+        team_knowledge.player_mut(2).own_hand |= 1 << 20;
+        team_knowledge.player_mut(3).own_hand |= 1 << 30;
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        // Clue touches card 30 (R1, not yet gotten) → condition 1 passes directly.
+        // Additionally, count_newly_playing_gotten should return 2 (R1 + R2 become playing,
+        // R3 also chain-playable through R2+R1 → 3 newly playing).
+        let clue = Clue {
+            clue_type: ClueType::Color,
+            clue_value: 0,
+        };
+        let touched: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = smallvec::smallvec![30];
+
+        assert!(is_minimal_clue_value_compliant(&clue, &0, &touched, &pov));
+        // Verify condition 2 count independently: R2 and R3 newly become playing (R1 was
+        // already immediately playable before the clue, so it doesn't count as a transition).
+        assert_eq!(
+            super::count_newly_playing_gotten(&touched, &pov),
+            2,
+            "R2 and R3 transition from non-playing to chain-playable once R1 is gotten"
+        );
     }
 
     // ── has_on_finesse_position ───────────────────────────────────────────

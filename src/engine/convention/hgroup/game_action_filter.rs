@@ -11,7 +11,7 @@ impl GameActionFilter {
         (self.filter)(action, pov)
     }
 
-    /// Rejects clue actions that violate the Minimum Clue Value Principle.
+    /// Rejects clue actions that violate the Minimum Clue Value Principle (MVCP).
     /// Non-clue actions always pass.
     pub fn minimum_clue_value() -> Self {
         GameActionFilter {
