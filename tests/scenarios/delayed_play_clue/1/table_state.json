@@ -1,5 +1,5 @@
 {
-  "scenario_description": "After receiving a rank-2 clue, Bob should entertain both the direct play clue and the delayed play clue (via her own playable 1 on slot 1) hypothesis, resulting in the correct inferred_identities mask",
+  "scenario_description": "State before rank-2 clue on Alice (turn 6). Prior action: Cathy gives rank-2 clue to Alice.",
   "suits": [
     "red",
     "yellow",
@@ -10,16 +10,18 @@
   "playing_stacks": [
     [], [], [], ["b1"], ["p1"]
   ],
-  "discard_pile": [],
-  "clue_tokens": 5,
   "strikes": 0,
-  "active_player": 1,
+  "active_player": 2,
+  "clue_tokens": 5,
+  "discard_pile": [],
   "hands": [
-    ["x", "x", "x", "x", "x"],
-    [{"id":  "r1", "positive": ["1"], "inferred":  "r1y1g1"}, "r2", "g4", "p2", "y4"],
-    ["b1", "g3", {"id": "p2", "positive": ["purple"], "inferred": "p2p3p4p5"}, "r5", "r4"]
+    [{"id": "r1", "inferred": "r1y1g1", "positive": ["1"]}, "r3", "g4", "p2", "y4"],
+    ["b1", {"id": "p2", "inferred": "p2p3p4p5", "positive": ["purple"]}, "r5", "r4"],
+    ["x", "x", "x", "x", "x"]
   ],
+
   "prior_actions": [
-    {"type": "clue", "giver": 0, "receiver": 1, "clue": "2"}
+    {"type": "clue", "giver": 2, "receiver": 0, "clue": "2"}
   ]
+
 }
