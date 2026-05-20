@@ -421,7 +421,7 @@ impl Default for DefaultEvaluator {
             known_playable_weight: 1.0_f64,
             team_empathy_weight: 0.3_f64,
             signal_ignored_penalty_weight: 5.0_f64,
-            misinformation_weight: 3.0_f64,
+            misinformation_weight: 0.0_f64,
             play_progress_weight: 1.0_f64,
             potential_bad_touch_penalty: 5.0_f64,
             bottom_deck_risk_weight: 3.0_f64,
