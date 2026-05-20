@@ -1,5 +1,5 @@
 use futures_util::{SinkExt, StreamExt};
-use tokio_tungstenite::{connect_async_tls_with_config, tungstenite::Message, Connector};
+use tokio_tungstenite::{Connector, connect_async_tls_with_config, tungstenite::Message};
 use tracing::{debug, error};
 
 use crate::external::hanablive::constants::{HOSTNAME, WEBSOCKET_PATH};

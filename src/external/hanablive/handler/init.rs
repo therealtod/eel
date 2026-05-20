@@ -2,8 +2,8 @@ use async_trait::async_trait;
 
 use super::Handler;
 use crate::external::hanablive::bot::HanabLiveBot;
-use crate::external::hanablive::dto::instruction_type::InstructionType;
 use crate::external::hanablive::dto::game_init_data::GameInitData;
+use crate::external::hanablive::dto::instruction_type::InstructionType;
 use crate::external::hanablive::handler::{ChatMessageHandler, HandlerError};
 
 pub struct InitHandler;

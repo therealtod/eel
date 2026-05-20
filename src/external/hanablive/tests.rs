@@ -347,7 +347,8 @@ mod dto_tests {
         let instruction = GetGameInfo1 { table_id: 123 };
         let msg = instruction.to_websocket_message();
         assert!(msg.starts_with("getGameInfo1 "));
-        let payload: serde_json::Value = serde_json::from_str(&msg["getGameInfo1 ".len()..]).unwrap();
+        let payload: serde_json::Value =
+            serde_json::from_str(&msg["getGameInfo1 ".len()..]).unwrap();
         assert_eq!(payload["tableID"], 123);
     }
 
@@ -356,7 +357,8 @@ mod dto_tests {
         let instruction = GetGameInfo2 { table_id: 456 };
         let msg = instruction.to_websocket_message();
         assert!(msg.starts_with("getGameInfo2 "));
-        let payload: serde_json::Value = serde_json::from_str(&msg["getGameInfo2 ".len()..]).unwrap();
+        let payload: serde_json::Value =
+            serde_json::from_str(&msg["getGameInfo2 ".len()..]).unwrap();
         assert_eq!(payload["tableID"], 456);
     }
 

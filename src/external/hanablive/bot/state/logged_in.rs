@@ -1,6 +1,6 @@
+use crate::external::hanablive::bot::BotEvent;
 use crate::external::hanablive::bot::state::common::CommonState;
 use crate::external::hanablive::bot::state::table_joined::TableJoinedState;
-use crate::external::hanablive::bot::BotEvent;
 use crate::external::hanablive::dto::outgoing::{PasswordProtectedTableJoin, TableJoin};
 
 #[derive(Debug)]
@@ -24,10 +24,7 @@ impl LoggedInState {
     ) -> Result<(), String> {
         self.sender
             .send(BotEvent::SendInstruction(Box::new(
-                PasswordProtectedTableJoin {
-                    table_id,
-                    password,
-                },
+                PasswordProtectedTableJoin { table_id, password },
             )))
             .map_err(|e| e.to_string())?;
         Ok(())

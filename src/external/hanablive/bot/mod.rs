@@ -1,18 +1,20 @@
 use tokio::sync::mpsc;
 use tracing::{debug, error, info};
 
+use crate::external::hanablive::bot::state::BotState;
+use crate::external::hanablive::bot::state::GameInitDataReceivedState;
 use crate::external::hanablive::bot::state::initial::InitialState;
 use crate::external::hanablive::bot::state::logged_in::LoggedInState;
 use crate::external::hanablive::bot::state::table_joined::TableJoinedState;
-use crate::external::hanablive::bot::state::BotState;
-use crate::external::hanablive::bot::state::GameInitDataReceivedState;
 use crate::external::hanablive::client::http_client::HttpClient;
 use crate::external::hanablive::client::websocket_client::WebSocketClient;
 use crate::external::hanablive::dto::game_init_data::GameInitData;
-use crate::external::hanablive::dto::instruction::game_action_list::{GameAction, GameActionListData};
-use crate::external::hanablive::dto::outgoing::Instruction;
-use crate::external::hanablive::dto::outgoing::GetGameInfo1;
+use crate::external::hanablive::dto::instruction::game_action_list::{
+    GameAction, GameActionListData,
+};
 use crate::external::hanablive::dto::instruction_type::InstructionType;
+use crate::external::hanablive::dto::outgoing::GetGameInfo1;
+use crate::external::hanablive::dto::outgoing::Instruction;
 use crate::external::hanablive::dto::table::Table;
 use crate::external::hanablive::handler::{Handler, TableListHandler};
 
@@ -68,9 +70,10 @@ impl HanabLiveBot {
 
         let sender = self.sender.clone();
 
-        if let BotState::Initial(initial) =
-            std::mem::replace(&mut self.state, BotState::Initial(InitialState::new(String::new(), String::new())))
-        {
+        if let BotState::Initial(initial) = std::mem::replace(
+            &mut self.state,
+            BotState::Initial(InitialState::new(String::new(), String::new())),
+        ) {
             let logged_in = LoggedInState {
                 common_state: initial.common_state,
                 sender: sender.clone(),
@@ -168,7 +171,11 @@ impl HanabLiveBot {
             }
             InstructionType::GameActionList => {
                 let game_action_list: GameActionListData = serde_json::from_str(payload)?;
-                if let Err(e) = self.state.on_game_action_list_received(game_action_list).await {
+                if let Err(e) = self
+                    .state
+                    .on_game_action_list_received(game_action_list)
+                    .await
+                {
                     error!("Error processing game action list: {}", e);
                 }
             }
@@ -207,11 +214,15 @@ impl HanabLiveBot {
     }
 
     pub async fn on_game_init_data_received(&mut self, game_init_data: GameInitData) {
-        info!("Game init data received for table {}", game_init_data.table_id);
+        info!(
+            "Game init data received for table {}",
+            game_init_data.table_id
+        );
 
-        if let BotState::TableJoined(table_joined) =
-            std::mem::replace(&mut self.state, BotState::Initial(InitialState::new(String::new(), String::new())))
-        {
+        if let BotState::TableJoined(table_joined) = std::mem::replace(
+            &mut self.state,
+            BotState::Initial(InitialState::new(String::new(), String::new())),
+        ) {
             let _ = self.sender.send(BotEvent::TransitionToGameInitDataReceived(
                 table_joined,
                 game_init_data,
@@ -220,9 +231,10 @@ impl HanabLiveBot {
     }
 
     pub async fn join_table(&mut self, table_id: usize) -> Result<(), Error> {
-        if let BotState::LoggedIn(logged_in) =
-            std::mem::replace(&mut self.state, BotState::Initial(InitialState::new(String::new(), String::new())))
-        {
+        if let BotState::LoggedIn(logged_in) = std::mem::replace(
+            &mut self.state,
+            BotState::Initial(InitialState::new(String::new(), String::new())),
+        ) {
             let sender = logged_in.sender.clone();
             logged_in.join_table(table_id).await.map_err(Error::State)?;
             let logged_in2 = LoggedInState {
@@ -241,9 +253,10 @@ impl HanabLiveBot {
         table_id: usize,
         password: String,
     ) -> Result<(), Error> {
-        if let BotState::LoggedIn(logged_in) =
-            std::mem::replace(&mut self.state, BotState::Initial(InitialState::new(String::new(), String::new())))
-        {
+        if let BotState::LoggedIn(logged_in) = std::mem::replace(
+            &mut self.state,
+            BotState::Initial(InitialState::new(String::new(), String::new())),
+        ) {
             let sender = logged_in.sender.clone();
             logged_in
                 .join_table_with_password(table_id, password)

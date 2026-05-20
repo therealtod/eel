@@ -3,8 +3,8 @@ use serde_json::Value;
 
 use super::Handler;
 use crate::external::hanablive::bot::HanabLiveBot;
-use crate::external::hanablive::dto::outgoing::GetGameInfo1;
 use crate::external::hanablive::dto::instruction_type::InstructionType;
+use crate::external::hanablive::dto::outgoing::GetGameInfo1;
 use crate::external::hanablive::handler::{ChatMessageHandler, HandlerError};
 
 pub struct TableStartHandler;

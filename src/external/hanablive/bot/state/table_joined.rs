@@ -1,6 +1,6 @@
+use crate::external::hanablive::bot::BotEvent;
 use crate::external::hanablive::bot::state::common::CommonState;
 use crate::external::hanablive::bot::state::game_init_data_received::GameInitDataReceivedState;
-use crate::external::hanablive::bot::BotEvent;
 use crate::external::hanablive::dto::game_init_data::GameInitData;
 
 #[derive(Debug)]

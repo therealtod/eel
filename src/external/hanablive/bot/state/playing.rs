@@ -1,5 +1,5 @@
-use crate::external::hanablive::bot::state::common::CommonState;
 use crate::external::hanablive::bot::BotEvent;
+use crate::external::hanablive::bot::state::common::CommonState;
 use crate::external::hanablive::dto::game_init_data::GameInitData;
 use crate::external::hanablive::dto::instruction::game_action_data::GameActionData;
 use crate::external::hanablive::dto::instruction::game_action_list::GameAction;
