@@ -215,3 +215,24 @@ fn prefers_to_clue_rank_1_rather_than_picking_up_1s_by_color() {
         _ => panic!("expected to clue rank-1 to Cathy's, got: {action:?}"),
     }
 }
+
+#[test]
+#[ignore]
+fn should_avoid_bad_touch() {
+    let action = search_best_action(
+        "should_avoid_bad_touch",
+    );
+    if let
+        GameAction::Clue {
+            player_index: 1,
+            clue:
+            Clue {
+                clue_type: ClueType::Rank,
+                clue_value: 1,
+            },
+            ..
+        } = action { panic!("Alice decided to clue both b1s, generating a bad touch: {action:?}") }
+    else {
+        println!("action: {:?}", action);
+    }
+}

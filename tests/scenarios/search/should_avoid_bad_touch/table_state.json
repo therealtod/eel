@@ -1,0 +1,23 @@
+{
+  "scenario_description": "Alice should not be in any rush to get the b1, since there are two copies in Bob's hand and cluing immediately will generate a bad touch",
+  "suits": [
+    "red",
+    "yellow",
+    "green",
+    "blue",
+    "purple"
+  ],
+  "active_player": 0,
+  "playing_stacks": [
+    ["r1"], [], ["g1", "g2"], [], []
+  ],
+  "discard_pile": ["r1"],
+  "clue_tokens": 4,
+  "strikes": 0,
+  "player_on_turn": 0,
+  "hands": [
+    ["x", "x", {"id": "g3", "positive": ["green"], "inferred": "g3g5"}, "x", "x"],
+    ["y4", "p2", "b1", {"id": "g4", "positive": ["green"], "inferred": "g4g5"}, "b1"],
+    ["p4", "y3", "p4", "p3", "y3"]
+  ]
+}
