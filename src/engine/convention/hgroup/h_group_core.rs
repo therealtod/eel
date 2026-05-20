@@ -185,20 +185,16 @@ pub fn is_minimal_clue_value_compliant(
     debug_assert!(!touched_cards.is_empty(), "No touched cards");
 
     // Condition 1: at least one touched card has an identity not yet in the gotten set.
-    if touched_cards
-        .iter()
-        .any(|&idx| player_pov.card_identity(idx).map_or(true, |id| !player_pov.is_gotten(id)))
-    {
+    if touched_cards.iter().any(|&idx| {
+        player_pov
+            .card_identity(idx)
+            .map_or(true, |id| !player_pov.is_gotten(id))
+    }) {
         return true;
     }
 
     // Condition 2: more than one card transitions from "not going to play" to "going to play".
-    count_newly_going_to_play(
-        clue,
-        *clue_receiver_player_index,
-        touched_cards,
-        player_pov,
-    ) > 1
+    count_newly_going_to_play(clue, *clue_receiver_player_index, touched_cards, player_pov) > 1
 }
 
 /// Overlay describing how a candidate clue would change holder-level empathy and signals.
@@ -1423,7 +1419,9 @@ mod tests {
         // 20=R3 (touched, holder=P2), 30=R1 (untouched, holder=P3). The clue touches card 30,
         // which carries an identity not yet in the gotten set — condition 1 alone passes MCVP.
         use crate::game::clue::Clue;
-        use crate::game::deck::unit_test_constants::novariant_constants::{R1_MASK, R2_MASK, R3_MASK};
+        use crate::game::deck::unit_test_constants::novariant_constants::{
+            R1_MASK, R2_MASK, R3_MASK,
+        };
         use smallvec::smallvec;
 
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
@@ -1437,8 +1435,7 @@ mod tests {
         table_state.active_player_index = 0;
         table_state.clue_touched_cards |= (1 << 10) | (1 << 20);
 
-        let knowledge =
-            knowledge_with_visible(0, &[(10, R2_MASK), (20, R3_MASK), (30, R1_MASK)]);
+        let knowledge = knowledge_with_visible(0, &[(10, R2_MASK), (20, R3_MASK), (30, R1_MASK)]);
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(1).own_hand |= 1 << 10;
         team_knowledge.player_mut(2).own_hand |= 1 << 20;

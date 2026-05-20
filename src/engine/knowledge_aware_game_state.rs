@@ -388,24 +388,16 @@ impl KnowledgeAwareGameState {
                     None
                 }
             });
-            // Truth override: prefer the thinker's view of the card when their truth
-            // CONTRADICTS the active player's empathy — i.e. the empathy candidates do not
-            // include the true identity. This catches:
-            //  - empathy collapsed to a singleton, but truth says a different identity
-            //    (duplicate-trash converging on a playable id);
-            //  - empathy is ambiguous-but-all-playable, but truth is something outside
-            //    that set (also typically trash) — the play should strike, not succeed.
-            // When the truth IS one of the empathy candidates, fall back to empathy: the
-            // active player's reasoning is consistent with the truth, and an ambiguous-
-            // but-playable case must keep flowing into the phantom-play branch so the
-            // search doesn't commit to a specific stack just because truth is visible.
+            // Truth override: when the truth player can directly observe this card's
+            // identity, use it — regardless of whether that identity is in the active
+            // player's empathy. This correctly models cases such as two copies of the
+            // same card in one hand (e.g. two b1s): the first play advances the stack
+            // via truth; the second play then finds b1 no longer playable and strikes,
+            // rather than receiving a second phantom-play bonus for the same identity.
+            // Phantom plays are reserved for cards the truth player cannot observe
+            // (own unseen cards, or cards drawn from the deck mid-simulation).
             let truth_id = truth.card_identity(card_deck_index);
-            let empathy_contains_truth =
-                truth_id.is_some_and(|t| combined.as_bits() & (1 << t) != 0);
-            let id = match (empathy_id, truth_id) {
-                (_, Some(t)) if !empathy_contains_truth => Some(t),
-                _ => empathy_id,
-            };
+            let id = truth_id.or(empathy_id);
             (id, has_play_signal)
         };
         let stack_advanced;

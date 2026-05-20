@@ -5,10 +5,10 @@ use crate::engine::convention::hgroup::h_group_core::{
 use crate::engine::game_state_snapshot::GameStateSnapshot;
 use crate::engine::knowledge::knowledge_update::Hypothesis;
 use crate::engine::knowledge::player_pov::PlayerPOV;
+use crate::game::MAX_CLUE_TOKEN_COUNT;
 use crate::game::action::game_action::GameAction;
 use crate::game::clue::Clue;
 use crate::game::clue_type::ClueType;
-use crate::game::MAX_CLUE_TOKEN_COUNT;
 
 /// Last-resort stall: invoked when no other tech produces an action.
 ///
@@ -55,10 +55,10 @@ impl ConventionTech for LowLevelStall {
 
             // Priority 1: clue rank 5 to the first teammate who holds a 5.
             for target in (0..num_players).filter(|&p| p != active) {
-                let has_five = table_state.hands[target]
-                    .cards()
-                    .iter()
-                    .any(|&idx| pov.card_identity(idx).is_some_and(|id| (1u64 << id) & rank5_mask != 0));
+                let has_five = table_state.hands[target].cards().iter().any(|&idx| {
+                    pov.card_identity(idx)
+                        .is_some_and(|id| (1u64 << id) & rank5_mask != 0)
+                });
                 if has_five {
                     let touched = touched_cards_for_clue(target, &rank5_clue, pov);
                     if !touched.is_empty() {
@@ -183,7 +183,10 @@ mod tests {
             vec![GameAction::Clue {
                 player_index: 1,
                 touched_card_deck_indexes: smallvec![10],
-                clue: Clue { clue_type: ClueType::Rank, clue_value: 5 },
+                clue: Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 5
+                },
                 turn: 3,
             }]
         );
@@ -211,7 +214,10 @@ mod tests {
 
         assert_eq!(actions.len(), 1);
         let touched = match &actions[0] {
-            GameAction::Clue { touched_card_deck_indexes, .. } => touched_card_deck_indexes,
+            GameAction::Clue {
+                touched_card_deck_indexes,
+                ..
+            } => touched_card_deck_indexes,
             _ => panic!("expected clue"),
         };
         assert!(touched.contains(&10));
