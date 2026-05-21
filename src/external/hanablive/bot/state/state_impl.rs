@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use super::common::CommonState;
 use super::game_init_data_received::GameInitDataReceivedState;
 use super::initial::InitialState;
 use super::logged_in::LoggedInState;

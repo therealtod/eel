@@ -1,6 +1,6 @@
 use crate::engine::convention::convention_tech::ClueTech;
 use crate::engine::convention::hgroup::h_group_core::{
-    clues_for_player_with_focus, get_clue_focus, has_pending_play_signal,
+    clues_for_player_with_focus, get_clue_focus,
 };
 use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, PlayClueTech, priority};
 use crate::engine::game_state_snapshot::GameStateSnapshot;
@@ -153,14 +153,14 @@ mod tests {
     use crate::engine::knowledge::player_knowledge::{PlayerKnowledge, knowledge_with_visible};
     use crate::engine::knowledge::team_knowledge::TeamKnowledge;
     use crate::game::action::game_action::GameAction;
-    use crate::game::card::{CardDeckIndex, CardIdentityMask};
+    use crate::game::card::CardIdentityMask;
     use crate::game::clue::Clue;
     use crate::game::clue_type::ClueType;
     use crate::game::deck::unit_test_constants::novariant_constants::{R1_MASK, R2_MASK, Y1_MASK};
     use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
         NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
     };
-    use smallvec::smallvec;
+    
 
     // ── game_actions ───────────────────────────────────────────────────────────
 

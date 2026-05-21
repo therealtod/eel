@@ -331,9 +331,9 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
 mod tests {
     use super::*;
     use crate::engine::knowledge::player_knowledge::knowledge_with_empathy;
-    use crate::game::action::game_action::GameAction;
-    use crate::game::card::CardIdentityMask;
-    use crate::game::clue_type::ClueType;
+    
+    
+    
     use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards::*;
     use crate::game::deck::unit_test_constants::novariant_constants::*;
     use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
@@ -698,7 +698,7 @@ mod tests {
         table_state.update_with_draw_action(0);
         table_state.clue_touched_cards |= 1 << 0;
 
-        let mut knowledge = knowledge_with_empathy(0, R1_MASK);
+        let knowledge = knowledge_with_empathy(0, R1_MASK);
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(0).own_hand |= 1 << 0;
 

@@ -7,7 +7,7 @@ use crate::engine::convention::hgroup::h_group_core::{
 use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, PlayClueTech, priority};
 use crate::engine::game_state_snapshot::GameStateSnapshot;
 use crate::engine::knowledge::knowledge_update::{
-    AltGroupKey, Hypothesis, HypothesisId, HypothesisSet, KnowledgeUpdate, PendingTrigger,
+    AltGroupKey, Hypothesis, HypothesisSet, KnowledgeUpdate, PendingTrigger,
 };
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
@@ -375,7 +375,7 @@ mod tests {
     use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
         NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
     };
-    use smallvec::smallvec;
+    
 
     // ── game_actions ───────────────────────────────────────────────────────────
 

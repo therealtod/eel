@@ -1360,9 +1360,7 @@ mod tests {
 
     #[test]
     fn combined_hidden_not_own_hand_returns_effective_without_observable_narrowing() {
-        use crate::game::deck::unit_test_constants::novariant_constants::{
-            NoVarCards::*, R1_MASK,
-        };
+        use crate::game::deck::unit_test_constants::novariant_constants::R1_MASK;
         use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
             NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
         };

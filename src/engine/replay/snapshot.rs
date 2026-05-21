@@ -394,7 +394,7 @@ mod tests {
     fn reconstruct_clues_color_and_rank() {
         // B5 only (id=19)
         let b5_mask: u64 = 1 << 19;
-        let (pos, neg) = reconstruct_clues(b5_mask, &NO_VARIANT);
+        let (pos, _neg) = reconstruct_clues(b5_mask, &NO_VARIANT);
         assert!(pos.contains(&"blue".to_string()), "expected blue positive");
         assert!(pos.contains(&"5".to_string()), "expected rank 5 positive");
         // 4 other colors negative, 4 other ranks negative
