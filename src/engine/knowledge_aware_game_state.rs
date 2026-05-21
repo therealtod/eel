@@ -6,6 +6,7 @@ use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge::player_pov_snapshot::PlayerPOVSnapshot;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
+use crate::engine::play_resolver::{DrawnCard, PlayResolver};
 use crate::game::MAX_HAND_SIZE;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, VariantCardId};
@@ -250,7 +251,7 @@ impl KnowledgeAwareGameState {
 
     // ── Search helpers ────────────────────────────────────────────────────────
 
-    /// Apply a `GameAction` (hidden-information flavour) and propagate convention knowledge.
+    /// Apply a `GameAction` and propagate convention knowledge.
     /// Does NOT advance the turn; call `advance_turn()` separately.
     ///
     /// For clue actions the `turn` field is set to `self.history_len() - 1` so the action
@@ -260,17 +261,15 @@ impl KnowledgeAwareGameState {
     ///
     /// The search uses clone-and-recurse, so no undo token is needed.
     ///
-    /// `truth` is the POV of the player who is reasoning about this action. For search,
-    /// it is the ROOT searcher (held fixed across recursion), so play resolution can use
-    /// the searcher's view of visible cards rather than the simulated active player's
-    /// (possibly mistaken) empathy. For replay/tests with no specific thinker, callers
-    /// should pass the active player's own POV — this preserves the legacy empathy-based
-    /// resolution behavior.
+    /// `resolver` determines how played/discarded card identities are resolved and how
+    /// replacement draws are handled. Use [`TruthPovResolver`](crate::engine::play_resolver::TruthPovResolver)
+    /// for search and [`GroundTruthResolver`](crate::engine::play_resolver::GroundTruthResolver)
+    /// for replay.
     pub fn apply(
         &mut self,
         action: &GameAction,
         convention_set: &dyn ConventionSet,
-        truth: &dyn PlayerPOV,
+        resolver: &mut dyn PlayResolver,
     ) -> ActionOutcome {
         let actor = self.table_state.active_player_index();
         let mut outcome = ActionOutcome::default();
@@ -278,14 +277,15 @@ impl KnowledgeAwareGameState {
             GameAction::Play {
                 card_deck_index, ..
             } => {
-                let (known, was_phantom) = self.apply_play(*card_deck_index, convention_set, truth);
+                let (known_id, was_phantom) =
+                    self.apply_play(*card_deck_index, convention_set, resolver);
                 outcome.is_phantom_play = was_phantom;
-                truth.card_identity(*card_deck_index).or(known)
+                known_id
             }
             GameAction::Discard {
                 card_deck_index, ..
             } => {
-                self.apply_discard(*card_deck_index, truth);
+                self.apply_discard(*card_deck_index, resolver);
                 None
             }
             GameAction::Clue {
@@ -330,7 +330,7 @@ impl KnowledgeAwareGameState {
         &mut self,
         card_deck_index: CardDeckIndex,
         convention_set: &dyn ConventionSet,
-        truth: &dyn PlayerPOV,
+        resolver: &mut dyn PlayResolver,
     ) -> (Option<VariantCardId>, bool) {
         let p = self.table_state.active_player_index();
         let turn_counter = self.table_state.current_turn;
@@ -357,91 +357,121 @@ impl KnowledgeAwareGameState {
         //
         // Three outcomes, in priority order:
         //
-        // 1. Singleton identity: empathy (possibly narrowed by play signal ∩ playable) resolves to
-        //    exactly one `card_id`. Use the full table-state path that advances the matching
-        //    stack or records a strike. Covers fully-clued plays and BlindPlay/finesse plays
-        //    that uniquely identify the card.
+        // 1. Singleton identity: resolver returns `Known(card_id)`. Use the full table-state
+        //    path that advances the matching stack or records a strike.
         //
-        // 2. Known-playable but multi-id: the player has a `Signal::Play` and the empathy ∩
-        //    playable intersection is non-empty (multiple playable candidates remain). The play
+        // 2. Known-playable but multi-id: resolver returns `KnownPlayableAmbiguous`. The play
         //    is guaranteed to succeed in expectation, but we deliberately refuse to commit to
         //    a single stack — guessing would distort downstream playability/criticality
-        //    reasoning ("I assumed r2 was played, so r3 is now playable"). Instead, increment
-        //    `phantom_plays` so the effective score advances without revealing any identity.
+        //    reasoning. Instead, record a phantom play so the effective score advances without
+        //    revealing any identity.
         //
-        // 3. Truly unknown: no signal, identity not narrowed. Fall back to the hidden-info path
-        //    (card removed from hand, no score change). This is essentially unreachable for
+        // 3. Truly unknown: resolver returns `Unknown`. Fall back to the hidden-info path
+        //    (card removed from hand, no score change). Essentially unreachable for
         //    legitimate Play actions generated by `PlayKnownPlayable` / `BlindPlay`.
-        let (known_id, has_play_signal) = {
-            let knowledge = self.team_knowledge.player(p);
-            let has_play_signal = knowledge.has_play_signal(card_deck_index);
-            let combined = knowledge.combined_possible_identities(
-                card_deck_index,
-                &self.table_state,
-                &self.static_data.variant,
-            );
-            let empathy_id = combined.known_card_id().or_else(|| {
-                if has_play_signal {
-                    let playable = self.table_state.playable_cards(&self.static_data);
-                    combined.narrow(playable).and_then(|e| e.known_card_id())
-                } else {
-                    None
-                }
-            });
-            // Truth override: when the truth player can directly observe this card's
-            // identity, use it — regardless of whether that identity is in the active
-            // player's empathy. This correctly models cases such as two copies of the
-            // same card in one hand (e.g. two b1s): the first play advances the stack
-            // via truth; the second play then finds b1 no longer playable and strikes,
-            // rather than receiving a second phantom-play bonus for the same identity.
-            // Phantom plays are reserved for cards the truth player cannot observe
-            // (own unseen cards, or cards drawn from the deck mid-simulation).
-            let truth_id = truth.card_identity(card_deck_index);
-            let id = truth_id.or(empathy_id);
-            (id, has_play_signal)
-        };
+        let resolved = resolver.resolve_play(p, card_deck_index, self);
         let stack_advanced;
         let mut is_phantom = false;
-        if let Some(card_id) = known_id {
-            let pre = self
-                .table_state
-                .playing_stacks
-                .stack_size((card_id as usize) / self.static_data.variant.stacks_size as usize);
-            self.table_state.update_with_play_action_of_specific_card(
-                card_deck_index,
-                card_id,
-                &self.static_data,
-            );
-            let post = self
-                .table_state
-                .playing_stacks
-                .stack_size((card_id as usize) / self.static_data.variant.stacks_size as usize);
-            stack_advanced = post > pre;
-        } else if self.is_known_playable_play(p, card_deck_index, has_play_signal) {
-            self.table_state.update_with_play_action(card_deck_index);
-            is_phantom = true;
-            stack_advanced = false;
-        } else {
-            self.table_state.update_with_play_action(card_deck_index);
-            stack_advanced = false;
+        let known_id: Option<VariantCardId>;
+        use crate::engine::play_resolver::ResolvedPlay;
+        match resolved {
+            ResolvedPlay::Known(card_id) => {
+                known_id = Some(card_id);
+                let pre = self
+                    .table_state
+                    .playing_stacks
+                    .stack_size((card_id as usize) / self.static_data.variant.stacks_size as usize);
+                self.table_state.update_with_play_action_of_specific_card(
+                    card_deck_index,
+                    card_id,
+                    &self.static_data,
+                );
+                let post = self
+                    .table_state
+                    .playing_stacks
+                    .stack_size((card_id as usize) / self.static_data.variant.stacks_size as usize);
+                stack_advanced = post > pre;
+            }
+            ResolvedPlay::KnownPlayableAmbiguous => {
+                known_id = None;
+                self.table_state.update_with_play_action(card_deck_index);
+                is_phantom = true;
+                stack_advanced = false;
+            }
+            ResolvedPlay::Unknown => {
+                known_id = None;
+                self.table_state.update_with_play_action(card_deck_index);
+                stack_advanced = false;
+            }
         }
         self.remove_card_from_own_hand(p, card_deck_index);
-        self.update_with_unkown_card_draw(p);
+
+        // Draw the replacement card. Replay mode draws a known card (reveals identity to
+        // teammates); search mode synthesizes an unknown card via update_with_unkown_card_draw.
+        match resolver.draw_next(self.table_state.deck.current_size, self.next_deck_index) {
+            DrawnCard::Empty => {}
+            DrawnCard::Known { card_id } => {
+                let idx = self.next_deck_index;
+                self.next_deck_index += 1;
+                self.update_with_draw_action_of_specific_card(p, idx, card_id);
+            }
+            DrawnCard::Unknown => {
+                self.update_with_unkown_card_draw(p);
+            }
+        }
 
         // Aggressive Good-Touch reinterpretation: when a play resolves to a specific
         // identity and advances a stack, that identity is now trash (further copies
         // are duplicates). Re-narrow every clue-touched, not-already-known-trash card
-        // in every player's hand against the updated `still_needed` mask, so a
-        // possibly-playable touched card can collapse to a known playable once one of
-        // its candidates becomes played-and-thus-trash.
+        // in every player's hand against the updated `still_needed` mask.
         if stack_advanced {
             self.reapply_good_touch_after_state_change();
         }
 
+        self.apply_actor_cohort(p, &actor_hypotheses);
+        (known_id, is_phantom)
+    }
+
+    fn apply_discard(&mut self, card_deck_index: CardDeckIndex, resolver: &mut dyn PlayResolver) {
+        let p = self.table_state.active_player_index();
+        let known_id = resolver.resolve_discard(p, card_deck_index, self);
+        if let Some(card_id) = known_id {
+            // Identity known: record per-id count and reveal the slot. Bonus token handling
+            // is folded into `update_with_discard_action_of_specific_card`.
+            self.table_state
+                .update_with_discard_action_of_specific_card(
+                    card_deck_index,
+                    card_id,
+                    &self.static_data,
+                );
+        } else {
+            self.table_state
+                .update_with_discard_action(card_deck_index, &self.static_data);
+        }
+        self.remove_card_from_own_hand(p, card_deck_index);
+
+        match resolver.draw_next(self.table_state.deck.current_size, self.next_deck_index) {
+            DrawnCard::Empty => {}
+            DrawnCard::Known { card_id } => {
+                let idx = self.next_deck_index;
+                self.next_deck_index += 1;
+                self.update_with_draw_action_of_specific_card(p, idx, card_id);
+            }
+            DrawnCard::Unknown => {
+                self.update_with_unkown_card_draw(p);
+            }
+        }
+    }
+
+    /// Distribute hypotheses from `actor`'s play/discard to all other players' knowledge.
+    ///
+    /// Each recipient's copy is filtered down to cards that are actually in their hand,
+    /// then applied as a new cohort.
+    fn apply_actor_cohort(&mut self, actor: usize, actor_hypotheses: &[(u8, Hypothesis)]) {
         let num_players = self.static_data.number_of_players as usize;
         let cohort_id = self.next_hypothesis_id;
         self.next_hypothesis_id += 1;
-        for target in (0..num_players).filter(|&t| t != p) {
+        for target in (0..num_players).filter(|&t| t != actor) {
             let own_hand = self.team_knowledge.player(target).own_hand;
             let filtered: Vec<(u8, Hypothesis)> = actor_hypotheses
                 .iter()
@@ -472,51 +502,6 @@ impl KnowledgeAwareGameState {
                 &self.static_data.variant,
             );
         }
-        known_id
-            .map(|id| (Some(id), is_phantom))
-            .unwrap_or((None, is_phantom))
-    }
-
-    fn apply_discard(&mut self, card_deck_index: CardDeckIndex, truth: &dyn PlayerPOV) {
-        let p = self.table_state.active_player_index();
-        let num_players = self.static_data.number_of_players as usize;
-        // Identity resolution priority:
-        //  1. Truth POV: the root searcher sees teammates' hands, so an untouched card the
-        //     active player discards usually has a known identity from the searcher's view.
-        //     Without this, untouched discards never record per-id counts in the discard
-        //     pile — corrupting `max_achievable_score`, `critical_cards_in_hand`, and the
-        //     CriticalSave tech's reading of which copies remain.
-        //  2. Spectator inferred knowledge: convention-narrowed identity from another player.
-        //  3. Global deck empathy: fallback for cards no observer can pin down.
-        let known_id: Option<VariantCardId> = truth.card_identity(card_deck_index).or_else(|| {
-            (0..num_players)
-                .filter(|&obs| obs != p)
-                .map(|obs| {
-                    let pk = self.team_knowledge.player(obs);
-                    pk.combined_possible_identities(
-                        card_deck_index,
-                        &self.table_state,
-                        &self.static_data.variant,
-                    )
-                })
-                .find(|e| e.is_exactly_known())
-                .and_then(|e| e.known_card_id())
-        });
-        if let Some(card_id) = known_id {
-            // Identity known: record per-id count and reveal the slot. Bonus token handling
-            // is folded into `update_with_discard_action_of_specific_card`.
-            self.table_state
-                .update_with_discard_action_of_specific_card(
-                    card_deck_index,
-                    card_id,
-                    &self.static_data,
-                );
-        } else {
-            self.table_state
-                .update_with_discard_action(card_deck_index, &self.static_data);
-        }
-        self.remove_card_from_own_hand(p, card_deck_index);
-        self.update_with_unkown_card_draw(p);
     }
 
     fn apply_clue(
@@ -826,7 +811,7 @@ impl KnowledgeAwareGameState {
     ///   identity remains), OR
     /// - every identity in the player's combined empathy is a currently-playable card (no signal
     ///   needed; the card has been narrowed to a subset of the playable set).
-    fn is_known_playable_play(
+    pub(crate) fn is_known_playable_play(
         &self,
         player_index: usize,
         card_deck_index: CardDeckIndex,
@@ -890,6 +875,7 @@ impl KnowledgeAwareGameState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engine::play_resolver::TruthPovResolver;
     use crate::game::card::CardIdentityMask;
     use crate::game::clue_type::ClueType;
     use crate::game::variant::test_variants::NO_VARIANT;
@@ -1028,14 +1014,14 @@ mod tests {
         let team_clone = state.team_knowledge.clone();
         let table_clone = state.table_state.clone();
         let static_clone = state.static_data.clone();
-        let truth = LightweightPlayerPOV::new(
+        let pov = LightweightPlayerPOV::new(
             0,
             &knowledge_clone,
             &team_clone,
             &table_clone,
             &static_clone,
         );
-        let outcome = state.apply(&play_action, &conventions, &truth);
+        let outcome = state.apply(&play_action, &conventions, &mut TruthPovResolver::new(&pov));
 
         assert!(
             outcome.is_phantom_play,
@@ -1074,7 +1060,7 @@ mod tests {
         let team_clone = state.team_knowledge.clone();
         let table_clone = state.table_state.clone();
         let static_clone = state.static_data.clone();
-        let truth = LightweightPlayerPOV::new(
+        let pov = LightweightPlayerPOV::new(
             0,
             &knowledge_clone,
             &team_clone,
@@ -1088,7 +1074,7 @@ mod tests {
                 turn: 1,
             },
             &conventions,
-            &truth,
+            &mut TruthPovResolver::new(&pov),
         );
 
         assert!(!outcome.is_phantom_play);
@@ -1152,14 +1138,14 @@ mod tests {
         let team_clone = state.team_knowledge.clone();
         let table_clone = state.table_state.clone();
         let static_clone = state.static_data.clone();
-        let truth = LightweightPlayerPOV::new(
+        let pov = LightweightPlayerPOV::new(
             1,
             &knowledge_clone,
             &team_clone,
             &table_clone,
             &static_clone,
         );
-        let _ = state.apply(&action, &conv, &truth);
+        let _ = state.apply(&action, &conv, &mut TruthPovResolver::new(&pov));
 
         let alice = state.team_knowledge.player(0);
 

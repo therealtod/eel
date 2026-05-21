@@ -4,9 +4,8 @@ use smallvec::SmallVec;
 
 use crate::engine::action_selection_strategy::ActionSelectionStrategy;
 use crate::engine::convention::convention_set::ConventionSet;
-use crate::engine::knowledge::knowledge_update::{Hypothesis, HypothesisId};
-use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
-use crate::engine::knowledge_aware_game_state::{KnowledgeAwareGameState, collect_hypotheses};
+use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
+use crate::engine::play_resolver::GroundTruthResolver;
 use crate::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
 use crate::external::hanablive::{Action, ActionType, Card};
 use crate::game::MAX_HAND_SIZE;
@@ -56,10 +55,6 @@ pub struct ReplayRunner<'a> {
     pub actual_deck: Vec<VariantCardId>,
     pub static_data: StaticGameData,
     convention_set: &'a dyn ConventionSet,
-    /// Monotonic counter for hypothesis cohort IDs. Separate from the one
-    /// inside KnowledgeAwareGameState so spectator-mode paths don't collide
-    /// with search-mode paths.
-    next_hypothesis_id: HypothesisId,
     actions: Vec<Action>,
     cursor: usize,
 }
@@ -107,7 +102,6 @@ impl<'a> ReplayRunner<'a> {
             actual_deck,
             static_data,
             convention_set,
-            next_hypothesis_id: 0,
             actions,
             cursor: 0,
         };
@@ -135,7 +129,6 @@ impl<'a> ReplayRunner<'a> {
             actual_deck,
             static_data,
             convention_set,
-            next_hypothesis_id: 0,
             actions: Vec::new(),
             cursor: 0,
         };
@@ -161,7 +154,15 @@ impl<'a> ReplayRunner<'a> {
                         deck_size: self.actual_deck.len(),
                     });
                 }
-                self.apply_play(deck_idx);
+                let p = self.game.table_state.active_player_index;
+                let turn = self.game.table_state.current_turn;
+                let game_action = GameAction::Play {
+                    player_index: p,
+                    card_deck_index: deck_idx,
+                    turn,
+                };
+                let mut resolver = GroundTruthResolver::new(&self.actual_deck);
+                self.game.apply(&game_action, self.convention_set, &mut resolver);
                 AppliedAction::Play
             }
             ActionType::Discard => {
@@ -172,7 +173,15 @@ impl<'a> ReplayRunner<'a> {
                         deck_size: self.actual_deck.len(),
                     });
                 }
-                self.apply_discard(deck_idx);
+                let p = self.game.table_state.active_player_index;
+                let turn = self.game.table_state.current_turn;
+                let game_action = GameAction::Discard {
+                    player_index: p,
+                    card_deck_index: deck_idx,
+                    turn,
+                };
+                let mut resolver = GroundTruthResolver::new(&self.actual_deck);
+                self.game.apply(&game_action, self.convention_set, &mut resolver);
                 AppliedAction::Discard
             }
             ActionType::ColorClue | ActionType::RankClue => {
@@ -197,21 +206,8 @@ impl<'a> ReplayRunner<'a> {
                     clue,
                     turn,
                 };
-                // Clue actions never consult `truth` (only Play does), but `apply` takes
-                // a POV for type uniformity. Clone the minimum needed to satisfy borrowck.
-                let active = self.game.table_state.active_player_index;
-                let knowledge_clone = self.game.team_knowledge.player(active).clone();
-                let team_clone = self.game.team_knowledge.clone();
-                let table_clone = self.game.table_state.clone();
-                let static_data_clone = self.game.static_data().clone();
-                let truth = LightweightPlayerPOV::new(
-                    active,
-                    &knowledge_clone,
-                    &team_clone,
-                    &table_clone,
-                    &static_data_clone,
-                );
-                let _ = self.game.apply(&game_action, self.convention_set, &truth);
+                let mut resolver = GroundTruthResolver::new(&self.actual_deck);
+                let _ = self.game.apply(&game_action, self.convention_set, &mut resolver);
                 AppliedAction::Clue
             }
             ActionType::EndGame => unreachable!("EndGame filtered in from_hanablive"),
@@ -313,26 +309,9 @@ impl<'a> ReplayRunner<'a> {
     /// that selfplay retains control of final-round counting and logging.
     pub fn apply_strategy_action(&mut self, action: &GameAction) {
         match action {
-            GameAction::Play {
-                card_deck_index, ..
-            } => self.apply_play(*card_deck_index),
-            GameAction::Discard {
-                card_deck_index, ..
-            } => self.apply_discard(*card_deck_index),
-            GameAction::Clue { .. } => {
-                let active = self.game.table_state.active_player_index;
-                let knowledge_clone = self.game.team_knowledge.player(active).clone();
-                let team_clone = self.game.team_knowledge.clone();
-                let table_clone = self.game.table_state.clone();
-                let static_data_clone = self.game.static_data().clone();
-                let truth = LightweightPlayerPOV::new(
-                    active,
-                    &knowledge_clone,
-                    &team_clone,
-                    &table_clone,
-                    &static_data_clone,
-                );
-                let _ = self.game.apply(action, self.convention_set, &truth);
+            GameAction::Play { .. } | GameAction::Discard { .. } | GameAction::Clue { .. } => {
+                let mut resolver = GroundTruthResolver::new(&self.actual_deck);
+                let _ = self.game.apply(action, self.convention_set, &mut resolver);
             }
             GameAction::Draw { .. } => {}
         }
@@ -352,101 +331,6 @@ impl<'a> ReplayRunner<'a> {
         }
         self.game.table_state.active_player_index = 0;
         self.game.next_deck_index = (num_players * hand_size) as u8;
-    }
-
-    fn draw_next_card(&mut self, player: usize) {
-        if self.game.table_state.deck.current_size == 0 {
-            return;
-        }
-        debug_assert_eq!(self.game.table_state.active_player_index, player);
-        let deck_idx = self.game.next_deck_index;
-        self.game.next_deck_index += 1;
-        let card_id = self.actual_deck[deck_idx as usize];
-        self.game
-            .update_with_draw_action_of_specific_card(player, deck_idx, card_id);
-    }
-
-    fn apply_play(&mut self, card_deck_index: CardDeckIndex) {
-        let p = self.game.table_state.active_player_index;
-        let actual_id = self.actual_deck[card_deck_index as usize];
-        let action = GameAction::Play {
-            player_index: p,
-            card_deck_index,
-            turn: self.game.table_state.current_turn,
-        };
-
-        let actor_hypotheses: Vec<(u8, Hypothesis)> = {
-            let pov = self.game.player_pov(p);
-            collect_hypotheses(self.convention_set.techs(), &action, &[], &pov)
-        };
-
-        self.game
-            .update_with_play_action_of_specific_card(card_deck_index, actual_id);
-        self.draw_next_card(p);
-
-        let num_players = self.static_data.number_of_players as usize;
-        let cohort_id = self.next_hypothesis_id;
-        self.next_hypothesis_id += 1;
-        for target in (0..num_players).filter(|&t| t != p) {
-            let own_hand = self.game.team_knowledge.player(target).own_hand;
-            let filtered: Vec<(u8, Hypothesis)> = actor_hypotheses
-                .iter()
-                .map(|(tier, h)| {
-                    (
-                        *tier,
-                        Hypothesis {
-                            immediate: h
-                                .immediate
-                                .iter()
-                                .filter(|u| own_hand & (1 << u.card_deck_index()) != 0)
-                                .cloned()
-                                .collect(),
-                            trigger: h.trigger.clone(),
-                            alt_group: h.alt_group,
-                        },
-                    )
-                })
-                .filter(|(_, h)| !h.is_empty())
-                .collect();
-            self.game.team_knowledge.player_mut(target).apply_cohort(
-                cohort_id,
-                filtered,
-                &mut self.next_hypothesis_id,
-                &self.static_data.variant,
-            );
-        }
-
-        for q in 0..num_players {
-            self.game.team_knowledge.player_mut(q).resolve_pending(
-                p,
-                &action,
-                Some(actual_id),
-                &self.static_data.variant,
-            );
-        }
-    }
-
-    fn apply_discard(&mut self, card_deck_index: CardDeckIndex) {
-        let p = self.game.table_state.active_player_index;
-        let actual_id = self.actual_deck[card_deck_index as usize];
-        let action = GameAction::Discard {
-            player_index: p,
-            card_deck_index,
-            turn: self.game.table_state.current_turn,
-        };
-        self.game
-            .update_with_discard_action_of_specific_card(card_deck_index, actual_id);
-        self.draw_next_card(p);
-
-        let num_players = self.static_data.number_of_players as usize;
-        for q in 0..num_players {
-            self.game.team_knowledge.player_mut(q).resolve_pending(
-                p,
-                &action,
-                None,
-                &self.static_data.variant,
-            );
-        }
     }
 
     fn compute_touched_cards(
