@@ -4,12 +4,11 @@ use crate::engine::knowledge::player_knowledge::PlayerKnowledge;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
 use crate::game::action::game_action::GameAction;
+use crate::game::MAX_CLUE_TOKEN_COUNT;
 use crate::game::card::{CardDeckIndex, CardIdentityMask, DeckCardsBitField, VariantCardId};
 use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
-use crate::game::{MAX_CLUE_TOKEN_COUNT, MAX_UNIQUE_CARDS_IN_DECK};
-use std::cell::OnceCell;
 
 /// Lightweight, read-only view that combines shared game state with player-specific knowledge.
 ///
@@ -27,7 +26,6 @@ pub struct LightweightPlayerPOV<'a> {
     /// produces a POV with an intersected `visible_cards` so a teammate cannot peek
     /// at hands the root observer cannot see.
     visible_cards: DeckCardsBitField,
-    observable_mask: OnceCell<u64>,
 }
 
 impl<'a> LightweightPlayerPOV<'a> {
@@ -46,7 +44,6 @@ impl<'a> LightweightPlayerPOV<'a> {
             table_state,
             static_data,
             visible_cards: knowledge.visible_cards,
-            observable_mask: OnceCell::new(),
         }
     }
 
@@ -68,7 +65,6 @@ impl<'a> LightweightPlayerPOV<'a> {
             table_state,
             static_data,
             visible_cards,
-            observable_mask: OnceCell::new(),
         }
     }
 
@@ -99,63 +95,6 @@ impl<'a> LightweightPlayerPOV<'a> {
         self.visible_cards
     }
 
-    /// Bitmask of variant card IDs that are not fully accounted for from this player's
-    /// observable perspective: played stacks + discard pile + visible copies in other hands.
-    /// Cached on first call — the inputs are immutable for the POV's lifetime.
-    fn observable_identity_mask(&self) -> u64 {
-        *self
-            .observable_mask
-            .get_or_init(|| self.compute_observable_identity_mask())
-    }
-
-    fn compute_observable_identity_mask(&self) -> u64 {
-        let variant = &self.static_data.variant;
-        let num_players = self.static_data.number_of_players as usize;
-        let stacks_size = variant.stacks_size as usize;
-
-        let mut other_hands: u64 = 0;
-        for p in 0..num_players {
-            if p != self.player_index {
-                other_hands |= self.team_knowledge.player(p).own_hand;
-            }
-        }
-        let visible_in_others = self.visible_cards & other_hands;
-
-        let mut seen_in_others = [0u8; MAX_UNIQUE_CARDS_IN_DECK];
-        let mut bits = visible_in_others;
-        while bits != 0 {
-            let idx = bits.trailing_zeros() as usize;
-            if let Some(id) = self.knowledge.direct_sight_identities[idx] {
-                seen_in_others[id] += 1;
-            } else if let Some(id) = self
-                .table_state
-                .deck
-                .get_global_empathy(idx as u8)
-                .known_card_id()
-            {
-                seen_in_others[id] += 1;
-            }
-            bits &= bits - 1;
-        }
-
-        let mut result: u64 = 0;
-        for suit in 0..variant.number_of_suits as usize {
-            let stack_top = self.table_state.playing_stacks.stack_size(suit) as usize;
-            for rank_idx in 0..stacks_size {
-                let card_id = suit * stacks_size + rank_idx;
-                let total = variant.card_copies_count_by_id[card_id];
-                let played = if rank_idx < stack_top { 1u8 } else { 0u8 };
-                let discarded = self
-                    .table_state
-                    .discard_pile
-                    .copies_of(card_id as VariantCardId);
-                if played + discarded + seen_in_others[card_id] < total {
-                    result |= 1u64 << card_id;
-                }
-            }
-        }
-        result
-    }
 }
 
 impl PlayerPOV for LightweightPlayerPOV<'_> {
@@ -321,44 +260,12 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
     }
 
     fn inferred_identities(&self, card_deck_index: CardDeckIndex) -> CardIdentityMask {
-        let effective = self.knowledge.combined_possible_identities_with_visible(
+        self.knowledge.combined_possible_identities_with_visible(
             card_deck_index,
             self.visible_cards,
             self.table_state,
             &self.static_data.variant,
-        );
-
-        let is_own_hand = (self.knowledge.own_hand >> card_deck_index) & 1 != 0;
-
-        // Observable narrowing is only valid for cards the player can't see directly.
-        // For other players' cards we already have the singleton visible identity via
-        // `combined_possible_identities`, and intersecting that against observable
-        // (which counts those very visible copies) would spuriously contradict.
-        if !is_own_hand {
-            return effective;
-        }
-
-        // Cross-check the convention-narrowed mask against what this player can
-        // directly observe: if every copy of an identity is already accounted for in
-        // visible positions (other players' hands + played stacks + discard pile),
-        // that identity is impossible for this unseen card regardless of convention
-        // reasoning. On contradiction (intersection empty), convention inference is
-        // unsound — fall back to baseline-clue ∩ observable so we keep the public
-        // clue constraints rather than discarding them along with the bad inference.
-        let observable = self.observable_identity_mask();
-        if let Some(constrained) = effective.narrow(observable) {
-            return constrained;
-        }
-        let baseline_bits = self
-            .knowledge
-            .possible_identities(card_deck_index)
-            .map_or(u64::MAX, |m| m.as_bits());
-        let safe = baseline_bits & observable;
-        if safe != 0 {
-            CardIdentityMask::from_bits(safe)
-        } else {
-            CardIdentityMask::from_bits(observable)
-        }
+        )
     }
 
     fn valid_actions(&self) -> Vec<GameAction> {
@@ -743,27 +650,33 @@ mod tests {
         // known trash.
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
-        table_state.update_with_draw_action(0);
-        table_state.update_with_draw_action(1);
-        table_state.update_with_draw_action(1);
+        // Cards 0 and 1 are physically in P1's hand (both R4); cards 2, 3, 4 stand in
+        // for the played R1/R2/R3 copies so the play actions resolve cleanly from the
+        // active player's hand.
+        for &(player, idx) in &[(1usize, 0u8), (1, 1), (0, 2), (0, 3), (0, 4)] {
+            table_state.hands[player].add_card_to_slot_1(idx);
+            table_state.all_hand_bits |= 1u64 << idx;
+        }
         table_state.update_with_play_action_of_specific_card(
-            0,
+            2,
             R1.as_variant_card_id(),
             &static_data,
         );
         table_state.update_with_play_action_of_specific_card(
-            0,
+            3,
             R2.as_variant_card_id(),
             &static_data,
         );
         table_state.update_with_play_action_of_specific_card(
-            0,
+            4,
             R3.as_variant_card_id(),
             &static_data,
         );
 
         let mut knowledge = knowledge_with_empathy(42, R3_MASK | R4_MASK);
         knowledge.own_hand |= 1 << 42;
+        table_state.hands[0].add_card_to_slot_1(42);
+        table_state.all_hand_bits |= 1u64 << 42;
         knowledge.update_with_revealed_card(0, R4.as_variant_card_id());
         knowledge.update_with_revealed_card(1, R4.as_variant_card_id());
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);

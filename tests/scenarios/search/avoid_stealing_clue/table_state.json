@@ -1,0 +1,25 @@
+{
+  "scenario_description": "Alice should not clue Cathy's r1, depriving Bob of something to do. Rather, she should save Bob's 5 on chop and let Bob Cathy's hand",
+  "suits": [
+    "red",
+    "yellow",
+    "green",
+    "blue",
+    "purple"
+  ],
+  "active_player": 0,
+  "playing_stacks": [
+    [], ["y1", "y2", "y3"], ["g1", "g2"], [], []
+  ],
+  "discard_pile": [
+    "r2", "y4", "y1", "b3", "b2", "p3"
+  ],
+  "clue_tokens": 6,
+  "strikes": 0,
+  "player_on_turn": 0,
+  "hands": [
+    ["x", "x", "x", "x", {"id": "x", "positive":  ["5"], "negative": ["yellow", "green"],"inferred":  "r5b5"}],
+    ["g2", "r3", {"id":  "y4", "positive": ["yellow"], "negative": ["1"], "inferred": "y4y5"}, "p4", "p5"],
+    ["r1", {"id":  "g5", "positive": ["5"], "negative": ["2"], "inferred": "y5g5b5"}, {"id": "g3", "positive": ["green"], "negative": ["2", "5"], "inferred": "g3g4"}, {"id":  "p2", "positive": ["2"], "negative": ["green", "5"], "inferred": "r2b2p2"}, {"id": "r2", "positive": ["2"], "negative": ["green", "5"], "inferred": "r2b2p2"}]
+  ]
+}

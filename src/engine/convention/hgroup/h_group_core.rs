@@ -601,7 +601,7 @@ pub(crate) fn count_bad_touches(
 ///   - `giver_held`: union of inferred identities of cards in the giver's own hand
 ///     that are either touched (clued previously) or carry a Play signal.
 ///
-/// Fires (returns true) iff the two masks intersect.
+/// Fires (returns true) if the two masks intersect.
 pub(crate) fn is_potential_bad_touch(
     touched: &[CardDeckIndex],
     giver: PlayerIndex,
