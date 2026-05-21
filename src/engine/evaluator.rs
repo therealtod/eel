@@ -376,10 +376,15 @@ pub struct DefaultEvaluator {
     /// For each candidate identity `id` in the discarded card's empathy, if discarding this
     /// copy would make `id` newly critical (`remaining_copies − 1 == 1`) **and** no other
     /// player's hand visibly holds the surviving copy (truth POV), the term contributes
-    /// `(stacks_size − rank_idx) / popcount(empathy)` — the score points that would be lost
-    /// if the surviving copy turns out to be on the bottom of the deck, scaled by the
-    /// uniform probability the discarded card actually is `id`. Terminal-rank ids are
-    /// skipped (they're single-copy by construction).
+    /// `P(card_is_id) × P(surviving_copy_lost) × loss_if_lost(id)` where:
+    ///
+    /// - `P(card_is_id)` = `1 / popcount` — uniform over empathy (Term A).
+    /// - `P(surviving_copy_lost)` = `1 / max(1, deck_remaining)` — Laplace bottom-card
+    ///   probability; small with a full deck, approaches 1 as the deck empties (Term B).
+    /// - `loss_if_lost` = achievable ranks from `rank_idx` upward, stopping at the first
+    ///   rank already fully in the discard pile (Term C).
+    ///
+    /// Terminal-rank ids are skipped (single-copy by construction).
     ///
     /// Set to 0 to disable.
     pub bottom_deck_risk_weight: f64,
@@ -505,6 +510,7 @@ impl DefaultEvaluator {
             // Second pass: each truth-critical card in the chop-eligible list contributes
             // a threat sized by buffer + rank-from-chop.
             for (rank_from_chop, &deck_idx) in chop_eligible.iter().enumerate() {
+                // Unknown identity → no contribution here; probabilistic risk is BDR's job.
                 let Some(id) = truth.card_identity(deck_idx) else {
                     continue;
                 };
@@ -797,19 +803,22 @@ impl DefaultEvaluator {
 
     /// Bottom Deck Risk score for discarding `discarded_deck_idx` from `table_state`.
     ///
-    /// When the truth player can resolve the discarded card to a known identity (it is visible
-    /// in another player's hand), that singleton is used directly. Otherwise the full global
-    /// empathy distribution is iterated and each candidate identity is weighted by `1/popcount`.
+    /// Uses a three-term expected-value model per eligible identity `id`:
     ///
-    /// For every candidate identity `id`:
-    ///   - skip if `id` has only one total copy (terminal — already critical) or its rank
-    ///     is the top of the stack (BDR is conceptually about non-terminal cards);
-    ///   - skip if the suit's stack already includes `id` (the card is already trash, no BDR);
-    ///   - skip if discarding doesn't drive remaining copies to exactly 1;
-    ///   - skip if any other player's hand visibly holds a copy of `id` (truth POV) — the
-    ///     surviving copy is observed, hence not bottom-decked;
-    ///   - otherwise contribute `(stacks_size − rank_idx) / popcount`, the ceiling loss if
-    ///     the surviving copy is bottom-decked, weighted by the empathy probability.
+    ///   `P(card_is_id)  ×  P(surviving_copy_lost)  ×  loss_if_lost(id)`
+    ///
+    /// - **Term A** `P(card_is_id)` = `1 / popcount` — uniform over empathy.
+    /// - **Term B** `P(surviving_copy_lost)` = `1 / max(1, deck_remaining)` — Laplace
+    ///   bottom-card probability; low with a full deck, rising toward 1 as it empties.
+    ///   This is the dominant correction over the old worst-case model. See
+    ///   `bottom_deck_risk_weight` doc for the probabilistic counterpart to
+    ///   `critical_exposure_weight` (which handles known-critical risk).
+    /// - **Term C** `loss_if_lost` = achievable ranks from `rank_idx` upward before the
+    ///   first fully-discarded rank (already-lost ranks are excluded from the loss).
+    ///
+    /// An identity is skipped when: it has only one total copy (terminal); its rank is
+    /// the top of the stack; its suit is already past this rank; discarding doesn't drive
+    /// remaining copies to exactly 1; or any other hand visibly holds the surviving copy.
     fn bottom_deck_risk_score(
         discarded_deck_idx: CardDeckIndex,
         table_state: &TableState,
@@ -846,6 +855,9 @@ impl DefaultEvaluator {
                 }
             }
         }
+        // Term B: Laplace probability the surviving copy is at the bottom of the deck.
+        let deck_remaining = table_state.deck.current_size as f64;
+        let p_surviving_lost = 1.0 / deck_remaining.max(1.0);
         let mut score = 0.0f64;
         let mut bits = empathy;
         while bits != 0 {
@@ -871,8 +883,20 @@ impl DefaultEvaluator {
             if (visible_ids >> id) & 1 != 0 {
                 continue;
             }
-            let loss = (stacks_size - rank_idx) as f64;
-            score += loss / popcount;
+            // Term A: uniform probability over empathy candidates.
+            let p_card_is_id = 1.0 / popcount;
+            // Term C: achievable ranks lost — walk up from rank_idx, stop at first fully-
+            // discarded rank (those were already unreachable before this discard).
+            let mut loss_count = 0usize;
+            for r in rank_idx..stacks_size {
+                let cid = suit * stacks_size + r;
+                let total_r = variant.card_copies_count_by_id[cid] as usize;
+                if table_state.discard_pile.copies_of(cid as VariantCardId) as usize >= total_r {
+                    break;
+                }
+                loss_count += 1;
+            }
+            score += p_card_is_id * p_surviving_lost * loss_count as f64;
         }
         score
     }
@@ -1586,6 +1610,196 @@ mod tests {
         assert_eq!(
             score, 0.0,
             "touched non-playable critical should not contribute to exposure"
+        );
+    }
+
+    /// With a full deck (50 cards) and maximum empathy (25 ids, 15 BDR-eligible), the
+    /// bottom deck risk on a single discard must be small — Term B (1/50) dominates.
+    #[test]
+    fn bdr_full_deck_is_small() {
+        let static_data = StaticGameData {
+            number_of_players: 3,
+            variant: NO_VARIANT,
+        };
+        // Deck at full size; card at deck index 0 is unrevealed (full empathy, 25 ids).
+        let deck = Deck::new(&NO_VARIANT);
+        let hands = Hand::empty_array();
+        let state = TableState::from_parts(
+            ClueTokenBank::new(10),
+            deck,
+            hands,
+            0,
+            0,
+            PlayingStacks::empty(),
+            0,
+            CopiesCountingCardCollection::empty(),
+        );
+        let truth = TruthFixture::new(&static_data);
+        let truth_pov = truth.pov(&state, &static_data);
+        let bdr = DefaultEvaluator::bottom_deck_risk_score(0, &state, &static_data, &truth_pov);
+        assert!(
+            bdr < 0.5,
+            "full-deck BDR should be small (got {bdr}); Term B = 1/50 should dominate"
+        );
+    }
+
+    /// With only 1 card left in the deck, Term B = 1.0 and BDR is at its maximum value —
+    /// the same state that was safe with a full deck is now a genuine ceiling-loss risk.
+    #[test]
+    fn bdr_empty_deck_is_large() {
+        let static_data = StaticGameData {
+            number_of_players: 3,
+            variant: NO_VARIANT,
+        };
+        let mut deck = Deck::new(&NO_VARIANT);
+        deck.current_size = 1;
+        let hands = Hand::empty_array();
+        let state = TableState::from_parts(
+            ClueTokenBank::new(10),
+            deck,
+            hands,
+            0,
+            0,
+            PlayingStacks::empty(),
+            0,
+            CopiesCountingCardCollection::empty(),
+        );
+        let truth = TruthFixture::new(&static_data);
+        let truth_pov = truth.pov(&state, &static_data);
+        let bdr = DefaultEvaluator::bottom_deck_risk_score(0, &state, &static_data, &truth_pov);
+        // With full deck the value is ~0.036; with 1-card deck it should be ~50× larger (~1.8).
+        assert!(
+            bdr > 1.0,
+            "near-empty-deck BDR should be large (got {bdr}); Term B = 1/1 = 1.0"
+        );
+    }
+
+    /// When the surviving copy is visibly held by another player, BDR must be zero —
+    /// the `visible_ids` short-circuit eliminates any chance of the card being lost.
+    #[test]
+    fn bdr_zero_when_surviving_copy_visible() {
+        let static_data = StaticGameData {
+            number_of_players: 3,
+            variant: NO_VARIANT,
+        };
+        // Reveal deck index 0 AND deck index 1 as Red 2 (id = 1, the two copies of that card).
+        let mut deck = Deck::new(&NO_VARIANT);
+        deck.reveal_card(0, 1, &NO_VARIANT); // discarded card → truth id 1
+        deck.reveal_card(1, 1, &NO_VARIANT); // surviving copy visible in another hand
+        let mut hands = Hand::empty_array();
+        hands[1] = Hand::new(&[1]); // player 1 holds deck index 1
+        let state = TableState::from_parts(
+            ClueTokenBank::new(10),
+            deck,
+            hands,
+            0,
+            0,
+            PlayingStacks::empty(),
+            0,
+            CopiesCountingCardCollection::empty(),
+        );
+        let truth = TruthFixture::new(&static_data);
+        let truth_pov = truth.pov(&state, &static_data);
+        let bdr = DefaultEvaluator::bottom_deck_risk_score(0, &state, &static_data, &truth_pov);
+        assert_eq!(bdr, 0.0, "visible surviving copy must zero out BDR");
+    }
+
+    /// BDR penalty from `discard_action_penalty` scales linearly with `bottom_deck_risk_weight`.
+    #[test]
+    fn bdr_scales_linearly_with_weight() {
+        use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
+        let static_data = StaticGameData {
+            number_of_players: 3,
+            variant: NO_VARIANT,
+        };
+        let deck = Deck::new(&NO_VARIANT);
+        let hands = Hand::empty_array();
+        let state = TableState::from_parts(
+            ClueTokenBank::new(10),
+            deck,
+            hands,
+            0,
+            0,
+            PlayingStacks::empty(),
+            0,
+            CopiesCountingCardCollection::empty(),
+        );
+        let tk = TeamKnowledge::new(static_data.number_of_players as usize);
+        let kags = KnowledgeAwareGameState::from_parts(static_data, state, tk, 0);
+        let truth = TruthFixture::new(kags.static_data());
+        let truth_pov = truth.pov(kags.table_state(), kags.static_data());
+        let action = GameAction::Discard {
+            player_index: 0,
+            card_deck_index: 0,
+            turn: 1,
+        };
+        let w1 = DefaultEvaluator {
+            bottom_deck_risk_weight: 0.1,
+            ..DefaultEvaluator::default()
+        };
+        let w2 = DefaultEvaluator {
+            bottom_deck_risk_weight: 0.5,
+            ..DefaultEvaluator::default()
+        };
+        // Disable the known-playable penalty to isolate BDR.
+        let w1 = DefaultEvaluator {
+            discard_while_known_playable_penalty: 0.0,
+            ..w1
+        };
+        let w2 = DefaultEvaluator {
+            discard_while_known_playable_penalty: 0.0,
+            ..w2
+        };
+        let p1 = w1.discard_action_penalty(&action, 0, &kags, &truth_pov);
+        let p2 = w2.discard_action_penalty(&action, 0, &kags, &truth_pov);
+        // Both penalties are non-positive; ratio must equal weight ratio.
+        assert!(p1 < 0.0 && p2 < 0.0, "BDR penalty must be negative");
+        let ratio = p2 / p1;
+        let expected = 0.5 / 0.1;
+        assert!(
+            (ratio - expected).abs() < 1e-9,
+            "penalty ratio {ratio} should equal weight ratio {expected}"
+        );
+    }
+
+    /// A chop card with no truth identity (freshly drawn in search — not revealed in the
+    /// deck) must contribute zero even though its full empathy spans critical identities.
+    /// Probabilistic risk from unknown cards belongs to BDR, not this term.
+    #[test]
+    fn critical_exposure_zero_for_unresolved_chop() {
+        use crate::engine::knowledge::player_knowledge::knowledge_for_hand;
+        let static_data = StaticGameData {
+            number_of_players: 3,
+            variant: NO_VARIANT,
+        };
+        let mut deck = Deck::new(&NO_VARIANT);
+        // Deck index 0 (chop) is intentionally left unrevealed — truth.card_identity(0)
+        // returns None because the global empathy has multiple bits. Deck indices 1-4 get
+        // non-critical fillers so they don't interfere with the assertion.
+        for (offset, &id) in [7u8, 12, 17, 22].iter().enumerate() {
+            deck.reveal_card((offset + 1) as u8, id as usize, &NO_VARIANT);
+        }
+        let mut hands = Hand::empty_array();
+        hands[0] = Hand::new(&[0, 1, 2, 3, 4]);
+        let state = TableState::from_parts(
+            ClueTokenBank::new(10),
+            deck,
+            hands,
+            0,
+            0,
+            PlayingStacks::empty(),
+            0,
+            CopiesCountingCardCollection::empty(),
+        );
+        let mut tk = TeamKnowledge::new(3);
+        *tk.player_mut(0) = knowledge_for_hand(&[0, 1, 2, 3, 4]);
+        let truth = TruthFixture::new(&static_data);
+        let truth_pov = truth.pov(&state, &static_data);
+        let score =
+            DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
+        assert_eq!(
+            score, 0.0,
+            "unresolved chop (no truth identity) must not contribute to critical exposure"
         );
     }
 }
