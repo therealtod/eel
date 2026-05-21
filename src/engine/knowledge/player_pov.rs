@@ -60,6 +60,11 @@ pub trait PlayerPOV {
 
     fn team_knowledge(&self) -> &TeamKnowledge;
 
+    /// Effective sight set for this POV. Defaults to the holder's stored
+    /// `visible_cards`; search-time teammate POVs intersect this with the root
+    /// observer's sight to avoid omniscient peeking during rollouts.
+    fn visible_cards(&self) -> DeckCardsBitField;
+
     /// Reconstruct the POV of `player_index` using the knowledge this player has about them.
     ///
     /// The returned view uses `team_knowledge().player(player_index)` as the knowledge source,

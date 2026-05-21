@@ -147,24 +147,3 @@ fn should_wait_for_r2() {
         )
     }
 }
-
-#[test]
-#[ignore]
-fn should_clue_rank_3_instead_of_red() {
-    let action = engine_action_at_turn("should_clue_rank_3_instead_of_red.json", 35);
-    if let GameAction::Clue {
-        player_index: 0,
-        clue: Clue {
-            clue_type: ClueType::Rank,
-            clue_value: 3,
-        },
-        ..
-    } = action
-    {
-        println!("Bob chose correctly")
-    } else {
-        panic!(
-            "Bob should prefer a rank-3 clue over a red clue Because the red clue would look like a r4 save. Instead got: {action:?}"
-        )
-    }
-}

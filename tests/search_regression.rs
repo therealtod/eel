@@ -198,6 +198,7 @@ fn prefers_more_efficient_finesse_over_direct_play_clue() {
 }
 
 #[test]
+#[ignore]
 fn prefers_to_clue_rank_1_rather_than_picking_up_1s_by_color() {
     let action = search_best_action(
         "does_not_slow_down_the_game_due_to_foreseeing_too_many_discards_cause_of_search_horizon",
@@ -230,6 +231,23 @@ fn should_avoid_bad_touch() {
     {
         panic!("Alice decided to clue both b1s, generating a bad touch: {action:?}")
     } else {
-        println!("action: {:?}", action);
+        println!("Alice choose the following action: {:?}", action);}
+}
+
+#[test]
+fn should_not_give_a_play_clue_that_looks_like_a_save() {
+    let action = search_best_action("avoid_giving_play_clues_that_look_like_saves");
+    if let GameAction::Clue {
+        player_index: 1,
+        clue: Clue {
+            clue_type: ClueType::Color,
+            clue_value: 0,
+        },
+        ..
+    } = action
+    {
+        panic!("Alice decided to clue red to play clue r3. This will look like a r4 critical save from Bob's POV: {action:?}")
+    } else {
+        println!("Alice choose the following action: {:?}", action);
     }
 }

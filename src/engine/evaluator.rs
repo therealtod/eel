@@ -1304,12 +1304,15 @@ mod tests {
             table_state: &'a TableState,
             static_data: &'a StaticGameData,
         ) -> LightweightPlayerPOV<'a> {
-            LightweightPlayerPOV::new(
+            // Omniscient testing POV: pretend every card is directly visible so
+            // `card_identity` falls back to deck-empathy truth.
+            LightweightPlayerPOV::with_visible_cards(
                 0,
                 &self.knowledge,
                 &self.team_knowledge,
                 table_state,
                 static_data,
+                u64::MAX,
             )
         }
     }

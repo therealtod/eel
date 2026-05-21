@@ -20,30 +20,43 @@ use crate::game::variant::Variant;
 ///
 /// # Knowledge layers
 ///
-/// - **Baseline** (`inferred_identities`, `signals`): unconditional facts. Comes
-///   from revealed cards, manual scenario setup, and confirmed hypotheses that have
-///   been baked in.
+/// - **Direct sight** (`visible_cards`): cards this player can physically observe.
+///   Mutated only by [`update_with_revealed_card`](Self::update_with_revealed_card)
+///   (i.e. at draw time, for every non-drawing player). The actual identity of a
+///   visible card is sourced from the deck's empathy table, not from
+///   `inferred_identities`.
+/// - **Convention-derived narrowing** (`inferred_identities`, `signals`): facts
+///   deduced from clue history and convention principles (good-touch, etc.). Mutated
+///   by [`narrow_inferred`](Self::narrow_inferred) and
+///   [`exclude_inferred`](Self::exclude_inferred). NOT touched by direct sight.
 /// - **Hypothesis cohorts** (`hypotheses`): tech-derived interpretations of observed
 ///   actions. Each hypothesis is one tech's claim; hypotheses sharing a `cohort_id`
 ///   come from the same observed action. The effective narrowing on any card is
 ///   the **union** of cohort hypothesis masks targeting that card, intersected with
 ///   baseline.
 ///
-/// Use [`effective_inferred_mask`](Self::effective_inferred_mask) and
-/// [`has_play_signal`](Self::has_play_signal) to read effective state — they
-/// combine baseline with live hypothesis contributions.
+/// "This player knows this card's identity" is the derived predicate
+/// [`knows_identity`](Self::knows_identity): direct sight ∨ singleton inference.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PlayerKnowledge {
     /// Index of the player this knowledge belongs to.
     pub player_index: usize,
-    /// Baseline narrowing of card identities. Hypothesis contributions are NOT
-    /// baked in here until they confirm.
+    /// Baseline narrowing of card identities from clue/convention reasoning. Direct
+    /// sight does NOT populate this field — use [`knows_identity`](Self::knows_identity)
+    /// or consult `visible_cards` + `direct_sight_identities` for direct-sight identities.
     pub inferred_identities: [Option<CardIdentityMask>; MAX_CARDS_IN_DECK],
     /// Baseline signals. Hypothesis-contributed signals live in `hypotheses`.
     /// `SmallVec<[Signal; 2]>` avoids heap allocation for the common 0–2 signals case.
     pub signals: [SmallVec<[Signal; 2]>; MAX_CARDS_IN_DECK],
-    /// Bitfield of cards whose identity is visible to this player.
+    /// Bitfield of cards this player can directly observe (i.e. cards in any other
+    /// player's hand, set at draw time). Does NOT include cards narrowed to a singleton
+    /// by clue inference — those live in `inferred_identities` only.
     pub visible_cards: DeckCardsBitField,
+    /// Identities of cards this player has seen directly. Populated only by
+    /// [`update_with_revealed_card`](Self::update_with_revealed_card) (in lockstep
+    /// with `visible_cards`). Distinct from `inferred_identities` so that direct
+    /// sight cannot leak through convention-narrowing reasoning during search.
+    pub direct_sight_identities: [Option<VariantCardId>; MAX_CARDS_IN_DECK],
     /// Bitfield of cards currently in this player's own hand.
     pub own_hand: DeckCardsBitField,
     /// Tracked hypotheses, flat. Hypotheses sharing the same `cohort_id` are
@@ -60,6 +73,7 @@ impl PlayerKnowledge {
             inferred_identities: [None; MAX_CARDS_IN_DECK],
             signals: std::array::from_fn(|_| SmallVec::new()),
             visible_cards: 0,
+            direct_sight_identities: [None; MAX_CARDS_IN_DECK],
             own_hand: 0,
             hypotheses: Vec::new(),
         }
@@ -71,20 +85,27 @@ impl PlayerKnowledge {
         Self::new(0)
     }
 
-    /// Mark a card as revealed (visible) and set its identity.
+    /// Mark a card as directly visible to this player and record its identity.
+    ///
+    /// Writes to `visible_cards` and `direct_sight_identities` only — does NOT
+    /// pollute `inferred_identities`. Direct sight and convention-narrowed
+    /// singletons are deliberately separate concepts so that search rollouts
+    /// cannot leak hidden hand identities through inferred-mask reasoning.
     pub fn update_with_revealed_card(
         &mut self,
         card_deck_index: CardDeckIndex,
         card_id: VariantCardId,
     ) {
-        let idx = card_deck_index as usize;
-        self.inferred_identities[idx] = Some(CardIdentityMask::known(card_id));
         self.visible_cards |= 1 << card_deck_index;
+        self.direct_sight_identities[card_deck_index as usize] = Some(card_id);
     }
 
     /// Restrict the possible identities of a card to only those in the given mask
-    /// in **baseline**. Used by non-hypothesis paths (revealed cards, direct
+    /// in **baseline**. Used by non-hypothesis paths (clue narrowing, direct
     /// scenario setup, hypothesis confirmation that bakes in the survivor).
+    ///
+    /// Mutates `inferred_identities` only — never touches `visible_cards`. Direct
+    /// sight and convention-narrowed singletons are deliberately separate concepts.
     pub fn narrow_inferred(
         &mut self,
         card_deck_index: CardDeckIndex,
@@ -96,9 +117,6 @@ impl PlayerKnowledge {
             self.inferred_identities[idx].unwrap_or_else(|| CardIdentityMask::all(variant));
         if let Some(new_empathy) = current.narrow(mask) {
             self.inferred_identities[idx] = Some(new_empathy);
-            if new_empathy.is_exactly_known() {
-                self.visible_cards |= 1 << card_deck_index;
-            }
         }
     }
 
@@ -119,9 +137,6 @@ impl PlayerKnowledge {
             self.inferred_identities[idx].unwrap_or_else(|| CardIdentityMask::all(variant));
         if let Some(new_empathy) = current.exclude(mask) {
             self.inferred_identities[idx] = Some(new_empathy);
-            if new_empathy.is_exactly_known() {
-                self.visible_cards |= 1 << card_deck_index;
-            }
         }
     }
 
@@ -477,13 +492,33 @@ impl PlayerKnowledge {
         self.inferred_identities[card_deck_index as usize]
     }
 
-    /// Get the combined knowledge for a card: game-rule empathy merged with
-    /// effective inferred identities (baseline + live hypotheses).
-    ///
-    /// For cards in the player's own hand that haven't been identified by
-    /// convention (i.e. not in `visible_cards`), only convention-inferred knowledge
-    /// is returned. The player cannot see their own cards, so the omniscient deck
-    /// empathy must not leak into their decision-making during search.
+    /// True when this player knows the card's exact identity — either by direct
+    /// sight (`direct_sight_identities[idx]` is `Some`) or by convention narrowing
+    /// (`inferred_identities[idx]` collapsed to a singleton).
+    #[must_use]
+    pub fn knows_identity(&self, card_deck_index: CardDeckIndex) -> bool {
+        if self.direct_sight_identities[card_deck_index as usize].is_some() {
+            return true;
+        }
+        self.inferred_identities[card_deck_index as usize]
+            .is_some_and(CardIdentityMask::is_exactly_known)
+    }
+
+    /// The identity this player knows for the given card, if any — direct sight
+    /// takes priority, otherwise falls back to a convention-narrowed singleton.
+    #[must_use]
+    pub fn known_identity(&self, card_deck_index: CardDeckIndex) -> Option<VariantCardId> {
+        if let Some(id) = self.direct_sight_identities[card_deck_index as usize] {
+            return Some(id);
+        }
+        self.inferred_identities[card_deck_index as usize]
+            .and_then(CardIdentityMask::known_card_id)
+    }
+
+    /// Convenience: get combined possible identities using this player's own stored
+    /// `visible_cards` as the effective sight set. Use
+    /// [`combined_possible_identities_with_visible`](Self::combined_possible_identities_with_visible)
+    /// when a search-time POV needs to override the sight set.
     #[must_use]
     pub fn combined_possible_identities(
         &self,
@@ -491,16 +526,51 @@ impl PlayerKnowledge {
         table_state: &TableState,
         variant: &Variant,
     ) -> CardIdentityMask {
-        let is_own_unseen = (self.own_hand >> card_deck_index) & 1 != 0
-            && (self.visible_cards >> card_deck_index) & 1 == 0;
+        self.combined_possible_identities_with_visible(
+            card_deck_index,
+            self.visible_cards,
+            table_state,
+            variant,
+        )
+    }
 
+    /// Get the combined knowledge for a card from the perspective of an effective
+    /// sight set `visible_cards`.
+    ///
+    /// - When the card is **directly visible** (`visible_cards` bit set): combine
+    ///   the convention-narrowed mask with the deck's global empathy (which carries
+    ///   the actual identity for any drawn card).
+    /// - When the card is **not visible** (own hand, or any card hidden by the
+    ///   effective sight set during search teammate reasoning): return only the
+    ///   convention-narrowed mask. The deck-truth fallback is deliberately gated
+    ///   off so a search rollout cannot peek at the holder's actual hand.
+    ///
+    /// The `visible_cards` parameter lets callers override the player's stored
+    /// sight set (e.g. the POV's `teammate_pov` intersection during search).
+    #[must_use]
+    pub fn combined_possible_identities_with_visible(
+        &self,
+        card_deck_index: CardDeckIndex,
+        visible_cards: DeckCardsBitField,
+        table_state: &TableState,
+        variant: &Variant,
+    ) -> CardIdentityMask {
+        let is_visible = (visible_cards >> card_deck_index) & 1 != 0;
         let effective = self.effective_inferred_mask(card_deck_index, variant);
 
-        if is_own_unseen {
+        if !is_visible {
             return effective;
         }
 
-        let game_empathy = table_state.deck.get_global_empathy(card_deck_index);
+        // Prefer the player's direct-sight identity when available; otherwise
+        // fall back to the deck's global empathy (which carries the truth for
+        // any card revealed via the proper draw path).
+        let game_empathy = if let Some(id) = self.direct_sight_identities[card_deck_index as usize]
+        {
+            CardIdentityMask::known(id)
+        } else {
+            table_state.deck.get_global_empathy(card_deck_index)
+        };
         if let Some(combined) = game_empathy.narrow(effective.as_bits()) {
             combined
         } else {

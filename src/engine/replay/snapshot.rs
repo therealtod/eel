@@ -119,8 +119,9 @@ pub fn to_scenario_json(game: &KnowledgeAwareGameState) -> Value {
 
                     if p != active {
                         // Emit the actual card identity (visible to the active player).
-                        let id_str = tk.player(active).inferred_identities[deck_idx as usize]
-                            .and_then(|m| m.known_card_id())
+                        let id_str = tk
+                            .player(active)
+                            .known_identity(deck_idx)
                             .map(card_id_to_string)
                             .unwrap_or_else(|| "x".to_string());
 

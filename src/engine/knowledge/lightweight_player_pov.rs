@@ -22,6 +22,11 @@ pub struct LightweightPlayerPOV<'a> {
     team_knowledge: &'a TeamKnowledge,
     table_state: &'a TableState,
     static_data: &'a StaticGameData,
+    /// Effective sight set: which cards this POV can actually observe. Defaults to
+    /// `knowledge.visible_cards`. During search, [`teammate_pov`](Self::teammate_pov)
+    /// produces a POV with an intersected `visible_cards` so a teammate cannot peek
+    /// at hands the root observer cannot see.
+    visible_cards: DeckCardsBitField,
     observable_mask: OnceCell<u64>,
 }
 
@@ -40,8 +45,58 @@ impl<'a> LightweightPlayerPOV<'a> {
             team_knowledge,
             table_state,
             static_data,
+            visible_cards: knowledge.visible_cards,
             observable_mask: OnceCell::new(),
         }
+    }
+
+    /// Construct a POV with an explicit effective sight set, overriding
+    /// `knowledge.visible_cards`. Used by [`teammate_pov`](Self::teammate_pov).
+    #[must_use]
+    pub fn with_visible_cards(
+        player_index: usize,
+        knowledge: &'a PlayerKnowledge,
+        team_knowledge: &'a TeamKnowledge,
+        table_state: &'a TableState,
+        static_data: &'a StaticGameData,
+        visible_cards: DeckCardsBitField,
+    ) -> Self {
+        LightweightPlayerPOV {
+            player_index,
+            knowledge,
+            team_knowledge,
+            table_state,
+            static_data,
+            visible_cards,
+            observable_mask: OnceCell::new(),
+        }
+    }
+
+    /// Reconstruct `target`'s POV from this observer's POV, intersecting effective
+    /// sight so the new POV cannot see anything the observer can't see either.
+    ///
+    /// Used during search: when Bob's root POV simulates Alice's turn, Alice's
+    /// search-time view of Bob's hand collapses (Bob can't see his own hand, so
+    /// the intersection drops those bits). Alice's reasoning falls back to public
+    /// clue/convention knowledge only — no omniscient peek.
+    #[must_use]
+    pub fn teammate_pov(&self, target: PlayerIndex) -> LightweightPlayerPOV<'a> {
+        let target_pk = self.team_knowledge.player(target);
+        let visible_cards = self.visible_cards & target_pk.visible_cards;
+        LightweightPlayerPOV::with_visible_cards(
+            target,
+            target_pk,
+            self.team_knowledge,
+            self.table_state,
+            self.static_data,
+            visible_cards,
+        )
+    }
+
+    /// Effective sight set for this POV.
+    #[must_use]
+    pub fn effective_visible_cards(&self) -> DeckCardsBitField {
+        self.visible_cards
     }
 
     /// Bitmask of variant card IDs that are not fully accounted for from this player's
@@ -64,14 +119,19 @@ impl<'a> LightweightPlayerPOV<'a> {
                 other_hands |= self.team_knowledge.player(p).own_hand;
             }
         }
-        let visible_in_others = self.knowledge.visible_cards & other_hands;
+        let visible_in_others = self.visible_cards & other_hands;
 
         let mut seen_in_others = [0u8; MAX_UNIQUE_CARDS_IN_DECK];
         let mut bits = visible_in_others;
         while bits != 0 {
             let idx = bits.trailing_zeros() as usize;
-            if let Some(id) =
-                self.knowledge.inferred_identities[idx].and_then(|m| m.known_card_id())
+            if let Some(id) = self.knowledge.direct_sight_identities[idx] {
+                seen_in_others[id] += 1;
+            } else if let Some(id) = self
+                .table_state
+                .deck
+                .get_global_empathy(idx as u8)
+                .known_card_id()
             {
                 seen_in_others[id] += 1;
             }
@@ -180,8 +240,8 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
             if pk.own_hand & (1 << card_deck_index) == 0 {
                 return false;
             }
-            // Known via direct identity reveal
-            if pk.visible_cards & (1 << card_deck_index) != 0 {
+            // Direct sight or singleton inference.
+            if pk.knows_identity(card_deck_index) {
                 return true;
             }
             // Known via a play signal (e.g. finesse blind-play)
@@ -191,8 +251,7 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
             {
                 return true;
             }
-            // Known via inferred identities (clue narrowing + convention + observable)
-            // collapsing to a singleton.
+            // Known via combined inferred + observable narrowing collapsing to a singleton.
             self.as_player_pov(p)
                 .inferred_identities(card_deck_index)
                 .known_card_id()
@@ -229,6 +288,10 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
         self.team_knowledge
     }
 
+    fn visible_cards(&self) -> DeckCardsBitField {
+        self.visible_cards
+    }
+
     fn is_known_trash(&self, card_deck_index: CardDeckIndex) -> bool {
         let possible_bits = self.inferred_identities(card_deck_index).as_bits();
 
@@ -258,8 +321,9 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
     }
 
     fn inferred_identities(&self, card_deck_index: CardDeckIndex) -> CardIdentityMask {
-        let effective = self.knowledge.combined_possible_identities(
+        let effective = self.knowledge.combined_possible_identities_with_visible(
             card_deck_index,
+            self.visible_cards,
             self.table_state,
             &self.static_data.variant,
         );

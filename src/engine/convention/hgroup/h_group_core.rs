@@ -1014,7 +1014,16 @@ mod tests {
         table_state: &'a TableState,
         static_data: &'a StaticGameData,
     ) -> LightweightPlayerPOV<'a> {
-        LightweightPlayerPOV::new(0, knowledge, team_knowledge, table_state, static_data)
+        // Test-only omniscient POV: every slot is treated as directly visible so
+        // `card_identity` resolves via deck empathy rather than gating on a sight set.
+        LightweightPlayerPOV::with_visible_cards(
+            0,
+            knowledge,
+            team_knowledge,
+            table_state,
+            static_data,
+            u64::MAX,
+        )
     }
 
     #[test]

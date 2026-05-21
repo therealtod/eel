@@ -20,7 +20,7 @@
 ///   cargo run --release --bin selfplay -- --games 200 --log-failures-below 20
 use std::fs;
 use std::path::PathBuf;
-use std::time::SystemTime;
+use std::time::{Instant, SystemTime};
 
 use clap::Parser;
 use rand::SeedableRng;
@@ -223,6 +223,8 @@ fn main() {
     let mut scores: Vec<u8> = Vec::with_capacity(args.games as usize);
     let progress_every = (args.games / 10).max(1);
 
+    let start = Instant::now();
+
     for game_num in 1..=args.games {
         let score = run_game(
             &static_data,
@@ -237,12 +239,11 @@ fn main() {
         if args.verbose {
             println!("game {game_num:>4}: {score}");
         } else if game_num % progress_every == 0 {
-            eprint!(".");
+            eprintln!("currently simulating game {game_num}");
         }
     }
-    if !args.verbose {
-        eprintln!();
-    }
+
+    let elapsed = start.elapsed();
 
     // Summary statistics
     let n = scores.len() as f64;
@@ -262,6 +263,7 @@ fn main() {
     let perfect = scores.iter().filter(|&&s| s == 25).count();
 
     println!("\n=== {} games, {}p ===", args.games, args.players);
+    println!("time:    {:.2}s", elapsed.as_secs_f64());
     println!("mean:    {mean:.3}");
     println!("std dev: {std_dev:.3}");
     println!("min/max: {min} / {max}");

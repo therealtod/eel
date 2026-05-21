@@ -346,10 +346,12 @@ mod tests {
         knowledge.inferred_identities[20] = Some(CardIdentityMask::from_bits(R3_MASK));
         knowledge.visible_cards |= 1u64 << 20;
 
-        // Mark R2 (card 10) as known to its holder (player 1) in team_knowledge.
+        // Mark R2 (card 10) as known to its holder (player 1) via clue narrowing
+        // (singleton inferred). visible_cards is for direct sight of other hands only.
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         team_knowledge.player_mut(1).own_hand |= 1u64 << 10;
-        team_knowledge.player_mut(1).visible_cards |= 1u64 << 10;
+        team_knowledge.player_mut(1).inferred_identities[10] =
+            Some(CardIdentityMask::from_bits(R2_MASK));
 
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);

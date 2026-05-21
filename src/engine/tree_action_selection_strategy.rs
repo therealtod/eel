@@ -274,7 +274,21 @@ impl TreeActionSelectionStrategy {
         }
 
         let active = state.table_state.active_player_index;
-        let pov = state.player_pov(active);
+        // Build the active player's POV from the *root observer's* sight set so search
+        // rollouts cannot peek at hands the root cannot see (the "cheating bot" leak).
+        // When `active == truth.player_index()`, the intersection is the root's own
+        // sight, which is the correct view.
+        let root_visible = truth.visible_cards();
+        let active_pk = state.team_knowledge.player(active);
+        let effective_visible = root_visible & active_pk.visible_cards;
+        let pov = LightweightPlayerPOV::with_visible_cards(
+            active,
+            active_pk,
+            &state.team_knowledge,
+            &state.table_state,
+            static_data,
+            effective_visible,
+        );
         let candidates = Self::candidate_actions_with_provenance(&pov, convention_set);
         let span = tracing::trace_span!(
             target: "eel::search",
