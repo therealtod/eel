@@ -239,7 +239,7 @@ fn main() {
         if args.verbose {
             println!("game {game_num:>4}: {score}");
         } else if game_num % progress_every == 0 {
-            eprintln!("currently simulating game {game_num}");
+            eprint!(".");
         }
     }
 
