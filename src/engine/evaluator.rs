@@ -424,7 +424,7 @@ impl Default for DefaultEvaluator {
             misinformation_weight: 0.0_f64,
             play_progress_weight: 1.0_f64,
             potential_bad_touch_penalty: 5.0_f64,
-            bottom_deck_risk_weight: 3.0_f64,
+            bottom_deck_risk_weight: 0.2_f64,
             discard_while_known_playable_penalty: 8.0_f64,
         }
     }
