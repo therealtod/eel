@@ -257,6 +257,29 @@ impl TableState {
         let live_setups = (self.clue_touched_cards & all_hand_bits).count_ones() as i32;
         (still_to_play - live_setups).max(0) as f32 / spare_turns as f32
     }
+
+    /// Maximum score still achievable given the current discard pile.
+    /// For each suit, walks ranks from the current stack top; stops at the first rank
+    /// where all copies have been discarded (that rank and everything above it is lost).
+    pub fn max_achievable_score(&self, static_data: &StaticGameData) -> u32 {
+        let variant = &static_data.variant;
+        let stacks_size = variant.stacks_size as usize;
+        let mut total = 0u32;
+        for suit in 0..variant.number_of_suits as usize {
+            let already_played = self.playing_stacks.stack_size(suit) as usize;
+            let mut suit_max = already_played;
+            for rank_idx in already_played..stacks_size {
+                let card_id = suit * stacks_size + rank_idx;
+                let copies = variant.card_copies_count_by_id[card_id];
+                if self.discard_pile.copies_of(card_id as VariantCardId) >= copies {
+                    break;
+                }
+                suit_max += 1;
+            }
+            total += suit_max as u32;
+        }
+        total
+    }
 }
 
 #[cfg(any(test, feature = "test-support"))]

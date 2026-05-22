@@ -69,6 +69,21 @@ fn play_known_playable() {
     );
 }
 
+#[test]
+fn play_known_playable_2() {
+    let action = search_best_action("play_known_playable_2");
+    assert!(
+        matches!(
+            action,
+            GameAction::Play {
+                card_deck_index: 3,
+                ..
+            }
+        ),
+        "expected play of known B1 (deck 3), got: {action:?}"
+    );
+}
+
 // 3p, empty stacks. Player 1's slot-1 card is R1 (visible to player 0).
 // Player 0 has no known playable cards. Expected: direct-play clue to player 1 touching R1 (deck 9).
 #[test]

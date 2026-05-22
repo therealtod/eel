@@ -1,0 +1,14 @@
+{
+  "scenario_description": "3p, empty stacks, player 0 on turn. Player 0 slot 2 (deck 3) is B1, inferred by convention. No immediately clue-able play targets exist for other players. Expected best action: play B1 (deck 3).",
+  "suits": ["red", "yellow", "green", "blue", "purple"],
+  "playing_stacks": [[], [], [], [], []],
+  "discard_pile": [],
+  "clue_tokens": 7,
+  "strikes": 0,
+  "active_player": 0,
+  "hands": [
+    ["x", {"id": "x", "positive": ["blue"], "inferred": "b1"}, "x", "x", "x"],
+    ["b4", "y4", "y3", "y3", "p4"],
+    ["r5", "g2", "y5", "p5", "r3"]
+  ]
+}

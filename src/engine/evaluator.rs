@@ -595,29 +595,6 @@ impl DefaultEvaluator {
         bits != 0 && (bits & playable_mask) == bits
     }
 
-    /// Maximum score still achievable given the current discard pile.
-    /// For each suit, walks ranks from the current stack top; stops at the first rank
-    /// where all copies have been discarded (that rank and everything above it is lost).
-    fn max_achievable_score(table_state: &TableState, static_data: &StaticGameData) -> u32 {
-        let variant = &static_data.variant;
-        let stacks_size = variant.stacks_size as usize;
-        let mut total = 0u32;
-        for suit in 0..variant.number_of_suits as usize {
-            let already_played = table_state.playing_stacks.stack_size(suit) as usize;
-            let mut suit_max = already_played;
-            for rank_idx in already_played..stacks_size {
-                let card_id = suit * stacks_size + rank_idx;
-                let copies = variant.card_copies_count_by_id[card_id];
-                if table_state.discard_pile.copies_of(card_id as VariantCardId) >= copies {
-                    break;
-                }
-                suit_max += 1;
-            }
-            total += suit_max as u32;
-        }
-        total
-    }
-
     /// Sum of identity-bits eliminated across all clued cards in every player's own hand.
     ///
     /// For each clued card, a player who knows exactly one identity (popcount=1) contributes
@@ -1073,7 +1050,7 @@ impl Evaluator for DefaultEvaluator {
         let theoretical_max =
             (static_data.variant.number_of_suits * static_data.variant.stacks_size) as f64;
         let lost_ceiling_penalty = self.lost_score_ceiling_weight
-            * (theoretical_max - Self::max_achievable_score(table_state, static_data) as f64);
+            * (theoretical_max - table_state.max_achievable_score(static_data) as f64);
         let empathy_bonus = if self.empathy_weight != 0.0 {
             self.empathy_weight * Self::empathy_precision(table_state, static_data, team_knowledge)
         } else {
@@ -1243,6 +1220,37 @@ impl Evaluator for DefaultEvaluator {
         }
     }
 
+    fn discard_action_penalty(
+        &self,
+        action: &GameAction,
+        actor: PlayerIndex,
+        pre: &KnowledgeAwareGameState,
+        truth: &dyn PlayerPOV,
+    ) -> Score {
+        let GameAction::Discard {
+            card_deck_index, ..
+        } = action
+        else {
+            return 0.0;
+        };
+        let table_state = pre.table_state();
+        let static_data = pre.static_data();
+        let bdr = if self.bottom_deck_risk_weight != 0.0 {
+            self.bottom_deck_risk_weight
+                * Self::bottom_deck_risk_score(*card_deck_index, table_state, static_data, truth)
+        } else {
+            0.0
+        };
+        let kp_penalty = if self.discard_while_known_playable_penalty != 0.0
+            && Self::actor_has_known_playable(actor, table_state, static_data, pre.team_knowledge())
+        {
+            self.discard_while_known_playable_penalty
+        } else {
+            0.0
+        };
+        -(bdr + kp_penalty)
+    }
+
     fn team_empathy_delta_bonus(
         &self,
         action: &GameAction,
@@ -1351,37 +1359,6 @@ impl Evaluator for DefaultEvaluator {
         total
     }
 
-    fn discard_action_penalty(
-        &self,
-        action: &GameAction,
-        actor: PlayerIndex,
-        pre: &KnowledgeAwareGameState,
-        truth: &dyn PlayerPOV,
-    ) -> Score {
-        let GameAction::Discard {
-            card_deck_index, ..
-        } = action
-        else {
-            return 0.0;
-        };
-        let table_state = pre.table_state();
-        let static_data = pre.static_data();
-        let bdr = if self.bottom_deck_risk_weight != 0.0 {
-            self.bottom_deck_risk_weight
-                * Self::bottom_deck_risk_score(*card_deck_index, table_state, static_data, truth)
-        } else {
-            0.0
-        };
-        let kp_penalty = if self.discard_while_known_playable_penalty != 0.0
-            && Self::actor_has_known_playable(actor, table_state, static_data, pre.team_knowledge())
-        {
-            self.discard_while_known_playable_penalty
-        } else {
-            0.0
-        };
-        -(bdr + kp_penalty)
-    }
-
     fn upper_bound(
         &self,
         table_state: &TableState,
@@ -1389,7 +1366,7 @@ impl Evaluator for DefaultEvaluator {
         depth: usize,
     ) -> Score {
         let max_game_score =
-            self.score_weight * Self::max_achievable_score(table_state, static_data) as f64;
+            self.score_weight * table_state.max_achievable_score(static_data) as f64;
         // Optimistic: no new strikes from here; penalty is already locked in at current level.
         let min_strike_penalty = self
             .strike_penalties
