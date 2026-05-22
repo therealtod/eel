@@ -248,11 +248,19 @@ fn build_hands(scenario: &ScenarioJson) -> [Hand; MAX_PLAYERS_IN_GAME] {
     hands
 }
 
-/// Builds the deck, decrements it by dealt cards, and reveals all known cards.
+/// Builds the deck, decrements it by every card that has already left the deck (cards
+/// in hands, played stacks, and the discard pile), and reveals each card now in a hand.
+///
+/// Subtracting only the dealt hand cards would leave `current_size` ≈ 50 even mid-game,
+/// inflating both the Laplace bottom-card probability used by BDR and the
+/// `next_deck_index = MAX_CARDS_IN_DECK − current_size` cursor used by search-time draws.
 fn build_deck(scenario: &ScenarioJson, variant: &Variant) -> Deck {
     let mut deck = Deck::new(variant);
-    let dealt: u8 = scenario.hands.iter().map(|h| h.len() as u8).sum();
-    deck.decrement_size(dealt);
+    let in_hands: usize = scenario.hands.iter().map(|h| h.len()).sum();
+    let played: usize = scenario.playing_stacks.iter().map(|s| s.len()).sum();
+    let discarded = scenario.discard_pile.len();
+    let drawn = in_hands + played + discarded;
+    deck.decrement_size(drawn as u8);
 
     let mut base_index: u8 = 0;
     for player_hand in &scenario.hands {
@@ -271,6 +279,15 @@ fn build_deck(scenario: &ScenarioJson, variant: &Variant) -> Deck {
 
 /// Applies per-slot positive and negative clue touches, updating deck empathy and
 /// `clue_touched_cards`. Replaces the old separate `empathy` and `clued_cards` fields.
+///
+/// Beyond the explicit per-slot annotations, every (clue_type, clue_value) that appears
+/// as a *positive* on any slot in a hand is treated as a clue that was given to that
+/// hand, so the slots that don't carry it as a positive receive it as a negative. This
+/// matches how `update_with_clue_action` propagates negatives at runtime: a Hanabi clue
+/// touches a subset of the hand and stamps "not‑that‑value" on every untouched card.
+/// Without this, scenario authors would have to spell out a per-slot negative for every
+/// clue that ever touched any sibling slot, and slots like Alice's chop here would keep
+/// a full 25-id empathy even after multiple clues.
 fn apply_slot_clues(
     scenario: &ScenarioJson,
     deck: &mut Deck,
@@ -280,19 +297,46 @@ fn apply_slot_clues(
     let mut base_index: u8 = 0;
     for player_hand in &scenario.hands {
         let hand_size = player_hand.len() as u8;
+
+        // Collect the set of clues that touched *some* slot in this hand. A clue value
+        // appears at most once per (ct, cv) regardless of how many slots it touched.
+        let mut hand_clues: SmallVec<[(ClueType, u8); 8]> = SmallVec::new();
+        for slot in player_hand {
+            for clue_str in slot.positive() {
+                let pair = parse_clue_string(clue_str);
+                if !hand_clues.contains(&pair) {
+                    hand_clues.push(pair);
+                }
+            }
+        }
+
         for (slot_pos, slot) in player_hand.iter().enumerate() {
             let deck_index = base_index + hand_size - 1 - slot_pos as u8;
 
+            // Explicit positives: narrow this slot's empathy and mark it touched.
+            let mut positives_on_slot: SmallVec<[(ClueType, u8); 4]> = SmallVec::new();
             for clue_str in slot.positive() {
                 let (ct, cv) = parse_clue_string(clue_str);
+                positives_on_slot.push((ct, cv));
                 let mask = variant.empathy_by_clue(ct, cv as usize).as_bits();
                 deck.update_positive_empathy(deck_index, mask, variant);
                 *clue_touched_cards |= 1u64 << deck_index;
             }
 
+            // Explicit negatives: exclude these values from this slot's empathy.
             for clue_str in slot.negative() {
                 let (ct, cv) = parse_clue_string(clue_str);
                 let mask = variant.empathy_by_clue(ct, cv as usize).as_bits();
+                deck.update_negative_empathy(deck_index, mask, variant);
+            }
+
+            // Implicit negatives: every clue that touched a *sibling* slot but not
+            // this one was, by Hanabi's rules, also a "not-X" signal for this slot.
+            for (ct, cv) in &hand_clues {
+                if positives_on_slot.contains(&(*ct, *cv)) {
+                    continue;
+                }
+                let mask = variant.empathy_by_clue(*ct, *cv as usize).as_bits();
                 deck.update_negative_empathy(deck_index, mask, variant);
             }
         }

@@ -495,8 +495,7 @@ impl DefaultEvaluator {
                 smallvec::SmallVec::new();
             for &deck_idx in hand.cards().iter().rev() {
                 let known_trash = pov.is_known_trash(deck_idx);
-                let known_playable =
-                    Self::card_known_playable(pk, deck_idx, table_state, playable_mask);
+                let known_playable = Self::card_known_playable(&pov, deck_idx, playable_mask);
                 if known_trash || known_playable {
                     buffer += 1;
                     continue;
@@ -525,28 +524,33 @@ impl DefaultEvaluator {
         total
     }
 
-    /// True when `pk` regards `deck_idx` as known playable — by `Signal::Play`,
-    /// convention-inferred identity, or raw empathy fully inside `playable_mask`.
-    /// Mirrors the priority order used by [`Self::known_playable_in_hands`].
+    /// True iff the holder of `deck_idx` (the POV's player) would have a play
+    /// action available for that card.
+    ///
+    /// Mirrors the candidate predicates of the search's actual play generators
+    /// so penalties and exposure buffers cannot fire for cards the search could
+    /// not have played:
+    /// - `Signal::Play` → `BlindPlay` proposes it.
+    /// - `pov.inferred_identities(idx) ⊆ playable_mask` → `PlayKnownPlayable`
+    ///   proposes it.
+    ///
+    /// The raw deck-empathy fallback that used to live here was unsound for the
+    /// KP penalty — it could fire on cards neither tech would offer as a play,
+    /// trapping the actor between a strike (if she plays) and the penalty (if
+    /// she doesn't).
     fn card_known_playable(
-        pk: &crate::engine::knowledge::player_knowledge::PlayerKnowledge,
+        pov: &dyn PlayerPOV,
         deck_idx: CardDeckIndex,
-        table_state: &TableState,
         playable_mask: VariantCardsBitField,
     ) -> bool {
+        let pk = pov.team_knowledge().player(pov.player_index());
         if pk.signals[deck_idx as usize]
             .iter()
             .any(|s| matches!(s, Signal::Play { .. }))
         {
             return true;
         }
-        if let Some(inferred) = pk.inferred_identities[deck_idx as usize] {
-            let bits = inferred.as_bits();
-            if bits != 0 && (bits & playable_mask) == bits {
-                return true;
-            }
-        }
-        let bits = table_state.deck.get_global_empathy(deck_idx).as_bits();
+        let bits = pov.inferred_identities(deck_idx).as_bits();
         bits != 0 && (bits & playable_mask) == bits
     }
 
@@ -901,9 +905,10 @@ impl DefaultEvaluator {
         score
     }
 
-    /// True iff `actor` currently holds at least one globally-known-playable card —
-    /// by `Signal::Play`, by convention-inferred identity ⊆ playable, or by raw empathy
-    /// ⊆ playable. Mirrors [`Self::card_known_playable`].
+    /// True iff `actor` currently holds at least one card the search's play
+    /// generators would offer them — i.e. a card matched by either
+    /// `BlindPlay` (via `Signal::Play`) or `PlayKnownPlayable` (via combined
+    /// inferred ⊆ playable). Delegates to [`Self::card_known_playable`].
     fn actor_has_known_playable(
         actor: PlayerIndex,
         table_state: &TableState,
@@ -911,12 +916,13 @@ impl DefaultEvaluator {
         team_knowledge: &TeamKnowledge,
     ) -> bool {
         let pk = team_knowledge.player(actor);
+        let pov = LightweightPlayerPOV::new(actor, pk, team_knowledge, table_state, static_data);
         let playable_mask = table_state.playable_cards(static_data);
         let mut hand = pk.own_hand;
         while hand != 0 {
             let idx = hand.trailing_zeros() as CardDeckIndex;
             hand &= hand - 1;
-            if Self::card_known_playable(pk, idx, table_state, playable_mask) {
+            if Self::card_known_playable(&pov, idx, playable_mask) {
                 return true;
             }
         }
@@ -1572,9 +1578,16 @@ mod tests {
     /// furthest no-buffer slot (0.2).
     #[test]
     fn critical_exposure_buffer_dominates_position() {
-        // [chop=R5, R1, Y1, G1, slot1=B1]. Each rank-1 is known-playable from empty stacks
-        // via revealed deck-empathy, so buffer = 4. R5 stays chop-eligible.
-        let (state, static_data, tk) = make_chop_test_state([4, 0, 5, 10, 15]);
+        // [chop=R5, R1, Y1, G1, slot1=B1]. Each rank-1 is convention-narrowed to its
+        // singleton identity (modeling a clue that resolved the card to a known
+        // playable), so buffer = 4. R5 stays chop-eligible.
+        let (mut state, static_data, tk) = make_chop_test_state([4, 0, 5, 10, 15]);
+        let mut tk = tk;
+        for (slot, id) in [(1, 0), (2, 5), (3, 10), (4, 15)] {
+            tk.player_mut(0).inferred_identities[slot] =
+                Some(crate::game::card::CardIdentityMask::from_bits(1 << id));
+            state.clue_touched_cards |= 1u64 << slot;
+        }
         let truth = TruthFixture::new(&static_data);
         let truth_pov = truth.pov(&state, &static_data);
         let score =
