@@ -498,4 +498,117 @@ mod tests {
 
         assert!(game_state.discard_pile.contains_card_with_id(card_id));
     }
+
+    // -----------------------------------------------------------------------
+    // max_achievable_score
+    // -----------------------------------------------------------------------
+
+    /// Helper: build a TableState whose only meaningful fields are the playing
+    /// stacks and discard pile.  The rest (hands, deck, clue tokens, …) are
+    /// filled with harmless defaults.
+    fn state_with(
+        playing_stacks: PlayingStacks,
+        discards: &[VariantCardId],
+    ) -> TableState {
+        let mut discard_pile = CopiesCountingCardCollection::empty();
+        for &id in discards {
+            discard_pile.add_card_with_id(id);
+        }
+        TableState {
+            clue_token_bank: ClueTokenBank::new(10),
+            clue_touched_cards: 0,
+            clues_given: 0,
+            deck: Deck::new(&NO_VARIANT),
+            all_hand_bits: 0,
+            hands: Hand::empty_array(),
+            active_player_index: 0,
+            current_turn: 0,
+            playing_stacks,
+            strike_tokens: 0,
+            discard_pile,
+        }
+    }
+
+    const SDA: StaticGameData = StaticGameData {
+        number_of_players: 3,
+        variant: NO_VARIANT,
+    };
+
+    #[test]
+    fn max_achievable_score_fresh_game() {
+        let ts = state_with(PlayingStacks::empty(), &[]);
+        assert_eq!(25, ts.max_achievable_score(&SDA));
+    }
+
+    #[test]
+    fn max_achievable_score_all_stacks_complete() {
+        // All 5 suits finished — every rank 1-5 played.
+        let stacks =
+            PlayingStacks::new(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                17, 18, 19, 20, 21, 22, 23, 24], &NO_VARIANT);
+        let ts = state_with(stacks, &[]);
+        assert_eq!(25, ts.max_achievable_score(&SDA));
+    }
+
+    #[test]
+    fn max_achievable_score_partial_progress_no_discards() {
+        // Red: R1, R2 played (stack=2).  Yellow: empty.  Green: G1,G2,G3 (stack=3).
+        // Blue: empty.  Purple: P1 (stack=1).  Nothing discarded — still 25.
+        let stacks = PlayingStacks::new(vec![0, 1, 10, 11, 12, 20], &NO_VARIANT);
+        let ts = state_with(stacks, &[]);
+        assert_eq!(25, ts.max_achievable_score(&SDA));
+    }
+
+    #[test]
+    fn max_achievable_score_discard_blocks_mid_rank() {
+        // Suit 0 (Red): stack empty.  All 2 copies of R3 (card_id 2) discarded.
+        // R1, R2 are still playable (3 and 2 copies remain), but R3+ is lost.
+        // Suit 0 max = 2.  Other suits max = 5 each.  Total = 2 + 4*5 = 22.
+        let stacks = PlayingStacks::empty();
+        let ts = state_with(stacks, &[2, 2]);
+        assert_eq!(22, ts.max_achievable_score(&SDA));
+    }
+
+    #[test]
+    fn max_achievable_score_discard_one_copy_does_not_block() {
+        // Suit 0: 1 of 2 R3 copies discarded — not all gone, so still achievable.
+        let stacks = PlayingStacks::empty();
+        let ts = state_with(stacks, &[2]);
+        assert_eq!(25, ts.max_achievable_score(&SDA));
+    }
+
+    #[test]
+    fn max_achievable_score_discard_blocks_entire_suit() {
+        // Suit 0: all 3 copies of R1 (card_id 0) discarded → break immediately.
+        // Suit 0 contributes 0.
+        let stacks = PlayingStacks::empty();
+        let ts = state_with(stacks, &[0, 0, 0]);
+        assert_eq!(20, ts.max_achievable_score(&SDA));
+    }
+
+    #[test]
+    fn max_achievable_score_progress_and_discard_interact() {
+        // Suit 0 (Red): R1 already played (stack=1).  All 2 copies of R3 discarded.
+        //   already_played=1 → start loop at rank_idx=1 (R2, copies=2, discards=0 ✓)
+        //   → suit_max=2.  rank_idx=2 (R3, copies=2, discards=2) → break.
+        //   Suit 0 contributes 2.
+        // Other suits contribute 5 each → total = 2 + 20 = 22.
+        let stacks = PlayingStacks::new(vec![0], &NO_VARIANT);
+        let ts = state_with(stacks, &[2, 2]);
+        assert_eq!(22, ts.max_achievable_score(&SDA));
+    }
+
+    #[test]
+    fn max_achievable_score_mixed_state() {
+        // Suit 0 (Red):   stack=0, all 3 R1 discarded            → 0
+        // Suit 1 (Yellow): stack=2 (Y1,Y2), no discards           → 5
+        // Suit 2 (Green):  stack=0, all 2 G4 (card 13) discarded
+        //   → G1(✓) G2(✓) G3(✓), break at G4 → suit_max=3
+        // Suit 3 (Blue):   stack=1 (B1), no discards              → 5
+        // Suit 4 (Purple): stack=3 (P1,P2,P3), no discards        → 5
+        // Total = 0 + 5 + 3 + 5 + 5 = 18.
+        let stacks = PlayingStacks::new(vec![5, 6, 15, 20, 21, 22], &NO_VARIANT);
+        let ts = state_with(stacks, &[0, 0, 0, 13, 13]);
+        assert_eq!(18, ts.max_achievable_score(&SDA));
+    }
 }
