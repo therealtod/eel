@@ -1,4 +1,6 @@
-use crate::engine::convention::hgroup::h_group_core::{count_bad_touches, is_potential_bad_touch};
+use crate::engine::convention::hgroup::h_group_core::{
+    count_bad_touches, get_chop_index, is_potential_bad_touch,
+};
 use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::decision_tree::Score;
 use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
@@ -44,6 +46,10 @@ pub struct ScoreBreakdown {
     /// `misinformation_weight * misinformed_card_count` — penalty for own-hand cards whose effective
     /// inferred mask excludes the card's true identity (convention breakdown / misinformation).
     pub misinformation_penalty: f64,
+    /// `critical_exposure_delta_weight * Δ critical_chop_count` accumulated as an immediate
+    /// bonus/penalty per turn. Always 0.0 at a pure leaf evaluation — the value is folded in
+    /// by `critical_exposure_delta_bonus` as the search walks each ply.
+    pub critical_exposure_delta: f64,
     /// Sum of all terms above.
     pub total: f64,
 }
@@ -52,7 +58,7 @@ impl std::fmt::Display for ScoreBreakdown {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "total={:.2} [score={:.1} -strike={:.1} +pace={:.1} -eff={:.1} -crit_exp={:.1} -ceil={:.1} +emp={:.1} +clue={:.1} +play={:.1} +team_emp={:.1} -misinfo={:.1}]",
+            "total={:.2} [score={:.1} -strike={:.1} +pace={:.1} -eff={:.1} -crit_exp={:.1} -ceil={:.1} +emp={:.1} +clue={:.1} +play={:.1} +team_emp={:.1} -misinfo={:.1} ±crit_delta={:.1}]",
             self.total,
             self.game_score,
             self.strike_penalty,
@@ -65,6 +71,7 @@ impl std::fmt::Display for ScoreBreakdown {
             self.known_playable,
             self.team_empathy,
             self.misinformation_penalty,
+            self.critical_exposure_delta,
         )
     }
 }
@@ -107,6 +114,7 @@ pub trait Evaluator: Send + Sync {
             known_playable: 0.0,
             team_empathy: 0.0,
             misinformation_penalty: 0.0,
+            critical_exposure_delta: 0.0,
             total: self.score(state, truth, phantom_plays),
         }
     }
@@ -202,6 +210,28 @@ pub trait Evaluator: Send + Sync {
         _action: &GameAction,
         _pre_action_state: &KnowledgeAwareGameState,
         _post_action_state: &KnowledgeAwareGameState,
+    ) -> Score {
+        0.0
+    }
+
+    /// Per-turn immediate bonus/penalty tied to changes in critical-card chop exposure.
+    ///
+    /// For each teammate whose chop holds a truth-critical card before `action`:
+    /// - **Reward** `+critical_exposure_delta_weight` if `action` removed the exposure (the
+    ///   chop card is now clue-touched in the post-action state).
+    /// - **Penalty** `−critical_exposure_delta_weight` if the card is still exposed **and**
+    ///   the actor had at least one clue token available (a save clue was possible but skipped).
+    ///
+    /// Truth identity from `truth: &dyn PlayerPOV` is required to identify critical chop cards
+    /// outside the root player's own hand. Cards whose identity is unknown to the searcher
+    /// (draw-fresh in search) contribute 0.
+    fn critical_exposure_delta_bonus(
+        &self,
+        _action: &GameAction,
+        _actor: PlayerIndex,
+        _pre_action_state: &KnowledgeAwareGameState,
+        _post_action_state: &KnowledgeAwareGameState,
+        _truth: &dyn PlayerPOV,
     ) -> Score {
         0.0
     }
@@ -407,6 +437,16 @@ pub struct DefaultEvaluator {
     ///
     /// Set to 0 to disable.
     pub potential_bad_touch_penalty: f64,
+    /// Immediate bonus/penalty per critical-card chop situation per turn.
+    ///
+    /// Applied as an immediate per-turn delta (not a leaf term). For each teammate whose chop
+    /// holds a truth-critical card before the action:
+    /// - `+critical_exposure_delta_weight` if the actor clue-touched the chop card (saved it).
+    /// - `−critical_exposure_delta_weight` if the card remains unsaved **and** the actor had
+    ///   at least one clue token (a save was available but was skipped).
+    ///
+    /// Set to 0 to disable.
+    pub critical_exposure_delta_weight: f64,
 }
 
 impl Default for DefaultEvaluator {
@@ -431,6 +471,7 @@ impl Default for DefaultEvaluator {
             potential_bad_touch_penalty: 5.0_f64,
             bottom_deck_risk_weight: 2.0_f64,
             discard_while_known_playable_penalty: 8.0_f64,
+            critical_exposure_delta_weight: 0.5_f64,
         }
     }
 }
@@ -959,6 +1000,24 @@ impl DefaultEvaluator {
         }
         total
     }
+
+    /// Count of known-playable cards held by the player behind `pov`.
+    ///
+    /// Delegates to [`Self::card_known_playable`] for each card in the player's hand so the
+    /// definition of "known playable" is consistent across all evaluator terms.
+    fn count_known_playable(pov: &dyn PlayerPOV, playable_mask: VariantCardsBitField) -> u32 {
+        let pk = pov.team_knowledge().player(pov.player_index());
+        let mut hand = pk.own_hand;
+        let mut count = 0u32;
+        while hand != 0 {
+            let idx = hand.trailing_zeros() as CardDeckIndex;
+            hand &= hand - 1;
+            if Self::card_known_playable(pov, idx, playable_mask) {
+                count += 1;
+            }
+        }
+        count
+    }
 }
 
 impl Evaluator for DefaultEvaluator {
@@ -997,6 +1056,7 @@ impl Evaluator for DefaultEvaluator {
                 known_playable: 0.0,
                 team_empathy: 0.0,
                 misinformation_penalty: 0.0,
+                critical_exposure_delta: 0.0,
                 total: game_score - strike_penalty,
             };
         }
@@ -1062,6 +1122,7 @@ impl Evaluator for DefaultEvaluator {
             known_playable,
             team_empathy,
             misinformation_penalty,
+            critical_exposure_delta: 0.0,
             total,
         }
     }
@@ -1202,6 +1263,94 @@ impl Evaluator for DefaultEvaluator {
         self.team_empathy_weight * (post_score - pre_score)
     }
 
+    fn critical_exposure_delta_bonus(
+        &self,
+        _action: &GameAction,
+        actor: PlayerIndex,
+        pre: &KnowledgeAwareGameState,
+        post: &KnowledgeAwareGameState,
+        truth: &dyn PlayerPOV,
+    ) -> Score {
+        if self.critical_exposure_delta_weight == 0.0 {
+            return 0.0;
+        }
+        let pre_table = pre.table_state();
+        let post_table = post.table_state();
+        let static_data = pre.static_data();
+        let num_players = static_data.number_of_players as usize;
+
+        let pre_critical_mask = Self::critical_mask(pre_table, static_data);
+        if pre_critical_mask == 0 {
+            return 0.0;
+        }
+
+        let save_available = pre_table.clue_token_bank.whole_clue_tokens_count() > 0;
+        // Only compute post mask when needed (save_available = true, card still exposed).
+        let post_critical_mask = if save_available {
+            Self::critical_mask(post_table, static_data)
+        } else {
+            0
+        };
+
+        let playable_mask = pre_table.playable_cards(static_data);
+        let actor_pk = pre.team_knowledge().player(actor);
+        let actor_pov =
+            LightweightPlayerPOV::new(actor, actor_pk, pre.team_knowledge(), pre_table, static_data);
+        let actor_known_playable = Self::count_known_playable(&actor_pov, playable_mask);
+
+        let mut total = 0.0f64;
+        for t in 0..num_players {
+            if t == actor {
+                continue;
+            }
+            let pk = pre.team_knowledge().player(t);
+            let pov = LightweightPlayerPOV::new(t, pk, pre.team_knowledge(), pre_table, static_data);
+            let Some(chop_idx) = get_chop_index(t, &pov) else {
+                continue;
+            };
+            let Some(chop_id) = truth.card_identity(chop_idx) else {
+                continue; // truth cannot see this card — skip
+            };
+            if (1u64 << chop_id) & pre_critical_mask == 0 {
+                continue; // not truth-critical
+            }
+            let saved = (post_table.clue_touched_cards >> chop_idx) & 1 != 0;
+            if saved {
+                total += self.critical_exposure_delta_weight;
+            } else if save_available && (1u64 << chop_id) & post_critical_mask != 0 {
+                // Charge the actor only if no player acting between actor and t has strictly
+                // fewer known playables (a player with fewer known playables is "freer" to save
+                // and is the more natural saver).
+                let any_freer_intermediate = {
+                    let mut p = (actor + 1) % num_players;
+                    let mut found = false;
+                    while p != t {
+                        let int_pk = pre.team_knowledge().player(p);
+                        let int_pov = LightweightPlayerPOV::new(
+                            p,
+                            int_pk,
+                            pre.team_knowledge(),
+                            pre_table,
+                            static_data,
+                        );
+                        if Self::count_known_playable(&int_pov, playable_mask)
+                            < actor_known_playable
+                        {
+                            found = true;
+                            break;
+                        }
+                        p = (p + 1) % num_players;
+                    }
+                    found
+                };
+                if !any_freer_intermediate {
+                    total -= self.critical_exposure_delta_weight;
+                }
+            }
+        }
+        total
+    }
+
     fn discard_action_penalty(
         &self,
         action: &GameAction,
@@ -1267,10 +1416,13 @@ impl Evaluator for DefaultEvaluator {
         let max_leaf =
             max_game_score - min_strike_penalty + max_pace + max_clue_tokens + max_known_playable;
         // Immediate bonuses: per-ply max = play_progress + clue precision across all cards
-        // + team-empathy delta (each clue can at most lift the whole-hand score by total_cards).
+        // + team-empathy delta (each clue can at most lift the whole-hand score by total_cards)
+        // + critical_exposure_delta (at most one reward per teammate = num_players - 1).
         let max_immediate_per_ply = self.play_progress_weight
             + self.clue_precision_weight * total_cards as f64
-            + self.team_empathy_weight * total_cards as f64;
+            + self.team_empathy_weight * total_cards as f64
+            + self.critical_exposure_delta_weight
+                * (static_data.number_of_players as f64 - 1.0).max(0.0);
         max_leaf + max_immediate_per_ply * depth as f64
     }
 }
@@ -1817,5 +1969,178 @@ mod tests {
             score, 0.0,
             "unresolved chop (no truth identity) must not contribute to critical exposure"
         );
+    }
+
+    // ── critical_exposure_delta_bonus ───────────────────────────────────────────
+
+    /// Build a two-player (actor=0, teammate=1) KAGS where player 1 has a truth-critical card
+    /// at deck index 10 on their chop. Returns (pre_state, post_state_unsaved,
+    /// post_state_saved).
+    ///
+    /// `with_clue_tokens`: whether actor has clue tokens.
+    fn make_critical_chop_states(
+        with_clue_tokens: bool,
+    ) -> (
+        KnowledgeAwareGameState,
+        KnowledgeAwareGameState,
+        KnowledgeAwareGameState,
+    ) {
+        use crate::engine::knowledge::player_knowledge::knowledge_for_hand;
+        use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
+
+        let static_data = StaticGameData {
+            number_of_players: 2,
+            variant: NO_VARIANT,
+        };
+        // Card id 4 = R5, only 1 copy → always critical.
+        let mut deck = Deck::new(&NO_VARIANT);
+        deck.reveal_card(10, 4, &NO_VARIANT); // deck index 10 = R5
+        let mut hands = Hand::empty_array();
+        hands[0] = Hand::new(&[0]); // actor (player 0)
+        hands[1] = Hand::new(&[10]); // teammate (player 1), chop = deck 10
+        let clue_tokens = if with_clue_tokens { 8 } else { 0 };
+        let pre_state = TableState::from_parts(
+            ClueTokenBank::new(clue_tokens),
+            deck.clone(),
+            hands.clone(),
+            0,
+            1,
+            PlayingStacks::empty(),
+            0,
+            CopiesCountingCardCollection::empty(),
+        );
+        let mut tk = TeamKnowledge::new(2);
+        *tk.player_mut(0) = knowledge_for_hand(&[0]);
+        *tk.player_mut(1) = knowledge_for_hand(&[10]);
+        let pre = KnowledgeAwareGameState::from_parts(static_data.clone(), pre_state.clone(), tk.clone(), 11);
+
+        // post_unsaved: same table state (actor did not touch the chop card)
+        let post_unsaved = KnowledgeAwareGameState::from_parts(static_data.clone(), pre_state.clone(), tk.clone(), 11);
+
+        // post_saved: chop card is now clue-touched
+        let mut saved_state = pre_state.clone();
+        saved_state.clue_touched_cards |= 1u64 << 10;
+        let post_saved = KnowledgeAwareGameState::from_parts(static_data, saved_state, tk, 11);
+
+        (pre, post_unsaved, post_saved)
+    }
+
+    #[test]
+    fn critical_exposure_delta_penalty_when_save_skipped() {
+        let (pre, post_unsaved, _) = make_critical_chop_states(true);
+        let evaluator = DefaultEvaluator {
+            critical_exposure_delta_weight: 2.0,
+            ..DefaultEvaluator::default()
+        };
+        let truth = TruthFixture::new(pre.static_data());
+        let truth_pov = truth.pov(pre.table_state(), pre.static_data());
+        let action = GameAction::Discard {
+            player_index: 0,
+            card_deck_index: 0,
+            turn: 1,
+        };
+        let delta = evaluator.critical_exposure_delta_bonus(&action, 0, &pre, &post_unsaved, &truth_pov);
+        assert!(
+            delta < 0.0,
+            "should charge when critical chop left unsaved with tokens available (got {delta})"
+        );
+        assert!(
+            (delta - (-2.0)).abs() < 1e-9,
+            "penalty should equal -weight (got {delta})"
+        );
+    }
+
+    #[test]
+    fn critical_exposure_delta_reward_when_chop_saved() {
+        let (pre, _, post_saved) = make_critical_chop_states(true);
+        let evaluator = DefaultEvaluator {
+            critical_exposure_delta_weight: 2.0,
+            ..DefaultEvaluator::default()
+        };
+        let truth = TruthFixture::new(pre.static_data());
+        let truth_pov = truth.pov(pre.table_state(), pre.static_data());
+        let action = GameAction::Clue {
+            player_index: 1,
+            touched_card_deck_indexes: smallvec::smallvec![10],
+            clue: crate::game::clue::Clue {
+                clue_type: crate::game::clue_type::ClueType::Rank,
+                clue_value: 5,
+            },
+            turn: 1,
+        };
+        let delta = evaluator.critical_exposure_delta_bonus(&action, 0, &pre, &post_saved, &truth_pov);
+        assert!(
+            delta > 0.0,
+            "should reward when critical chop card is saved (got {delta})"
+        );
+        assert!(
+            (delta - 2.0).abs() < 1e-9,
+            "reward should equal +weight (got {delta})"
+        );
+    }
+
+    #[test]
+    fn critical_exposure_delta_no_penalty_when_no_clue_tokens() {
+        let (pre, post_unsaved, _) = make_critical_chop_states(false);
+        let evaluator = DefaultEvaluator {
+            critical_exposure_delta_weight: 2.0,
+            ..DefaultEvaluator::default()
+        };
+        let truth = TruthFixture::new(pre.static_data());
+        let truth_pov = truth.pov(pre.table_state(), pre.static_data());
+        let action = GameAction::Discard {
+            player_index: 0,
+            card_deck_index: 0,
+            turn: 1,
+        };
+        let delta = evaluator.critical_exposure_delta_bonus(&action, 0, &pre, &post_unsaved, &truth_pov);
+        assert_eq!(
+            delta, 0.0,
+            "no penalty when no clue tokens available (got {delta})"
+        );
+    }
+
+    #[test]
+    fn critical_exposure_delta_zero_when_no_critical_cards() {
+        use crate::engine::knowledge::player_knowledge::knowledge_for_hand;
+        use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
+
+        let static_data = StaticGameData {
+            number_of_players: 2,
+            variant: NO_VARIANT,
+        };
+        // Card id 0 = R1, 3 copies → not critical.
+        let mut deck = Deck::new(&NO_VARIANT);
+        deck.reveal_card(10, 0, &NO_VARIANT);
+        let mut hands = Hand::empty_array();
+        hands[0] = Hand::new(&[0]);
+        hands[1] = Hand::new(&[10]);
+        let state = TableState::from_parts(
+            ClueTokenBank::new(8),
+            deck,
+            hands,
+            0,
+            1,
+            PlayingStacks::empty(),
+            0,
+            CopiesCountingCardCollection::empty(),
+        );
+        let mut tk = TeamKnowledge::new(2);
+        *tk.player_mut(0) = knowledge_for_hand(&[0]);
+        *tk.player_mut(1) = knowledge_for_hand(&[10]);
+        let kags = KnowledgeAwareGameState::from_parts(static_data.clone(), state.clone(), tk, 11);
+        let evaluator = DefaultEvaluator {
+            critical_exposure_delta_weight: 2.0,
+            ..DefaultEvaluator::default()
+        };
+        let truth = TruthFixture::new(&static_data);
+        let truth_pov = truth.pov(&state, &static_data);
+        let action = GameAction::Discard {
+            player_index: 0,
+            card_deck_index: 0,
+            turn: 1,
+        };
+        let delta = evaluator.critical_exposure_delta_bonus(&action, 0, &kags, &kags, &truth_pov);
+        assert_eq!(delta, 0.0, "no effect when no critical cards exist (got {delta})");
     }
 }
