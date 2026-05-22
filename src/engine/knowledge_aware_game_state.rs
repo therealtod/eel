@@ -15,14 +15,7 @@ use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
 use crate::game::variant::Variant;
 use smallvec::SmallVec;
-
-/// Outcome of applying an action, carrying search-relevant metadata.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct ActionOutcome {
-    /// True when the play succeeded but its exact stack assignment was deferred
-    /// (known-playable but multiple candidate identities).
-    pub is_phantom_play: bool,
-}
+use crate::engine::action_outcome::ActionOutcome;
 
 /// Collect hypotheses for `action` from `observer_pov`, respecting interpretation priority.
 ///
@@ -30,7 +23,7 @@ pub struct ActionOutcome {
 /// Each returned entry is `(tier, hypothesis)` where `tier 0` = primary and `tier 1` = fallback.
 /// Techs must be pre-sorted by `interpretation_priority` (ascending) —
 /// `HGroupConventionSet::new` guarantees this. Empty hypotheses are dropped.
-pub fn collect_hypotheses(
+fn collect_hypotheses(
     techs: &[Box<dyn ConventionTech>],
     action: &GameAction,
     history: &[GameStateSnapshot],

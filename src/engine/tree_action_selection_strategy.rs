@@ -1,6 +1,6 @@
 use rayon::prelude::*;
 use smallvec::SmallVec;
-
+use crate::engine::action_outcome::ActionOutcome;
 use crate::engine::action_selection_strategy::ActionSelectionStrategy;
 use crate::engine::convention::convention_set::ConventionSet;
 use crate::engine::convention::convention_tech::ConventionTech;
@@ -9,7 +9,7 @@ use crate::engine::decision_tree::{LineStep, Score, ScoredNode};
 use crate::engine::evaluator::{DefaultEvaluator, Evaluator, ScoreBreakdown};
 use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 use crate::engine::knowledge::player_pov::PlayerPOV;
-use crate::engine::knowledge_aware_game_state::{ActionOutcome, KnowledgeAwareGameState};
+use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
 use crate::engine::play_resolver::TruthPovResolver;
 use crate::game::action::game_action::GameAction;
 use crate::game::static_game_data::StaticGameData;
