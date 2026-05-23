@@ -2,7 +2,9 @@ use crate::engine::action_outcome::ActionOutcome;
 use crate::engine::action_selection_strategy::ActionSelectionStrategy;
 use crate::engine::convention::convention_set::ConventionSet;
 use crate::engine::convention::convention_tech::ConventionTech;
+use crate::engine::convention::hgroup::tech::clue_burn::ClueBurn;
 use crate::engine::convention::hgroup::tech::low_level_stall::LowLevelStall;
+use crate::engine::convention::hgroup::tech::tempo_clue::TempoClue;
 use crate::engine::decision_tree::{LineStep, Score, ScoredNode};
 use crate::engine::evaluator::{DefaultEvaluator, Evaluator, ScoreBreakdown};
 use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
@@ -103,15 +105,26 @@ impl TreeActionSelectionStrategy {
             .collect();
 
         if proposed.is_empty() {
-            proposed = LowLevelStall
-                .game_actions(pov)
-                .into_iter()
-                .map(|action| ProposedAction {
-                    action,
-                    tech_name: LowLevelStall.name(),
-                    priority: u8::MAX,
-                })
-                .collect();
+            for (tech, name) in [
+                (&TempoClue as &dyn ConventionTech, TempoClue.name()),
+                (&ClueBurn as &dyn ConventionTech, ClueBurn.name()),
+                (&LowLevelStall as &dyn ConventionTech, LowLevelStall.name()),
+            ] {
+                let actions: SmallVec<[ProposedAction; CANDIDATE_INLINE_CAP]> = tech
+                    .game_actions(pov)
+                    .into_iter()
+                    .filter(|a| has_clue_tokens || !matches!(a, GameAction::Clue { .. }))
+                    .map(|action| ProposedAction {
+                        action,
+                        tech_name: name,
+                        priority: u8::MAX,
+                    })
+                    .collect();
+                if !actions.is_empty() {
+                    proposed = actions;
+                    break;
+                }
+            }
         }
 
         // Dedup by action, keeping the first (highest-priority) tech that proposed it.
