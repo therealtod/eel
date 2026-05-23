@@ -67,6 +67,31 @@ fn collect_hypotheses(
     result
 }
 
+/// Collect hypotheses from fallback techs using first-match-wins semantics.
+///
+/// Iterates `fallback_techs` in their declared order (matching the action-generation fallback
+/// chain). Stops at the first tech whose `matches_action` returns `true` and returns its
+/// (possibly empty) hypotheses — an empty return from a matched tech correctly signals
+/// "stall recognised, no knowledge update" and prevents further matching.
+fn collect_stall_hypotheses(
+    fallback_techs: &[Box<dyn ConventionTech>],
+    action: &GameAction,
+    history: &[GameStateSnapshot],
+    observer_pov: &dyn PlayerPOV,
+) -> Vec<(u8, Hypothesis)> {
+    for tech in fallback_techs {
+        if tech.matches_action(action, history, observer_pov) {
+            return tech
+                .knowledge_updates_multi(action, history, observer_pov)
+                .into_iter()
+                .filter(|h| !h.is_empty())
+                .map(|h| (0u8, h))
+                .collect();
+        }
+    }
+    vec![]
+}
+
 /// A [TableState] with associated player knowledge and convention awareness.
 ///
 /// This is the main integration point for the engine: it wraps a [TableState] with a
@@ -573,7 +598,6 @@ impl KnowledgeAwareGameState {
         let cohort_id = self.next_hypothesis_id;
         self.next_hypothesis_id += 1;
         let num_players = self.static_data.number_of_players as usize;
-        let techs = convention_set.techs();
 
         // Build the snapshot for local_history using the PRE-clue table_state but the
         // POST-raw-narrowing team_knowledge. This combination gives techs what they need:
@@ -588,6 +612,26 @@ impl KnowledgeAwareGameState {
         //   it to detect good-touch duplicates introduced by the same clue.
         let tech_snapshot =
             GameStateSnapshot::new(pre_clue_table_state, self.team_knowledge.clone());
+
+        // Reconstruct the giver's POV at decision time to determine whether they were in
+        // a stall situation (no primary tech had a candidate action). If they were, route
+        // interpretation to the fallback techs instead of the primary techs — this prevents
+        // registered techs (e.g. DirectPlayClue, FiveSave) from incorrectly claiming a
+        // stall clue as a play/save and producing wrong knowledge updates.
+        let actor_had_primary_candidate = {
+            let actor_pov = tech_snapshot.player_pov(giver, &self.static_data);
+            let has_clue_tokens = actor_pov
+                .table_state()
+                .clue_token_bank
+                .whole_clue_tokens_count()
+                > 0;
+            convention_set.techs().iter().any(|tech| {
+                tech.game_actions(&actor_pov)
+                    .into_iter()
+                    .any(|a| has_clue_tokens || !matches!(a, GameAction::Clue { .. }))
+            })
+        };
+
         let action_turn = match action {
             GameAction::Clue { turn, .. } => *turn,
             _ => 0,
@@ -610,8 +654,16 @@ impl KnowledgeAwareGameState {
             &self.table_state,
             &self.static_data,
         );
-        let receiver_hypotheses =
-            collect_hypotheses(techs, action, knowledge_history, &receiver_pov);
+        let receiver_hypotheses = if actor_had_primary_candidate {
+            collect_hypotheses(convention_set.techs(), action, knowledge_history, &receiver_pov)
+        } else {
+            collect_stall_hypotheses(
+                convention_set.fallback_techs(),
+                action,
+                knowledge_history,
+                &receiver_pov,
+            )
+        };
         if !receiver_hypotheses.is_empty() {
             tracing::debug!(target: "eel::apply", giver, action = ?action, hypotheses = receiver_hypotheses.len(), "receiver_hypotheses");
         }
@@ -635,7 +687,16 @@ impl KnowledgeAwareGameState {
                 &target_table_state,
                 &self.static_data,
             );
-            let raw = collect_hypotheses(techs, action, knowledge_history, &target_pov);
+            let raw = if actor_had_primary_candidate {
+                collect_hypotheses(convention_set.techs(), action, knowledge_history, &target_pov)
+            } else {
+                collect_stall_hypotheses(
+                    convention_set.fallback_techs(),
+                    action,
+                    knowledge_history,
+                    &target_pov,
+                )
+            };
             let own_hand = self.team_knowledge.player(target).own_hand;
             let filtered: Vec<(u8, Hypothesis)> = raw
                 .into_iter()

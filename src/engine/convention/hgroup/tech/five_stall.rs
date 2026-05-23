@@ -6,6 +6,7 @@ use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
 use crate::game::clue::Clue;
 use crate::game::clue_type::ClueType;
+use crate::game::state::PlayerIndex;
 
 /// Stall: clue rank 5 to the first teammate who holds a 5 (any slot).
 ///
@@ -62,11 +63,23 @@ impl ConventionTech for FiveStall {
 
     fn matches_action(
         &self,
-        _action: &GameAction,
-        _history: &[GameStateSnapshot],
-        _observer_pov: &dyn PlayerPOV,
+        action: &GameAction,
+        history: &[GameStateSnapshot],
+        observer_pov: &dyn PlayerPOV,
     ) -> bool {
-        false
+        let (clue, turn) = match action {
+            GameAction::Clue { clue, turn, .. } => (clue, *turn),
+            _ => return false,
+        };
+        if clue.clue_type != ClueType::Rank || clue.clue_value != 5 {
+            return false;
+        }
+        let Some(snap) = history.get(turn.saturating_sub(1)) else {
+            return false;
+        };
+        let actor: PlayerIndex = snap.table_state.active_player_index;
+        let actor_pov = snap.player_pov(actor, observer_pov.static_data());
+        !FiveStall.game_actions(&actor_pov).is_empty()
     }
 
     fn knowledge_updates(
@@ -190,5 +203,152 @@ mod tests {
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
         assert!(FiveStall.game_actions(&pov).is_empty());
+    }
+
+    // ── matches_action ─────────────────────────────────────────────────────────
+
+    #[test]
+    fn matches_action_true_when_rank5_clue_and_actor_had_a_five() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.clue_token_bank.set_half_tokens(2);
+        table_state.current_turn = 1;
+
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10);
+        table_state.active_player_index = 0;
+
+        let knowledge = knowledge_with_visible(0, &[(10, R5_MASK)]);
+        // The snapshot's team_knowledge must reflect that player 0 can see card 10 as R5,
+        // so that snap.player_pov(0, ..) returns the correct actor POV.
+        let mut snap_team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        snap_team_knowledge.player_mut(0).visible_cards |= 1 << 10;
+        snap_team_knowledge.player_mut(0).inferred_identities[10] =
+            Some(crate::game::card::CardIdentityMask::from_bits(R5_MASK));
+        snap_team_knowledge.player_mut(1).own_hand |= 1 << 10;
+        let snapshot = crate::engine::game_state_snapshot::GameStateSnapshot::new(
+            table_state.clone(),
+            snap_team_knowledge,
+        );
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let action = GameAction::Clue {
+            player_index: 1,
+            touched_card_deck_indexes: smallvec![10],
+            clue: Clue {
+                clue_type: ClueType::Rank,
+                clue_value: 5,
+            },
+            turn: 1,
+        };
+        assert!(FiveStall.matches_action(&action, &[snapshot], &pov));
+    }
+
+    #[test]
+    fn matches_action_false_when_not_rank5_clue() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.clue_token_bank.set_half_tokens(2);
+        table_state.current_turn = 3;
+
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10);
+        table_state.active_player_index = 0;
+
+        let knowledge = knowledge_with_visible(0, &[(10, R5_MASK)]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let snapshot = crate::engine::game_state_snapshot::GameStateSnapshot::new(
+            table_state.clone(),
+            team_knowledge.clone(),
+        );
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let action = GameAction::Clue {
+            player_index: 1,
+            touched_card_deck_indexes: smallvec![10],
+            clue: Clue {
+                clue_type: ClueType::Rank,
+                clue_value: 4,
+            },
+            turn: 1,
+        };
+        assert!(!FiveStall.matches_action(&action, &[snapshot], &pov));
+    }
+
+    #[test]
+    fn matches_action_false_when_actor_had_no_five_to_stall_with() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.clue_token_bank.set_half_tokens(2);
+        table_state.current_turn = 3;
+
+        // No cards drawn for player 1 — actor has no 5 visible.
+        table_state.active_player_index = 0;
+
+        let knowledge = knowledge_with_visible(0, &[]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let snapshot = crate::engine::game_state_snapshot::GameStateSnapshot::new(
+            table_state.clone(),
+            team_knowledge.clone(),
+        );
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let action = GameAction::Clue {
+            player_index: 1,
+            touched_card_deck_indexes: smallvec![],
+            clue: Clue {
+                clue_type: ClueType::Rank,
+                clue_value: 5,
+            },
+            turn: 1,
+        };
+        assert!(!FiveStall.matches_action(&action, &[snapshot], &pov));
+    }
+
+    #[test]
+    fn matches_action_false_when_history_too_short() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let table_state = initial_five_players_table_state();
+        let knowledge = knowledge_with_visible(0, &[]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let action = GameAction::Clue {
+            player_index: 1,
+            touched_card_deck_indexes: smallvec![10],
+            clue: Clue {
+                clue_type: ClueType::Rank,
+                clue_value: 5,
+            },
+            turn: 5,
+        };
+        // history has only 1 entry but turn is 5, so history.get(4) is None
+        let snap = crate::engine::game_state_snapshot::GameStateSnapshot::new(
+            table_state.clone(),
+            team_knowledge.clone(),
+        );
+        assert!(!FiveStall.matches_action(&action, &[snap], &pov));
+    }
+
+    #[test]
+    fn matches_action_false_for_non_clue_action() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let table_state = initial_five_players_table_state();
+        let knowledge = knowledge_with_visible(0, &[]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let play = GameAction::Play {
+            player_index: 0,
+            card_deck_index: 5,
+            turn: 1,
+        };
+        assert!(!FiveStall.matches_action(&play, &[], &pov));
     }
 }

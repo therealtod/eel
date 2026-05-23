@@ -16,6 +16,14 @@ pub trait ConventionSet: Sync {
     /// All techniques in priority order (lowest priority number first).
     fn techs(&self) -> &[Box<dyn ConventionTech>];
 
+    /// Last-resort techniques consulted only when no primary tech has a candidate action.
+    ///
+    /// Returned in the order they should be tried (first match wins, mirroring the
+    /// action-generation fallback chain). NOT sorted by `interpretation_priority`.
+    fn fallback_techs(&self) -> &[Box<dyn ConventionTech>] {
+        &[]
+    }
+
     /// Per-clue baseline narrowing applied to the receiver's own empathy on touched cards.
     ///
     /// This is convention-wide knowledge that does not depend on which specific tech

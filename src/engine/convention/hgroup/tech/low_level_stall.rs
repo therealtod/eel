@@ -9,6 +9,7 @@ use crate::game::MAX_CLUE_TOKEN_COUNT;
 use crate::game::action::game_action::GameAction;
 use crate::game::clue::Clue;
 use crate::game::clue_type::ClueType;
+use crate::game::state::PlayerIndex;
 
 /// Last-resort stall: invoked when no other tech produces an action.
 ///
@@ -90,11 +91,22 @@ impl ConventionTech for LowLevelStall {
 
     fn matches_action(
         &self,
-        _action: &GameAction,
-        _history: &[GameStateSnapshot],
-        _observer_pov: &dyn PlayerPOV,
+        action: &GameAction,
+        history: &[GameStateSnapshot],
+        observer_pov: &dyn PlayerPOV,
     ) -> bool {
-        false
+        let turn = match action {
+            GameAction::Clue { turn, .. }
+            | GameAction::Discard { turn, .. }
+            | GameAction::Play { turn, .. } => *turn,
+            GameAction::Draw { .. } => return false,
+        };
+        let Some(snap) = history.get(turn.saturating_sub(1)) else {
+            return false;
+        };
+        let actor: PlayerIndex = snap.table_state.active_player_index;
+        let actor_pov = snap.player_pov(actor, observer_pov.static_data());
+        LowLevelStall.game_actions(&actor_pov).contains(action)
     }
 
     fn knowledge_updates(
@@ -247,5 +259,124 @@ mod tests {
                 turn: 8,
             }]
         );
+    }
+
+    // ── matches_action ─────────────────────────────────────────────────────────
+
+    #[test]
+    fn matches_action_true_for_discard_slot1_when_bank_not_full() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.clue_token_bank.set_half_tokens(6); // 3 whole tokens, not full
+        table_state.current_turn = 1;
+
+        table_state.update_with_draw_action(10); // player 0 draws card 10 (slot 1)
+
+        let knowledge = knowledge_with_visible(0, &[]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let snapshot = crate::engine::game_state_snapshot::GameStateSnapshot::new(
+            table_state.clone(),
+            team_knowledge.clone(),
+        );
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let action = GameAction::Discard {
+            player_index: 0,
+            card_deck_index: 10,
+            turn: 1,
+        };
+        assert!(LowLevelStall.matches_action(&action, &[snapshot], &pov));
+    }
+
+    #[test]
+    fn matches_action_true_for_play_slot1_when_bank_is_full() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.clue_token_bank.set_half_tokens(16); // 8 whole tokens = full
+        table_state.current_turn = 1;
+
+        table_state.update_with_draw_action(10); // player 0 draws card 10 (slot 1)
+
+        let knowledge = knowledge_with_visible(0, &[]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let snapshot = crate::engine::game_state_snapshot::GameStateSnapshot::new(
+            table_state.clone(),
+            team_knowledge.clone(),
+        );
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let action = GameAction::Play {
+            player_index: 0,
+            card_deck_index: 10,
+            turn: 1,
+        };
+        assert!(LowLevelStall.matches_action(&action, &[snapshot], &pov));
+    }
+
+    #[test]
+    fn matches_action_false_for_wrong_card_index() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.clue_token_bank.set_half_tokens(6);
+        table_state.current_turn = 1;
+
+        table_state.update_with_draw_action(10); // slot 1 is card 10
+
+        let knowledge = knowledge_with_visible(0, &[]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let snapshot = crate::engine::game_state_snapshot::GameStateSnapshot::new(
+            table_state.clone(),
+            team_knowledge.clone(),
+        );
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        // LowLevelStall would discard card 10 (slot 1), not card 20
+        let action = GameAction::Discard {
+            player_index: 0,
+            card_deck_index: 20,
+            turn: 1,
+        };
+        assert!(!LowLevelStall.matches_action(&action, &[snapshot], &pov));
+    }
+
+    #[test]
+    fn matches_action_false_when_history_too_short() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let table_state = initial_five_players_table_state();
+        let knowledge = knowledge_with_visible(0, &[]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let action = GameAction::Discard {
+            player_index: 0,
+            card_deck_index: 10,
+            turn: 9,
+        };
+        let snap = crate::engine::game_state_snapshot::GameStateSnapshot::new(
+            table_state.clone(),
+            team_knowledge.clone(),
+        );
+        // history has 1 entry but turn is 9, so history.get(8) is None
+        assert!(!LowLevelStall.matches_action(&action, &[snap], &pov));
+    }
+
+    #[test]
+    fn matches_action_false_for_draw_action() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let table_state = initial_five_players_table_state();
+        let knowledge = knowledge_with_visible(0, &[]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let draw = GameAction::Draw {
+            player_index: 0,
+            card_deck_index: 5,
+        };
+        assert!(!LowLevelStall.matches_action(&draw, &[], &pov));
     }
 }
