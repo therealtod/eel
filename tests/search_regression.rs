@@ -196,7 +196,6 @@ fn does_not_defer_play_to_save_cathy_when_bob_could_save() {
 }
 
 #[test]
-#[ignore]
 fn prefers_more_efficient_finesse_over_direct_play_clue() {
     let action = search_best_action("prefer_finesse_over_direct_play_clue_when_more_efficient");
     match action {
@@ -214,7 +213,6 @@ fn prefers_more_efficient_finesse_over_direct_play_clue() {
 }
 
 #[test]
-#[ignore]
 fn prefers_to_clue_rank_1_rather_than_picking_up_1s_by_color() {
     let action = search_best_action(
         "does_not_slow_down_the_game_due_to_foreseeing_too_many_discards_cause_of_search_horizon",

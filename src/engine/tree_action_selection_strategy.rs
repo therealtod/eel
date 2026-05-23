@@ -240,12 +240,20 @@ impl TreeActionSelectionStrategy {
             state_after,
             truth,
         );
+        let tempo = evaluator.tempo_cost(
+            action,
+            state_before,
+            state_after,
+            pre_phantom_plays,
+            post_phantom_plays,
+        );
         clue_bonus
             + signal_penalty
             + play_bonus
             + team_empathy_bonus
             + discard_penalty
             + critical_exposure_delta
+            + tempo
     }
 
     /// Recursively compute the best leaf score reachable from `state` within `depth` more turns.
