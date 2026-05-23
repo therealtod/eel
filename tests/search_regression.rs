@@ -247,7 +247,8 @@ fn should_avoid_bad_touch() {
     {
         panic!("Alice decided to clue both b1s, generating a bad touch: {action:?}")
     } else {
-        println!("Alice choose the following action: {:?}", action);}
+        println!("Alice choose the following action: {:?}", action);
+    }
 }
 
 #[test]
@@ -262,7 +263,9 @@ fn should_not_give_a_play_clue_that_looks_like_a_save() {
         ..
     } = action
     {
-        panic!("Alice decided to clue red to play clue r3. This will look like a r4 critical save from Bob's POV: {action:?}")
+        panic!(
+            "Alice decided to clue red to play clue r3. This will look like a r4 critical save from Bob's POV: {action:?}"
+        )
     } else {
         println!("Alice choose the following action: {:?}", action);
     }
@@ -274,31 +277,37 @@ fn should_not_steal_a_play_clue_from_bob_and_rather_save_his_chop() {
     match action {
         GameAction::Clue {
             player_index: 1,
-            clue: Clue {
-                clue_type: ClueType::Rank,
-                clue_value: 5,
-            },
+            clue:
+                Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 5,
+                },
             ..
         } => {
             println!("Alice choose to save Bob's chop. Action: {:?}", action);
-        },
+        }
         GameAction::Clue {
             player_index: 2,
-            clue: Clue {
-                clue_type: ClueType::Color,
-                clue_value: 0,
-            },
+            clue:
+                Clue {
+                    clue_type: ClueType::Color,
+                    clue_value: 0,
+                },
             ..
         } => {
-            panic!("Alice decided to clue Cathy's red 1, Depriving Bob of reasonable actions and putting his chop in danger of being discarded : {action:?}")
-        },
+            panic!(
+                "Alice decided to clue Cathy's red 1, Depriving Bob of reasonable actions and putting his chop in danger of being discarded : {action:?}"
+            )
+        }
         GameAction::Discard {
             player_index: 0,
             card_deck_index: 1,
             ..
-         } => {
-            panic!("Alice chose to aggressively discard even though it's not as safe as saving Bob's chop {action:?}")
-         },
-        _ => println!("Alice chose the following action: {:?}", action)
+        } => {
+            panic!(
+                "Alice chose to aggressively discard even though it's not as safe as saving Bob's chop {action:?}"
+            )
+        }
+        _ => println!("Alice chose the following action: {:?}", action),
     }
 }

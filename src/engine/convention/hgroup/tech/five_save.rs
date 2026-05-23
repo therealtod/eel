@@ -140,7 +140,6 @@ mod tests {
     use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
         NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
     };
-    
 
     #[test]
     fn generates_rank5_clue_when_chop_is_a_5() {

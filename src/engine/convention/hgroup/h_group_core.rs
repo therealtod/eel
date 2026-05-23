@@ -1292,7 +1292,6 @@ mod tests {
         // identity R2 is not yet in gotten_cards → condition 1 passes.
         use crate::game::clue::Clue;
         use crate::game::deck::unit_test_constants::novariant_constants::{R1_MASK, R2_MASK};
-        
 
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
@@ -1326,7 +1325,6 @@ mod tests {
         use crate::game::card::CardIdentityMask;
         use crate::game::clue::Clue;
         use crate::game::deck::unit_test_constants::novariant_constants::{R1_MASK, R2_MASK};
-        
 
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
@@ -1362,7 +1360,6 @@ mod tests {
         use crate::engine::convention::hgroup::signal::Signal;
         use crate::game::clue::Clue;
         use crate::game::deck::unit_test_constants::novariant_constants::{NoVarCards, R1_MASK};
-        
 
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
@@ -1399,7 +1396,6 @@ mod tests {
         // Card 10 (R1) is not yet touched at all — its identity R1 is not gotten → passes.
         use crate::game::clue::Clue;
         use crate::game::deck::unit_test_constants::novariant_constants::R1_MASK;
-        
 
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
@@ -1431,7 +1427,6 @@ mod tests {
         use crate::game::deck::unit_test_constants::novariant_constants::{
             R1_MASK, R2_MASK, R3_MASK,
         };
-        
 
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
@@ -1474,7 +1469,6 @@ mod tests {
         use crate::game::card::CardIdentityMask;
         use crate::game::clue::Clue;
         use crate::game::deck::unit_test_constants::novariant_constants::{R1_MASK, R2_MASK};
-        
 
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let _ = _Signal::Play {

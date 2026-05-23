@@ -1,5 +1,5 @@
-use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
 use crate::engine::knowledge::player_pov::PlayerPOV;
+use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
 use crate::game::card::{CardDeckIndex, VariantCardId};
 
 /// The outcome of resolving a played card's identity.
@@ -111,11 +111,14 @@ impl PlayResolver for TruthPovResolver<'_> {
             (0..num_players)
                 .filter(|&obs| obs != player_index)
                 .map(|obs| {
-                    state.team_knowledge.player(obs).combined_possible_identities(
-                        card_deck_index,
-                        &state.table_state,
-                        &state.static_data().variant,
-                    )
+                    state
+                        .team_knowledge
+                        .player(obs)
+                        .combined_possible_identities(
+                            card_deck_index,
+                            &state.table_state,
+                            &state.static_data().variant,
+                        )
                 })
                 .find(|e| e.is_exactly_known())
                 .and_then(|e| e.known_card_id())

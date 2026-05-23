@@ -1,9 +1,8 @@
 use smallvec::smallvec;
 
+use super::play_clue;
 use crate::engine::convention::convention_tech::ClueTech;
-use crate::engine::convention::hgroup::h_group_core::{
-    clues_for_player_with_focus, get_clue_focus,
-};
+use crate::engine::convention::hgroup::h_group_core::get_clue_focus;
 use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, PlayClueTech, priority};
 use crate::engine::game_state_snapshot::GameStateSnapshot;
 use crate::engine::knowledge::knowledge_update::{
@@ -95,24 +94,10 @@ impl DelayedPlayClue {
 
 impl ClueTech for DelayedPlayClue {
     fn clue_game_actions(&self, pov: &dyn PlayerPOV) -> Vec<GameAction> {
-        let active = pov.active_player_index();
-        let num_players = pov.static_data().number_of_players as usize;
-
-        (0..num_players)
-            .filter(|&p| p != active)
-            .flat_map(|target| {
-                clues_for_player_with_focus(target, pov)
-                    .into_iter()
-                    .filter_map(|(action, focus_idx)| {
-                        let card_id = pov.card_identity(focus_idx)?;
-                        if Self::is_delayed_play_situation(card_id, pov) {
-                            Some(action)
-                        } else {
-                            None
-                        }
-                    })
-            })
-            .collect()
+        play_clue::clue_game_actions(pov, |focus_idx, pov| {
+            pov.card_identity(focus_idx)
+                .is_some_and(|card_id| Self::is_delayed_play_situation(card_id, pov))
+        })
     }
 
     fn matches_clue(
@@ -375,7 +360,6 @@ mod tests {
     use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
         NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
     };
-    
 
     // ── game_actions ───────────────────────────────────────────────────────────
 

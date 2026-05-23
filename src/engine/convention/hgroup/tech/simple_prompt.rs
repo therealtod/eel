@@ -255,7 +255,6 @@ mod tests {
     use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
         NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
     };
-    
 
     /// Actor (player 0) knows the identities of all cards listed.
     /// `team_knowledge` is a fresh `TeamKnowledge` — sufficient for tests that don't need

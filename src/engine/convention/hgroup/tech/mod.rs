@@ -10,5 +10,5 @@ pub mod play_clue;
 pub mod play_known_playable;
 pub mod simple_finesse;
 pub mod simple_prompt;
-pub mod two_save;
 mod tempo_clue;
+pub mod two_save;

@@ -1,3 +1,4 @@
+use crate::engine::action_outcome::ActionOutcome;
 use crate::engine::convention::convention_set::ConventionSet;
 use crate::engine::convention::convention_tech::ConventionTech;
 use crate::engine::game_state_snapshot::GameStateSnapshot;
@@ -15,7 +16,6 @@ use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
 use crate::game::variant::Variant;
 use smallvec::SmallVec;
-use crate::engine::action_outcome::ActionOutcome;
 
 /// Collect hypotheses for `action` from `observer_pov`, respecting interpretation priority.
 ///

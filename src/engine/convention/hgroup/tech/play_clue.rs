@@ -11,7 +11,7 @@ use crate::game::state::PlayerIndex;
 
 pub(crate) fn clue_game_actions(
     active_player_pov: &dyn PlayerPOV,
-    predicate: fn(CardDeckIndex, &dyn PlayerPOV) -> bool,
+    predicate: impl Fn(CardDeckIndex, &dyn PlayerPOV) -> bool,
 ) -> Vec<GameAction> {
     let active_player_index = active_player_pov.active_player_index();
     let num_players = active_player_pov.static_data().number_of_players as usize;
@@ -19,6 +19,7 @@ pub(crate) fn clue_game_actions(
     (0..num_players)
         .filter(|&x| x != active_player_index)
         .flat_map(|target| {
+            let predicate = &predicate;
             clues_for_player_with_focus(target, active_player_pov)
                 .into_iter()
                 .filter_map(move |(action, focus_idx)| {

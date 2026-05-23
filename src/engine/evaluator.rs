@@ -1302,8 +1302,13 @@ impl Evaluator for DefaultEvaluator {
 
         let playable_mask = pre_table.playable_cards(static_data);
         let actor_pk = pre.team_knowledge().player(actor);
-        let actor_pov =
-            LightweightPlayerPOV::new(actor, actor_pk, pre.team_knowledge(), pre_table, static_data);
+        let actor_pov = LightweightPlayerPOV::new(
+            actor,
+            actor_pk,
+            pre.team_knowledge(),
+            pre_table,
+            static_data,
+        );
         let actor_known_playable = Self::count_known_playable(&actor_pov, playable_mask);
 
         let mut total = 0.0f64;
@@ -1312,7 +1317,8 @@ impl Evaluator for DefaultEvaluator {
                 continue;
             }
             let pk = pre.team_knowledge().player(t);
-            let pov = LightweightPlayerPOV::new(t, pk, pre.team_knowledge(), pre_table, static_data);
+            let pov =
+                LightweightPlayerPOV::new(t, pk, pre.team_knowledge(), pre_table, static_data);
             let Some(chop_idx) = get_chop_index(t, &pov) else {
                 continue;
             };
@@ -1989,10 +1995,20 @@ mod tests {
         let mut tk = TeamKnowledge::new(2);
         *tk.player_mut(0) = knowledge_for_hand(&[0]);
         *tk.player_mut(1) = knowledge_for_hand(&[10]);
-        let pre = KnowledgeAwareGameState::from_parts(static_data.clone(), pre_state.clone(), tk.clone(), 11);
+        let pre = KnowledgeAwareGameState::from_parts(
+            static_data.clone(),
+            pre_state.clone(),
+            tk.clone(),
+            11,
+        );
 
         // post_unsaved: same table state (actor did not touch the chop card)
-        let post_unsaved = KnowledgeAwareGameState::from_parts(static_data.clone(), pre_state.clone(), tk.clone(), 11);
+        let post_unsaved = KnowledgeAwareGameState::from_parts(
+            static_data.clone(),
+            pre_state.clone(),
+            tk.clone(),
+            11,
+        );
 
         // post_saved: chop card is now clue-touched
         let mut saved_state = pre_state.clone();
@@ -2016,7 +2032,8 @@ mod tests {
             card_deck_index: 0,
             turn: 1,
         };
-        let delta = evaluator.critical_exposure_delta_bonus(&action, 0, &pre, &post_unsaved, &truth_pov);
+        let delta =
+            evaluator.critical_exposure_delta_bonus(&action, 0, &pre, &post_unsaved, &truth_pov);
         assert!(
             delta < 0.0,
             "should charge when critical chop left unsaved with tokens available (got {delta})"
@@ -2045,7 +2062,8 @@ mod tests {
             },
             turn: 1,
         };
-        let delta = evaluator.critical_exposure_delta_bonus(&action, 0, &pre, &post_saved, &truth_pov);
+        let delta =
+            evaluator.critical_exposure_delta_bonus(&action, 0, &pre, &post_saved, &truth_pov);
         assert!(
             delta > 0.0,
             "should reward when critical chop card is saved (got {delta})"
@@ -2070,7 +2088,8 @@ mod tests {
             card_deck_index: 0,
             turn: 1,
         };
-        let delta = evaluator.critical_exposure_delta_bonus(&action, 0, &pre, &post_unsaved, &truth_pov);
+        let delta =
+            evaluator.critical_exposure_delta_bonus(&action, 0, &pre, &post_unsaved, &truth_pov);
         assert_eq!(
             delta, 0.0,
             "no penalty when no clue tokens available (got {delta})"
@@ -2118,6 +2137,9 @@ mod tests {
             turn: 1,
         };
         let delta = evaluator.critical_exposure_delta_bonus(&action, 0, &kags, &kags, &truth_pov);
-        assert_eq!(delta, 0.0, "no effect when no critical cards exist (got {delta})");
+        assert_eq!(
+            delta, 0.0,
+            "no effect when no critical cards exist (got {delta})"
+        );
     }
 }

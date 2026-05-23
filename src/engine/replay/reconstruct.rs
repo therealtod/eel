@@ -162,7 +162,8 @@ impl<'a> ReplayRunner<'a> {
                     turn,
                 };
                 let mut resolver = GroundTruthResolver::new(&self.actual_deck);
-                self.game.apply(&game_action, self.convention_set, &mut resolver);
+                self.game
+                    .apply(&game_action, self.convention_set, &mut resolver);
                 AppliedAction::Play
             }
             ActionType::Discard => {
@@ -181,7 +182,8 @@ impl<'a> ReplayRunner<'a> {
                     turn,
                 };
                 let mut resolver = GroundTruthResolver::new(&self.actual_deck);
-                self.game.apply(&game_action, self.convention_set, &mut resolver);
+                self.game
+                    .apply(&game_action, self.convention_set, &mut resolver);
                 AppliedAction::Discard
             }
             ActionType::ColorClue | ActionType::RankClue => {
@@ -207,7 +209,9 @@ impl<'a> ReplayRunner<'a> {
                     turn,
                 };
                 let mut resolver = GroundTruthResolver::new(&self.actual_deck);
-                let _ = self.game.apply(&game_action, self.convention_set, &mut resolver);
+                let _ = self
+                    .game
+                    .apply(&game_action, self.convention_set, &mut resolver);
                 AppliedAction::Clue
             }
             ActionType::EndGame => unreachable!("EndGame filtered in from_hanablive"),

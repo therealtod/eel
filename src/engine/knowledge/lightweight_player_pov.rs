@@ -3,8 +3,8 @@ use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::knowledge::player_knowledge::PlayerKnowledge;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
-use crate::game::action::game_action::GameAction;
 use crate::game::MAX_CLUE_TOKEN_COUNT;
+use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, CardIdentityMask, DeckCardsBitField, VariantCardId};
 use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
@@ -94,7 +94,6 @@ impl<'a> LightweightPlayerPOV<'a> {
     pub fn effective_visible_cards(&self) -> DeckCardsBitField {
         self.visible_cards
     }
-
 }
 
 impl PlayerPOV for LightweightPlayerPOV<'_> {
@@ -331,9 +330,7 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
 mod tests {
     use super::*;
     use crate::engine::knowledge::player_knowledge::knowledge_with_empathy;
-    
-    
-    
+
     use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards::*;
     use crate::game::deck::unit_test_constants::novariant_constants::*;
     use crate::game::state::table_state::unit_test_constants::no_variant_constants::{

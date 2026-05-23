@@ -392,8 +392,8 @@ mod tests {
     };
     use super::*;
     use crate::game::card::CardIdentityMask;
-    use crate::game::{MAX_CARDS_IN_DECK, MAX_UNIQUE_CARDS_IN_DECK};
     use crate::game::variant::test_variants::NO_VARIANT;
+    use crate::game::{MAX_CARDS_IN_DECK, MAX_UNIQUE_CARDS_IN_DECK};
 
     #[test]
     fn should_be_correctly_updated_after_a_draw() {
@@ -508,10 +508,7 @@ mod tests {
     /// Helper: build a TableState whose only meaningful fields are the playing
     /// stacks and discard pile.  The rest (hands, deck, clue tokens, …) are
     /// filled with harmless defaults.
-    fn state_with(
-        playing_stacks: PlayingStacks,
-        discards: &[VariantCardId],
-    ) -> TableState {
+    fn state_with(playing_stacks: PlayingStacks, discards: &[VariantCardId]) -> TableState {
         let mut discard_pile = CopiesCountingCardCollection::empty();
         for &id in discards {
             discard_pile.add_card_with_id(id);
@@ -545,9 +542,13 @@ mod tests {
     #[test]
     fn max_achievable_score_all_stacks_complete() {
         // All 5 suits finished — every rank 1-5 played.
-        let stacks =
-            PlayingStacks::new(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-                17, 18, 19, 20, 21, 22, 23, 24], &NO_VARIANT);
+        let stacks = PlayingStacks::new(
+            vec![
+                0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+                23, 24,
+            ],
+            &NO_VARIANT,
+        );
         let ts = state_with(stacks, &[]);
         assert_eq!(25, ts.max_achievable_score(&SDA));
     }
@@ -648,7 +649,13 @@ mod tests {
         TableState {
             hands: hands_3p(),
             all_hand_bits: hand_bits_3p(),
-            deck: Deck::of(deck_size, NO_VARIANT.card_copies_count_by_id, [0; MAX_UNIQUE_CARDS_IN_DECK], [CardIdentityMask::all(&NO_VARIANT); MAX_CARDS_IN_DECK], 0),
+            deck: Deck::of(
+                deck_size,
+                NO_VARIANT.card_copies_count_by_id,
+                [0; MAX_UNIQUE_CARDS_IN_DECK],
+                [CardIdentityMask::all(&NO_VARIANT); MAX_CARDS_IN_DECK],
+                0,
+            ),
             ..state_with(stacks, &[])
         }
     }
@@ -668,7 +675,10 @@ mod tests {
     fn pace_fresh_game_3_players() {
         // score=0, deck=35, players=3 → 0 + 35 + 3 - 25 = 13
         let ts = pace_state_3p(PlayingStacks::empty(), 35);
-        let sgd = StaticGameData { number_of_players: 3, variant: NO_VARIANT };
+        let sgd = StaticGameData {
+            number_of_players: 3,
+            variant: NO_VARIANT,
+        };
         assert_eq!(13, ts.pace(&sgd));
     }
 
@@ -678,8 +688,17 @@ mod tests {
         let mut ts = state_with(PlayingStacks::empty(), &[]);
         ts.hands = hands_5p();
         ts.all_hand_bits = hand_bits_5p();
-        ts.deck = Deck::of(30, NO_VARIANT.card_copies_count_by_id, [0; MAX_UNIQUE_CARDS_IN_DECK], [CardIdentityMask::all(&NO_VARIANT); MAX_CARDS_IN_DECK], 0);
-        let sgd = StaticGameData { number_of_players: 5, variant: NO_VARIANT };
+        ts.deck = Deck::of(
+            30,
+            NO_VARIANT.card_copies_count_by_id,
+            [0; MAX_UNIQUE_CARDS_IN_DECK],
+            [CardIdentityMask::all(&NO_VARIANT); MAX_CARDS_IN_DECK],
+            0,
+        );
+        let sgd = StaticGameData {
+            number_of_players: 5,
+            variant: NO_VARIANT,
+        };
         assert_eq!(10, ts.pace(&sgd));
     }
 
@@ -689,7 +708,10 @@ mod tests {
         // score=4, deck=35, players=3 → 4 + 35 + 3 - 25 = 17
         let stacks = PlayingStacks::new(vec![0, 1, 2, 3], &NO_VARIANT);
         let ts = pace_state_3p(stacks, 35);
-        let sgd = StaticGameData { number_of_players: 3, variant: NO_VARIANT };
+        let sgd = StaticGameData {
+            number_of_players: 3,
+            variant: NO_VARIANT,
+        };
         assert_eq!(17, ts.pace(&sgd));
     }
 
@@ -698,7 +720,10 @@ mod tests {
         // Deck partially consumed: 15 in hands + 20 in deck = 35 remaining
         // score=0, deck=20, players=3 → 0 + 20 + 3 - 25 = -2
         let ts = pace_state_3p(PlayingStacks::empty(), 20);
-        let sgd = StaticGameData { number_of_players: 3, variant: NO_VARIANT };
+        let sgd = StaticGameData {
+            number_of_players: 3,
+            variant: NO_VARIANT,
+        };
         assert_eq!(-2, ts.pace(&sgd));
     }
 
@@ -708,7 +733,10 @@ mod tests {
         // score=10, deck=3, players=3 → 10 + 3 + 3 - 25 = -9
         let stacks = PlayingStacks::new(vec![0, 1, 5, 6, 7, 10, 11, 15, 16, 20], &NO_VARIANT);
         let ts = pace_state_3p(stacks, 3);
-        let sgd = StaticGameData { number_of_players: 3, variant: NO_VARIANT };
+        let sgd = StaticGameData {
+            number_of_players: 3,
+            variant: NO_VARIANT,
+        };
         assert_eq!(-9, ts.pace(&sgd));
     }
 
@@ -716,9 +744,18 @@ mod tests {
     fn pace_game_won() {
         // All stacks complete (score=25), with 15 cards in hands + 35 in deck
         // score=25, deck=35, players=3 → 25 + 35 + 3 - 25 = 38
-        let stacks = PlayingStacks::new(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], &NO_VARIANT);
+        let stacks = PlayingStacks::new(
+            vec![
+                0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+                23, 24,
+            ],
+            &NO_VARIANT,
+        );
         let ts = pace_state_3p(stacks, 35);
-        let sgd = StaticGameData { number_of_players: 3, variant: NO_VARIANT };
+        let sgd = StaticGameData {
+            number_of_players: 3,
+            variant: NO_VARIANT,
+        };
         assert_eq!(38, ts.pace(&sgd));
     }
 
@@ -727,9 +764,17 @@ mod tests {
         // Tight endgame: score=22, deck=1, 3 players
         // R1-R5 + Y1-Y4 + G1-G4 + B1-B4 + P1-P5 = 5+4+4+4+5 = 22
         // score=22, deck=1, 15 in hands → 22 + 1 + 3 - 25 = 1
-        let stacks = PlayingStacks::new(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 15, 16, 17, 18, 20, 21, 22, 23, 24], &NO_VARIANT);
+        let stacks = PlayingStacks::new(
+            vec![
+                0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 15, 16, 17, 18, 20, 21, 22, 23, 24,
+            ],
+            &NO_VARIANT,
+        );
         let ts = pace_state_3p(stacks, 1);
-        let sgd = StaticGameData { number_of_players: 3, variant: NO_VARIANT };
+        let sgd = StaticGameData {
+            number_of_players: 3,
+            variant: NO_VARIANT,
+        };
         assert_eq!(1, ts.pace(&sgd));
     }
 
@@ -738,9 +783,15 @@ mod tests {
         // Pace = 0 means no breathing room: score + deck + players == max_score
         // max_score=25, players=3 → need score + deck = 22.  e.g. score=12, deck=10.
         // R1-R2 + Y1-Y2 + G1-G2 + B1-B2 + P1-P4 = 2+2+2+2+4 = 12
-        let stacks = PlayingStacks::new(vec![0, 1, 5, 6, 10, 11, 15, 16, 20, 21, 22, 23], &NO_VARIANT);
+        let stacks = PlayingStacks::new(
+            vec![0, 1, 5, 6, 10, 11, 15, 16, 20, 21, 22, 23],
+            &NO_VARIANT,
+        );
         let ts = pace_state_3p(stacks, 10);
-        let sgd = StaticGameData { number_of_players: 3, variant: NO_VARIANT };
+        let sgd = StaticGameData {
+            number_of_players: 3,
+            variant: NO_VARIANT,
+        };
         assert_eq!(0, ts.pace(&sgd));
     }
 }

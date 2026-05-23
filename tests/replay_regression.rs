@@ -154,31 +154,37 @@ fn should_not_steal_clue() {
     match action {
         GameAction::Clue {
             player_index: 2,
-            clue: Clue {
-                clue_type: ClueType::Rank,
-                clue_value: 5,
-            },
+            clue:
+                Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 5,
+                },
             ..
         } => {
             println!("Bob choose to save Cathy's chop. Action: {:?}", action);
-        },
+        }
         GameAction::Clue {
             player_index: 0,
-            clue: Clue {
-                clue_type: ClueType::Color,
-                clue_value: 0,
-            },
+            clue:
+                Clue {
+                    clue_type: ClueType::Color,
+                    clue_value: 0,
+                },
             ..
         } => {
-            panic!("Bob decided to clue Alice's red 1, Depriving Cathy of reasonable actions and putting her chop in danger of being discarded : {action:?}")
-        },
+            panic!(
+                "Bob decided to clue Alice's red 1, Depriving Cathy of reasonable actions and putting her chop in danger of being discarded : {action:?}"
+            )
+        }
         GameAction::Discard {
             player_index: 0,
             card_deck_index: 1,
             ..
         } => {
-            panic!("Bob chose to aggressively discard even though it's not as safe as saving Cathy's chop {action:?}")
-        },
-        _ => println!("Bob chose the following action: {:?}", action)
+            panic!(
+                "Bob chose to aggressively discard even though it's not as safe as saving Cathy's chop {action:?}"
+            )
+        }
+        _ => println!("Bob chose the following action: {:?}", action),
     }
 }

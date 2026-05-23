@@ -101,12 +101,9 @@ pub trait PlayerPOV {
     /// convention reasoning is dropped but public clue constraints are preserved.
     fn inferred_identities(&self, card_deck_index: CardDeckIndex) -> CardIdentityMask;
 
-    
     fn valid_actions(&self) -> Vec<GameAction>;
 
-    
     fn gotten_cards(&self) -> CardIdentityMask;
 
-    
     fn is_gotten(&self, variant_card_id: VariantCardId) -> bool;
 }

@@ -76,10 +76,7 @@ impl ConventionTech for LowLevelStall {
                 clue_type: ClueType::Rank,
                 clue_value: 1,
             };
-            let rank1_mask = static_data
-                .variant
-                .empathy_for_clue(&rank1_clue)
-                .as_bits();
+            let rank1_mask = static_data.variant.empathy_for_clue(&rank1_clue).as_bits();
             if still_needed_cards_mask(table_state, static_data) & rank1_mask == 0 {
                 for target in (0..num_players).filter(|&p| p != active) {
                     let target_hand = &table_state.hands[target];
@@ -87,16 +84,15 @@ impl ConventionTech for LowLevelStall {
                         .cards()
                         .iter()
                         .filter_map(|&idx| pov.card_identity(idx))
-                        .any(|card| static_data.variant.rank_of(card) == 1) {
+                        .any(|card| static_data.variant.rank_of(card) == 1)
+                    {
                         let touched = touched_cards_for_clue(target, &rank1_clue, pov);
-                        return vec![
-                            GameAction::Clue {
-                                player_index: target,
-                                touched_card_deck_indexes: touched,
-                                clue: rank1_clue,
-                                turn: table_state.current_turn,
-                            }
-                        ]
+                        return vec![GameAction::Clue {
+                            player_index: target,
+                            touched_card_deck_indexes: touched,
+                            clue: rank1_clue,
+                            turn: table_state.current_turn,
+                        }];
                     }
                 }
             }
@@ -235,11 +231,17 @@ mod tests {
         table_state.current_turn = 5;
 
         // All rank-1 cards have been played (stack size 1 for each suit).
-        table_state.playing_stacks.add_card(0, &static_data.variant);  // R1
-        table_state.playing_stacks.add_card(5, &static_data.variant);  // Y1
-        table_state.playing_stacks.add_card(10, &static_data.variant); // G1
-        table_state.playing_stacks.add_card(15, &static_data.variant); // B1
-        table_state.playing_stacks.add_card(20, &static_data.variant); // P1
+        table_state.playing_stacks.add_card(0, &static_data.variant); // R1
+        table_state.playing_stacks.add_card(5, &static_data.variant); // Y1
+        table_state
+            .playing_stacks
+            .add_card(10, &static_data.variant); // G1
+        table_state
+            .playing_stacks
+            .add_card(15, &static_data.variant); // B1
+        table_state
+            .playing_stacks
+            .add_card(20, &static_data.variant); // P1
 
         // Player 1 has a rank-1 card visible.
         table_state.active_player_index = 1;

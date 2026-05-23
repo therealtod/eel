@@ -1,5 +1,3 @@
-use rayon::prelude::*;
-use smallvec::SmallVec;
 use crate::engine::action_outcome::ActionOutcome;
 use crate::engine::action_selection_strategy::ActionSelectionStrategy;
 use crate::engine::convention::convention_set::ConventionSet;
@@ -13,6 +11,8 @@ use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
 use crate::engine::play_resolver::TruthPovResolver;
 use crate::game::action::game_action::GameAction;
 use crate::game::static_game_data::StaticGameData;
+use rayon::prelude::*;
+use smallvec::SmallVec;
 
 /// Inline capacity for candidate action lists. 20 covers all realistic Hanabi scenarios
 /// (5-card hands × play+discard + a handful of convention-proposed clues) without spilling
@@ -316,8 +316,11 @@ impl TreeActionSelectionStrategy {
         let node_ceiling = evaluator.upper_bound(state.table_state(), static_data, depth);
         for proposed in candidates {
             let mut next = state.clone();
-            let outcome: ActionOutcome =
-                next.apply(&proposed.action, convention_set, &mut TruthPovResolver::new(truth));
+            let outcome: ActionOutcome = next.apply(
+                &proposed.action,
+                convention_set,
+                &mut TruthPovResolver::new(truth),
+            );
             next.advance_turn();
             let child_phantom = phantom_plays + if outcome.is_phantom_play { 1 } else { 0 };
             let immediate = Self::immediate_action_bonus(

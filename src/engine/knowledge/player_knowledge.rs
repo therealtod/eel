@@ -4,7 +4,6 @@ use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::knowledge::knowledge_update::{
     AltGroupKey, Hypothesis, HypothesisId, KnowledgeUpdate, PendingTrigger, TrackedHypothesis,
 };
-use crate::game::{MAX_CARDS_IN_DECK, MAX_UNIQUE_CARDS_IN_DECK};
 use crate::game::action::game_action::GameAction;
 use crate::game::card::{
     CardDeckIndex, CardIdentityMask, DeckCardsBitField, VariantCardId, VariantCardsBitField,
@@ -12,6 +11,7 @@ use crate::game::card::{
 use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::variant::Variant;
+use crate::game::{MAX_CARDS_IN_DECK, MAX_UNIQUE_CARDS_IN_DECK};
 
 /// Per-player mutable knowledge storage.
 ///
@@ -511,8 +511,7 @@ impl PlayerKnowledge {
         if let Some(id) = self.direct_sight_identities[card_deck_index as usize] {
             return Some(id);
         }
-        self.inferred_identities[card_deck_index as usize]
-            .and_then(CardIdentityMask::known_card_id)
+        self.inferred_identities[card_deck_index as usize].and_then(CardIdentityMask::known_card_id)
     }
 
     /// Convenience: get combined possible identities using this player's own stored
@@ -601,8 +600,8 @@ impl PlayerKnowledge {
         if let Some(constrained) = effective.narrow(observable) {
             return constrained;
         }
-        let baseline_bits = self.inferred_identities[card_deck_index as usize]
-            .map_or(u64::MAX, |m| m.as_bits());
+        let baseline_bits =
+            self.inferred_identities[card_deck_index as usize].map_or(u64::MAX, |m| m.as_bits());
         let safe = baseline_bits & observable;
         if safe != 0 {
             CardIdentityMask::from_bits(safe)
@@ -658,9 +657,7 @@ impl PlayerKnowledge {
                 let card_id = suit * stacks_size + rank_idx;
                 let total = variant.card_copies_count_by_id[card_id];
                 let played = if rank_idx < stack_top { 1u8 } else { 0u8 };
-                let discarded = table_state
-                    .discard_pile
-                    .copies_of(card_id as VariantCardId);
+                let discarded = table_state.discard_pile.copies_of(card_id as VariantCardId);
                 if played + discarded + seen_in_others[card_id] < total {
                     result |= 1u64 << card_id;
                 }
@@ -1054,9 +1051,7 @@ mod tests {
 
     #[test]
     fn observable_identity_mask_exhaustes_fully_played_identity() {
-        use crate::game::deck::unit_test_constants::novariant_constants::{
-            NoVarCards::*, R1_MASK,
-        };
+        use crate::game::deck::unit_test_constants::novariant_constants::{NoVarCards::*, R1_MASK};
         use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
             NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
         };
@@ -1068,23 +1063,37 @@ mod tests {
             table_state.hands[player].add_card_to_slot_1(idx);
             table_state.all_hand_bits |= 1u64 << idx;
         }
-        table_state.update_with_play_action_of_specific_card(0, R1.as_variant_card_id(), static_data);
-        table_state.update_with_play_action_of_specific_card(1, R1.as_variant_card_id(), static_data);
-        table_state.update_with_play_action_of_specific_card(2, R1.as_variant_card_id(), static_data);
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            R1.as_variant_card_id(),
+            static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            1,
+            R1.as_variant_card_id(),
+            static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            2,
+            R1.as_variant_card_id(),
+            static_data,
+        );
 
         let pk = PlayerKnowledge::new(0);
         let mask = pk.observable_identity_mask(0, &table_state, &static_data.variant);
 
         // R1 (bit 0) should be exhausted; R2 (bit 1) should still be observable.
-        assert_eq!(mask & R1_MASK, 0, "R1 should be exhausted after all 3 copies played");
+        assert_eq!(
+            mask & R1_MASK,
+            0,
+            "R1 should be exhausted after all 3 copies played"
+        );
         assert_ne!(mask & (1 << 1), 0, "R2 should still be observable");
     }
 
     #[test]
     fn observable_identity_mask_exhaustes_fully_discarded_identity() {
-        use crate::game::deck::unit_test_constants::novariant_constants::{
-            NoVarCards::*, R1_MASK,
-        };
+        use crate::game::deck::unit_test_constants::novariant_constants::{NoVarCards::*, R1_MASK};
         use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
             NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
         };
@@ -1095,21 +1104,35 @@ mod tests {
             table_state.hands[player].add_card_to_slot_1(idx);
             table_state.all_hand_bits |= 1u64 << idx;
         }
-        table_state.update_with_discard_action_of_specific_card(0, R1.as_variant_card_id(), static_data);
-        table_state.update_with_discard_action_of_specific_card(1, R1.as_variant_card_id(), static_data);
-        table_state.update_with_discard_action_of_specific_card(2, R1.as_variant_card_id(), static_data);
+        table_state.update_with_discard_action_of_specific_card(
+            0,
+            R1.as_variant_card_id(),
+            static_data,
+        );
+        table_state.update_with_discard_action_of_specific_card(
+            1,
+            R1.as_variant_card_id(),
+            static_data,
+        );
+        table_state.update_with_discard_action_of_specific_card(
+            2,
+            R1.as_variant_card_id(),
+            static_data,
+        );
 
         let pk = PlayerKnowledge::new(0);
         let mask = pk.observable_identity_mask(0, &table_state, &static_data.variant);
 
-        assert_eq!(mask & R1_MASK, 0, "R1 should be exhausted after all 3 copies discarded");
+        assert_eq!(
+            mask & R1_MASK,
+            0,
+            "R1 should be exhausted after all 3 copies discarded"
+        );
     }
 
     #[test]
     fn observable_identity_mask_counts_visible_copies_in_other_hands() {
-        use crate::game::deck::unit_test_constants::novariant_constants::{
-            NoVarCards::*, R1_MASK,
-        };
+        use crate::game::deck::unit_test_constants::novariant_constants::{NoVarCards::*, R1_MASK};
         use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
             NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
         };
@@ -1132,14 +1155,16 @@ mod tests {
 
         let mask = pk.observable_identity_mask(visible_cards, &table_state, &static_data.variant);
 
-        assert_eq!(mask & R1_MASK, 0, "R1 should be exhausted when all 3 copies are visible in P1's hand");
+        assert_eq!(
+            mask & R1_MASK,
+            0,
+            "R1 should be exhausted when all 3 copies are visible in P1's hand"
+        );
     }
 
     #[test]
     fn observable_identity_mask_does_not_double_count_played_cards_from_visible() {
-        use crate::game::deck::unit_test_constants::novariant_constants::{
-            NoVarCards::*, R1_MASK,
-        };
+        use crate::game::deck::unit_test_constants::novariant_constants::{NoVarCards::*, R1_MASK};
         use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
             NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
         };
@@ -1149,7 +1174,11 @@ mod tests {
         // Card 0 was in P1's hand and then played as R1.
         table_state.hands[1].add_card_to_slot_1(0);
         table_state.all_hand_bits |= 1u64 << 0;
-        table_state.update_with_play_action_of_specific_card(0, R1.as_variant_card_id(), static_data);
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            R1.as_variant_card_id(),
+            static_data,
+        );
 
         // visible_cards is monotonic — card 0 is still set even though it's no longer in any hand.
         let visible_cards: DeckCardsBitField = 1 << 0;
@@ -1161,14 +1190,16 @@ mod tests {
 
         // R1 has 3 copies; 1 played, 0 discarded, 0 visible in others (card 0 is no longer in a hand).
         // So 2 copies remain observable.
-        assert_ne!(mask & R1_MASK, 0, "R1 should still have observable copies (only 1 of 3 played)");
+        assert_ne!(
+            mask & R1_MASK,
+            0,
+            "R1 should still have observable copies (only 1 of 3 played)"
+        );
     }
 
     #[test]
     fn observable_identity_mask_uses_empathy_when_direct_sight_unavailable() {
-        use crate::game::deck::unit_test_constants::novariant_constants::{
-            NoVarCards::*, R1_MASK,
-        };
+        use crate::game::deck::unit_test_constants::novariant_constants::{NoVarCards::*, R1_MASK};
         use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
             NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
         };
@@ -1182,7 +1213,9 @@ mod tests {
         }
         // Set deck empathy for these cards (simulating a draw path that revealed them).
         for idx in 0..3u8 {
-            table_state.deck.reveal_card(idx, R1.as_variant_card_id(), &static_data.variant);
+            table_state
+                .deck
+                .reveal_card(idx, R1.as_variant_card_id(), &static_data.variant);
         }
         let visible_cards: DeckCardsBitField = (1 << 0) | (1 << 1) | (1 << 2);
 
@@ -1191,14 +1224,16 @@ mod tests {
 
         let mask = pk.observable_identity_mask(visible_cards, &table_state, &static_data.variant);
 
-        assert_eq!(mask & R1_MASK, 0, "R1 should be exhausted via deck empathy fallback");
+        assert_eq!(
+            mask & R1_MASK,
+            0,
+            "R1 should be exhausted via deck empathy fallback"
+        );
     }
 
     #[test]
     fn combined_visible_card_uses_direct_sight_identity() {
-        use crate::game::deck::unit_test_constants::novariant_constants::{
-            NoVarCards::*, R1_MASK,
-        };
+        use crate::game::deck::unit_test_constants::novariant_constants::{NoVarCards::*, R1_MASK};
         use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
             NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
         };
@@ -1220,15 +1255,16 @@ mod tests {
         );
 
         // Visible card: should intersect direct sight (R1) with convention mask (R1|R2) → R1 only.
-        assert!(result.is_exactly_known(), "visible card should be narrowed to singleton R1");
+        assert!(
+            result.is_exactly_known(),
+            "visible card should be narrowed to singleton R1"
+        );
         assert_eq!(result.known_card_id(), Some(R1.as_variant_card_id()));
     }
 
     #[test]
     fn combined_visible_card_uses_deck_empathy_when_no_direct_sight() {
-        use crate::game::deck::unit_test_constants::novariant_constants::{
-            NoVarCards::*, R1_MASK,
-        };
+        use crate::game::deck::unit_test_constants::novariant_constants::{NoVarCards::*, R1_MASK};
         use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
             NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
         };
@@ -1237,7 +1273,9 @@ mod tests {
         let mut table_state = initial_five_players_table_state();
         table_state.update_with_draw_action(0);
         // Set deck empathy for card 0 to R1.
-        table_state.deck.reveal_card(0, R1.as_variant_card_id(), &static_data.variant);
+        table_state
+            .deck
+            .reveal_card(0, R1.as_variant_card_id(), &static_data.variant);
 
         let mut pk = PlayerKnowledge::new(0);
         // No direct sight, but convention narrows to R1|R2.
@@ -1268,17 +1306,53 @@ mod tests {
         let static_data = &NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
         // Play R1 (3 copies), R2 (2 copies), R3 (2 copies) from dummy indices across players.
-        for &(player, idx) in &[(1usize, 0u8), (1, 1), (1, 2), (2, 0), (2, 1), (3, 0), (3, 1)] {
+        for &(player, idx) in &[
+            (1usize, 0u8),
+            (1, 1),
+            (1, 2),
+            (2, 0),
+            (2, 1),
+            (3, 0),
+            (3, 1),
+        ] {
             table_state.hands[player].add_card_to_slot_1(idx);
             table_state.all_hand_bits |= 1u64 << idx;
         }
-        table_state.update_with_play_action_of_specific_card(0, R1.as_variant_card_id(), static_data);
-        table_state.update_with_play_action_of_specific_card(1, R1.as_variant_card_id(), static_data);
-        table_state.update_with_play_action_of_specific_card(2, R1.as_variant_card_id(), static_data);
-        table_state.update_with_play_action_of_specific_card(3, R2.as_variant_card_id(), static_data);
-        table_state.update_with_play_action_of_specific_card(4, R2.as_variant_card_id(), static_data);
-        table_state.update_with_play_action_of_specific_card(5, R3.as_variant_card_id(), static_data);
-        table_state.update_with_play_action_of_specific_card(6, R3.as_variant_card_id(), static_data);
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            R1.as_variant_card_id(),
+            static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            1,
+            R1.as_variant_card_id(),
+            static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            2,
+            R1.as_variant_card_id(),
+            static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            3,
+            R2.as_variant_card_id(),
+            static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            4,
+            R2.as_variant_card_id(),
+            static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            5,
+            R3.as_variant_card_id(),
+            static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            6,
+            R3.as_variant_card_id(),
+            static_data,
+        );
 
         // P4 holds both R4 copies (R4 has 2 copies total).
         for idx in 0..2u8 {
@@ -1307,7 +1381,11 @@ mod tests {
         // R4 is fully visible in P1's hand (2 of 2 copies), R5 has 1 copy not seen.
         // Observable excludes R4 but includes R5.
         // Convention says R4|R5, observable excludes R4 → effective ∩ observable = R5 (non-empty).
-        assert_eq!(result.as_bits() & R4_MASK, 0, "R4 should be excluded (all copies visible in P1's hand)");
+        assert_eq!(
+            result.as_bits() & R4_MASK,
+            0,
+            "R4 should be excluded (all copies visible in P1's hand)"
+        );
         assert_ne!(result.as_bits() & R5_MASK, 0, "R5 should still be possible");
     }
 
@@ -1327,9 +1405,21 @@ mod tests {
             table_state.hands[player].add_card_to_slot_1(idx);
             table_state.all_hand_bits |= 1u64 << idx;
         }
-        table_state.update_with_play_action_of_specific_card(2, R1.as_variant_card_id(), static_data);
-        table_state.update_with_play_action_of_specific_card(3, R2.as_variant_card_id(), static_data);
-        table_state.update_with_play_action_of_specific_card(4, R3.as_variant_card_id(), static_data);
+        table_state.update_with_play_action_of_specific_card(
+            2,
+            R1.as_variant_card_id(),
+            static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            3,
+            R2.as_variant_card_id(),
+            static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            4,
+            R3.as_variant_card_id(),
+            static_data,
+        );
 
         // P1 holds one R4 copy (but there are 2 total).
         table_state.hands[1].add_card_to_slot_1(0);
@@ -1354,8 +1444,16 @@ mod tests {
 
         // R4 has 2 copies, 1 visible in P1 → 1 still unaccounted → R4 should remain possible.
         // R5 has 1 copy, not seen → R5 should remain possible.
-        assert_ne!(result.as_bits() & R4_MASK, 0, "R4 should still be possible (1 of 2 copies unaccounted)");
-        assert_ne!(result.as_bits() & R5_MASK, 0, "R5 should still be possible (not seen)");
+        assert_ne!(
+            result.as_bits() & R4_MASK,
+            0,
+            "R4 should still be possible (1 of 2 copies unaccounted)"
+        );
+        assert_ne!(
+            result.as_bits() & R5_MASK,
+            0,
+            "R5 should still be possible (not seen)"
+        );
     }
 
     #[test]
@@ -1401,9 +1499,21 @@ mod tests {
             table_state.hands[player].add_card_to_slot_1(idx);
             table_state.all_hand_bits |= 1u64 << idx;
         }
-        table_state.update_with_play_action_of_specific_card(2, R1.as_variant_card_id(), static_data);
-        table_state.update_with_play_action_of_specific_card(3, R1.as_variant_card_id(), static_data);
-        table_state.update_with_play_action_of_specific_card(4, R1.as_variant_card_id(), static_data);
+        table_state.update_with_play_action_of_specific_card(
+            2,
+            R1.as_variant_card_id(),
+            static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            3,
+            R1.as_variant_card_id(),
+            static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            4,
+            R1.as_variant_card_id(),
+            static_data,
+        );
 
         let mut pk = PlayerKnowledge::new(0);
         pk.own_hand = 1 << 42;
@@ -1424,7 +1534,11 @@ mod tests {
 
         // effective = R1_MASK, observable excludes R1 → effective ∩ observable = empty → contradiction.
         // Fallback: baseline_bits (R1_MASK) ∩ observable → 0 → return observable.
-        assert_eq!(result.as_bits() & R1_MASK, 0, "R1 should be excluded from result");
+        assert_eq!(
+            result.as_bits() & R1_MASK,
+            0,
+            "R1 should be excluded from result"
+        );
         assert_ne!(result.as_bits() & R2_MASK, 0, "R2 should be in observable");
     }
 }
