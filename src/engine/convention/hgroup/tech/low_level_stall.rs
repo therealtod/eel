@@ -14,8 +14,7 @@ use crate::game::clue_type::ClueType;
 ///
 /// Attempts the following in priority order and returns the first that succeeds:
 /// 1. Clue rank 5 to the first teammate who holds a 5 (any slot).
-/// 2. Clue the rank matching the chop card to the first teammate whose chop is useful
-///    (still needed by the stacks).
+/// 2. Clue rank-1 if 1s are not useful anymore
 /// 3. Discard slot 1 (when the clue token bank is not full).
 /// 4. Play slot 1 (the newest card in the active player's hand).
 ///
@@ -72,31 +71,33 @@ impl ConventionTech for LowLevelStall {
                 }
             }
 
-            // Priority 2: clue the rank of the first useful chop card seen on a teammate.
-            let still_needed = still_needed_cards_mask(table_state, static_data);
-            for target in (0..num_players).filter(|&p| p != active) {
-                let Some(chop_idx) = get_chop_index(target, pov) else {
-                    continue;
-                };
-                let Some(card_id) = pov.card_identity(chop_idx) else {
-                    continue;
-                };
-                if (1u64 << card_id) & still_needed == 0 {
-                    continue;
-                }
-                let rank = Self::rank_clue_value(card_id, stacks_size);
-                let clue = Clue {
-                    clue_type: ClueType::Rank,
-                    clue_value: rank,
-                };
-                let touched = touched_cards_for_clue(target, &clue, pov);
-                if !touched.is_empty() {
-                    return vec![GameAction::Clue {
-                        player_index: target,
-                        touched_card_deck_indexes: touched,
-                        clue,
-                        turn: table_state.current_turn,
-                    }];
+            // Priority 2: clue rank-1 if all 1s are trash.
+            let rank1_clue = Clue {
+                clue_type: ClueType::Rank,
+                clue_value: 1,
+            };
+            let rank1_mask = static_data
+                .variant
+                .empathy_for_clue(&rank1_clue)
+                .as_bits();
+            if still_needed_cards_mask(table_state, static_data) & rank1_mask == 0 {
+                for target in (0..num_players).filter(|&p| p != active) {
+                    let target_hand = &table_state.hands[target];
+                    if target_hand
+                        .cards()
+                        .iter()
+                        .filter_map(|&idx| pov.card_identity(idx))
+                        .any(|card| static_data.variant.rank_of(card) == 1) {
+                        let touched = touched_cards_for_clue(target, &rank1_clue, pov);
+                        return vec![
+                            GameAction::Clue {
+                                player_index: target,
+                                touched_card_deck_indexes: touched,
+                                clue: rank1_clue,
+                                turn: table_state.current_turn,
+                            }
+                        ]
+                    }
                 }
             }
         }
@@ -224,16 +225,23 @@ mod tests {
         assert!(touched.contains(&20));
     }
 
-    // ── Priority 2: useful-chop rank clue ────────────────────────────────────
+    // ── Priority 2: rank-1 clue when all 1s are trash ───────────────────────
 
     #[test]
-    fn clues_rank_of_useful_chop_when_no_5_visible() {
+    fn clues_rank1_when_all_ones_are_trash() {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
         table_state.clue_token_bank.set_half_tokens(2);
         table_state.current_turn = 5;
 
-        // Player 1 has Y1 on chop. Y1 is useful (stacks empty).
+        // All rank-1 cards have been played (stack size 1 for each suit).
+        table_state.playing_stacks.add_card(0, &static_data.variant);  // R1
+        table_state.playing_stacks.add_card(5, &static_data.variant);  // Y1
+        table_state.playing_stacks.add_card(10, &static_data.variant); // G1
+        table_state.playing_stacks.add_card(15, &static_data.variant); // B1
+        table_state.playing_stacks.add_card(20, &static_data.variant); // P1
+
+        // Player 1 has a rank-1 card visible.
         table_state.active_player_index = 1;
         table_state.update_with_draw_action(10);
         table_state.active_player_index = 0;
