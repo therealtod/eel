@@ -278,7 +278,11 @@ impl TableState {
             }
             total += suit_max as u32;
         }
-        total
+        let max_possible = static_data.variant.stacks_size as u32 * static_data.variant.number_of_suits as u32;
+        let remaining_plays = self.score(&static_data.variant) as u32
+            + self.deck.current_size as u32
+            + static_data.number_of_players as u32;
+        total.min(remaining_plays.min(max_possible))
     }
 }
 
@@ -613,6 +617,64 @@ mod tests {
         let stacks = PlayingStacks::new(vec![5, 6, 15, 20, 21, 22], &NO_VARIANT);
         let ts = state_with(stacks, &[0, 0, 0, 13, 13]);
         assert_eq!(18, ts.max_achievable_score(&SDA));
+    }
+
+    #[test]
+    fn max_achievable_score_capped_by_pace() {
+        // Score = 10 (2 ranks in all 5 suits).  No discards → suit walk = 25.
+        // Deck = 5, players = 3 → remaining_plays = 10 + 5 + 3 = 18 < 25.
+        // Cap = 18.  Result = min(25, 18) = 18.
+        let stacks = PlayingStacks::new(
+            vec![0, 1, 5, 6, 10, 11, 15, 16, 20, 21],
+            &NO_VARIANT,
+        );
+        let ts = pace_state_3p(stacks, 5);
+        assert_eq!(18, ts.max_achievable_score(&SDA));
+    }
+
+    #[test]
+    fn max_achievable_score_capped_by_pace_with_discards() {
+        // Score = 10, R5 (card_id 4) fully discarded (1 copy).
+        // Suit 0 walk: already_played=2, rank 3 OK, rank 4 OK, rank 5 (copies=1,
+        //   discards=1) → break.  Suit 0 max = 4.
+        // Other suits: no discards → 5 each.  Total = 4 + 5*4 = 24.
+        // Deck = 5, players = 3 → remaining_plays = 18.
+        // Result = min(24, 18) = 18.
+        let stacks = PlayingStacks::new(
+            vec![0, 1, 5, 6, 10, 11, 15, 16, 20, 21],
+            &NO_VARIANT,
+        );
+        let mut ts = pace_state_3p(stacks, 5);
+        ts.discard_pile.add_card_with_id(4);
+        assert_eq!(18, ts.max_achievable_score(&SDA));
+    }
+
+    #[test]
+    fn max_achievable_score_pace_cap_not_triggered_with_large_deck() {
+        // Score = 10, no discards → suit walk = 25.
+        // Deck = 15, players = 3 → remaining_plays = 10 + 15 + 3 = 28 ≥ 25.
+        // Cap = 25.  Result = min(25, 25) = 25.
+        let stacks = PlayingStacks::new(
+            vec![0, 1, 5, 6, 10, 11, 15, 16, 20, 21],
+            &NO_VARIANT,
+        );
+        let ts = pace_state_3p(stacks, 15);
+        assert_eq!(25, ts.max_achievable_score(&SDA));
+    }
+
+    #[test]
+    fn max_achievable_score_pace_cap_not_triggered_when_suit_total_lower() {
+        // Suit 0 stack = 2 (R1,R2).  All 2 copies of R3 (card_id 2) discarded.
+        //   already_played=2 → rank 3: copies=2, discards=2 → break.  suit 0 max = 2.
+        // Other suits empty, no discards → 5 each.  Total = 2 + 20 = 22.
+        // Deck = 35, score = 2 (only R1,R2), players = 3
+        //   → remaining_plays = 2 + 35 + 3 = 40 > 25.
+        // Cap = 25.  Result = min(22, 25) = 22.
+        let stacks = PlayingStacks::new(vec![0, 1], &NO_VARIANT);
+        let mut ts = pace_state_3p(stacks, 35);
+        ts.discard_pile.add_card_with_id(2);
+        ts.discard_pile.add_card_with_id(2);
+        assert_eq!(22, ts.max_achievable_score(&SDA));
     }
 
     // -----------------------------------------------------------------------
