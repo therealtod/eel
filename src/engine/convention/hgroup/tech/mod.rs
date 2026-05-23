@@ -6,6 +6,7 @@ pub mod discard_chop;
 pub mod discard_known_trash;
 pub mod five_save;
 pub mod low_level_stall;
+pub mod play_clue;
 pub mod play_known_playable;
 pub mod simple_finesse;
 pub mod simple_prompt;
