@@ -6,6 +6,7 @@ pub mod direct_play_clue;
 pub mod discard_chop;
 pub mod discard_known_trash;
 pub mod five_save;
+pub mod five_stall;
 pub mod low_level_stall;
 pub mod play_clue;
 pub mod play_known_playable;

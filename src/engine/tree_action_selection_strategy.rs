@@ -3,6 +3,7 @@ use crate::engine::action_selection_strategy::ActionSelectionStrategy;
 use crate::engine::convention::convention_set::ConventionSet;
 use crate::engine::convention::convention_tech::ConventionTech;
 use crate::engine::convention::hgroup::tech::clue_burn::ClueBurn;
+use crate::engine::convention::hgroup::tech::five_stall::FiveStall;
 use crate::engine::convention::hgroup::tech::low_level_stall::LowLevelStall;
 use crate::engine::convention::hgroup::tech::tempo_clue::TempoClue;
 use crate::engine::decision_tree::{LineStep, Score, ScoredNode};
@@ -107,6 +108,7 @@ impl TreeActionSelectionStrategy {
         if proposed.is_empty() {
             for (tech, name) in [
                 (&TempoClue as &dyn ConventionTech, TempoClue.name()),
+                (&FiveStall as &dyn ConventionTech, FiveStall.name()),
                 (&ClueBurn as &dyn ConventionTech, ClueBurn.name()),
                 (&LowLevelStall as &dyn ConventionTech, LowLevelStall.name()),
             ] {
