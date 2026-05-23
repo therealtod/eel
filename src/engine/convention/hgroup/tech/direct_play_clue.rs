@@ -28,7 +28,8 @@ use crate::impl_convention_tech_for_hgroup_clue_tech;
 pub struct DirectPlayClue;
 
 impl DirectPlayClue {
-    /// Core direct play detection: checks if the focus card is currently playable on the stacks.
+    /// Core direct play detection: checks if the focus card is currently playable on the stacks and
+    /// is not gotten yet.
     fn is_direct_play_situation(focus_idx: CardDeckIndex, pov: &dyn PlayerPOV) -> bool {
         pov.card_identity(focus_idx).is_some_and(|card_id| {
             (pov.table_state().playable_cards(pov.static_data()) >> card_id) & 1 != 0
