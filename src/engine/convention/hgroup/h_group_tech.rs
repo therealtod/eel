@@ -15,6 +15,7 @@ pub mod priority {
     pub const SIMPLE_PLAY_CLUE: u8 = 1;
     pub const PROMPT: u8 = 1;
     pub const FINESSE: u8 = 3;
+    pub const BURN_CLUE: u8 = 100;
 }
 
 /// H-Group refinement of `ClueTech`. Use `impl_convention_tech_for_hgroup_clue_tech!`

@@ -2,6 +2,7 @@ use crate::engine::convention::convention_set::ConventionSet;
 use crate::engine::convention::convention_tech::ConventionTech;
 use crate::engine::convention::hgroup::h_group_core::good_touch_baseline_mask;
 use crate::engine::convention::hgroup::tech::blind_play::BlindPlay;
+use crate::engine::convention::hgroup::tech::clue_burn::ClueBurn;
 use crate::engine::convention::hgroup::tech::critical_save::{ColorCriticalSave, RankCriticalSave};
 use crate::engine::convention::hgroup::tech::delayed_play_clue::DelayedPlayClue;
 use crate::engine::convention::hgroup::tech::direct_play_clue::DirectPlayClue;

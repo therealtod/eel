@@ -1,4 +1,5 @@
 pub mod blind_play;
+pub mod clue_burn;
 pub mod critical_save;
 pub mod delayed_play_clue;
 pub mod direct_play_clue;
