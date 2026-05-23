@@ -50,6 +50,10 @@ pub struct ScoreBreakdown {
     /// bonus/penalty per turn. Always 0.0 at a pure leaf evaluation — the value is folded in
     /// by `critical_exposure_delta_bonus` as the search walks each ply.
     pub critical_exposure_delta: f64,
+    /// `−tempo_cost_weight` per non-progressing action accumulated across the search line.
+    /// Always 0.0 at a pure leaf evaluation — the value is folded in by `tempo_cost` as the
+    /// search walks each ply.
+    pub tempo_cost: f64,
     /// Sum of all terms above.
     pub total: f64,
 }
@@ -58,7 +62,7 @@ impl std::fmt::Display for ScoreBreakdown {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "total={:.2} [score={:.1} -strike={:.1} +pace={:.1} -eff={:.1} -crit_exp={:.1} -ceil={:.1} +emp={:.1} +clue={:.1} +play={:.1} +team_emp={:.1} -misinfo={:.1} ±crit_delta={:.1}]",
+            "total={:.2} [score={:.1} -strike={:.1} +pace={:.1} -eff={:.1} -crit_exp={:.1} -ceil={:.1} +emp={:.1} +clue={:.1} +play={:.1} +team_emp={:.1} -misinfo={:.1} ±crit_delta={:.1} -tempo={:.1}]",
             self.total,
             self.game_score,
             self.strike_penalty,
@@ -72,6 +76,7 @@ impl std::fmt::Display for ScoreBreakdown {
             self.team_empathy,
             self.misinformation_penalty,
             self.critical_exposure_delta,
+            self.tempo_cost,
         )
     }
 }
@@ -115,6 +120,7 @@ pub trait Evaluator: Send + Sync {
             team_empathy: 0.0,
             misinformation_penalty: 0.0,
             critical_exposure_delta: 0.0,
+            tempo_cost: 0.0,
             total: self.score(state, truth, phantom_plays),
         }
     }
@@ -236,6 +242,29 @@ pub trait Evaluator: Send + Sync {
         0.0
     }
 
+    /// Immediate per-ply tempo cost.
+    ///
+    /// Returns a non-positive `Score` (penalty) for any action that consumes a turn
+    /// without making forward progress on the play stacks. A `Play` that advances
+    /// the score returns 0 here (its tempo value is already credited by
+    /// `play_progress_bonus`).
+    ///
+    /// Fires on every action along the search line — clues, discards, and misplays
+    /// all incur the cost; only successful plays escape it. This breaks the horizon
+    /// arbitrage where the engine pads search lines with redundant clues to push
+    /// discards past the leaf: every padding clue now reduces the line's score by
+    /// `tempo_cost_weight`.
+    fn tempo_cost(
+        &self,
+        _action: &GameAction,
+        _pre: &KnowledgeAwareGameState,
+        _post: &KnowledgeAwareGameState,
+        _pre_phantom_plays: u8,
+        _post_phantom_plays: u8,
+    ) -> Score {
+        0.0
+    }
+
     /// Optimistic upper bound on the best score reachable from `table_state` with `depth`
     /// more plies of search remaining (including accumulated immediate bonuses).
     ///
@@ -296,6 +325,12 @@ const HARMONIC_LUT: [f64; 9] = build_harmonic_lut();
 /// - `-potential_bad_touch_penalty`                     — flat penalty when a touched-on-receiver still-needed
 ///                                                        identity overlaps with an identity the giver likely
 ///                                                        already holds (potential duplicate)
+///
+/// Per-ply immediate adjustments (applied to every action along the search line):
+/// - `-tempo_cost_weight`                               — flat penalty for any non-play turn (clues, discards,
+///                                                        misplays); closes the horizon-arbitrage hole where the
+///                                                        engine pads lines with redundant clues to push discards
+///                                                        past the leaf
 pub struct DefaultEvaluator {
     /// Multiplier for the Hanabi game score term; dominates the total and keeps score progress as the primary objective.
     pub score_weight: f64,
@@ -441,12 +476,31 @@ pub struct DefaultEvaluator {
     ///
     /// Applied as an immediate per-turn delta (not a leaf term). For each teammate whose chop
     /// holds a truth-critical card before the action:
-    /// - `+critical_exposure_delta_weight` if the actor clue-touched the chop card (saved it).
-    /// - `−critical_exposure_delta_weight` if the card remains unsaved **and** the actor had
-    ///   at least one clue token (a save was available but was skipped).
+    /// - `+critical_exposure_delta_weight * threat` if the actor clue-touched the chop card.
+    /// - `−critical_exposure_delta_weight * threat` if the card remains unsaved **and** the
+    ///   actor had at least one clue token (a save was available but was skipped).
+    ///
+    /// `threat = 1 / (1 + 4 × buffer)` where `buffer` is the count of known-playable or
+    /// known-trash cards in the chop owner's hand — identical to the formula used by the leaf
+    /// evaluator's `critical_exposure_score`.  This keeps the immediate incentive proportional
+    /// to actual discard risk: a critical 5 buffered behind three known-playable 1s yields
+    /// `threat ≈ 0.077`, so the immediate bonus is ~13× smaller than for a truly naked chop.
     ///
     /// Set to 0 to disable.
     pub critical_exposure_delta_weight: f64,
+    /// Flat tempo penalty charged on every action that does **not** advance the play stacks
+    /// (clues, discards, misplays). Successful plays pay 0 here; their value is credited by
+    /// `play_progress_bonus`.
+    ///
+    /// Closes the horizon-arbitrage hole: every redundant clue that pads the search line to
+    /// defer a discard past the leaf now reduces the line's score by one `tempo_cost_weight`
+    /// unit, so the engine cannot earn a free advantage by deferring inevitable bad events.
+    ///
+    /// Must be at least as large as the spurious gain from postponing a typical discard by
+    /// one ply (≈ 1.0–3.0 at default weights). Suggested default: `1.5`.
+    ///
+    /// Set to 0 to disable.
+    pub tempo_cost_weight: f64,
 }
 
 impl Default for DefaultEvaluator {
@@ -472,6 +526,7 @@ impl Default for DefaultEvaluator {
             bottom_deck_risk_weight: 2.0_f64,
             discard_while_known_playable_penalty: 8.0_f64,
             critical_exposure_delta_weight: 0.5_f64,
+            tempo_cost_weight: 1.5_f64,
         }
     }
 }
@@ -1034,6 +1089,7 @@ impl Evaluator for DefaultEvaluator {
                 team_empathy: 0.0,
                 misinformation_penalty: 0.0,
                 critical_exposure_delta: 0.0,
+                tempo_cost: 0.0,
                 total: game_score - strike_penalty,
             };
         }
@@ -1100,6 +1156,7 @@ impl Evaluator for DefaultEvaluator {
             team_empathy,
             misinformation_penalty,
             critical_exposure_delta: 0.0,
+            tempo_cost: 0.0,
             total,
         }
     }
@@ -1220,6 +1277,28 @@ impl Evaluator for DefaultEvaluator {
         }
     }
 
+    fn tempo_cost(
+        &self,
+        action: &GameAction,
+        pre: &KnowledgeAwareGameState,
+        post: &KnowledgeAwareGameState,
+        pre_phantom_plays: u8,
+        post_phantom_plays: u8,
+    ) -> Score {
+        if self.tempo_cost_weight == 0.0 {
+            return 0.0;
+        }
+        let variant = &pre.static_data().variant;
+        if matches!(action, GameAction::Play { .. })
+            && post.score(variant, post_phantom_plays) > pre.score(variant, pre_phantom_plays)
+        {
+            // Successful Play — tempo-positive; the reward is paid by play_progress_bonus.
+            0.0
+        } else {
+            -self.tempo_cost_weight
+        }
+    }
+
     fn discard_action_penalty(
         &self,
         action: &GameAction,
@@ -1328,9 +1407,23 @@ impl Evaluator for DefaultEvaluator {
             if (1u64 << chop_id) & pre_critical_mask == 0 {
                 continue; // not truth-critical
             }
+            // Buffer = count of known-playable or known-trash cards in the chop owner's hand.
+            // Mirrors the identical buffer term in `critical_exposure_score` (leaf evaluator),
+            // keeping the immediate incentive proportional to actual discard risk.
+            let buffer = pre_table.hands[t]
+                .cards()
+                .iter()
+                .filter(|&&idx| {
+                    pov.is_known_trash(idx)
+                        || Self::card_known_playable(&pov, idx, playable_mask)
+                })
+                .count() as f64;
+            // threat ∈ (0, 1]: approaches 0 as buffer grows, equals 1 when buffer = 0.
+            let threat = 1.0 / (1.0 + 4.0 * buffer);
+
             let saved = (post_table.clue_touched_cards >> chop_idx) & 1 != 0;
             if saved {
-                total += self.critical_exposure_delta_weight;
+                total += self.critical_exposure_delta_weight * threat;
             } else if save_available && (1u64 << chop_id) & post_critical_mask != 0 {
                 // Charge the actor only if no player acting between actor and t has strictly
                 // fewer known playables (a player with fewer known playables is "freer" to save
@@ -1358,7 +1451,7 @@ impl Evaluator for DefaultEvaluator {
                     found
                 };
                 if !any_freer_intermediate {
-                    total -= self.critical_exposure_delta_weight;
+                    total -= self.critical_exposure_delta_weight * threat;
                 }
             }
         }
@@ -1401,6 +1494,7 @@ impl Evaluator for DefaultEvaluator {
         // Immediate bonuses: per-ply max = play_progress + clue precision across all cards
         // + team-empathy delta (each clue can at most lift the whole-hand score by total_cards)
         // + critical_exposure_delta (at most one reward per teammate = num_players - 1).
+        // Note: tempo_cost is ≤ 0 per ply, so ignoring it here keeps the bound optimistic.
         let max_immediate_per_ply = self.play_progress_weight
             + self.clue_precision_weight * total_cards as f64
             + self.team_empathy_weight * total_cards as f64
@@ -2141,5 +2235,209 @@ mod tests {
             delta, 0.0,
             "no effect when no critical cards exist (got {delta})"
         );
+    }
+
+    #[test]
+    fn critical_exposure_delta_scales_with_buffer_depth() {
+        // Regression: with buffer=2 (two known-playable cards in front of the critical chop),
+        // the bonus/penalty must be 1/(1+4×2) = 1/9 of the weight, not the full flat weight.
+        use crate::engine::convention::hgroup::signal::Signal;
+        use crate::engine::knowledge::player_knowledge::knowledge_for_hand;
+
+        let static_data = StaticGameData {
+            number_of_players: 2,
+            variant: NO_VARIANT,
+        };
+        // Card ids (NO_VARIANT, 5 suits × 5 ranks): R1=0, Y1=5, R5=4 (1 copy → critical).
+        let mut deck = Deck::new(&NO_VARIANT);
+        deck.reveal_card(10, 4, &NO_VARIANT); // deck 10 = R5 (chop, critical)
+        deck.reveal_card(11, 0, &NO_VARIANT); // deck 11 = R1 (buffer: known-playable via signal)
+        deck.reveal_card(12, 5, &NO_VARIANT); // deck 12 = Y1 (buffer: known-playable via signal)
+        let mut hands = Hand::empty_array();
+        hands[0] = Hand::new(&[0]); // actor (player 0)
+        // Player 1 hand: newest-first [12, 11, 10].  cards().iter().rev() = [10, 11, 12]
+        // → chop = deck 10 (R5), buffer = 2 (decks 11+12 carry Signal::Play).
+        hands[1] = Hand::new(&[10, 11, 12]);
+        let pre_state = TableState::from_parts(
+            ClueTokenBank::new(8),
+            deck,
+            hands,
+            0,
+            1,
+            PlayingStacks::empty(),
+            0,
+            CopiesCountingCardCollection::empty(),
+        );
+        let mut tk = TeamKnowledge::new(2);
+        *tk.player_mut(0) = knowledge_for_hand(&[0]);
+        let mut pk1 = knowledge_for_hand(&[10, 11, 12]);
+        // Mark decks 11 and 12 as known-playable via Signal::Play (buffer cards).
+        pk1.signals[11].push(Signal::Play { card_deck_index: 11, committed_identity: 0 });
+        pk1.signals[12].push(Signal::Play { card_deck_index: 12, committed_identity: 5 });
+        *tk.player_mut(1) = pk1;
+
+        let pre = KnowledgeAwareGameState::from_parts(
+            static_data.clone(),
+            pre_state.clone(),
+            tk.clone(),
+            13,
+        );
+        let post_unsaved = pre.clone(); // actor did nothing
+        let mut saved_state = pre_state.clone();
+        saved_state.clue_touched_cards |= 1u64 << 10; // deck 10 clue-touched
+        let post_saved =
+            KnowledgeAwareGameState::from_parts(static_data.clone(), saved_state, tk, 13);
+
+        let weight = 2.0_f64;
+        let evaluator = DefaultEvaluator {
+            critical_exposure_delta_weight: weight,
+            ..DefaultEvaluator::default()
+        };
+        let truth = TruthFixture::new(&static_data);
+        let truth_pov = truth.pov(pre.table_state(), &static_data);
+        let discard = GameAction::Discard { player_index: 0, card_deck_index: 0, turn: 1 };
+        let save_clue = GameAction::Clue {
+            player_index: 1,
+            touched_card_deck_indexes: smallvec::smallvec![10],
+            clue: crate::game::clue::Clue {
+                clue_type: crate::game::clue_type::ClueType::Rank,
+                clue_value: 5,
+            },
+            turn: 1,
+        };
+
+        // buffer = 2  →  threat = 1/(1+4×2) = 1/9
+        let expected_threat = 1.0 / (1.0 + 4.0 * 2.0);
+
+        let penalty =
+            evaluator.critical_exposure_delta_bonus(&discard, 0, &pre, &post_unsaved, &truth_pov);
+        assert!(
+            (penalty - (-weight * expected_threat)).abs() < 1e-9,
+            "penalty should be -weight*threat = {:.6} with buffer=2, got {penalty:.6}",
+            -weight * expected_threat
+        );
+
+        let reward =
+            evaluator.critical_exposure_delta_bonus(&save_clue, 0, &pre, &post_saved, &truth_pov);
+        assert!(
+            (reward - (weight * expected_threat)).abs() < 1e-9,
+            "reward should be +weight*threat = {:.6} with buffer=2, got {reward:.6}",
+            weight * expected_threat
+        );
+    }
+
+    // ── tempo_cost ──────────────────────────────────────────────────────────────
+
+    fn make_kags_with_stacks(score: u8) -> KnowledgeAwareGameState {
+        let static_data = StaticGameData {
+            number_of_players: 3,
+            variant: NO_VARIANT,
+        };
+        // Play `score` rank-1 cards (ids 0, 5, 10, … — one per suit) to get a non-zero score.
+        let stacks = if score == 0 {
+            PlayingStacks::empty()
+        } else {
+            let cards: Vec<usize> = (0..score as usize).map(|s| s * 5).collect();
+            PlayingStacks::new(cards, &NO_VARIANT)
+        };
+        let state = TableState::from_parts(
+            ClueTokenBank::new(8),
+            Deck::new(&NO_VARIANT),
+            Hand::empty_array(),
+            0,
+            0,
+            stacks,
+            0,
+            CopiesCountingCardCollection::empty(),
+        );
+        let tk = TeamKnowledge::new(static_data.number_of_players as usize);
+        KnowledgeAwareGameState::from_parts(static_data, state, tk, 0)
+    }
+
+    #[test]
+    fn tempo_cost_zero_for_successful_play() {
+        let evaluator = DefaultEvaluator::default();
+        let pre = make_kags_with_stacks(0);
+        let post = make_kags_with_stacks(1);
+        let action = GameAction::Play {
+            player_index: 0,
+            card_deck_index: 0,
+            turn: 1,
+        };
+        let cost = evaluator.tempo_cost(&action, &pre, &post, 0, 0);
+        assert_eq!(cost, 0.0, "successful play must have zero tempo cost");
+    }
+
+    #[test]
+    fn tempo_cost_charges_misplay() {
+        let evaluator = DefaultEvaluator::default();
+        let pre = make_kags_with_stacks(0);
+        let post = make_kags_with_stacks(0); // score unchanged — misplay
+        let action = GameAction::Play {
+            player_index: 0,
+            card_deck_index: 0,
+            turn: 1,
+        };
+        let cost = evaluator.tempo_cost(&action, &pre, &post, 0, 0);
+        assert_eq!(
+            cost,
+            -evaluator.tempo_cost_weight,
+            "misplay (no score advance) must pay tempo cost"
+        );
+    }
+
+    #[test]
+    fn tempo_cost_charges_clue() {
+        let evaluator = DefaultEvaluator::default();
+        let state = make_kags_with_stacks(0);
+        let action = GameAction::Clue {
+            player_index: 1,
+            touched_card_deck_indexes: smallvec::smallvec![],
+            clue: crate::game::clue::Clue {
+                clue_type: crate::game::clue_type::ClueType::Rank,
+                clue_value: 1,
+            },
+            turn: 1,
+        };
+        let cost = evaluator.tempo_cost(&action, &state, &state, 0, 0);
+        assert_eq!(cost, -evaluator.tempo_cost_weight, "clue must pay tempo cost");
+    }
+
+    #[test]
+    fn tempo_cost_charges_discard() {
+        let evaluator = DefaultEvaluator::default();
+        let state = make_kags_with_stacks(0);
+        let action = GameAction::Discard {
+            player_index: 0,
+            card_deck_index: 0,
+            turn: 1,
+        };
+        let cost = evaluator.tempo_cost(&action, &state, &state, 0, 0);
+        assert_eq!(cost, -evaluator.tempo_cost_weight, "discard must pay tempo cost");
+    }
+
+    #[test]
+    fn tempo_cost_respects_weight_zero() {
+        let evaluator = DefaultEvaluator {
+            tempo_cost_weight: 0.0,
+            ..DefaultEvaluator::default()
+        };
+        let state = make_kags_with_stacks(0);
+        let discard = GameAction::Discard {
+            player_index: 0,
+            card_deck_index: 0,
+            turn: 1,
+        };
+        let clue = GameAction::Clue {
+            player_index: 1,
+            touched_card_deck_indexes: smallvec::smallvec![],
+            clue: crate::game::clue::Clue {
+                clue_type: crate::game::clue_type::ClueType::Rank,
+                clue_value: 1,
+            },
+            turn: 1,
+        };
+        assert_eq!(evaluator.tempo_cost(&discard, &state, &state, 0, 0), 0.0);
+        assert_eq!(evaluator.tempo_cost(&clue, &state, &state, 0, 0), 0.0);
     }
 }
