@@ -107,8 +107,8 @@ impl TreeActionSelectionStrategy {
 
         if proposed.is_empty() {
             for (tech, name) in [
-                (&TempoClue as &dyn ConventionTech, TempoClue.name()),
                 (&FiveStall as &dyn ConventionTech, FiveStall.name()),
+                (&TempoClue as &dyn ConventionTech, TempoClue.name()),
                 (&ClueBurn as &dyn ConventionTech, ClueBurn.name()),
                 (&LowLevelStall as &dyn ConventionTech, LowLevelStall.name()),
             ] {
