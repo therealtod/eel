@@ -467,7 +467,7 @@ pub fn build_from_scenario(
         discard_pile,
     );
 
-    table_state.all_hand_bits = table_state.hands[..static_game_data.number_of_players as usize]
+    table_state.all_hands_bitfield = table_state.hands[..static_game_data.number_of_players as usize]
         .iter()
         .flat_map(|h| h.cards())
         .fold(0u64, |acc, &idx| acc | (1u64 << idx));

@@ -631,7 +631,7 @@ impl PlayerKnowledge {
         // Visible-but-no-longer-held cards (played / discarded) are accounted for
         // separately via `playing_stacks` / `discard_pile`; counting them here
         // too would double-count and spuriously exhaust identities.
-        let other_hands = table_state.all_hand_bits & !self.own_hand;
+        let other_hands = table_state.all_hands_bitfield & !self.own_hand;
         let visible_in_others = visible_cards & other_hands;
 
         let mut seen_in_others = [0u8; MAX_UNIQUE_CARDS_IN_DECK];
@@ -1061,7 +1061,7 @@ mod tests {
         // R1 has 3 copies; play all 3 from dummy indices.
         for &(player, idx) in &[(0usize, 0u8), (0, 1), (0, 2)] {
             table_state.hands[player].add_card_to_slot_1(idx);
-            table_state.all_hand_bits |= 1u64 << idx;
+            table_state.all_hands_bitfield |= 1u64 << idx;
         }
         table_state.update_with_play_action_of_specific_card(
             0,
@@ -1102,7 +1102,7 @@ mod tests {
         let mut table_state = initial_five_players_table_state();
         for &(player, idx) in &[(0usize, 0u8), (0, 1), (0, 2)] {
             table_state.hands[player].add_card_to_slot_1(idx);
-            table_state.all_hand_bits |= 1u64 << idx;
+            table_state.all_hands_bitfield |= 1u64 << idx;
         }
         table_state.update_with_discard_action_of_specific_card(
             0,
@@ -1142,7 +1142,7 @@ mod tests {
         // P1 holds all 3 R1 copies.
         for idx in 0..3u8 {
             table_state.hands[1].add_card_to_slot_1(idx);
-            table_state.all_hand_bits |= 1u64 << idx;
+            table_state.all_hands_bitfield |= 1u64 << idx;
         }
         // P0 can see P1's hand (cards 0, 1, 2).
         let visible_cards: DeckCardsBitField = (1 << 0) | (1 << 1) | (1 << 2);
@@ -1173,7 +1173,7 @@ mod tests {
         let mut table_state = initial_five_players_table_state();
         // Card 0 was in P1's hand and then played as R1.
         table_state.hands[1].add_card_to_slot_1(0);
-        table_state.all_hand_bits |= 1u64 << 0;
+        table_state.all_hands_bitfield |= 1u64 << 0;
         table_state.update_with_play_action_of_specific_card(
             0,
             R1.as_variant_card_id(),
@@ -1209,7 +1209,7 @@ mod tests {
         // P1 holds 3 R1 copies.
         for idx in 0..3u8 {
             table_state.hands[1].add_card_to_slot_1(idx);
-            table_state.all_hand_bits |= 1u64 << idx;
+            table_state.all_hands_bitfield |= 1u64 << idx;
         }
         // Set deck empathy for these cards (simulating a draw path that revealed them).
         for idx in 0..3u8 {
@@ -1316,7 +1316,7 @@ mod tests {
             (3, 1),
         ] {
             table_state.hands[player].add_card_to_slot_1(idx);
-            table_state.all_hand_bits |= 1u64 << idx;
+            table_state.all_hands_bitfield |= 1u64 << idx;
         }
         table_state.update_with_play_action_of_specific_card(
             0,
@@ -1357,13 +1357,13 @@ mod tests {
         // P4 holds both R4 copies (R4 has 2 copies total).
         for idx in 0..2u8 {
             table_state.hands[4].add_card_to_slot_1(idx);
-            table_state.all_hand_bits |= 1u64 << idx;
+            table_state.all_hands_bitfield |= 1u64 << idx;
         }
 
         let mut pk = PlayerKnowledge::new(0);
         pk.own_hand = 1 << 42;
         table_state.hands[0].add_card_to_slot_1(42);
-        table_state.all_hand_bits |= 1u64 << 42;
+        table_state.all_hands_bitfield |= 1u64 << 42;
         // Convention narrows card 42 to R4|R5.
         pk.inferred_identities[42] = Some(CardIdentityMask::from_bits(R4_MASK | R5_MASK));
         // P0 can see both R4 copies in P4's hand.
@@ -1403,7 +1403,7 @@ mod tests {
         // Play R1, R2, R3.
         for &(player, idx) in &[(0usize, 2u8), (0, 3), (0, 4)] {
             table_state.hands[player].add_card_to_slot_1(idx);
-            table_state.all_hand_bits |= 1u64 << idx;
+            table_state.all_hands_bitfield |= 1u64 << idx;
         }
         table_state.update_with_play_action_of_specific_card(
             2,
@@ -1423,12 +1423,12 @@ mod tests {
 
         // P1 holds one R4 copy (but there are 2 total).
         table_state.hands[1].add_card_to_slot_1(0);
-        table_state.all_hand_bits |= 1u64 << 0;
+        table_state.all_hands_bitfield |= 1u64 << 0;
 
         let mut pk = PlayerKnowledge::new(0);
         pk.own_hand = 1 << 42;
         table_state.hands[0].add_card_to_slot_1(42);
-        table_state.all_hand_bits |= 1u64 << 42;
+        table_state.all_hands_bitfield |= 1u64 << 42;
         // Convention narrows card 42 to R4|R5.
         pk.inferred_identities[42] = Some(CardIdentityMask::from_bits(R4_MASK | R5_MASK));
         // P0 can see one R4 copy in P1's hand.
@@ -1497,7 +1497,7 @@ mod tests {
         // Play R1 (all 3 copies).
         for &(player, idx) in &[(0usize, 2u8), (0, 3), (0, 4)] {
             table_state.hands[player].add_card_to_slot_1(idx);
-            table_state.all_hand_bits |= 1u64 << idx;
+            table_state.all_hands_bitfield |= 1u64 << idx;
         }
         table_state.update_with_play_action_of_specific_card(
             2,
@@ -1518,7 +1518,7 @@ mod tests {
         let mut pk = PlayerKnowledge::new(0);
         pk.own_hand = 1 << 42;
         table_state.hands[0].add_card_to_slot_1(42);
-        table_state.all_hand_bits |= 1u64 << 42;
+        table_state.all_hands_bitfield |= 1u64 << 42;
         // Baseline (no prior narrowing) = all cards. effective = all.
         // Observable excludes R1 (all played). effective ∩ observable ≠ empty, so no contradiction.
         // But let's set up a contradiction: convention says only R1.

@@ -841,7 +841,7 @@ impl KnowledgeAwareGameState {
         if spare_turns == 0 {
             return f32::INFINITY;
         }
-        let all_hand_bits = self.table_state.all_hand_bits;
+        let all_hand_bits = self.table_state.all_hands_bitfield;
         let live_setups = (self.table_state.clue_touched_cards & all_hand_bits).count_ones() as i32;
         (still_to_play - live_setups).max(0) as f32 / spare_turns as f32
     }

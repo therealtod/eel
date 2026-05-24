@@ -652,7 +652,7 @@ mod tests {
         // active player's hand.
         for &(player, idx) in &[(1usize, 0u8), (1, 1), (0, 2), (0, 3), (0, 4)] {
             table_state.hands[player].add_card_to_slot_1(idx);
-            table_state.all_hand_bits |= 1u64 << idx;
+            table_state.all_hands_bitfield |= 1u64 << idx;
         }
         table_state.update_with_play_action_of_specific_card(
             2,
@@ -673,7 +673,7 @@ mod tests {
         let mut knowledge = knowledge_with_empathy(42, R3_MASK | R4_MASK);
         knowledge.own_hand |= 1 << 42;
         table_state.hands[0].add_card_to_slot_1(42);
-        table_state.all_hand_bits |= 1u64 << 42;
+        table_state.all_hands_bitfield |= 1u64 << 42;
         knowledge.update_with_revealed_card(0, R4.as_variant_card_id());
         knowledge.update_with_revealed_card(1, R4.as_variant_card_id());
         let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);

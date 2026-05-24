@@ -28,7 +28,7 @@ pub struct TableState {
     pub clues_given: u8,
     pub deck: Deck,
     pub hands: [Hand; MAX_PLAYERS_IN_GAME],
-    pub all_hand_bits: DeckCardsBitField,
+    pub all_hands_bitfield: DeckCardsBitField,
     pub active_player_index: PlayerIndex,
     pub current_turn: usize,
     pub playing_stacks: PlayingStacks,
@@ -56,7 +56,7 @@ impl TableState {
             clue_touched_cards: 0,
             clues_given: 0,
             deck,
-            all_hand_bits: 0,
+            all_hands_bitfield: 0,
             hands,
             active_player_index,
             current_turn,
@@ -99,14 +99,14 @@ impl TableState {
     pub fn update_with_draw_action(&mut self, card_deck_index: CardDeckIndex) {
         self.hands[self.active_player_index].add_card_to_slot_1(card_deck_index);
         self.deck.decrement_size(1);
-        self.all_hand_bits |= 1u64 << card_deck_index;
+        self.all_hands_bitfield |= 1u64 << card_deck_index;
     }
 
     /// Update this [crate::game::game_state::GameState] when the player with the given
     /// `player_index` tries to play a card
     pub fn update_with_play_action(&mut self, card_deck_index: CardDeckIndex) {
         self.hands[self.active_player_index].remove_card(card_deck_index);
-        self.all_hand_bits &= !(1u64 << card_deck_index);
+        self.all_hands_bitfield &= !(1u64 << card_deck_index);
     }
 
     /// Update this [crate::game::game_state::GameState] when the player with the given
@@ -148,7 +148,7 @@ impl TableState {
         static_game_data: &StaticGameData,
     ) {
         self.hands[self.active_player_index].remove_card(card_deck_index);
-        self.all_hand_bits &= !(1u64 << card_deck_index);
+        self.all_hands_bitfield &= !(1u64 << card_deck_index);
         self.discard_pile.add_card();
         let bonus_tokens = static_game_data.variant.bonus_half_clue_tokens_for_discard;
         self.clue_token_bank.add_tokens(bonus_tokens);
@@ -163,7 +163,7 @@ impl TableState {
         static_game_data: &StaticGameData,
     ) {
         self.hands[self.active_player_index].remove_card(card_deck_index);
-        self.all_hand_bits &= !(1u64 << card_deck_index);
+        self.all_hands_bitfield &= !(1u64 << card_deck_index);
         self.discard_pile.add_card_with_id(card_id);
         let bonus_tokens = static_game_data.variant.bonus_half_clue_tokens_for_discard;
         self.clue_token_bank.add_tokens(bonus_tokens);
@@ -253,7 +253,7 @@ impl TableState {
         if spare_turns == 0 {
             return f32::INFINITY;
         }
-        let all_hand_bits = self.all_hand_bits;
+        let all_hand_bits = self.all_hands_bitfield;
         let live_setups = (self.clue_touched_cards & all_hand_bits).count_ones() as i32;
         (still_to_play - live_setups).max(0) as f32 / spare_turns as f32
     }
@@ -342,7 +342,7 @@ pub mod unit_test_constants {
                 clue_touched_cards: 0,
                 clues_given: 0,
                 deck,
-                all_hand_bits: (0..=3u64)
+                all_hands_bitfield: (0..=3u64)
                     .chain(5..=9)
                     .chain(10..=13)
                     .fold(0u64, |acc, i| acc | (1 << i)),
@@ -374,7 +374,7 @@ pub mod unit_test_constants {
                 clue_touched_cards: 0,
                 clues_given: 0,
                 deck,
-                all_hand_bits: (0..=4u64)
+                all_hands_bitfield: (0..=4u64)
                     .chain(5..=9)
                     .chain(10..=13)
                     .fold(0u64, |acc, i| acc | (1 << i)),
@@ -522,7 +522,7 @@ mod tests {
             clue_touched_cards: 0,
             clues_given: 0,
             deck: Deck::new(&NO_VARIANT),
-            all_hand_bits: 0,
+            all_hands_bitfield: 0,
             hands: Hand::empty_array(),
             active_player_index: 0,
             current_turn: 0,
@@ -710,7 +710,7 @@ mod tests {
     fn pace_state_3p(stacks: PlayingStacks, deck_size: u8) -> TableState {
         TableState {
             hands: hands_3p(),
-            all_hand_bits: hand_bits_3p(),
+            all_hands_bitfield: hand_bits_3p(),
             deck: Deck::of(
                 deck_size,
                 NO_VARIANT.card_copies_count_by_id,
@@ -749,7 +749,7 @@ mod tests {
         // score=0, deck=30, players=5 → 0 + 30 + 5 - 25 = 10
         let mut ts = state_with(PlayingStacks::empty(), &[]);
         ts.hands = hands_5p();
-        ts.all_hand_bits = hand_bits_5p();
+        ts.all_hands_bitfield = hand_bits_5p();
         ts.deck = Deck::of(
             30,
             NO_VARIANT.card_copies_count_by_id,
