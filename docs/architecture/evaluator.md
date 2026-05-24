@@ -1,7 +1,7 @@
 # Evaluator — Term Reference
 
-`DefaultEvaluator` in `src/engine/evaluator.rs` scores every leaf state reached during
-alpha-beta search.  The total score that drives action selection is:
+`DefaultEvaluator` (defined in `src/engine/evaluator/`) scores every leaf state reached
+during alpha-beta search.  The total score that drives action selection is:
 
 ```
 total_score = leaf_total + Σ immediate_bonus(ply)
