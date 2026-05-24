@@ -7,11 +7,11 @@ pub struct InitialState {
 }
 
 impl InitialState {
-    pub fn new(username: String, password: String) -> Self {
+    pub fn new(username: &str, password: &str) -> Self {
         Self {
             common_state: CommonState::default(),
-            username,
-            password,
+            username: username.to_string(),
+            password: password.to_string(),
         }
     }
 }

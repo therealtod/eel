@@ -35,9 +35,9 @@ pub struct HanabLiveBot {
 }
 
 impl HanabLiveBot {
-    pub fn new(username: String, password: String) -> Self {
+    pub fn new(username: &str, password: &str) -> Self {
         let (sender, receiver) = mpsc::unbounded_channel();
-        let initial_state = InitialState::new(username.clone(), password.clone());
+        let initial_state = InitialState::new(username, password);
 
         Self {
             state: BotState::Initial(initial_state),
@@ -72,7 +72,7 @@ impl HanabLiveBot {
 
         if let BotState::Initial(initial) = std::mem::replace(
             &mut self.state,
-            BotState::Initial(InitialState::new(String::new(), String::new())),
+            BotState::Initial(InitialState::new("", "")),
         ) {
             let logged_in = LoggedInState {
                 common_state: initial.common_state,
@@ -85,18 +85,27 @@ impl HanabLiveBot {
 
         loop {
             tokio::select! {
-                message = ws.receive() => {
+                message = tokio::time::timeout(
+                    std::time::Duration::from_secs(30),
+                    ws.receive(),
+                ) => {
                     match message {
-                        Some(Ok(text)) => {
+                        Ok(Some(Ok(text))) => {
                             self.handle_message(&text, &mut ws).await?;
                         }
-                        Some(Err(e)) => {
+                        Ok(Some(Err(e))) => {
                             error!("WebSocket error: {}", e);
                             break;
                         }
-                        None => {
+                        Ok(None) => {
                             info!("WebSocket closed");
                             break;
+                        }
+                        Err(_) => {
+                            if let Err(e) = ws.send_ping().await {
+                                error!("Failed to send ping: {}", e);
+                                break;
+                            }
                         }
                     }
                 }
@@ -221,7 +230,7 @@ impl HanabLiveBot {
 
         if let BotState::TableJoined(table_joined) = std::mem::replace(
             &mut self.state,
-            BotState::Initial(InitialState::new(String::new(), String::new())),
+            BotState::Initial(InitialState::new("", "")),
         ) {
             let _ = self.sender.send(BotEvent::TransitionToGameInitDataReceived(
                 table_joined,
@@ -233,7 +242,7 @@ impl HanabLiveBot {
     pub async fn join_table(&mut self, table_id: usize) -> Result<(), Error> {
         if let BotState::LoggedIn(logged_in) = std::mem::replace(
             &mut self.state,
-            BotState::Initial(InitialState::new(String::new(), String::new())),
+            BotState::Initial(InitialState::new("", "")),
         ) {
             let sender = logged_in.sender.clone();
             logged_in.join_table(table_id).await.map_err(Error::State)?;
@@ -255,7 +264,7 @@ impl HanabLiveBot {
     ) -> Result<(), Error> {
         if let BotState::LoggedIn(logged_in) = std::mem::replace(
             &mut self.state,
-            BotState::Initial(InitialState::new(String::new(), String::new())),
+            BotState::Initial(InitialState::new("", "")),
         ) {
             let sender = logged_in.sender.clone();
             logged_in

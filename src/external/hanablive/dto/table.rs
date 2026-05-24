@@ -4,7 +4,7 @@ use serde::Deserialize;
 #[serde(rename_all = "camelCase")]
 pub struct Spectator {
     pub name: String,
-    pub shadowing_player_index: usize,
+    // pub shadowing_player_index: usize,
     pub shadowing_player_username: String,
 }
 
@@ -16,8 +16,8 @@ pub struct Table {
     pub password_protected: bool,
     pub joined: bool,
     pub num_players: usize,
-    pub starting_player: usize,
-    pub owned: bool,
+    // pub starting_player: usize,
+    // pub owned: bool,
     pub running: bool,
     pub variant: String,
     pub options: super::game_options::GameOptions,

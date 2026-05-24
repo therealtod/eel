@@ -51,23 +51,37 @@ impl WebSocketClient {
         Ok(())
     }
 
+    pub async fn send_ping(&mut self) -> Result<(), Error> {
+        self.stream.send(Message::Ping(Vec::new().into())).await?;
+        Ok(())
+    }
+
     pub async fn receive(&mut self) -> Option<Result<String, Error>> {
-        match self.stream.next().await {
-            Some(Ok(Message::Text(text))) => Some(Ok(text.to_string())),
-            Some(Ok(Message::Binary(data))) => match String::from_utf8(data.to_vec()) {
-                Ok(text) => Some(Ok(text)),
-                Err(e) => Some(Err(Error::Utf8(e))),
-            },
-            Some(Ok(Message::Close(_))) => {
-                debug!("WebSocket closed");
-                None
+        loop {
+            match self.stream.next().await {
+                Some(Ok(Message::Text(text))) => return Some(Ok(text.to_string())),
+                Some(Ok(Message::Binary(data))) => match String::from_utf8(data.to_vec()) {
+                    Ok(text) => return Some(Ok(text)),
+                    Err(e) => return Some(Err(Error::Utf8(e))),
+                },
+                Some(Ok(Message::Ping(payload))) => {
+                    if let Err(e) = self.stream.send(Message::Pong(payload)).await {
+                        error!("Failed to send pong: {}", e);
+                        return Some(Err(Error::WebSocket(e)));
+                    }
+                }
+                Some(Ok(Message::Pong(_))) => {}
+                Some(Ok(Message::Close(_))) => {
+                    debug!("WebSocket closed");
+                    return None;
+                }
+                Some(Ok(_)) => {}
+                Some(Err(e)) => {
+                    error!("WebSocket error: {}", e);
+                    return Some(Err(Error::WebSocket(e)));
+                }
+                None => return None,
             }
-            Some(Ok(_)) => None,
-            Some(Err(e)) => {
-                error!("WebSocket error: {}", e);
-                Some(Err(Error::WebSocket(e)))
-            }
-            None => None,
         }
     }
 }
