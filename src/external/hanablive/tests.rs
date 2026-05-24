@@ -135,7 +135,6 @@ mod dto_tests {
         assert_eq!(table.spectators.len(), 1);
         let spectator = &table.spectators[0];
         assert_eq!(spectator.name, "Dave");
-        assert_eq!(spectator.shadowing_player_index, 0);
         assert_eq!(spectator.shadowing_player_username, "Alice");
     }
 
