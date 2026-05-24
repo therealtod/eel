@@ -40,11 +40,7 @@ impl ConventionTech for LowLevelStall {
 
         if has_clues {
             // Priority 1: clue rank-1 if all 1s are trash.
-            let rank1_clue = Clue {
-                clue_type: ClueType::Rank,
-                clue_value: 1,
-            };
-            let rank1_mask = static_data.variant.empathy_for_clue(&rank1_clue).as_bits();
+            let rank1_mask = static_data.variant.empathy_for_clue(&Clue::RANK_1_CLUE).as_bits();
             if still_needed_cards_mask(table_state, static_data) & rank1_mask == 0 {
                 for target in (0..num_players).filter(|&p| p != active) {
                     let target_hand = &table_state.hands[target];
@@ -54,11 +50,11 @@ impl ConventionTech for LowLevelStall {
                         .filter_map(|&idx| pov.card_identity(idx))
                         .any(|card| static_data.variant.rank_of(card) == 1)
                     {
-                        let touched = touched_cards_for_clue(target, &rank1_clue, pov);
+                        let touched = touched_cards_for_clue(target, &Clue::RANK_1_CLUE, pov);
                         return vec![GameAction::Clue {
                             player_index: target,
                             touched_card_deck_indexes: touched,
-                            clue: rank1_clue,
+                            clue: Clue::RANK_1_CLUE,
                             turn: table_state.current_turn,
                         }];
                     }

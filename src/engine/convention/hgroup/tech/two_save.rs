@@ -17,17 +17,12 @@ use crate::impl_convention_tech_for_hgroup_clue_tech;
 /// be safely discarded (no other player has a copy outside their own chop).
 pub struct TwoSave;
 
-const RANK_2_CLUE: Clue = Clue {
-    clue_type: ClueType::Rank,
-    clue_value: 2,
-};
-
 impl TwoSave {
     fn is_rank_two(card_id: VariantCardId, pov: &dyn PlayerPOV) -> bool {
         let rank2_mask = pov
             .static_data()
             .variant
-            .empathy_for_clue(&RANK_2_CLUE)
+            .empathy_for_clue(&Clue::RANK_2_CLUE)
             .as_bits();
         (1u64 << card_id) & rank2_mask != 0
     }
@@ -71,11 +66,11 @@ impl ClueTech for TwoSave {
             .filter(|&p| p != active)
             .filter(|&target| Self::is_two_saveable_for_target(target, pov))
             .map(|target| {
-                let touched = touched_cards_for_clue(target, &RANK_2_CLUE, pov);
+                let touched = touched_cards_for_clue(target, &Clue::RANK_2_CLUE, pov);
                 GameAction::Clue {
                     player_index: target,
                     touched_card_deck_indexes: touched,
-                    clue: RANK_2_CLUE,
+                    clue: Clue::RANK_2_CLUE,
                     turn: pov.table_state().current_turn,
                 }
             })
@@ -91,7 +86,7 @@ impl ClueTech for TwoSave {
         history: &[GameStateSnapshot],
         pov: &dyn PlayerPOV,
     ) -> bool {
-        if *clue != RANK_2_CLUE {
+        if *clue != Clue::RANK_2_CLUE {
             return false;
         }
         let Some(snap) = history.get(turn.saturating_sub(1)) else {
@@ -105,7 +100,7 @@ impl ClueTech for TwoSave {
         let static_data = pov.static_data();
         let total_ids =
             static_data.variant.number_of_suits as usize * static_data.variant.stacks_size as usize;
-        let rank2_mask = static_data.variant.empathy_for_clue(&RANK_2_CLUE).as_bits();
+        let rank2_mask = static_data.variant.empathy_for_clue(&Clue::RANK_2_CLUE).as_bits();
         let candidates = pov.inferred_identities(chop).as_bits() & rank2_mask;
         (0..total_ids).any(|id| {
             (candidates & (1u64 << id)) != 0 && Self::is_two_saveable(id, player_index, &giver_pov)
@@ -134,7 +129,7 @@ impl ClueTech for TwoSave {
         let static_data = giver_pov.static_data();
         let total_ids =
             static_data.variant.number_of_suits as usize * static_data.variant.stacks_size as usize;
-        let rank2_mask = static_data.variant.empathy_for_clue(&RANK_2_CLUE).as_bits();
+        let rank2_mask = static_data.variant.empathy_for_clue(&Clue::RANK_2_CLUE).as_bits();
         let mask: u64 = (0..total_ids)
             .filter(|&id| (1u64 << id) & rank2_mask != 0 && giver_pov.away_value(id) > Some(0))
             .fold(0u64, |acc, id| acc | (1 << id));
@@ -193,7 +188,7 @@ mod tests {
             vec![GameAction::Clue {
                 player_index: 1,
                 touched_card_deck_indexes: smallvec::smallvec![10],
-                clue: RANK_2_CLUE,
+                clue: Clue::RANK_2_CLUE,
                 turn: 3,
             }]
         );
@@ -308,7 +303,7 @@ mod tests {
         let action = GameAction::Clue {
             player_index: 1,
             touched_card_deck_indexes: smallvec::smallvec![10],
-            clue: RANK_2_CLUE,
+            clue: Clue::RANK_2_CLUE,
             turn: 1,
         };
         assert!(TwoSave.matches_action(&action, &[snapshot], &pov));
@@ -336,7 +331,7 @@ mod tests {
         let action = GameAction::Clue {
             player_index: 1,
             touched_card_deck_indexes: smallvec::smallvec![10],
-            clue: RANK_2_CLUE,
+            clue: Clue::RANK_2_CLUE,
             turn: 1,
         };
         assert!(!TwoSave.matches_action(&action, &[snapshot], &pov));
@@ -502,7 +497,7 @@ mod tests {
             &GameAction::Clue {
                 player_index: 1,
                 touched_card_deck_indexes: smallvec![10],
-                clue: RANK_2_CLUE,
+                clue: Clue::RANK_2_CLUE,
                 turn: 1,
             },
             &[],

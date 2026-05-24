@@ -20,7 +20,7 @@ fn is_five_saveable(target: PlayerIndex, pov: &dyn PlayerPOV) -> bool {
             let rank5_mask = pov
                 .static_data()
                 .variant
-                .empathy_for_clue(&RANK_5_CLUE)
+                .empathy_for_clue(&Clue::RANK_5_CLUE)
                 .as_bits();
             (1u64 << id) & rank5_mask != 0
         })
@@ -28,11 +28,6 @@ fn is_five_saveable(target: PlayerIndex, pov: &dyn PlayerPOV) -> bool {
 
 /// Clue rank 5 to a teammate whose chop card is a 5.
 pub struct FiveSave;
-
-const RANK_5_CLUE: Clue = Clue {
-    clue_type: ClueType::Rank,
-    clue_value: 5,
-};
 
 impl ClueTech for FiveSave {
     fn clue_game_actions(&self, active_player_pov: &dyn PlayerPOV) -> Vec<GameAction> {
@@ -43,11 +38,11 @@ impl ClueTech for FiveSave {
             .filter(|&p| p != active)
             .filter(|&target| is_five_saveable(target, active_player_pov))
             .map(|target| {
-                let touched = touched_cards_for_clue(target, &RANK_5_CLUE, active_player_pov);
+                let touched = touched_cards_for_clue(target, &Clue::RANK_5_CLUE, active_player_pov);
                 GameAction::Clue {
                     player_index: target,
                     touched_card_deck_indexes: touched,
-                    clue: RANK_5_CLUE,
+                    clue: Clue::RANK_5_CLUE,
                     turn: active_player_pov.table_state().current_turn,
                 }
             })
@@ -63,7 +58,7 @@ impl ClueTech for FiveSave {
         history: &[GameStateSnapshot],
         observer_pov: &dyn PlayerPOV,
     ) -> bool {
-        if *clue != RANK_5_CLUE {
+        if *clue != Clue::RANK_5_CLUE {
             return false;
         }
         let Some(snap) = history.get(turn.saturating_sub(1)) else {
@@ -78,7 +73,7 @@ impl ClueTech for FiveSave {
         // observer's view: empathy(chop) ∩ rank-5-mask must be non-empty. For non-receivers the
         // empathy is a singleton (they see the chop); for the receiver it's wider.
         let static_data = observer_pov.static_data();
-        let rank5_mask = static_data.variant.empathy_for_clue(&RANK_5_CLUE).as_bits();
+        let rank5_mask = static_data.variant.empathy_for_clue(&Clue::RANK_5_CLUE).as_bits();
         (observer_pov.inferred_identities(chop).as_bits() & rank5_mask) != 0
     }
 
@@ -103,7 +98,7 @@ impl ClueTech for FiveSave {
         let static_data = giver_pov.static_data();
         let total_ids =
             static_data.variant.number_of_suits as usize * static_data.variant.stacks_size as usize;
-        let rank5_mask = static_data.variant.empathy_for_clue(&RANK_5_CLUE).as_bits();
+        let rank5_mask = static_data.variant.empathy_for_clue(&Clue::RANK_5_CLUE).as_bits();
         // Narrow the focus to rank-5 ids that are not immediately playable. A rank-5 clue
         // touching chop is conventionally a save, so the receiver should not collapse to
         // an immediately-playable 5 (which would be a direct-play interpretation). Mirrors
