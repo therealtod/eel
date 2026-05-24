@@ -31,7 +31,6 @@ impl ClueTech for ClueBurn {
                 let mut result = Vec::new();
                 for clue_type in &static_data.variant.clue_types {
                     for clue_value in 0..MAX_CLUE_VALUES_PER_TYPE {
-                        #[allow(clippy::cast_possible_truncation)]
                         let clue = Clue {
                             clue_type: *clue_type,
                             clue_value: clue_value as u8,
