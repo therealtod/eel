@@ -338,3 +338,27 @@ fn should_choose_the_most_efficient_play_clue() {
         _ => panic!("Alice chose the following action: {action:?}"),
     }
 }
+
+#[test]
+fn should_prefer_tempo_clue_over_hard_burn() {
+    let action = search_best_action("should_prefer_tempo_clue_over_hard_burn");
+    match action {
+        GameAction::Clue {
+            player_index: 1,
+            clue: Clue {
+                clue_type: ClueType::Color,
+                clue_value: 4,
+            },
+            ..
+        } => println!("Alice has chosen correctly: {:?}", action),
+        GameAction::Clue {
+            player_index: 1,
+            clue: Clue {
+                clue_type: ClueType::Rank,
+                clue_value: 5,
+            },
+            ..
+        } => panic!("Alice has decided to just burn a clue {action:?}"),
+        _ => panic!("Alice has chosen the following action: {:?}", action)
+    }
+}

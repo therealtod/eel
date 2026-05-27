@@ -41,11 +41,12 @@ impl ConventionTech for FiveStall {
         let rank5_mask = static_data.variant.empathy_for_clue(&rank5_clue).as_bits();
 
         for target in (0..num_players).filter(|&p| p != active) {
-            let has_five = table_state.hands[target].cards().iter().any(|&idx| {
-                pov.card_identity(idx)
+            let has_untouched_five = table_state.hands[target].cards().iter().any(|&idx| {
+                !pov.is_touched(idx)
+                && pov.card_identity(idx)
                     .is_some_and(|id| (1u64 << id) & rank5_mask != 0)
             });
-            if has_five {
+            if has_untouched_five {
                 let touched = touched_cards_for_clue(target, &rank5_clue, pov);
                 if !touched.is_empty() {
                     return vec![GameAction::Clue {
