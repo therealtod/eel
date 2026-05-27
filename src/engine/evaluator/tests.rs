@@ -203,8 +203,7 @@ fn misinformation_term_fires_on_excluded_truth() {
 
     tk.player_mut(0).inferred_identities[5] =
         Some(crate::game::card::CardIdentityMask::from_bits(1 << 7));
-    let score_correct =
-        DefaultEvaluator::misinformation_score(&static_data, &tk, &state, &truth);
+    let score_correct = DefaultEvaluator::misinformation_score(&static_data, &tk, &state, &truth);
     assert_eq!(
         score_correct, 0.0,
         "misinformation_score should be 0 when knowledge exactly matches truth"
@@ -243,8 +242,7 @@ fn critical_exposure_chop_no_buffer_is_one() {
     let (state, static_data, tk) = make_chop_test_state([4, 7, 12, 17, 22]);
     let truth = TruthFixture::new(&static_data);
     let truth_pov = truth.pov(&state, &static_data);
-    let score =
-        DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
+    let score = DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
     assert!(
         (score - 1.0).abs() < 1e-9,
         "chop critical with no buffer should be exactly 1.0, got {score}"
@@ -256,8 +254,7 @@ fn critical_exposure_slot1_lower_than_chop() {
     let (state, static_data, tk) = make_chop_test_state([7, 12, 17, 22, 4]);
     let truth = TruthFixture::new(&static_data);
     let truth_pov = truth.pov(&state, &static_data);
-    let score =
-        DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
+    let score = DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
     let expected = 1.0 / (1.0 + 4.0);
     assert!(
         (score - expected).abs() < 1e-9,
@@ -276,8 +273,7 @@ fn critical_exposure_buffer_dominates_position() {
     }
     let truth = TruthFixture::new(&static_data);
     let truth_pov = truth.pov(&state, &static_data);
-    let score =
-        DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
+    let score = DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
     let expected = 1.0 / (1.0 + 0.0 + 4.0 * 4.0);
     assert!(
         (score - expected).abs() < 1e-9,
@@ -290,8 +286,7 @@ fn critical_exposure_zero_when_no_critical_mask() {
     let (state, static_data, tk) = make_chop_test_state([0, 5, 10, 15, 20]);
     let truth = TruthFixture::new(&static_data);
     let truth_pov = truth.pov(&state, &static_data);
-    let score =
-        DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
+    let score = DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
     assert_eq!(score, 0.0, "no critical identities → zero exposure");
 }
 
@@ -301,8 +296,7 @@ fn critical_exposure_zero_when_critical_is_touched() {
     state.clue_touched_cards |= 1u64 << 0;
     let truth = TruthFixture::new(&static_data);
     let truth_pov = truth.pov(&state, &static_data);
-    let score =
-        DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
+    let score = DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
     assert_eq!(
         score, 0.0,
         "touched non-playable critical should not contribute to exposure"
@@ -473,8 +467,7 @@ fn critical_exposure_zero_for_unresolved_chop() {
     *tk.player_mut(0) = knowledge_for_hand(&[0, 1, 2, 3, 4]);
     let truth = TruthFixture::new(&static_data);
     let truth_pov = truth.pov(&state, &static_data);
-    let score =
-        DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
+    let score = DefaultEvaluator::critical_exposure_score(&state, &static_data, &tk, &truth_pov);
     assert_eq!(
         score, 0.0,
         "unresolved chop (no truth identity) must not contribute to critical exposure"
@@ -514,19 +507,11 @@ fn make_critical_chop_states(
     let mut tk = TeamKnowledge::new(2);
     *tk.player_mut(0) = knowledge_for_hand(&[0]);
     *tk.player_mut(1) = knowledge_for_hand(&[10]);
-    let pre = KnowledgeAwareGameState::from_parts(
-        static_data.clone(),
-        pre_state.clone(),
-        tk.clone(),
-        11,
-    );
+    let pre =
+        KnowledgeAwareGameState::from_parts(static_data.clone(), pre_state.clone(), tk.clone(), 11);
 
-    let post_unsaved = KnowledgeAwareGameState::from_parts(
-        static_data.clone(),
-        pre_state.clone(),
-        tk.clone(),
-        11,
-    );
+    let post_unsaved =
+        KnowledgeAwareGameState::from_parts(static_data.clone(), pre_state.clone(), tk.clone(), 11);
 
     let mut saved_state = pre_state.clone();
     saved_state.clue_touched_cards |= 1u64 << 10;
@@ -579,8 +564,7 @@ fn critical_exposure_delta_reward_when_chop_saved() {
         },
         turn: 1,
     };
-    let delta =
-        evaluator.critical_exposure_delta_bonus(&action, 0, &pre, &post_saved, &truth_pov);
+    let delta = evaluator.critical_exposure_delta_bonus(&action, 0, &pre, &post_saved, &truth_pov);
     assert!(
         delta > 0.0,
         "should reward when critical chop card is saved (got {delta})"
@@ -688,21 +672,22 @@ fn critical_exposure_delta_scales_with_buffer_depth() {
     let mut tk = TeamKnowledge::new(2);
     *tk.player_mut(0) = knowledge_for_hand(&[0]);
     let mut pk1 = knowledge_for_hand(&[10, 11, 12]);
-    pk1.signals[11].push(Signal::Play { card_deck_index: 11, committed_identity: 0 });
-    pk1.signals[12].push(Signal::Play { card_deck_index: 12, committed_identity: 5 });
+    pk1.signals[11].push(Signal::Play {
+        card_deck_index: 11,
+        committed_identity: 0,
+    });
+    pk1.signals[12].push(Signal::Play {
+        card_deck_index: 12,
+        committed_identity: 5,
+    });
     *tk.player_mut(1) = pk1;
 
-    let pre = KnowledgeAwareGameState::from_parts(
-        static_data.clone(),
-        pre_state.clone(),
-        tk.clone(),
-        13,
-    );
+    let pre =
+        KnowledgeAwareGameState::from_parts(static_data.clone(), pre_state.clone(), tk.clone(), 13);
     let post_unsaved = pre.clone();
     let mut saved_state = pre_state.clone();
     saved_state.clue_touched_cards |= 1u64 << 10;
-    let post_saved =
-        KnowledgeAwareGameState::from_parts(static_data.clone(), saved_state, tk, 13);
+    let post_saved = KnowledgeAwareGameState::from_parts(static_data.clone(), saved_state, tk, 13);
 
     let weight = 2.0_f64;
     let evaluator = DefaultEvaluator {
@@ -711,7 +696,11 @@ fn critical_exposure_delta_scales_with_buffer_depth() {
     };
     let truth = TruthFixture::new(&static_data);
     let truth_pov = truth.pov(pre.table_state(), &static_data);
-    let discard = GameAction::Discard { player_index: 0, card_deck_index: 0, turn: 1 };
+    let discard = GameAction::Discard {
+        player_index: 0,
+        card_deck_index: 0,
+        turn: 1,
+    };
     let save_clue = GameAction::Clue {
         player_index: 1,
         touched_card_deck_indexes: smallvec::smallvec![10],
@@ -792,8 +781,7 @@ fn tempo_cost_charges_misplay() {
     };
     let cost = evaluator.tempo_cost(&action, &pre, &post, 0, 0);
     assert_eq!(
-        cost,
-        -evaluator.tempo_cost_weight,
+        cost, -evaluator.tempo_cost_weight,
         "misplay (no score advance) must pay tempo cost"
     );
 }
@@ -812,7 +800,10 @@ fn tempo_cost_charges_clue() {
         turn: 1,
     };
     let cost = evaluator.tempo_cost(&action, &state, &state, 0, 0);
-    assert_eq!(cost, -evaluator.tempo_cost_weight, "clue must pay tempo cost");
+    assert_eq!(
+        cost, -evaluator.tempo_cost_weight,
+        "clue must pay tempo cost"
+    );
 }
 
 #[test]

@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
 use crate::hanablive::action::Action;
 use crate::hanablive::dto::card::Card;
 use crate::hanablive::dto::character::Character;
 use crate::hanablive::game_options::GameOptions;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Game {

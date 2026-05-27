@@ -696,7 +696,10 @@ impl DefaultEvaluator {
     ///
     /// Delegates to [`Self::card_known_playable`] for each card in the player's hand so the
     /// definition of "known playable" is consistent across all evaluator terms.
-    pub(crate) fn count_known_playable(pov: &dyn PlayerPOV, playable_mask: VariantCardsBitField) -> u32 {
+    pub(crate) fn count_known_playable(
+        pov: &dyn PlayerPOV,
+        playable_mask: VariantCardsBitField,
+    ) -> u32 {
         let pk = pov.team_knowledge().player(pov.player_index());
         let mut hand = pk.own_hand;
         let mut count = 0u32;

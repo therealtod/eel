@@ -100,7 +100,10 @@ impl ClueTech for TwoSave {
         let static_data = pov.static_data();
         let total_ids =
             static_data.variant.number_of_suits as usize * static_data.variant.stacks_size as usize;
-        let rank2_mask = static_data.variant.empathy_for_clue(&Clue::RANK_2_CLUE).as_bits();
+        let rank2_mask = static_data
+            .variant
+            .empathy_for_clue(&Clue::RANK_2_CLUE)
+            .as_bits();
         let candidates = pov.inferred_identities(chop).as_bits() & rank2_mask;
         (0..total_ids).any(|id| {
             (candidates & (1u64 << id)) != 0 && Self::is_two_saveable(id, player_index, &giver_pov)
@@ -129,7 +132,10 @@ impl ClueTech for TwoSave {
         let static_data = giver_pov.static_data();
         let total_ids =
             static_data.variant.number_of_suits as usize * static_data.variant.stacks_size as usize;
-        let rank2_mask = static_data.variant.empathy_for_clue(&Clue::RANK_2_CLUE).as_bits();
+        let rank2_mask = static_data
+            .variant
+            .empathy_for_clue(&Clue::RANK_2_CLUE)
+            .as_bits();
         let mask: u64 = (0..total_ids)
             .filter(|&id| (1u64 << id) & rank2_mask != 0 && giver_pov.away_value(id) > Some(0))
             .fold(0u64, |acc, id| acc | (1 << id));

@@ -5,11 +5,11 @@ use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, priority};
 use crate::engine::game_state_snapshot::GameStateSnapshot;
 use crate::engine::knowledge::knowledge_update::Hypothesis;
 use crate::engine::knowledge::player_pov::PlayerPOV;
+use crate::game::MAX_CLUE_VALUES_PER_TYPE;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::CardDeckIndex;
 use crate::game::clue::Clue;
 use crate::game::state::PlayerIndex;
-use crate::game::{MAX_CLUE_VALUES_PER_TYPE};
 use crate::impl_convention_tech_for_hgroup_clue_tech;
 
 /// `ClueBurn`: a clue where every touched card is already touched (clue-touched or signal-touched).
@@ -196,7 +196,13 @@ mod tests {
         let actions = ClueBurn.game_actions(&pov);
 
         assert_eq!(actions.len(), 2);
-        assert!(actions.iter().all(|a| matches!(a, GameAction::Clue { player_index: 1, .. })));
+        assert!(actions.iter().all(|a| matches!(
+            a,
+            GameAction::Clue {
+                player_index: 1,
+                ..
+            }
+        )));
     }
 
     #[test]

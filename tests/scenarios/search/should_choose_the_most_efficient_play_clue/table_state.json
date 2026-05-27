@@ -1,0 +1,23 @@
+{
+  "scenario_description": "Alice should choose to clue rank-2 to Bob, to pick up an extra useful card (r2)",
+  "suits": [
+    "red",
+    "yellow",
+    "green",
+    "blue",
+    "purple"
+  ],
+  "active_player": 0,
+  "playing_stacks": [
+    [], ["y1"], [], ["b1"], ["p1"]
+  ],
+  "discard_pile": [],
+  "clue_tokens": 7,
+  "strikes": 0,
+  "player_on_turn": 0,
+  "hands": [
+    ["x", "x",{"id":  "x", "positive": ["1"], "inferred": "r1g1"}, "x", "x"],
+    ["b1", "r5", "y2", "r2", "p3"],
+    ["g5", "g2", "b3", {"id": "p4", "positive": ["purple"], "inferred": "p2p3p4p5"}, "r4"]
+  ]
+}

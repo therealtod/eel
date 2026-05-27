@@ -1,6 +1,6 @@
+use crate::hanablive::dto::game_options::GameOptions;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
-use crate::hanablive::dto::game_options::GameOptions;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]

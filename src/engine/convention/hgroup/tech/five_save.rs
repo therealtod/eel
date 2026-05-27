@@ -73,7 +73,10 @@ impl ClueTech for FiveSave {
         // observer's view: empathy(chop) ∩ rank-5-mask must be non-empty. For non-receivers the
         // empathy is a singleton (they see the chop); for the receiver it's wider.
         let static_data = observer_pov.static_data();
-        let rank5_mask = static_data.variant.empathy_for_clue(&Clue::RANK_5_CLUE).as_bits();
+        let rank5_mask = static_data
+            .variant
+            .empathy_for_clue(&Clue::RANK_5_CLUE)
+            .as_bits();
         (observer_pov.inferred_identities(chop).as_bits() & rank5_mask) != 0
     }
 
@@ -98,7 +101,10 @@ impl ClueTech for FiveSave {
         let static_data = giver_pov.static_data();
         let total_ids =
             static_data.variant.number_of_suits as usize * static_data.variant.stacks_size as usize;
-        let rank5_mask = static_data.variant.empathy_for_clue(&Clue::RANK_5_CLUE).as_bits();
+        let rank5_mask = static_data
+            .variant
+            .empathy_for_clue(&Clue::RANK_5_CLUE)
+            .as_bits();
         // Narrow the focus to rank-5 ids that are not immediately playable. A rank-5 clue
         // touching chop is conventionally a save, so the receiver should not collapse to
         // an immediately-playable 5 (which would be a direct-play interpretation). Mirrors

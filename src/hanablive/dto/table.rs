@@ -1,5 +1,5 @@
-use serde::Deserialize;
 use crate::hanablive::dto::game_options::GameOptions;
+use serde::Deserialize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]

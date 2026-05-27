@@ -71,7 +71,7 @@ fn play_known_playable() {
 
 #[test]
 #[ignore]
-fn play_known_playable_2() {
+fn play_known_playable_even_when_foreseeing_stall() {
     let action = search_best_action("play_known_playable_when_foreseeing_stall");
     assert!(
         matches!(
@@ -307,5 +307,34 @@ fn should_not_steal_a_play_clue_from_bob_and_rather_save_his_chop() {
             )
         }
         _ => println!("Alice chose the following action: {:?}", action),
+    }
+}
+#[test]
+fn should_choose_the_most_efficient_play_clue() {
+    let action = search_best_action("should_choose_the_most_efficient_play_clue");
+    match action {
+        GameAction::Clue {
+            player_index: 1,
+            clue:
+                Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 2,
+                },
+            ..
+        } => println!(
+            "Alice correctly chose to clue rank-2 to Bob, to pick up an extra useful card (r2) {action:?}"
+        ),
+        GameAction::Clue {
+            player_index: 1,
+            clue:
+                Clue {
+                    clue_type: ClueType::Color,
+                    clue_value: 1,
+                },
+            ..
+        } => panic!(
+            "Alice gave an inferior play clue (grabbing ony one card with the clue), rather than getting an additional good card (r2)   {action:?}"
+        ),
+        _ => panic!("Alice chose the following action: {action:?}"),
     }
 }

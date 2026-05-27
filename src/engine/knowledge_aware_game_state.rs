@@ -655,7 +655,12 @@ impl KnowledgeAwareGameState {
             &self.static_data,
         );
         let receiver_hypotheses = if actor_had_primary_candidate {
-            collect_hypotheses(convention_set.techs(), action, knowledge_history, &receiver_pov)
+            collect_hypotheses(
+                convention_set.techs(),
+                action,
+                knowledge_history,
+                &receiver_pov,
+            )
         } else {
             collect_stall_hypotheses(
                 convention_set.fallback_techs(),
@@ -688,7 +693,12 @@ impl KnowledgeAwareGameState {
                 &self.static_data,
             );
             let raw = if actor_had_primary_candidate {
-                collect_hypotheses(convention_set.techs(), action, knowledge_history, &target_pov)
+                collect_hypotheses(
+                    convention_set.techs(),
+                    action,
+                    knowledge_history,
+                    &target_pov,
+                )
             } else {
                 collect_stall_hypotheses(
                     convention_set.fallback_techs(),

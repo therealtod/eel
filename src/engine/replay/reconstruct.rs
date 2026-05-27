@@ -1,5 +1,5 @@
-use std::fmt;
 use smallvec::SmallVec;
+use std::fmt;
 
 use crate::engine::action_selection_strategy::ActionSelectionStrategy;
 use crate::engine::convention::convention_set::ConventionSet;

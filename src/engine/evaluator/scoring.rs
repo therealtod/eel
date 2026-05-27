@@ -57,12 +57,19 @@ impl super::Evaluator for DefaultEvaluator {
             };
         }
         let pace = self.pace_weight
-            * state.pace(phantom_plays).clamp(-10, static_data.number_of_players as i32) as f64;
+            * state
+                .pace(phantom_plays)
+                .clamp(-10, static_data.number_of_players as i32) as f64;
         let efficiency_penalty =
             self.efficiency_weight * f64::from(state.required_efficiency(phantom_plays));
         let critical_exposure_penalty = if self.critical_exposure_weight != 0.0 {
             self.critical_exposure_weight
-                * DefaultEvaluator::critical_exposure_score(table_state, static_data, team_knowledge, truth)
+                * DefaultEvaluator::critical_exposure_score(
+                    table_state,
+                    static_data,
+                    team_knowledge,
+                    truth,
+                )
         } else {
             0.0
         };
@@ -71,11 +78,13 @@ impl super::Evaluator for DefaultEvaluator {
         let lost_ceiling_penalty = self.lost_score_ceiling_weight
             * (theoretical_max - table_state.max_achievable_score(static_data) as f64);
         let empathy_bonus = if self.empathy_weight != 0.0 {
-            self.empathy_weight * DefaultEvaluator::empathy_precision(table_state, static_data, team_knowledge)
+            self.empathy_weight
+                * DefaultEvaluator::empathy_precision(table_state, static_data, team_knowledge)
         } else {
             0.0
         };
-        let harmonic_value = DefaultEvaluator::harmonic(table_state.clue_token_bank.whole_clue_tokens_count());
+        let harmonic_value =
+            DefaultEvaluator::harmonic(table_state.clue_token_bank.whole_clue_tokens_count());
         let demand_factor = if self.clue_demand_weight != 0.0 {
             1.0 + self.clue_demand_weight * DefaultEvaluator::clue_demand(table_state, static_data)
         } else {
@@ -84,7 +93,12 @@ impl super::Evaluator for DefaultEvaluator {
         let clue_tokens = self.clue_token_weight * harmonic_value * demand_factor;
         let known_playable = if self.known_playable_weight != 0.0 {
             self.known_playable_weight
-                * DefaultEvaluator::known_playable_in_hands(table_state, static_data, team_knowledge, truth)
+                * DefaultEvaluator::known_playable_in_hands(
+                    table_state,
+                    static_data,
+                    team_knowledge,
+                    truth,
+                )
         } else {
             0.0
         };
@@ -94,7 +108,12 @@ impl super::Evaluator for DefaultEvaluator {
         let team_empathy = 0.0;
         let misinformation_penalty = if self.misinformation_weight != 0.0 {
             self.misinformation_weight
-                * DefaultEvaluator::misinformation_score(static_data, team_knowledge, table_state, truth)
+                * DefaultEvaluator::misinformation_score(
+                    static_data,
+                    team_knowledge,
+                    table_state,
+                    truth,
+                )
         } else {
             0.0
         };
@@ -255,13 +274,22 @@ impl super::Evaluator for DefaultEvaluator {
         let static_data = pre.static_data();
         let bdr = if self.bottom_deck_risk_weight != 0.0 {
             self.bottom_deck_risk_weight
-                * DefaultEvaluator::bottom_deck_risk_score(*card_deck_index, table_state, static_data, truth)
+                * DefaultEvaluator::bottom_deck_risk_score(
+                    *card_deck_index,
+                    table_state,
+                    static_data,
+                    truth,
+                )
         } else {
             0.0
         };
         let kp_penalty = if self.discard_while_known_playable_penalty != 0.0
-            && DefaultEvaluator::actor_has_known_playable(actor, table_state, static_data, pre.team_knowledge())
-        {
+            && DefaultEvaluator::actor_has_known_playable(
+                actor,
+                table_state,
+                static_data,
+                pre.team_knowledge(),
+            ) {
             self.discard_while_known_playable_penalty
         } else {
             0.0
@@ -282,10 +310,16 @@ impl super::Evaluator for DefaultEvaluator {
             return 0.0;
         };
         let static_data = pre.static_data();
-        let pre_score =
-            DefaultEvaluator::team_empathy_score(static_data, pre.team_knowledge(), pre.table_state());
-        let post_score =
-            DefaultEvaluator::team_empathy_score(static_data, post.team_knowledge(), post.table_state());
+        let pre_score = DefaultEvaluator::team_empathy_score(
+            static_data,
+            pre.team_knowledge(),
+            pre.table_state(),
+        );
+        let post_score = DefaultEvaluator::team_empathy_score(
+            static_data,
+            post.team_knowledge(),
+            post.table_state(),
+        );
         self.team_empathy_weight * (post_score - pre_score)
     }
 
@@ -326,7 +360,8 @@ impl super::Evaluator for DefaultEvaluator {
             pre_table,
             static_data,
         );
-        let actor_known_playable = DefaultEvaluator::count_known_playable(&actor_pov, playable_mask);
+        let actor_known_playable =
+            DefaultEvaluator::count_known_playable(&actor_pov, playable_mask);
 
         let mut total = 0.0f64;
         for t in 0..num_players {
@@ -436,8 +471,9 @@ impl super::Evaluator for DefaultEvaluator {
         } else {
             1.0
         };
-        let max_clue_tokens =
-            self.clue_token_weight * DefaultEvaluator::harmonic(crate::game::MAX_CLUE_TOKEN_COUNT) * max_demand;
+        let max_clue_tokens = self.clue_token_weight
+            * DefaultEvaluator::harmonic(crate::game::MAX_CLUE_TOKEN_COUNT)
+            * max_demand;
         let max_known_playable = self.known_playable_weight * total_cards as f64;
         let max_leaf =
             max_game_score - min_strike_penalty + max_pace + max_clue_tokens + max_known_playable;

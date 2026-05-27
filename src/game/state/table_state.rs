@@ -278,7 +278,8 @@ impl TableState {
             }
             total += suit_max as u32;
         }
-        let max_possible = static_data.variant.stacks_size as u32 * static_data.variant.number_of_suits as u32;
+        let max_possible =
+            static_data.variant.stacks_size as u32 * static_data.variant.number_of_suits as u32;
         let remaining_plays = self.score(&static_data.variant) as u32
             + self.deck.current_size as u32
             + static_data.number_of_players as u32;
@@ -624,10 +625,7 @@ mod tests {
         // Score = 10 (2 ranks in all 5 suits).  No discards → suit walk = 25.
         // Deck = 5, players = 3 → remaining_plays = 10 + 5 + 3 = 18 < 25.
         // Cap = 18.  Result = min(25, 18) = 18.
-        let stacks = PlayingStacks::new(
-            vec![0, 1, 5, 6, 10, 11, 15, 16, 20, 21],
-            &NO_VARIANT,
-        );
+        let stacks = PlayingStacks::new(vec![0, 1, 5, 6, 10, 11, 15, 16, 20, 21], &NO_VARIANT);
         let ts = pace_state_3p(stacks, 5);
         assert_eq!(18, ts.max_achievable_score(&SDA));
     }
@@ -640,10 +638,7 @@ mod tests {
         // Other suits: no discards → 5 each.  Total = 4 + 5*4 = 24.
         // Deck = 5, players = 3 → remaining_plays = 18.
         // Result = min(24, 18) = 18.
-        let stacks = PlayingStacks::new(
-            vec![0, 1, 5, 6, 10, 11, 15, 16, 20, 21],
-            &NO_VARIANT,
-        );
+        let stacks = PlayingStacks::new(vec![0, 1, 5, 6, 10, 11, 15, 16, 20, 21], &NO_VARIANT);
         let mut ts = pace_state_3p(stacks, 5);
         ts.discard_pile.add_card_with_id(4);
         assert_eq!(18, ts.max_achievable_score(&SDA));
@@ -654,10 +649,7 @@ mod tests {
         // Score = 10, no discards → suit walk = 25.
         // Deck = 15, players = 3 → remaining_plays = 10 + 15 + 3 = 28 ≥ 25.
         // Cap = 25.  Result = min(25, 25) = 25.
-        let stacks = PlayingStacks::new(
-            vec![0, 1, 5, 6, 10, 11, 15, 16, 20, 21],
-            &NO_VARIANT,
-        );
+        let stacks = PlayingStacks::new(vec![0, 1, 5, 6, 10, 11, 15, 16, 20, 21], &NO_VARIANT);
         let ts = pace_state_3p(stacks, 15);
         assert_eq!(25, ts.max_achievable_score(&SDA));
     }
