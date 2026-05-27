@@ -203,10 +203,13 @@ mod tests {
     use super::*;
     use crate::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet;
     use crate::engine::replay::reconstruct::{ReplayRunner, hand_size_for};
-    use crate::external::hanablive::{Card, GameBuilder, GameOptions};
     use crate::game::state::table_state_json::{build_from_scenario, parse_scenario};
     use crate::game::static_game_data::StaticGameData;
     use crate::game::variant::test_variants::NO_VARIANT;
+    use crate::hanablive::action::ActionType;
+    use crate::hanablive::dto::card::Card;
+    use crate::hanablive::game_builder::GameBuilder;
+    use crate::hanablive::game_options::GameOptions;
 
     fn ordered_deck() -> Vec<(usize, u8)> {
         let mut deck = Vec::new();
@@ -229,7 +232,7 @@ mod tests {
     /// Build a ReplayRunner positioned after `num_actions` actions using the ordered deck.
     fn runner_after_actions<'a>(
         deck: &[(usize, u8)],
-        action_tuples: Vec<(crate::external::hanablive::ActionType, usize, Option<usize>)>,
+        action_tuples: Vec<(ActionType, usize, Option<usize>)>,
         conv: &'a HGroupConventionSet,
     ) -> ReplayRunner<'a> {
         let cards: Vec<Card> = deck
@@ -252,7 +255,6 @@ mod tests {
         });
 
         for (action_type, target, value) in action_tuples {
-            use crate::external::hanablive::ActionType;
             match action_type {
                 ActionType::Play => builder.push_play(target),
                 ActionType::Discard => builder.push_discard(target),
@@ -270,8 +272,6 @@ mod tests {
 
     #[test]
     fn roundtrip_preserves_table_state_after_play_and_discard() {
-        use crate::external::hanablive::ActionType;
-
         let deck = ordered_deck();
         let conv = HGroupConventionSet::default();
         // Deck[0] = R1 → Alice plays it; deck[5] = Y1 → Bob discards it.
@@ -324,8 +324,6 @@ mod tests {
 
     #[test]
     fn roundtrip_preserves_clue_touched_cards() {
-        use crate::external::hanablive::ActionType;
-
         let deck = ordered_deck();
         let conv = HGroupConventionSet::default();
         // hand_size=5 for 3 players:

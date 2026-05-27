@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use crate::hanablive::dto::game_options::GameOptions;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -20,7 +21,7 @@ pub struct Table {
     // pub owned: bool,
     pub running: bool,
     pub variant: String,
-    pub options: super::game_options::GameOptions,
+    pub options: GameOptions,
     pub timed: bool,
     pub time_base: usize,
     pub time_per_turn: usize,

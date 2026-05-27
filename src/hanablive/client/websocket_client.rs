@@ -2,7 +2,7 @@ use futures_util::{SinkExt, StreamExt};
 use tokio_tungstenite::{Connector, connect_async_tls_with_config, tungstenite::Message};
 use tracing::{debug, error};
 
-use crate::external::hanablive::constants::{HOSTNAME, WEBSOCKET_PATH};
+use crate::hanablive::constants::{HOSTNAME, WEBSOCKET_PATH};
 
 pub struct WebSocketClient {
     stream: tokio_tungstenite::WebSocketStream<
@@ -92,8 +92,6 @@ pub enum Error {
     Http(#[from] reqwest::Error),
     #[error("WebSocket error: {0}")]
     WebSocket(#[from] tokio_tungstenite::tungstenite::Error),
-    #[error("URL error: {0}")]
-    Url(#[from] url::ParseError),
     #[error("Request error: {0}")]
     Request(#[from] tokio_tungstenite::tungstenite::http::Error),
     #[error("UTF-8 error: {0}")]

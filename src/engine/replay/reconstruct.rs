@@ -1,5 +1,4 @@
 use std::fmt;
-
 use smallvec::SmallVec;
 
 use crate::engine::action_selection_strategy::ActionSelectionStrategy;
@@ -7,7 +6,6 @@ use crate::engine::convention::convention_set::ConventionSet;
 use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
 use crate::engine::play_resolver::GroundTruthResolver;
 use crate::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
-use crate::external::hanablive::{Action, ActionType, Card};
 use crate::game::MAX_HAND_SIZE;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, VariantCardId};
@@ -15,6 +13,9 @@ use crate::game::clue::Clue;
 use crate::game::clue_type::ClueType;
 use crate::game::static_game_data::StaticGameData;
 use crate::game::variant::test_variants::NO_VARIANT;
+use crate::hanablive::action::{Action, ActionType};
+use crate::hanablive::dto::card::Card;
+use crate::hanablive::dto::game::Game;
 
 #[derive(Debug)]
 pub enum ReplayError {
@@ -66,7 +67,7 @@ impl<'a> ReplayRunner<'a> {
     /// Deals the initial hands; the runner is positioned before the first action
     /// (`current_turn() == 1`).
     pub fn from_hanablive(
-        game: &crate::external::hanablive::Game,
+        game: &Game,
         convention_set: &'a dyn ConventionSet,
     ) -> Result<Self, ReplayError> {
         let variant_name = game.options.as_ref().and_then(|o| o.variant.as_deref());
@@ -378,7 +379,8 @@ pub fn variant_card_id_to_hanablive(id: VariantCardId, static_data: &StaticGameD
 mod tests {
     use super::*;
     use crate::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet;
-    use crate::external::hanablive::{Game, GameBuilder, GameOptions};
+    use crate::hanablive::game_builder::GameBuilder;
+    use crate::hanablive::game_options::GameOptions;
 
     /// Build a minimal 3-player hanab.live Game from a deck + action list.
     fn make_game(deck: Vec<(usize, u8)>, actions: Vec<(ActionType, usize, Option<usize>)>) -> Game {

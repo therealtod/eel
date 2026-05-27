@@ -32,12 +32,13 @@ use eel::engine::convention::convention_set::ConventionSet;
 use eel::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet;
 use eel::engine::replay::reconstruct::{ReplayRunner, variant_card_id_to_hanablive};
 use eel::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
-use eel::external::hanablive::{GameBuilder, GameOptions};
 use eel::game::action::game_action::GameAction;
 use eel::game::card::VariantCardId;
 use eel::game::clue_type::ClueType;
 use eel::game::static_game_data::StaticGameData;
 use eel::game::variant::test_variants::NO_VARIANT;
+use eel::hanablive::game_builder::GameBuilder;
+use eel::hanablive::game_options::GameOptions;
 
 #[derive(Parser, Debug)]
 #[command(about = "Run self-play games to benchmark evaluator parameters")]

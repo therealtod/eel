@@ -1,5 +1,3 @@
-use eel::external::hanablive::HanabLiveBot;
-
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
@@ -14,10 +12,4 @@ async fn main() {
         .expect("EEL_BOT_USERNAME must be set");
     let password = std::env::var("EEL_BOT_PASSWORD")
         .expect("EEL_BOT_PASSWORD must be set");
-
-    let mut bot = HanabLiveBot::new(&username, &password);
-    if let Err(e) = bot.run().await {
-        eprintln!("Bot failed: {e:?}");
-        std::process::exit(1);
-    }
 }

@@ -11,7 +11,10 @@
 //! let json = game.to_json_pretty()?;
 //! ```
 
-use super::{Action, ActionType, Card, Game, GameOptions};
+use crate::hanablive::action::{Action, ActionType};
+use crate::hanablive::dto::card::Card;
+use crate::hanablive::dto::game::Game;
+use crate::hanablive::game_options::GameOptions;
 
 /// Incrementally builds a hanab.live [`Game`] replay.
 pub struct GameBuilder {

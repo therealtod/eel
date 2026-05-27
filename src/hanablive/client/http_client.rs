@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::debug;
 
-use crate::external::hanablive::constants::{HOSTNAME, LOGIN_PATH};
+use crate::hanablive::constants::{HOSTNAME, LOGIN_PATH};
 
 pub struct HttpClient {
     client: Client,
