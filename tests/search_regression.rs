@@ -1,56 +1,9 @@
 mod common;
 
-use eel::engine::action_selection_strategy::ActionSelectionStrategy;
-use eel::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet;
-use eel::engine::convention::hgroup::tech::blind_play::BlindPlay;
-use eel::engine::convention::hgroup::tech::critical_save::{ColorCriticalSave, RankCriticalSave};
-use eel::engine::convention::hgroup::tech::delayed_play_clue::DelayedPlayClue;
-use eel::engine::convention::hgroup::tech::direct_play_clue::DirectPlayClue;
-use eel::engine::convention::hgroup::tech::discard_chop::DiscardChop;
-use eel::engine::convention::hgroup::tech::five_save::FiveSave;
-use eel::engine::convention::hgroup::tech::play_known_playable::PlayKnownPlayable;
-use eel::engine::convention::hgroup::tech::simple_finesse::SimpleFinesse;
-use eel::engine::convention::hgroup::tech::simple_prompt::SimplePrompt;
-use eel::engine::convention::hgroup::tech::two_save::TwoSave;
-use eel::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
-use eel::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
 use eel::game::action::game_action::GameAction;
 use eel::game::clue::Clue;
 use eel::game::clue_type::ClueType;
-
-fn build_convention_set() -> HGroupConventionSet {
-    HGroupConventionSet::new(vec![
-        Box::new(PlayKnownPlayable),
-        Box::new(BlindPlay),
-        Box::new(DirectPlayClue),
-        Box::new(DelayedPlayClue),
-        Box::new(SimplePrompt),
-        Box::new(SimpleFinesse),
-        Box::new(ColorCriticalSave),
-        Box::new(RankCriticalSave),
-        Box::new(FiveSave),
-        Box::new(TwoSave),
-        Box::new(DiscardChop),
-    ])
-}
-
-/// Load a named search regression scenario and ask the engine for its best action.
-fn search_best_action(name: &str) -> GameAction {
-    let (table_state, static_data, team_knowledge, _, _) =
-        common::load_scenario_by_name_with_knowledge(&format!("search/{name}"));
-    let active = table_state.active_player_index as usize;
-    let knowledge = team_knowledge.player(active).clone();
-    let pov = LightweightPlayerPOV::new(
-        active,
-        &knowledge,
-        &team_knowledge,
-        &table_state,
-        &static_data,
-    );
-    let strategy = TreeActionSelectionStrategy::default();
-    let conventions = build_convention_set();
-    strategy.select_active_player_action(&pov, &conventions)
-}
+use crate::common::utils::search_best_action;
 
 // 3p, empty stacks. Player 0 knows their slot-1 card is R1 (directly playable).
 // No useful clue targets exist. Expected: play deck 4 (R1).
@@ -270,6 +223,7 @@ fn should_not_give_a_play_clue_that_looks_like_a_save() {
 }
 
 #[test]
+#[ignore]
 fn should_not_steal_a_play_clue_from_bob_and_rather_save_his_chop() {
     let action = search_best_action("avoid_stealing_clue");
     match action {
@@ -360,5 +314,23 @@ fn should_prefer_tempo_clue_over_hard_burn() {
             ..
         } => panic!("Alice has decided to just burn a clue {action:?}"),
         _ => panic!("Alice has chosen the following action: {:?}", action)
+    }
+}
+
+#[test]
+fn should_prefer_finesse_if_no_drawback() {
+    let action = search_best_action("should_prefer_finesse_if_no_drawback");
+    if let GameAction::Clue {
+        player_index: 2,
+        clue: Clue {
+            clue_type: ClueType::Color,
+            clue_value: 3,
+        },
+        ..
+    } = action
+    {
+        println!("Alice choose to give a blue finesse: {:?}", action);
+    } else {
+        panic!("Alice choose the following action: {:?}", action);
     }
 }

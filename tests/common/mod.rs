@@ -1,3 +1,5 @@
+pub mod utils;
+
 use eel::engine::game_state_snapshot::GameStateSnapshot;
 use eel::engine::knowledge::player_knowledge::PlayerKnowledge;
 use eel::engine::knowledge::team_knowledge::TeamKnowledge;
@@ -202,3 +204,4 @@ pub fn knowledge_for_hand(player_index: usize, deck_indices: &[u8]) -> PlayerKno
     k.own_hand = deck_indices.iter().fold(0u64, |acc, &i| acc | (1 << i));
     k
 }
+

@@ -325,7 +325,21 @@ impl TreeActionSelectionStrategy {
             static_data,
             effective_visible,
         );
-        let candidates = Self::candidate_actions_with_provenance(&pov, convention_set);
+        let mut candidates = Self::candidate_actions_with_provenance(&pov, convention_set);
+        // Inner players decide from their own POV, not from root-visible hidden outcomes.
+        // If an inner player has a playable card, only their plays and save-priority
+        // clues remain eligible. Lower-priority clues and fallback discards cannot be
+        // justified by a determinized subtree they would not know how to foresee.
+        if active != truth.player_index()
+            && candidates
+                .iter()
+                .any(|p| matches!(&p.action, GameAction::Play { .. }))
+        {
+            candidates.retain(|p| {
+                matches!(&p.action, GameAction::Play { .. })
+                    || (matches!(&p.action, GameAction::Clue { .. }) && p.priority == 0)
+            });
+        }
         let span = tracing::trace_span!(
             target: "eel::search",
             "search_ply",
@@ -346,13 +360,16 @@ impl TreeActionSelectionStrategy {
             );
             next.advance_turn();
             let child_phantom = phantom_plays + if outcome.is_phantom_play { 1 } else { 0 };
+            // Score the action from the active player's POV — not the root's truth. Using truth
+            // here would let inner players "see" consequences they can't actually observe (e.g.
+            // discarding a chop whose identity is hidden from them).
             let immediate = Self::immediate_action_bonus(
                 &proposed.action,
                 evaluator,
                 state,
                 &next,
                 static_data,
-                truth,
+                &pov,
                 phantom_plays,
                 child_phantom,
             );

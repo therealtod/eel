@@ -843,3 +843,131 @@ fn tempo_cost_respects_weight_zero() {
     assert_eq!(evaluator.tempo_cost(&discard, &state, &state, 0, 0), 0.0);
     assert_eq!(evaluator.tempo_cost(&clue, &state, &state, 0, 0), 0.0);
 }
+
+// ---- BDR POV-identity tests -----------------------------------------------
+//
+// bottom_deck_risk_score must derive its empathy from the evaluating POV's
+// inferred_identities, not the deck's global (truth-narrowed) empathy.  The
+// two tests below place card 5 in player 0's own hand with different
+// inferred-identity masks and verify the resulting BDR.
+
+/// Helper: POV fixture where the player cannot see their own hand
+/// (visible_cards = 0).  `knowledge` is taken by value so callers can set
+/// own_hand and inferred_identities before passing it in.
+struct OwnHandPOV {
+    knowledge: PlayerKnowledge,
+    team_knowledge: TeamKnowledge,
+}
+
+impl OwnHandPOV {
+    fn new(knowledge: PlayerKnowledge, static_data: &StaticGameData) -> Self {
+        OwnHandPOV {
+            knowledge,
+            team_knowledge: TeamKnowledge::new(static_data.number_of_players as usize),
+        }
+    }
+
+    fn pov<'a>(
+        &'a self,
+        table_state: &'a TableState,
+        static_data: &'a StaticGameData,
+    ) -> LightweightPlayerPOV<'a> {
+        LightweightPlayerPOV::with_visible_cards(
+            0,
+            &self.knowledge,
+            &self.team_knowledge,
+            table_state,
+            static_data,
+            0, // player cannot see their own hand
+        )
+    }
+}
+
+#[test]
+fn bdr_zero_when_pov_inferred_identities_excludes_all_bdr_cards() {
+    // Card 5 is globally revealed as R2 (id 1, 2 copies → BDR would trigger).
+    // The evaluating POV's inferred_identities for card 5 contains only rank-1
+    // identities (3 copies each), which can never drive remaining copies to 1.
+    // The new code must use the POV mask → BDR = 0.
+    use crate::engine::knowledge::player_knowledge::knowledge_for_hand;
+
+    let static_data = StaticGameData {
+        number_of_players: 3,
+        variant: NO_VARIANT,
+    };
+    let mut deck = Deck::new(&NO_VARIANT);
+    // Reveal card 5 as R2 (identity 1): global empathy = single bit for id 1.
+    deck.reveal_card(5, 1, &NO_VARIANT);
+
+    let mut hands = Hand::empty_array();
+    hands[0] = Hand::new(&[5]);
+    let state = TableState::from_parts(
+        ClueTokenBank::new(8),
+        deck,
+        hands,
+        0,
+        0,
+        PlayingStacks::empty(),
+        0,
+        CopiesCountingCardCollection::empty(),
+    );
+
+    // POV: player 0 holds card 5 but doesn't know its identity.
+    // Inferred mask = all rank-1 ids (3 copies → BDR can't trigger).
+    let rank1_mask: u64 = (1 << 0) | (1 << 5) | (1 << 10) | (1 << 15) | (1 << 20);
+    let mut pk = knowledge_for_hand(&[5]);
+    pk.inferred_identities[5] = Some(crate::game::card::CardIdentityMask::from_bits(rank1_mask));
+    let fixture = OwnHandPOV::new(pk, &static_data);
+    let pov = fixture.pov(&state, &static_data);
+
+    let bdr = DefaultEvaluator::bottom_deck_risk_score(5, &state, &static_data, &pov);
+    assert_eq!(
+        bdr, 0.0,
+        "BDR must be 0 when POV inferred_identities contains only 3-copy cards; \
+         the deck's truth (R2) must not leak into the POV's risk assessment (got {bdr})"
+    );
+}
+
+#[test]
+fn bdr_positive_when_pov_inferred_identities_are_two_copy_cards() {
+    // Card 5 is globally revealed as R1 (id 0, 3 copies → BDR doesn't trigger
+    // from global empathy).  The evaluating POV's inferred_identities contains
+    // only rank-2 ids (2 copies → BDR does trigger).
+    // The new code must use the POV mask → BDR > 0.
+    use crate::engine::knowledge::player_knowledge::knowledge_for_hand;
+
+    let static_data = StaticGameData {
+        number_of_players: 3,
+        variant: NO_VARIANT,
+    };
+    let mut deck = Deck::new(&NO_VARIANT);
+    // Reveal card 5 as R1 (identity 0): global empathy = single bit for id 0.
+    deck.reveal_card(5, 0, &NO_VARIANT);
+
+    let mut hands = Hand::empty_array();
+    hands[0] = Hand::new(&[5]);
+    let state = TableState::from_parts(
+        ClueTokenBank::new(8),
+        deck,
+        hands,
+        0,
+        0,
+        PlayingStacks::empty(),
+        0,
+        CopiesCountingCardCollection::empty(),
+    );
+
+    // POV: inferred mask = all rank-2 ids (2 copies → BDR triggers for each).
+    let rank2_mask: u64 = (1 << 1) | (1 << 6) | (1 << 11) | (1 << 16) | (1 << 21);
+    let mut pk = knowledge_for_hand(&[5]);
+    pk.inferred_identities[5] = Some(crate::game::card::CardIdentityMask::from_bits(rank2_mask));
+    let fixture = OwnHandPOV::new(pk, &static_data);
+    let pov = fixture.pov(&state, &static_data);
+
+    let bdr = DefaultEvaluator::bottom_deck_risk_score(5, &state, &static_data, &pov);
+    assert!(
+        bdr > 0.0,
+        "BDR must be positive when POV inferred_identities contains only 2-copy cards; \
+         the deck's truth (R1, 3 copies) must not suppress the POV's risk assessment (got {bdr})"
+    );
+}

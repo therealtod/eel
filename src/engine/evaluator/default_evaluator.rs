@@ -602,13 +602,16 @@ impl DefaultEvaluator {
     ) -> f64 {
         let variant = &static_data.variant;
         let stacks_size = variant.stacks_size as usize;
+        // When the evaluating POV doesn't know the card's identity, fall back to that POV's
+        // own inferred empathy — not the deck's global empathy. The deck's global empathy is
+        // truth-narrowed (every starting-hand card gets `reveal_card`'d by the scenario loader),
+        // so consulting it here would leak the discarder's own-card identity into their own
+        // risk assessment. The POV's `inferred_identities` correctly reflects only what the
+        // evaluating player can deduce.
         let (empathy, popcount) = if let Some(known_id) = truth.card_identity(discarded_deck_idx) {
             (1u64 << known_id, 1.0f64)
         } else {
-            let e = table_state
-                .deck
-                .get_global_empathy(discarded_deck_idx)
-                .as_bits();
+            let e = truth.inferred_identities(discarded_deck_idx).as_bits();
             if e == 0 {
                 return 0.0;
             }

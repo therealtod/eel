@@ -1,0 +1,22 @@
+{
+  "scenario_description": "",
+  "suits": [
+    "red",
+    "yellow",
+    "green",
+    "blue",
+    "purple"
+  ],
+  "playing_stacks": [
+    [], [], [], [], []
+  ],
+  "discard_pile": [],
+  "clue_tokens": 8,
+  "strikes": 0,
+  "active_player": 0,
+  "hands": [
+    ["x", "x", "x", "x", "x"],
+    ["b1", "p1", "g4", "p1", "p4"],
+    ["g3", "p3", "g2", "p4", "b2"]
+  ]
+}
