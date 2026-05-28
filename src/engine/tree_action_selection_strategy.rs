@@ -325,21 +325,11 @@ impl TreeActionSelectionStrategy {
             static_data,
             effective_visible,
         );
-        let mut candidates = Self::candidate_actions_with_provenance(&pov, convention_set);
-        // Inner players decide from their own POV, not from root-visible hidden outcomes.
-        // If an inner player has a playable card, only their plays and save-priority
-        // clues remain eligible. Lower-priority clues and fallback discards cannot be
-        // justified by a determinized subtree they would not know how to foresee.
-        if active != truth.player_index()
-            && candidates
-                .iter()
-                .any(|p| matches!(&p.action, GameAction::Play { .. }))
-        {
-            candidates.retain(|p| {
-                matches!(&p.action, GameAction::Play { .. })
-                    || (matches!(&p.action, GameAction::Clue { .. }) && p.priority == 0)
-            });
-        }
+        let candidates = Self::candidate_actions_with_provenance(&pov, convention_set);
+        // Inner players see every candidate their POV would generate. Finesse urgency
+        // (a `Signal::Play` on an untouched own-hand card) is enforced by
+        // `signal_ignored_penalty`; non-urgent plays are free to be deferred when the
+        // subtree shows another action is more valuable.
         let span = tracing::trace_span!(
             target: "eel::search",
             "search_ply",
@@ -386,6 +376,21 @@ impl TreeActionSelectionStrategy {
                 );
                 continue;
             }
+            // Blind the actor's hand from the subtree truth: exclude the actor's
+            // post-action deck indices from visible_cards so downstream players cannot
+            // use the actor's hidden card identities when scoring their own actions.
+            // This prevents the actor's optimal choice from leaking through the subtree
+            // score back to the actor, who cannot observe their own hand.
+            let actor_hand = next.team_knowledge.player(active).own_hand;
+            let blinded_visible = truth.visible_cards() & !actor_hand;
+            let subtree_truth = LightweightPlayerPOV::with_visible_cards(
+                truth.player_index(),
+                truth.team_knowledge().player(truth.player_index()),
+                truth.team_knowledge(),
+                truth.table_state(),
+                truth.static_data(),
+                blinded_visible,
+            );
             let (subtree_score, leaf_bd) = Self::best_score_at_depth(
                 &next,
                 static_data,
@@ -393,7 +398,7 @@ impl TreeActionSelectionStrategy {
                 evaluator,
                 depth - 1,
                 pv_table,
-                truth,
+                &subtree_truth,
                 child_phantom,
             );
             let score = subtree_score + immediate;

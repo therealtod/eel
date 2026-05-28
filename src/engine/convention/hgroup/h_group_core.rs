@@ -1895,4 +1895,102 @@ mod tests {
             &team_knowledge,
         ));
     }
+
+    #[test]
+    fn pbt_does_not_fire_when_receiver_card_is_blinded() {
+        // Unblinded: giver holds a clued R1; receiver's touched card is R1 → fires.
+        // Blinded (receiver's deck index excluded from visible_cards): truth.card_identity
+        // returns None → touched_on_receiver stays 0 → does NOT fire.
+        // This is the actor-hand blinding invariant: a downstream player cannot use the
+        // actor's hidden card identity to flag a bad touch.
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards;
+        let r1_mask = 1u64 << NoVarCards::R1.as_variant_card_id();
+        let (static_data, table_state, team_knowledge, truth_knowledge) =
+            setup_pbt(r1_mask, NoVarCards::R1, /*touched=*/ true, None);
+
+        let omniscient_truth =
+            make_truth_pov(&truth_knowledge, &team_knowledge, &table_state, &static_data);
+        assert!(
+            super::is_potential_bad_touch(
+                &[10],
+                0,
+                &omniscient_truth,
+                &table_state,
+                &static_data,
+                &team_knowledge,
+            ),
+            "baseline: should fire with omniscient truth"
+        );
+
+        // Blinded truth: exclude deck index 10 (receiver's card) from visible_cards.
+        let blinded_truth = LightweightPlayerPOV::with_visible_cards(
+            0,
+            &truth_knowledge,
+            &team_knowledge,
+            &table_state,
+            &static_data,
+            !0u64 & !(1u64 << 10),
+        );
+        assert!(
+            !super::is_potential_bad_touch(
+                &[10],
+                0,
+                &blinded_truth,
+                &table_state,
+                &static_data,
+                &team_knowledge,
+            ),
+            "should not fire when receiver's card is blinded"
+        );
+    }
+
+    #[test]
+    fn count_bad_touches_does_not_count_intra_clue_duplicate_when_identity_blinded() {
+        // Two cards [10, 11] are touched, both R1 as known via direct sight.
+        // Unblinded: card_identity returns R1 for both → second is detected as an
+        // intra-clue duplicate (dup_within_touched) → count = 1.
+        // Blinded: card_identity returns None for both; global deck empathy is not a
+        // singleton (card not revealed in deck) → is_singleton = false → dup_within_touched
+        // cannot fire → count = 0.
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards;
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+
+        // Receiver (player 1) draws two cards at deck indices 10 and 11.
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10);
+        table_state.update_with_draw_action(11);
+
+        // Truth POV's knowledge: direct-sight reveals both as R1, but the deck itself
+        // has no reveal (get_global_empathy stays full-width), so blinding the cards
+        // makes card_identity fall back to a multi-valued mask and return None.
+        let mut truth_knowledge = knowledge_for_hand(&[]);
+        truth_knowledge.update_with_revealed_card(10, NoVarCards::R1.as_variant_card_id());
+        truth_knowledge.update_with_revealed_card(11, NoVarCards::R1.as_variant_card_id());
+
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+
+        let omniscient_truth =
+            make_truth_pov(&truth_knowledge, &team_knowledge, &table_state, &static_data);
+        assert_eq!(
+            super::count_bad_touches(&[10, 11], 1, &omniscient_truth, &table_state, &static_data),
+            1,
+            "baseline: intra-clue duplicate detected with omniscient truth"
+        );
+
+        // Blinded truth: exclude both receiver cards from visible_cards.
+        let blinded_truth = LightweightPlayerPOV::with_visible_cards(
+            0,
+            &truth_knowledge,
+            &team_knowledge,
+            &table_state,
+            &static_data,
+            !0u64 & !(1u64 << 10) & !(1u64 << 11),
+        );
+        assert_eq!(
+            super::count_bad_touches(&[10, 11], 1, &blinded_truth, &table_state, &static_data),
+            0,
+            "should not count intra-clue duplicate when card identities are blinded"
+        );
+    }
 }
