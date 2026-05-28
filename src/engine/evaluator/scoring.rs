@@ -435,16 +435,27 @@ impl super::Evaluator for DefaultEvaluator {
         if self.tempo_cost_weight == 0.0 {
             return 0.0;
         }
-        let variant = &pre.static_data().variant;
-        if matches!(action, GameAction::Play { .. })
-            && post.score(variant, post_phantom_plays) > pre.score(variant, pre_phantom_plays)
-        {
-            0.0
-        } else if matches!(action, GameAction::Discard { .. }) {
-            0.0
-        } else {
-            -self.tempo_cost_weight
+        if matches!(action, GameAction::Discard { .. }) {
+            return 0.0;
         }
+        if matches!(action, GameAction::Play { .. }) {
+            let variant = &pre.static_data().variant;
+            // Successful play (real or phantom): score advances, no tempo cost.
+            if post.score(variant, post_phantom_plays) > pre.score(variant, pre_phantom_plays) {
+                return 0.0;
+            }
+            // Vanish play (`ResolvedPlay::Unknown`): card removed from hand without
+            // resolving identity, no score advance, no strike — the leaf evaluator
+            // sees no consequence either. Charging tempo here would create a
+            // horizon-arbitrage asymmetry: a line that completes its productive
+            // work early pads remaining plies with `LowLevelStall` priority-3
+            // vanish-plays and pays full tempo per ply, while a line that stretches
+            // productive clues+discards over those same plies pays much less.
+            if post.table_state().strike_tokens == pre.table_state().strike_tokens {
+                return 0.0;
+            }
+        }
+        -self.tempo_cost_weight
     }
 
     fn upper_bound(

@@ -180,13 +180,16 @@ impl TreeActionSelectionStrategy {
 
     /// Per-action bonus applied along the search path.
     ///
-    /// Sums two terms:
-    /// - `clue_precision_bonus` for clue actions (good-touch penalty + precision reward),
-    ///   evaluated from the post-action state.
-    /// - `signal_ignored_penalty` charged when the actor took a non-Play (or wrong-Play)
-    ///   action while holding an active `Signal::Play` on an untouched own-hand card.
-    ///   Evaluated from the pre-action state, where the actor is the player who chose
-    ///   the action (i.e. `state_before.active_player_index`).
+    /// Sums every component of the evaluator's per-action terms (clue precision,
+    /// signal penalty, play progress, team empathy, discard penalty, critical
+    /// exposure delta, tempo cost). For clue actions, the positive part of
+    /// `clue_precision_bonus` is then subtracted again so it cannot offset the
+    /// action's own `tempo_cost`. This narrows a horizon-arbitrage hole where the
+    /// search padded lines with productive clues because each clue's precision
+    /// reward partly cancelled tempo, while a line that completed its work earlier
+    /// accumulated `LowLevelStall` bombs paying full tempo with no offset.
+    /// `team_empathy_delta_bonus` and `critical_exposure_delta_bonus` remain
+    /// un-capped so they continue to rank between competing good clues.
     fn immediate_action_bonus(
         action: &GameAction,
         evaluator: &dyn Evaluator,
@@ -247,6 +250,19 @@ impl TreeActionSelectionStrategy {
             pre_phantom_plays,
             post_phantom_plays,
         );
+        // Horizon-arbitrage cap: the productive part of a clue's
+        // `clue_precision_bonus` cannot offset its own `tempo_cost`. Without this,
+        // the search padded lines with productive clues because each clue's net
+        // precision reward partly cancelled tempo, while a line that completed its
+        // work earlier accumulated `LowLevelStall` bombs paying full tempo with no
+        // offset. Bad-touch clues (negative `clue_bonus`) keep their full penalty;
+        // `team_empathy_delta_bonus` and `critical_exposure_delta_bonus` remain
+        // un-capped so they still rank between competing good clues.
+        let clue_offset = if matches!(action, GameAction::Clue { .. }) {
+            -clue_bonus.max(0.0)
+        } else {
+            0.0
+        };
         clue_bonus
             + signal_penalty
             + play_bonus
@@ -254,6 +270,7 @@ impl TreeActionSelectionStrategy {
             + discard_penalty
             + critical_exposure_delta
             + tempo
+            + clue_offset
     }
 
     /// Recursively compute the best leaf score reachable from `state` within `depth` more turns.

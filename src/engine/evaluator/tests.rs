@@ -773,7 +773,8 @@ fn tempo_cost_zero_for_successful_play() {
 fn tempo_cost_charges_misplay() {
     let evaluator = DefaultEvaluator::default();
     let pre = make_kags_with_stacks(0);
-    let post = make_kags_with_stacks(0);
+    let mut post = make_kags_with_stacks(0);
+    post.table_state.strike_tokens = 1;
     let action = GameAction::Play {
         player_index: 0,
         card_deck_index: 0,
@@ -782,7 +783,24 @@ fn tempo_cost_charges_misplay() {
     let cost = evaluator.tempo_cost(&action, &pre, &post, 0, 0);
     assert_eq!(
         cost, -evaluator.tempo_cost_weight,
-        "misplay (no score advance) must pay tempo cost"
+        "misplay (strike incremented) must pay tempo cost"
+    );
+}
+
+#[test]
+fn tempo_cost_zero_for_vanish_play() {
+    let evaluator = DefaultEvaluator::default();
+    let pre = make_kags_with_stacks(0);
+    let post = make_kags_with_stacks(0);
+    let action = GameAction::Play {
+        player_index: 0,
+        card_deck_index: 0,
+        turn: 1,
+    };
+    let cost = evaluator.tempo_cost(&action, &pre, &post, 0, 0);
+    assert_eq!(
+        cost, 0.0,
+        "vanish play (no score advance and no strike) must be tempo neutral"
     );
 }
 
