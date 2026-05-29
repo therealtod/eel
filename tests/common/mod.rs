@@ -204,4 +204,3 @@ pub fn knowledge_for_hand(player_index: usize, deck_indices: &[u8]) -> PlayerKno
     k.own_hand = deck_indices.iter().fold(0u64, |acc, &i| acc | (1 << i));
     k
 }
-

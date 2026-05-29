@@ -387,6 +387,7 @@ impl TreeActionSelectionStrategy {
             evaluator,
             depth,
             &inner_pov,
+            at_root_sim,
         ) else {
             let breakdown = Self::leaf_breakdown(evaluator, state, observer, phantom_plays);
             pv_table.rows[depth].clear();
@@ -476,6 +477,7 @@ impl TreeActionSelectionStrategy {
         evaluator: &dyn Evaluator,
         depth: usize,
         inner_pov: &dyn PlayerPOV,
+        outer: bool,
     ) -> Option<ProposedAction> {
         match SUBJECTIVE_POLICY {
             SubjectivePolicy::Recursive => Self::pick_subjective_recursive(
@@ -485,6 +487,7 @@ impl TreeActionSelectionStrategy {
                 evaluator,
                 depth,
                 inner_pov,
+                outer,
             ),
             SubjectivePolicy::Priority => Self::pick_subjective_priority(convention_set, inner_pov),
         }
@@ -507,8 +510,24 @@ impl TreeActionSelectionStrategy {
         evaluator: &dyn Evaluator,
         depth: usize,
         inner_pov: &dyn PlayerPOV,
+        outer: bool,
     ) -> Option<ProposedAction> {
         let candidates = Self::candidate_actions_with_provenance(inner_pov, convention_set);
+        #[cfg(feature = "search-diagnostic")]
+        {
+            println!(
+                "subjective_candidates_list (player={}, depth={}, outer={}):",
+                inner_pov.active_player_index(),
+                depth,
+                outer
+            );
+            for c in &candidates {
+                println!(
+                    "  action={:?} tech={} priority={}",
+                    c.action, c.tech_name, c.priority
+                );
+            }
+        }
         let span = tracing::trace_span!(
             target: "eel::search",
             "pick_subjective_recursive",
@@ -553,7 +572,7 @@ impl TreeActionSelectionStrategy {
                 continue;
             }
             let mut pv_table = PvTable::new(depth.saturating_sub(1));
-            let (subtree_score, _leaf_bd) = Self::simulate_forward(
+            let (subtree_score, leaf_bd) = Self::simulate_forward(
                 &next,
                 static_data,
                 convention_set,
@@ -565,6 +584,30 @@ impl TreeActionSelectionStrategy {
                 false,
             );
             let score = subtree_score + immediate;
+            #[cfg(feature = "search-diagnostic")]
+            {
+                let pv = pv_table.pv_at(depth.saturating_sub(1));
+                let mut line = Vec::with_capacity(pv.len() + 1);
+                line.push(LineStep {
+                    action: proposed.action.clone(),
+                    tech_name: proposed.tech_name,
+                    immediate_bonus: immediate,
+                });
+                line.extend_from_slice(pv);
+                println!(
+                    "subjective_candidate_evaluated (player={}, depth={}, outer={}): action={:?} tech={} immediate={} subtree_score={} score={} leaf={} line={:?}",
+                    inner_pov.active_player_index(),
+                    depth,
+                    outer,
+                    proposed.action,
+                    proposed.tech_name,
+                    immediate,
+                    subtree_score,
+                    score,
+                    leaf_bd,
+                    line
+                );
+            }
             tracing::trace!(
                 target: "eel::search",
                 action = ?proposed.action,

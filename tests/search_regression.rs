@@ -1,9 +1,9 @@
 mod common;
 
+use crate::common::utils::search_best_action;
 use eel::game::action::game_action::GameAction;
 use eel::game::clue::Clue;
 use eel::game::clue_type::ClueType;
-use crate::common::utils::search_best_action;
 
 // 3p, empty stacks. Player 0 knows their slot-1 card is R1 (directly playable).
 // No useful clue targets exist. Expected: play deck 4 (R1).
@@ -301,21 +301,23 @@ fn should_prefer_tempo_clue_over_hard_burn() {
     match action {
         GameAction::Clue {
             player_index: 1,
-            clue: Clue {
-                clue_type: ClueType::Color,
-                clue_value: 4,
-            },
+            clue:
+                Clue {
+                    clue_type: ClueType::Color,
+                    clue_value: 4,
+                },
             ..
         } => println!("Alice has chosen correctly: {:?}", action),
         GameAction::Clue {
             player_index: 1,
-            clue: Clue {
-                clue_type: ClueType::Rank,
-                clue_value: 5,
-            },
+            clue:
+                Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 5,
+                },
             ..
         } => panic!("Alice has decided to just burn a clue {action:?}"),
-        _ => panic!("Alice has chosen the following action: {:?}", action)
+        _ => panic!("Alice has chosen the following action: {:?}", action),
     }
 }
 

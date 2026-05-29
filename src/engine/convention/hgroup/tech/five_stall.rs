@@ -43,8 +43,9 @@ impl ConventionTech for FiveStall {
         for target in (0..num_players).filter(|&p| p != active) {
             let has_untouched_five = table_state.hands[target].cards().iter().any(|&idx| {
                 !pov.is_touched(idx)
-                && pov.card_identity(idx)
-                    .is_some_and(|id| (1u64 << id) & rank5_mask != 0)
+                    && pov
+                        .card_identity(idx)
+                        .is_some_and(|id| (1u64 << id) & rank5_mask != 0)
             });
             if has_untouched_five {
                 let touched = touched_cards_for_clue(target, &rank5_clue, pov);

@@ -491,10 +491,7 @@ impl PlayerKnowledge {
     /// subjective subtree (e.g. a finesse target plays as `y1`, advancing the yellow
     /// stack, so the next y2 reads as known-playable).
     #[must_use]
-    pub fn committed_play_identity(
-        &self,
-        card_deck_index: CardDeckIndex,
-    ) -> Option<VariantCardId> {
+    pub fn committed_play_identity(&self, card_deck_index: CardDeckIndex) -> Option<VariantCardId> {
         if let Some(id) = self.signals[card_deck_index as usize]
             .iter()
             .find_map(|s| match s {

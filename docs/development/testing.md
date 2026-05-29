@@ -76,6 +76,18 @@ cargo bench --features test-support
 useful as a blank canvas. `empty_stacks_table_state` and `stacked_table_state` return 3-player
 states; the latter has B1–B4 already on the playing stacks.
 
+## `search-diagnostic` Feature
+
+The `search-diagnostic` feature enables detailed debugging outputs during the recursive tree search. When active, it logs:
+- `subjective_candidates_list` at the top of `pick_subjective_recursive`, detailing every candidate action proposed by the convention tech set, its tech name, its H-Group interpretation priority, and an `outer` flag to distinguish outer-objective and inner-subjective evaluations.
+- `subjective_candidate_evaluated` enriched with the principal variation (PV) line, leaf breakdown, and an `outer` flag for forensic sub-search path analysis.
+
+Enable it from the command line:
+
+```bash
+cargo test --features search-diagnostic -- --nocapture
+```
+
 **Scenario tests**: Game positions are stored as JSON files at `tests/scenarios/{tech}/{n}/table_state.json`.
 Each tech folder can contain multiple numbered scenarios.
 

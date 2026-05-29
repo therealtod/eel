@@ -1,9 +1,9 @@
+use crate::common;
 use eel::engine::action_selection_strategy::ActionSelectionStrategy;
 use eel::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet;
 use eel::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 use eel::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
 use eel::game::action::game_action::GameAction;
-use crate::common;
 
 /// Load a named search regression scenario and ask the engine for its best action.
 pub fn search_best_action(name: &str) -> GameAction {

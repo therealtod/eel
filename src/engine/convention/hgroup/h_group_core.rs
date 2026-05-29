@@ -1908,8 +1908,12 @@ mod tests {
         let (static_data, table_state, team_knowledge, truth_knowledge) =
             setup_pbt(r1_mask, NoVarCards::R1, /*touched=*/ true, None);
 
-        let omniscient_truth =
-            make_truth_pov(&truth_knowledge, &team_knowledge, &table_state, &static_data);
+        let omniscient_truth = make_truth_pov(
+            &truth_knowledge,
+            &team_knowledge,
+            &table_state,
+            &static_data,
+        );
         assert!(
             super::is_potential_bad_touch(
                 &[10],
@@ -1970,8 +1974,12 @@ mod tests {
 
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
 
-        let omniscient_truth =
-            make_truth_pov(&truth_knowledge, &team_knowledge, &table_state, &static_data);
+        let omniscient_truth = make_truth_pov(
+            &truth_knowledge,
+            &team_knowledge,
+            &table_state,
+            &static_data,
+        );
         assert_eq!(
             super::count_bad_touches(&[10, 11], 1, &omniscient_truth, &table_state, &static_data),
             1,
