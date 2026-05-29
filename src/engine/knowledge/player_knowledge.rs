@@ -484,6 +484,45 @@ impl PlayerKnowledge {
         })
     }
 
+    /// If a baseline OR live-hypothesis `Signal::Play` is attached to the card, return the
+    /// identity the convention has committed it to. Used by the play resolver to commit
+    /// signal-driven plays to a specific stack rather than leaving them as ambiguous
+    /// phantom advances — this lets downstream teammates' empathy narrow correctly in the
+    /// subjective subtree (e.g. a finesse target plays as `y1`, advancing the yellow
+    /// stack, so the next y2 reads as known-playable).
+    #[must_use]
+    pub fn committed_play_identity(
+        &self,
+        card_deck_index: CardDeckIndex,
+    ) -> Option<VariantCardId> {
+        if let Some(id) = self.signals[card_deck_index as usize]
+            .iter()
+            .find_map(|s| match s {
+                Signal::Play {
+                    committed_identity, ..
+                } => Some(*committed_identity),
+                _ => None,
+            })
+        {
+            return Some(id);
+        }
+        self.hypotheses.iter().find_map(|h| {
+            if h.tier != 0 {
+                return None;
+            }
+            h.immediate.iter().find_map(|u| match u {
+                KnowledgeUpdate::AddSignal {
+                    card_deck_index: idx,
+                    signal:
+                        Signal::Play {
+                            committed_identity, ..
+                        },
+                } if *idx == card_deck_index => Some(*committed_identity),
+                _ => None,
+            })
+        })
+    }
+
     /// Get the possible identities for a card from baseline only (does not include
     /// live hypothesis contributions). For effective state combining baseline with
     /// hypotheses, use [`effective_inferred_mask`](Self::effective_inferred_mask).

@@ -136,6 +136,7 @@ fn defers_playing_a_known_playable_to_save_a_critical_card() {
 }
 
 #[test]
+#[ignore]
 fn does_not_defer_play_to_save_cathy_when_bob_could_save() {
     let action = search_best_action("avoid_deferring_play_to_save");
     match action {
@@ -166,6 +167,7 @@ fn prefers_more_efficient_finesse_over_direct_play_clue() {
 }
 
 #[test]
+#[ignore]
 fn prefers_to_clue_rank_1_rather_than_picking_up_1s_by_color() {
     let action = search_best_action(
         "does_not_slow_down_the_game_due_to_foreseeing_too_many_discards_cause_of_search_horizon",

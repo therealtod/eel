@@ -22,6 +22,23 @@ use smallvec::SmallVec;
 /// to the heap on the hot recursive path.
 const CANDIDATE_INLINE_CAP: usize = 20;
 
+/// Selects which subjective-action policy [`TreeActionSelectionStrategy::pick_subjective`]
+/// uses at inner plies. Single-line toggle: change this constant to swap policies.
+///
+/// - `SubjectivePolicy::Recursive` — A-style: each inner player runs their own forward
+///   sub-search from their own POV and returns the best-scoring candidate. Expressive
+///   but can compound POV-restriction error at deep plies.
+/// - `SubjectivePolicy::Priority` — H-Group-style: each inner player picks the
+///   highest-priority tech proposal that fires for them. Deterministic, cheap, no
+///   recursive POV compounding.
+const SUBJECTIVE_POLICY: SubjectivePolicy = SubjectivePolicy::Recursive;
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+enum SubjectivePolicy {
+    Recursive,
+    Priority,
+}
+
 /// Pre-allocated triangular PV table used to record the principal variation without
 /// heap-allocating inside the search hot path.
 ///
@@ -273,48 +290,65 @@ impl TreeActionSelectionStrategy {
             + clue_offset
     }
 
-    /// Recursively compute the best leaf score reachable from `state` within `depth` more turns.
+    /// Forward-simulate `depth` more plies from `state`, using `observer` as the
+    /// truth POV for action-outcome resolution and leaf evaluation. No branching at
+    /// inner plies — exactly one action is chosen per ply, picked by [`pick_subjective`]
+    /// from the active player's POV.
     ///
     /// The principal variation is written into `pv_table` at row `depth`; callers read it via
     /// [`PvTable::pv_at`] after this function returns and prepend their own action.
     ///
     /// The returned score is the leaf evaluation **plus** the sum of per-action immediate bonuses
-    /// (currently `clue_precision_bonus`) accumulated along the chosen line, so that good-touch
-    /// violations and clue precision are visible at every ply, not just at the root.
+    /// (clue precision, signal/discard penalties, play progress, …) accumulated along the chosen
+    /// line, so that good-touch violations and clue precision are visible at every ply, not just
+    /// at the root.
     ///
     /// # Search model
     ///
-    /// This is a **cooperative maximising search** — there is no adversary. At every ply the
-    /// current player generates candidate actions from *their own* POV (i.e. using only the
-    /// information available to them), applies the best-looking one, and the resulting game
-    /// state is scored objectively. The best leaf score then bubbles back up to rank the root
-    /// candidates chosen by the actor.
-    ///
-    /// Concretely, for a root action `a` chosen by the actor:
+    /// This is a **cooperative simulation** — there is no adversary, and only the root iterates
+    /// over its own candidate actions. After the root picks `a`:
     /// 1. `a` is applied and the turn advances to the next player.
-    /// 2. Each subsequent player also picks their best action (from their POV).
-    /// 3. The leaf state is evaluated with a shared objective score (stacks, clue tokens, …).
+    /// 2. Each subsequent player is *simulated* picking one action via [`pick_subjective`]
+    ///    (see [`SUBJECTIVE_POLICY`] for the policy variants). No branching over teammate
+    ///    alternatives happens in this outer simulation — only one path forward per ply.
+    /// 3. The leaf state is evaluated with the root observer's truth so the line value
+    ///    accurately reflects what really happens (e.g. a bad-touch follow-on resolves
+    ///    to a real strike rather than a phantom advance).
     /// 4. That score propagates back to rank `a` against the other root candidates.
     ///
-    /// The question being answered is therefore: *"how good does the game get if everyone plays
-    /// optimally after I do this?"* — not a subjective per-player utility.
+    /// The decoupling between **how actions are picked** (each player from their own POV)
+    /// and **how outcomes are resolved** (root truth throughout) keeps the search from
+    /// "cheating" — an inner player can't refuse a play just because the root knows it
+    /// will bomb — while still letting the root's analysis see real consequences.
     ///
-    /// Branch-and-bound pruning is applied: before recursing into each candidate, the evaluator's
-    /// `upper_bound` is queried for the post-action state at the remaining depth. If that ceiling
-    /// cannot beat the best score already secured at this node, the candidate is skipped. Once
-    /// `best` reaches the node's own ceiling, the loop exits early.
-    fn best_score_at_depth(
+    /// # `at_root_sim`
+    ///
+    /// `at_root_sim = true` selects **objective** resolution: the chosen action is
+    /// applied with `observer` (the root truth POV) as the resolver. This is required
+    /// at the root level so that bad-touch follow-ons resolve as real strikes — the
+    /// root observer can see all teammates' hands and reports the actual card identity.
+    ///
+    /// `at_root_sim = false` selects **subjective** resolution: the chosen action is
+    /// applied with the active player's own POV (`inner_pov`) as the resolver. This
+    /// is required inside a recursive subjective sub-search ([`pick_subjective_recursive`])
+    /// because there the `observer` is itself an inner player who can see the
+    /// *acting* player's hand — using `observer` as truth would let plays of an
+    /// actor's own hidden cards (e.g. `LowLevelStall` picking "play slot 1") falsely
+    /// resolve as known successes, paying out stack advances the actor couldn't
+    /// actually predict from her own POV.
+    fn simulate_forward(
         state: &KnowledgeAwareGameState,
         static_data: &StaticGameData,
         convention_set: &dyn ConventionSet,
         evaluator: &dyn Evaluator,
         depth: usize,
         pv_table: &mut PvTable,
-        truth: &dyn PlayerPOV,
+        observer: &dyn PlayerPOV,
         phantom_plays: u8,
+        at_root_sim: bool,
     ) -> (Score, ScoreBreakdown) {
         if depth == 0 || state.table_state.is_terminal(static_data) {
-            let breakdown = Self::leaf_breakdown(evaluator, state, truth, phantom_plays);
+            let breakdown = Self::leaf_breakdown(evaluator, state, observer, phantom_plays);
             tracing::trace!(
                 target: "eel::search",
                 depth = 0,
@@ -327,14 +361,15 @@ impl TreeActionSelectionStrategy {
         }
 
         let active = state.table_state.active_player_index;
-        // Build the active player's POV from the *root observer's* sight set so search
-        // rollouts cannot peek at hands the root cannot see (the "cheating bot" leak).
-        // When `active == truth.player_index()`, the intersection is the root's own
-        // sight, which is the correct view.
-        let root_visible = truth.visible_cards();
+        // Build the active player's POV from the *observer's* sight set so the inner
+        // player can never use information the observer doesn't have. When the observer
+        // is the root truth this is just the standard "cheating bot" guard; when the
+        // observer is itself an inner POV (as inside [`pick_subjective`]) this also
+        // prevents nested-leak chains.
+        let observer_visible = observer.visible_cards();
         let active_pk = state.team_knowledge.player(active);
-        let effective_visible = root_visible & active_pk.visible_cards;
-        let pov = LightweightPlayerPOV::with_visible_cards(
+        let effective_visible = observer_visible & active_pk.visible_cards;
+        let inner_pov = LightweightPlayerPOV::with_visible_cards(
             active,
             active_pk,
             &state.team_knowledge,
@@ -342,42 +377,166 @@ impl TreeActionSelectionStrategy {
             static_data,
             effective_visible,
         );
-        let candidates = Self::candidate_actions_with_provenance(&pov, convention_set);
-        // Inner players see every candidate their POV would generate. Finesse urgency
-        // (a `Signal::Play` on an untouched own-hand card) is enforced by
-        // `signal_ignored_penalty`; non-urgent plays are free to be deferred when the
-        // subtree shows another action is more valuable.
-        let span = tracing::trace_span!(
+
+        // Policy: pick what the active player would do from *their* POV. See
+        // [`SUBJECTIVE_POLICY`] for the variant in effect.
+        let Some(chosen) = Self::pick_subjective(
+            state,
+            static_data,
+            convention_set,
+            evaluator,
+            depth,
+            &inner_pov,
+        ) else {
+            let breakdown = Self::leaf_breakdown(evaluator, state, observer, phantom_plays);
+            pv_table.rows[depth].clear();
+            return (breakdown.total, breakdown);
+        };
+
+        // Resolution policy depends on whether we're in the root simulation or in a
+        // recursive subjective sub-search (see this function's `at_root_sim` doc-comment).
+        // At the root, `observer` is the true root POV — using it lets bad-touch
+        // follow-ons resolve as real strikes. Inside a recursive sub-search, `observer`
+        // is the outer planning self (an inner player) who can see the active player's
+        // hand; using it there would let plays of the active player's own hidden cards
+        // falsely resolve as known successes. Under [`SubjectivePolicy::Priority`] the
+        // recursive sub-search never fires, so `at_root_sim` is always `true`.
+        let mut next = state.clone();
+        let outcome: ActionOutcome = if at_root_sim {
+            next.apply(
+                &chosen.action,
+                convention_set,
+                &mut TruthPovResolver::new(observer),
+            )
+        } else {
+            next.apply(
+                &chosen.action,
+                convention_set,
+                &mut TruthPovResolver::new(&inner_pov),
+            )
+        };
+        next.advance_turn();
+        let child_phantom = phantom_plays + if outcome.is_phantom_play { 1 } else { 0 };
+
+        // Score the per-ply contribution from the active player's POV so terms like
+        // `discard_action_penalty`/BDR and `critical_exposure_delta_bonus` reflect what
+        // the actor could actually see when they made the choice.
+        let immediate = Self::immediate_action_bonus(
+            &chosen.action,
+            evaluator,
+            state,
+            &next,
+            static_data,
+            &inner_pov,
+            phantom_plays,
+            child_phantom,
+        );
+
+        let (subtree_score, leaf_bd) = Self::simulate_forward(
+            &next,
+            static_data,
+            convention_set,
+            evaluator,
+            depth - 1,
+            pv_table,
+            observer,
+            child_phantom,
+            at_root_sim,
+        );
+        let total = subtree_score + immediate;
+        tracing::trace!(
             target: "eel::search",
-            "search_ply",
             depth,
             player = active,
+            action = ?chosen.action,
+            tech = chosen.tech_name,
+            immediate,
+            subtree_score,
+            total,
+            "ply_simulated",
+        );
+        pv_table.set_pv(
+            depth,
+            LineStep {
+                action: chosen.action,
+                tech_name: chosen.tech_name,
+                immediate_bonus: immediate,
+            },
+        );
+        (total, leaf_bd)
+    }
+
+    /// Dispatcher: selects between the recursive A-style and the priority-based
+    /// subjective policies based on [`SUBJECTIVE_POLICY`]. The unused branch is
+    /// dead-code-eliminated since `SUBJECTIVE_POLICY` is a compile-time constant.
+    fn pick_subjective(
+        state: &KnowledgeAwareGameState,
+        static_data: &StaticGameData,
+        convention_set: &dyn ConventionSet,
+        evaluator: &dyn Evaluator,
+        depth: usize,
+        inner_pov: &dyn PlayerPOV,
+    ) -> Option<ProposedAction> {
+        match SUBJECTIVE_POLICY {
+            SubjectivePolicy::Recursive => Self::pick_subjective_recursive(
+                state,
+                static_data,
+                convention_set,
+                evaluator,
+                depth,
+                inner_pov,
+            ),
+            SubjectivePolicy::Priority => Self::pick_subjective_priority(convention_set, inner_pov),
+        }
+    }
+
+    /// A-style subjective policy: ask "what would the active player do?" by running their
+    /// own forward-simulation evaluation from their POV across each candidate and picking
+    /// the highest-scoring one.
+    ///
+    /// Resolution inside this sub-search uses `inner_pov` as truth — the active player
+    /// resolves their own hidden cards as `KnownPlayableAmbiguous` (phantom plays), just
+    /// as they would believe in reality. This is what lets a bad-touched card holder
+    /// still *pick* the bad play (their POV says it's known-playable) while the outer
+    /// [`simulate_forward`] applies that pick with the root's truth and sees the real
+    /// strike.
+    fn pick_subjective_recursive(
+        state: &KnowledgeAwareGameState,
+        static_data: &StaticGameData,
+        convention_set: &dyn ConventionSet,
+        evaluator: &dyn Evaluator,
+        depth: usize,
+        inner_pov: &dyn PlayerPOV,
+    ) -> Option<ProposedAction> {
+        let candidates = Self::candidate_actions_with_provenance(inner_pov, convention_set);
+        let span = tracing::trace_span!(
+            target: "eel::search",
+            "pick_subjective_recursive",
+            depth,
+            player = inner_pov.active_player_index(),
             candidates = candidates.len(),
         );
         let _guard = span.enter();
         let mut best = f64::NEG_INFINITY;
-        let mut best_breakdown: Option<ScoreBreakdown> = None;
+        let mut best_proposed: Option<ProposedAction> = None;
         let node_ceiling = evaluator.upper_bound(state.table_state(), static_data, depth);
         for proposed in candidates {
             let mut next = state.clone();
             let outcome: ActionOutcome = next.apply(
                 &proposed.action,
                 convention_set,
-                &mut TruthPovResolver::new(truth),
+                &mut TruthPovResolver::new(inner_pov),
             );
             next.advance_turn();
-            let child_phantom = phantom_plays + if outcome.is_phantom_play { 1 } else { 0 };
-            // Score the action from the active player's POV — not the root's truth. Using truth
-            // here would let inner players "see" consequences they can't actually observe (e.g.
-            // discarding a chop whose identity is hidden from them).
+            let child_phantom = if outcome.is_phantom_play { 1 } else { 0 };
             let immediate = Self::immediate_action_bonus(
                 &proposed.action,
                 evaluator,
                 state,
                 &next,
                 static_data,
-                &pov,
-                phantom_plays,
+                inner_pov,
+                0,
                 child_phantom,
             );
             let candidate_ceiling =
@@ -389,37 +548,23 @@ impl TreeActionSelectionStrategy {
                     tech = proposed.tech_name,
                     candidate_ceiling,
                     best,
-                    "candidate_pruned",
+                    "subjective_candidate_pruned",
                 );
                 continue;
             }
-            // Blind the actor's hand from the subtree truth: exclude the actor's
-            // post-action deck indices from visible_cards so downstream players cannot
-            // use the actor's hidden card identities when scoring their own actions.
-            // This prevents the actor's optimal choice from leaking through the subtree
-            // score back to the actor, who cannot observe their own hand.
-            let actor_hand = next.team_knowledge.player(active).own_hand;
-            let blinded_visible = truth.visible_cards() & !actor_hand;
-            let subtree_truth = LightweightPlayerPOV::with_visible_cards(
-                truth.player_index(),
-                truth.team_knowledge().player(truth.player_index()),
-                truth.team_knowledge(),
-                truth.table_state(),
-                truth.static_data(),
-                blinded_visible,
-            );
-            let (subtree_score, leaf_bd) = Self::best_score_at_depth(
+            let mut pv_table = PvTable::new(depth.saturating_sub(1));
+            let (subtree_score, _leaf_bd) = Self::simulate_forward(
                 &next,
                 static_data,
                 convention_set,
                 evaluator,
                 depth - 1,
-                pv_table,
-                &subtree_truth,
+                &mut pv_table,
+                inner_pov,
                 child_phantom,
+                false,
             );
             let score = subtree_score + immediate;
-            let improved = score > best;
             tracing::trace!(
                 target: "eel::search",
                 action = ?proposed.action,
@@ -427,28 +572,46 @@ impl TreeActionSelectionStrategy {
                 immediate,
                 subtree_score,
                 score,
-                improved,
-                "candidate_evaluated",
+                "subjective_candidate_evaluated",
             );
-            if improved {
+            if score > best {
                 best = score;
-                pv_table.set_pv(
-                    depth,
-                    LineStep {
-                        action: proposed.action,
-                        tech_name: proposed.tech_name,
-                        immediate_bonus: immediate,
-                    },
-                );
-                best_breakdown = Some(leaf_bd);
+                best_proposed = Some(proposed);
                 if best >= node_ceiling {
                     break;
                 }
             }
         }
-        let breakdown = best_breakdown
-            .unwrap_or_else(|| Self::leaf_breakdown(evaluator, state, truth, phantom_plays));
-        (best, breakdown)
+        best_proposed
+    }
+
+    /// Priority-based subjective policy: pick the highest-priority tech proposal
+    /// that fires for the active player from their own POV.
+    ///
+    /// [`candidate_actions_with_provenance`] returns candidates already sorted by
+    /// action type (Play > Clue > Discard) and, within each type, by the
+    /// originating tech's `interpretation_priority` ascending — so the first entry
+    /// is the action a player following H-Group convention priority would choose.
+    /// No recursive sub-search: nested subjective simulation compounded POV-
+    /// restriction error and
+    /// added cost without buying meaningfully better picks.
+    fn pick_subjective_priority(
+        convention_set: &dyn ConventionSet,
+        inner_pov: &dyn PlayerPOV,
+    ) -> Option<ProposedAction> {
+        let candidates = Self::candidate_actions_with_provenance(inner_pov, convention_set);
+        let chosen = candidates.into_iter().next();
+        if let Some(c) = &chosen {
+            tracing::trace!(
+                target: "eel::search",
+                player = inner_pov.active_player_index(),
+                action = ?c.action,
+                tech = c.tech_name,
+                priority = c.priority,
+                "subjective_pick_priority",
+            );
+        }
+        chosen
     }
 }
 
@@ -533,7 +696,7 @@ impl TreeActionSelectionStrategy {
                     child_phantom,
                 );
                 let mut pv_table = PvTable::new(subtree_depth);
-                let (leaf_score, leaf_breakdown) = Self::best_score_at_depth(
+                let (leaf_score, leaf_breakdown) = Self::simulate_forward(
                     &next,
                     static_data,
                     convention_set,
@@ -542,6 +705,7 @@ impl TreeActionSelectionStrategy {
                     &mut pv_table,
                     &truth_pov,
                     child_phantom,
+                    true,
                 );
                 let total = leaf_score + immediate_bonus;
                 let pv = pv_table.pv_at(subtree_depth);

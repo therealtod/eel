@@ -93,6 +93,12 @@ impl PlayResolver for TruthPovResolver<'_> {
         let id = self.truth.card_identity(card_deck_index).or(empathy_id);
         if let Some(card_id) = id {
             ResolvedPlay::Known(card_id)
+        } else if let Some(card_id) = knowledge.committed_play_identity(card_deck_index) {
+            // Convention-committed fallback: a `Signal::Play` on this card names the
+            // identity the convention says it has. Use it instead of falling through
+            // to a stack-agnostic phantom advance so that downstream teammates'
+            // empathy can narrow against the committed stack progression.
+            ResolvedPlay::Known(card_id)
         } else if state.is_known_playable_play(player_index, card_deck_index, has_play_signal) {
             ResolvedPlay::KnownPlayableAmbiguous
         } else {
@@ -106,23 +112,23 @@ impl PlayResolver for TruthPovResolver<'_> {
         card_deck_index: CardDeckIndex,
         state: &KnowledgeAwareGameState,
     ) -> Option<VariantCardId> {
-        let num_players = state.static_data().number_of_players as usize;
-        self.truth.card_identity(card_deck_index).or_else(|| {
-            (0..num_players)
-                .filter(|&obs| obs != player_index)
-                .map(|obs| {
-                    state
-                        .team_knowledge
-                        .player(obs)
-                        .combined_possible_identities(
-                            card_deck_index,
-                            &state.table_state,
-                            &state.static_data().variant,
-                        )
-                })
-                .find(|e| e.is_exactly_known())
-                .and_then(|e| e.known_card_id())
-        })
+        // Mirror `resolve_play`: truth-POV first, then the *actor's own* narrowed empathy.
+        // Never consult other players' team_knowledge — doing so would leak identities the
+        // actor cannot know in a subjective sub-search (e.g. Cathy discarding her own
+        // untouched chop should not resolve as a concrete card just because teammates can
+        // see it). The pile then records an empathically-wide hole, so downstream
+        // critical-mask reasoning doesn't get a free setup it couldn't have foreseen.
+        let combined = state
+            .team_knowledge
+            .player(player_index)
+            .combined_possible_identities(
+                card_deck_index,
+                &state.table_state,
+                &state.static_data().variant,
+            );
+        self.truth
+            .card_identity(card_deck_index)
+            .or_else(|| combined.known_card_id())
     }
 
     fn draw_next(&mut self, _deck_size: u8, _next_deck_index: u8) -> DrawnCard {
