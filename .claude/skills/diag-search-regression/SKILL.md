@@ -35,6 +35,15 @@ DEBUG scored_actions{player=0 candidates=2}: eel::search: candidate_scored
   ]
 ```
 
+> [!TIP]
+> **Debugging Inner-Ply / Subjective Decisions:**
+> If the wrong choice is made at an inner ply of the PV (i.e. by a simulated player Bob or Cathy), compile with the `search-diagnostic` Cargo feature:
+> ```bash
+> cargo test <test_name> --features search-diagnostic 2>&1
+> ```
+> This prints the candidate actions proposed (`subjective_candidates_list`) and their full evaluations (`subjective_candidate_evaluated`) for all simulated players, making it extremely easy to see why a simulated teammate picked or rejected a specific action.
+
+
 ## Step 2 — Decompose the scores
 
 The arithmetic:

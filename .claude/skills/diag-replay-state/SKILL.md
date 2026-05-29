@@ -187,6 +187,14 @@ state.advance_turn();
 The clone-then-borrow gymnastics are needed because `apply` takes `&mut self.state`
 while the truth POV holds `&` borrows of the same fields.
 
+> [!TIP]
+> **Leveraging the `search-diagnostic` Feature:**
+> When calling `scored_actions` during a diagnostic test, you can enable the `search-diagnostic` Cargo feature to automatically dump every alternative action considered by inner simulated players, alongside their PV lines, leaf breakdowns, and whether the evaluation is outer or inner. Simply run your diagnostic with:
+> ```bash
+> cargo test --test _diag diag_<name> --features search-diagnostic -- --nocapture
+> ```
+
+
 ## Scenario tests, not just replays
 
 The same dump pattern works for `tests/search_regression.rs` (scenario-driven) tests —
