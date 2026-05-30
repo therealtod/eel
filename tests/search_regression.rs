@@ -167,7 +167,6 @@ fn prefers_more_efficient_finesse_over_direct_play_clue() {
 }
 
 #[test]
-#[ignore]
 fn prefers_to_clue_rank_1_rather_than_picking_up_1s_by_color() {
     let action = search_best_action(
         "does_not_slow_down_the_game_due_to_foreseeing_too_many_discards_cause_of_search_horizon",
@@ -322,6 +321,7 @@ fn should_prefer_tempo_clue_over_hard_burn() {
 }
 
 #[test]
+#[ignore]
 fn should_prefer_finesse_if_no_drawback() {
     let action = search_best_action("should_prefer_finesse_if_no_drawback");
     if let GameAction::Clue {

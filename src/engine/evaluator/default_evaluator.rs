@@ -203,6 +203,20 @@ pub struct DefaultEvaluator {
     ///
     /// Set to 0 to disable.
     pub tempo_cost_weight: f64,
+    /// Per-ply discount subtracted from a successful play's `play_progress_bonus` for every
+    /// ply the play is deferred from the root (`elapsed = number_of_players × 2 − remaining_depth`).
+    ///
+    /// Closes the *deferred-play* horizon arbitrage: when two lines play the same cards and reach
+    /// the same horizon-capped `game_score`, the line that defers its plays banks extra leaf
+    /// `known_playable` credit for cards left un-cashed in hand, out-scoring the line that played
+    /// them efficiently. Charging a small per-ply discount makes an earlier play strictly beat an
+    /// identical deferred one, breaking the tie in favour of cashing progress now.
+    ///
+    /// Kept well below `play_progress_weight` so a productive play is always net-positive; only
+    /// reduces the immediate bonus, so search `upper_bound` admissibility is preserved.
+    ///
+    /// Set to 0 to disable.
+    pub play_deferral_weight: f64,
 }
 
 impl Default for DefaultEvaluator {
@@ -229,6 +243,7 @@ impl Default for DefaultEvaluator {
             discard_while_known_playable_penalty: 8.0_f64,
             critical_exposure_delta_weight: 0.5_f64,
             tempo_cost_weight: 2.5_f64,
+            play_deferral_weight: 0.15_f64,
         }
     }
 }

@@ -43,6 +43,15 @@ DEBUG scored_actions{player=0 candidates=2}: eel::search: candidate_scored
 > ```
 > This prints the candidate actions proposed (`subjective_candidates_list`) and their full evaluations (`subjective_candidate_evaluated`) for all simulated players, making it extremely easy to see why a simulated teammate picked or rejected a specific action.
 
+> [!NOTE]
+> **Deck indexes are not the JSON listed order.** Before reasoning about which card a
+> `touched_card_deck_indexes` set refers to, decode the mapping. The scenario loader
+> (`src/engine/replay/from_scenario.rs`) assigns `deck_idx = player_range[hand_size − 1 − slot_pos]`,
+> so the **first card listed in a JSON hand is the *highest* deck index** in that player's
+> range. Example: Cathy's hand `["y1","r1","p3","b5","g1"]` with range `10..=14` maps to
+> `y1=14, r1=13, p3=12, b5=11, g1=10` — so a rank-1 clue touching `[14,13,10]` is the three
+> 1s. Cross-check against the clue-touch sets in the PV to confirm.
+
 
 ## Step 2 — Decompose the scores
 
@@ -61,6 +70,15 @@ not the leaf evaluation.
 
 Compute `Σ(inner_immediates)` by hand for each candidate — the outlier step is usually
 obvious (one value is 10–20× larger than the rest).
+
+> [!IMPORTANT]
+> **Not every culprit is an immediate-bonus outlier.** When the totals are *close* and no
+> single line step stands out (all immediates are normal ~±2), the deciding factor is
+> almost always a **leaf term**. Diff the two candidates' `leaf=total=… [score=… +play=… …]`
+> breakdowns **column-by-column** — the gap will localize to one leaf term (commonly
+> `+play` = `known_playable`, `-crit_exp`, or `-eff`). Trust the printed breakdown numbers
+> over hand-counting the leaf state; they are authoritative. See Step 3 for the
+> label→field map and the horizon-saturation failure shape below.
 
 ## Step 3 — Identify the culprit bonus
 
@@ -91,6 +109,30 @@ The most common large-magnitude culprits:
 - **`signal_penalty` ≈ −N`: `signal_ignored_penalty` fired. The actor has a `Signal::Play`
   tagged on an own-hand card but chose Discard or a wrong Play. This is usually correct
   behavior — it penalises path branches where an inner player ignores their own signal.
+
+### Leaf-breakdown terms (the `leaf=total=… […]` string)
+
+If Step 2 pointed you at a **leaf** term rather than an immediate step, map the short label
+in the `leaf=…` breakdown to its field and the function that computes it (defined in
+`src/engine/evaluator/types.rs` `Display` and `default_evaluator.rs`):
+
+| Label | Field | Computed by | Notes |
+|---|---|---|---|
+| `score` | `game_score` | played-stack score × `score_weight` | **Horizon-capped** — both candidates often tie here |
+| `+play` | `known_playable` | `known_playable_in_hands` | Leaf reward for cards still *in hand* known playable |
+| `-crit_exp` | `critical_exposure_penalty` | `critical_exposure_score` | |
+| `-eff` | `efficiency_penalty` | `required_efficiency` | |
+| `+clue` | `clue_tokens` | `harmonic(count) × demand` | |
+| `±crit_delta` | `critical_exposure_delta` | `critical_exposure_delta_bonus` | Immediate Δ folded in; 0.0 at a pure leaf |
+| `-tempo` | `tempo_cost` | `tempo_cost` | Immediate; 0.0 at a pure leaf |
+
+> [!WARNING]
+> **`+play` (leaf) ≠ `play_bonus` (line step).** The leaf `+play` term is `known_playable`
+> (`known_playable_in_hands`) — a reward for playable cards *held in hand* at the leaf. The
+> per-step `play_bonus` is `play_progress_bonus` — the reward for the *act* of playing. Two
+> different mechanisms at two different stages; don't conflate them. A line that *defers*
+> plays scores **lower** `play_bonus` timing but **higher** leaf `+play` (more cards left
+> banked unplayed) — see the horizon-saturation row in Common failure shapes.
 
 ## Step 4 — Understand the inner-player POV restriction
 
@@ -151,7 +193,8 @@ cargo test --test search_regression 2>&1
 |---|---|
 | One candidate has a step with `immediate_bonus ≈ −19` on a LowLevelStall clue | Stall clue touches two cards with same identity in the same hand (bad touch). Fix the scenario hand. |
 | Discard candidate wins with large negative `discard_penalty` still beating play | Play path has a worse subtree (check for stall asymmetry). Or play's `leaf_breakdown.total` is much lower. |
-| Two candidates have nearly equal `total` (difference < 0.5) | Tie broken by candidate enumeration order. May need a stronger signal or a determinism fix. |
+| Two candidates have nearly equal `total` (difference < 0.5), and their `leaf=…` breakdowns differ in exactly one leaf term | **Real, deterministic leaf-term delta — not enumeration order.** Diff the breakdowns column-by-column (Step 2/3) and fix the responsible leaf term. Only suspect enumeration order if the breakdowns are *identical*. |
+| Both candidates reach the **same capped `game_score`**; winner decided by a small `+play` (`known_playable`) delta | **Horizon-saturation artifact.** Both lines play the same cards within the horizon, so `game_score` ties; the line that *defers* its plays banks extra un-cashed playables in hand and wins on leaf `+play`. The efficient line is penalised for cashing progress. Levers: `play_deferral_weight` (discount deferred plays — already in `immediate_action_bonus`), or discount banked `known_playable` at the leaf. |
 | Inner player takes a suboptimal action in one path's PV but not the other | `effective_visible` asymmetry: the root player has different knowledge along each branch. Check what the inner player can actually see. |
 | Inner player gives a stall when a save/play should be available | Save tech requires seeing a critical card on chop. If that card is in the root player's own hand, `effective_visible` hides it from the inner player. |
 

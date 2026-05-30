@@ -216,6 +216,7 @@ impl TreeActionSelectionStrategy {
         truth: &dyn PlayerPOV,
         pre_phantom_plays: u8,
         post_phantom_plays: u8,
+        remaining_depth: usize,
     ) -> Score {
         let actor = state_before.table_state().active_player_index;
         let signal_penalty = evaluator.signal_ignored_penalty(
@@ -243,13 +244,22 @@ impl TreeActionSelectionStrategy {
         } else {
             0.0
         };
-        let play_bonus = evaluator.play_progress_bonus(
+        let mut play_bonus = evaluator.play_progress_bonus(
             action,
             state_before,
             state_after,
             pre_phantom_plays,
             post_phantom_plays,
         );
+        // Deferred-play discount: a successful play loses a small amount per ply it is pushed
+        // back from the root, so an earlier play strictly beats an identical deferred one. This
+        // closes the horizon-arbitrage hole where a line that postpones its plays banks extra
+        // leaf `known_playable` credit while reaching the same (horizon-capped) game score.
+        if play_bonus > 0.0 {
+            let root_depth = (static_data.number_of_players as usize) * 2;
+            let elapsed = root_depth.saturating_sub(remaining_depth);
+            play_bonus -= evaluator.play_deferral_penalty(elapsed);
+        }
         let team_empathy_bonus =
             evaluator.team_empathy_delta_bonus(action, state_before, state_after);
         let discard_penalty = evaluator.discard_action_penalty(action, actor, state_before, truth);
@@ -431,6 +441,7 @@ impl TreeActionSelectionStrategy {
             &inner_pov,
             phantom_plays,
             child_phantom,
+            depth,
         );
 
         let (subtree_score, leaf_bd) = Self::simulate_forward(
@@ -557,6 +568,7 @@ impl TreeActionSelectionStrategy {
                 inner_pov,
                 0,
                 child_phantom,
+                depth,
             );
             let candidate_ceiling =
                 evaluator.upper_bound(next.table_state(), static_data, depth - 1) + immediate;
@@ -737,6 +749,7 @@ impl TreeActionSelectionStrategy {
                     &truth_pov,
                     0,
                     child_phantom,
+                    depth,
                 );
                 let mut pv_table = PvTable::new(subtree_depth);
                 let (leaf_score, leaf_breakdown) = Self::simulate_forward(

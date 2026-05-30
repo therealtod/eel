@@ -411,6 +411,23 @@ play.
 **Sign:** `+`  
 **Default weight:** `play_progress_weight = 2.0`
 
+#### Deferred-play discount
+
+```
+play_progress_bonus −= play_deferral_weight × elapsed_plies   (elapsed = number_of_players × 2 − remaining_depth)
+```
+
+A successful play loses a small amount for every ply it is deferred from the root, so an
+**earlier play strictly beats an identical deferred one**.  This closes a second
+horizon-arbitrage hole distinct from `tempo_cost`: when two lines play the *same* cards and
+reach the *same* horizon-capped `game_score`, the line that postpones its plays banks extra
+leaf `known_playable` credit for cards left un-cashed in hand, out-scoring the line that
+cashed its progress efficiently.  Because the discount only ever *reduces* the immediate
+bonus (never below zero given `play_deferral_weight × max_elapsed ≪ play_progress_weight`),
+search `upper_bound` admissibility is preserved.
+
+**Default weight:** `play_deferral_weight = 0.15`
+
 ---
 
 ### 2.7 `discard_action_penalty`
@@ -478,6 +495,7 @@ dumped may itself be critical.
 | `potential_bad_touch_penalty` | 5.0 | − | Immediate (clue) |
 | `signal_ignored_penalty_weight` | 5.0 | − | Immediate (any) |
 | `play_progress_weight` | 2.0 | + | Immediate (play) |
+| `play_deferral_weight` | 0.15 | − | Immediate (play, per elapsed ply) |
 | `bottom_deck_risk_weight` | 2.0 | − | Immediate (discard) |
 | `discard_while_known_playable_penalty` | 8.0 | − | Immediate (discard) |
 

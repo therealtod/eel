@@ -171,6 +171,13 @@ pub trait Evaluator: Send + Sync {
         0.0
     }
 
+    /// Non-negative discount subtracted from a successful play's `play_progress_bonus` for
+    /// every ply (`elapsed_plies`) the play is deferred from the root. Lets an earlier play
+    /// strictly out-score an identical deferred one. Default zero (no discount).
+    fn play_deferral_penalty(&self, _elapsed_plies: usize) -> Score {
+        0.0
+    }
+
     /// Penalty assessed when `actor` chooses to `Discard`.
     ///
     /// Combines two risks the chop-discard pricing should reflect:
