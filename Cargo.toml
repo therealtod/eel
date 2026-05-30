@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
+default = ["quiescence-search", "stall-quiescence"]
 test-support = []
 search-diagnostic = []
 # Experimental: extend root-PV leaves with a quiescence tail so pending *signalled*
@@ -13,6 +14,17 @@ search-diagnostic = []
 # pending a cost/quiet-cap review before it can be promoted; the full test suite passes
 # with it enabled. See `quiescence_extend` in `tree_action_selection_strategy.rs`.
 quiescence-search = []
+# Experimental: terminate a simulated line at the first forced `LowLevelStall` ply and
+# evaluate the pre-stall state statically, instead of simulating the stall and charging its
+# consequences (wasted clue, trashed critical, or a Priority-3 "play slot 1" strike). A
+# `LowLevelStall` only fires when no productive tech proposed a move, so it is a precise
+# "out of real moves" signal — a horizon artifact of frozen information, not a real position.
+# Cutting there stops the search from systematically over-penalising tempo/draw-heavy lines
+# that hit the forced-stall wall earlier inside the horizon. On by default: the full test
+# suite passes with it enabled (fixes the dry-position `should_prefer_finesse_if_no_drawback`
+# horizon artifact) with no regressions and no runtime cost.
+# See `is_forced_stall_leaf` in `tree_action_selection_strategy.rs`.
+stall-quiescence = []
 
 [dependencies]
 serde = { version = "1.0.228", features = ["derive"] }

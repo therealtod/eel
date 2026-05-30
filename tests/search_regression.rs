@@ -23,7 +23,6 @@ fn play_known_playable() {
 }
 
 #[test]
-#[ignore]
 fn play_known_playable_even_when_foreseeing_stall() {
     let action = search_best_action("play_known_playable_when_foreseeing_stall");
     assert!(
@@ -325,7 +324,6 @@ fn should_prefer_tempo_clue_over_hard_burn() {
 }
 
 #[test]
-#[ignore]
 fn should_prefer_finesse_if_no_drawback() {
     let action = search_best_action("should_prefer_finesse_if_no_drawback");
     if let GameAction::Clue {

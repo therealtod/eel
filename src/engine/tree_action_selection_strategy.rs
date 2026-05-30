@@ -302,6 +302,25 @@ impl TreeActionSelectionStrategy {
             + clue_offset
     }
 
+    /// Stall-quiescence predicate (feature on): is the subjectively-chosen action a forced
+    /// last-resort [`LowLevelStall`]? That tech is only reached via the fallback path in
+    /// [`Self::candidate_actions_with_provenance`] once every productive tech (and the
+    /// FiveStall/TempoClue/ClueBurn fallbacks) produced nothing — so its presence is a precise
+    /// "out of real moves" signal that [`simulate_forward`] uses to settle the line early.
+    #[cfg(feature = "stall-quiescence")]
+    #[inline]
+    fn is_forced_stall_leaf(tech_name: &str) -> bool {
+        tech_name == LowLevelStall.name()
+    }
+
+    /// Stall-quiescence stub (feature off): never settles early, so [`simulate_forward`] applies
+    /// the stall and recurses exactly as in the baseline — byte-for-byte unchanged.
+    #[cfg(not(feature = "stall-quiescence"))]
+    #[inline]
+    fn is_forced_stall_leaf(_tech_name: &str) -> bool {
+        false
+    }
+
     /// Forward-simulate `depth` more plies from `state`, using `observer` as the
     /// truth POV for action-outcome resolution and leaf evaluation. No branching at
     /// inner plies — exactly one action is chosen per ply, picked by [`pick_subjective`]
@@ -422,6 +441,19 @@ impl TreeActionSelectionStrategy {
             pv_table.rows[depth].clear();
             return (breakdown.total, breakdown);
         };
+
+        // Stall-quiescence (experimental, off by default): a `LowLevelStall` only fires when no
+        // productive tech proposed a move, so it marks the search hitting the "no real move"
+        // wall — an artifact of frozen information, since real draws would supply fresh actions.
+        // Rather than simulate the stall and charge its consequences (wasted clue, trashed
+        // critical, or a Priority-3 "play slot 1" strike) into this line's score, settle here on
+        // the pre-stall state's static leaf. Banked signalled/known playables still count via the
+        // leaf `known_playable` term, so downstream potential is valued, just not realized.
+        if Self::is_forced_stall_leaf(chosen.tech_name) {
+            let breakdown = Self::leaf_breakdown(evaluator, state, observer, phantom_plays);
+            pv_table.rows[depth].clear();
+            return (breakdown.total, breakdown);
+        }
 
         // Resolution policy depends on whether we're in the root simulation or in a
         // recursive subjective sub-search (see this function's `at_root_sim` doc-comment).
