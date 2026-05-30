@@ -6,6 +6,13 @@ edition = "2024"
 [features]
 test-support = []
 search-diagnostic = []
+# Experimental: extend root-PV leaves with a quiescence tail so pending *signalled*
+# plays resolve into real game_score before evaluation, rather than being estimated by
+# the static `known_playable` term. Tail plays carry the same deferred-play discount the
+# in-horizon plies pay, so the extension never becomes a penalty-free zone. Off by default
+# pending a cost/quiet-cap review before it can be promoted; the full test suite passes
+# with it enabled. See `quiescence_extend` in `tree_action_selection_strategy.rs`.
+quiescence-search = []
 
 [dependencies]
 serde = { version = "1.0.228", features = ["derive"] }

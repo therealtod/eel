@@ -58,6 +58,11 @@ fn direct_play_clue_is_top_choice() {
     }
 }
 
+// Ignored: this is not a search-horizon problem. The blue→Cathy line's payoff is a future
+// *yellow* clue to Cathy (touching y1+y2+y3) that the subjective rollout never gives, so
+// Cathy's yellows are never *signalled* — quiescence (even feature-on) correctly leaves the
+// leaf quiet and cannot realize the setup. Tracked for a scenario redesign / rollout-policy
+// fix, separate from the quiescence-search experiment.
 #[test]
 #[ignore]
 fn prefers_blue_clue_to_cathy_over_rank1_clue_to_bob() {

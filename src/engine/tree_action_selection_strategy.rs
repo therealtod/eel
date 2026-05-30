@@ -2,6 +2,8 @@ use crate::engine::action_outcome::ActionOutcome;
 use crate::engine::action_selection_strategy::ActionSelectionStrategy;
 use crate::engine::convention::convention_set::ConventionSet;
 use crate::engine::convention::convention_tech::ConventionTech;
+#[cfg(feature = "quiescence-search")]
+use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::convention::hgroup::tech::clue_burn::ClueBurn;
 use crate::engine::convention::hgroup::tech::five_stall::FiveStall;
 use crate::engine::convention::hgroup::tech::low_level_stall::LowLevelStall;
@@ -358,6 +360,23 @@ impl TreeActionSelectionStrategy {
         at_root_sim: bool,
     ) -> (Score, ScoreBreakdown) {
         if depth == 0 || state.table_state.is_terminal(static_data) {
+            // Quiescence extension (experimental, off by default): when this leaf still has a
+            // pending *signalled* play, roll it forward so the play resolves into real
+            // game_score instead of a static estimate. A no-op (returns `None`) when the
+            // feature is disabled, when the leaf is already quiet, or below the root sim.
+            if let Some(settled) = Self::quiescence_extend(
+                state,
+                static_data,
+                convention_set,
+                evaluator,
+                observer,
+                phantom_plays,
+                at_root_sim,
+                depth,
+            ) {
+                pv_table.rows[depth].clear();
+                return settled;
+            }
             let breakdown = Self::leaf_breakdown(evaluator, state, observer, phantom_plays);
             tracing::trace!(
                 target: "eel::search",
@@ -488,6 +507,207 @@ impl TreeActionSelectionStrategy {
             },
         );
         (total, leaf_bd)
+    }
+
+    /// Quiescence stub when the feature is off: never extends, so [`simulate_forward`]
+    /// falls through to the static leaf — byte-for-byte the baseline behavior.
+    #[cfg(not(feature = "quiescence-search"))]
+    #[inline]
+    #[allow(clippy::too_many_arguments)]
+    fn quiescence_extend(
+        _state: &KnowledgeAwareGameState,
+        _static_data: &StaticGameData,
+        _convention_set: &dyn ConventionSet,
+        _evaluator: &dyn Evaluator,
+        _observer: &dyn PlayerPOV,
+        _phantom_plays: u8,
+        _at_root_sim: bool,
+        _depth: usize,
+    ) -> Option<(Score, ScoreBreakdown)> {
+        None
+    }
+
+    /// Quiescence entry point (feature on): extend only a *loud* root-PV leaf — one with a
+    /// pending signalled play the rollout can actually cash. Returns `None` (fall through to
+    /// the static leaf) when below the root sim, not at the horizon, terminal, or already
+    /// quiet. See [`Self::quiescence_rollout`] for the tail and [`Self::has_uncashed_signalled_play`]
+    /// for why the predicate is signal-based rather than the god's-eye `known_playable` term.
+    #[cfg(feature = "quiescence-search")]
+    #[allow(clippy::too_many_arguments)]
+    fn quiescence_extend(
+        state: &KnowledgeAwareGameState,
+        static_data: &StaticGameData,
+        convention_set: &dyn ConventionSet,
+        evaluator: &dyn Evaluator,
+        observer: &dyn PlayerPOV,
+        phantom_plays: u8,
+        at_root_sim: bool,
+        depth: usize,
+    ) -> Option<(Score, ScoreBreakdown)> {
+        if !(at_root_sim
+            && depth == 0
+            && !state.table_state.is_terminal(static_data)
+            && Self::has_uncashed_signalled_play(state, static_data, observer))
+        {
+            return None;
+        }
+        let budget = (static_data.number_of_players * 2) as usize;
+        Some(Self::quiescence_rollout(
+            state,
+            static_data,
+            convention_set,
+            evaluator,
+            observer,
+            phantom_plays,
+            at_root_sim,
+            budget,
+        ))
+    }
+
+    /// Loud/quiet predicate for quiescence: does any hand hold a card whose holder *signally*
+    /// knows to play it (a `Signal::Play`, or a convention-inferred all-playable identity)?
+    ///
+    /// This is deliberately tighter than the leaf `known_playable` term, which also counts
+    /// cards playable only under the searcher's god's-eye global empathy (priority 3 in
+    /// [`DefaultEvaluator::known_playable_in_hands`]). The quiescence rollout can only *cash*
+    /// what the subjective holder will actually play (`PlayKnownPlayable` fires on signalled /
+    /// inferred-playable cards) — so loudness must use the same notion of "playable" the
+    /// rollout uses, or the tail spins discarding global-empathy "plays" it can never realize.
+    #[cfg(feature = "quiescence-search")]
+    fn has_uncashed_signalled_play(
+        state: &KnowledgeAwareGameState,
+        static_data: &StaticGameData,
+        truth: &dyn PlayerPOV,
+    ) -> bool {
+        let playable_mask = state.table_state.playable_cards(static_data);
+        for p in 0..static_data.number_of_players as usize {
+            let pk = state.team_knowledge.player(p);
+            let mut hand = pk.own_hand;
+            while hand != 0 {
+                let idx = hand.trailing_zeros() as usize;
+                hand &= hand - 1;
+                // Skip cards the searcher knows are not actually playable (misinformation).
+                if let Some(truth_id) = truth.card_identity(idx as u8) {
+                    if (1u64 << truth_id) & playable_mask == 0 {
+                        continue;
+                    }
+                }
+                // Priority 1: convention play signal.
+                if pk.signals[idx]
+                    .iter()
+                    .any(|s| matches!(s, Signal::Play { .. }))
+                {
+                    return true;
+                }
+                // Priority 2: convention-inferred all-playable identity.
+                if let Some(inferred) = pk.inferred_identities[idx] {
+                    let bits = inferred.as_bits();
+                    if bits != 0 && (bits & playable_mask) == bits {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+
+    /// Quiescence tail: extend a *loud* leaf (one with an uncashed signalled play) until it
+    /// goes quiet, so the returned `game_score` reflects pending plays actually resolving
+    /// rather than a static estimate. Mirrors [`simulate_forward`]'s pick→apply→advance
+    /// loop but (a) iterates instead of recursing, (b) credits only realized
+    /// `play_progress_bonus` — intervening stalls/discards contribute nothing, so the
+    /// extension can never manufacture a tempo/stall penalty — and (c) records no PV.
+    ///
+    /// Runs only under the root truth simulation (`at_root_sim == true`); inner subjective
+    /// sub-searches keep the plain static leaf, which bounds cost and prevents nesting a
+    /// quiescence rollout inside every inner pick.
+    #[cfg(feature = "quiescence-search")]
+    #[allow(clippy::too_many_arguments)]
+    fn quiescence_rollout(
+        state: &KnowledgeAwareGameState,
+        static_data: &StaticGameData,
+        convention_set: &dyn ConventionSet,
+        evaluator: &dyn Evaluator,
+        observer: &dyn PlayerPOV,
+        phantom_plays: u8,
+        at_root_sim: bool,
+        budget: usize,
+    ) -> (Score, ScoreBreakdown) {
+        let mut cur = state.clone();
+        let mut phantom = phantom_plays;
+        let mut acc_play_bonus: Score = 0.0;
+        let mut remaining = budget;
+        // The tail begins one ply past the horizon, so its plays are the most-deferred of
+        // all. `elapsed` starts at the leaf depth (`root_depth`) and advances per tail ply,
+        // mirroring `immediate_action_bonus`'s `elapsed = root_depth - remaining_depth`.
+        let root_depth = (static_data.number_of_players as usize) * 2;
+        let mut elapsed = root_depth;
+
+        loop {
+            // Settle once quiet (no signalled play to cash), out of budget, or terminal.
+            if remaining == 0
+                || cur.table_state.is_terminal(static_data)
+                || !Self::has_uncashed_signalled_play(&cur, static_data, observer)
+            {
+                let breakdown = Self::leaf_breakdown(evaluator, &cur, observer, phantom);
+                return (breakdown.total + acc_play_bonus, breakdown);
+            }
+
+            let active = cur.table_state.active_player_index;
+            let observer_visible = observer.visible_cards();
+            let active_pk = cur.team_knowledge.player(active);
+            let effective_visible = observer_visible & active_pk.visible_cards;
+            let inner_pov = LightweightPlayerPOV::with_visible_cards(
+                active,
+                active_pk,
+                &cur.team_knowledge,
+                &cur.table_state,
+                static_data,
+                effective_visible,
+            );
+
+            // One ply of subjective lookahead is enough for a holder to cash a known play.
+            // `pick_subjective` with `depth = 1` recurses into `simulate_forward` at depth 0
+            // with `at_root_sim = false`, so the inner pick does not re-enter quiescence.
+            let Some(chosen) = Self::pick_subjective(
+                &cur,
+                static_data,
+                convention_set,
+                evaluator,
+                1,
+                &inner_pov,
+                at_root_sim,
+            ) else {
+                let breakdown = Self::leaf_breakdown(evaluator, &cur, observer, phantom);
+                return (breakdown.total + acc_play_bonus, breakdown);
+            };
+
+            let mut next = cur.clone();
+            let outcome: ActionOutcome = next.apply(
+                &chosen.action,
+                convention_set,
+                &mut TruthPovResolver::new(observer),
+            );
+            next.advance_turn();
+            let child_phantom = phantom + if outcome.is_phantom_play { 1 } else { 0 };
+
+            // Credit only realized play progress; stalls/discards contribute nothing. Apply the
+            // same deferred-play discount the in-horizon plies pay (`immediate_action_bonus`),
+            // continued past the leaf so a tail play is strictly worse than the identical play
+            // made earlier. Without this the tail is a penalty-free zone that re-opens the
+            // horizon-arbitrage the discount exists to close — just relocated past the leaf.
+            let mut play_bonus =
+                evaluator.play_progress_bonus(&chosen.action, &cur, &next, phantom, child_phantom);
+            if play_bonus > 0.0 {
+                play_bonus -= evaluator.play_deferral_penalty(elapsed);
+            }
+            acc_play_bonus += play_bonus;
+
+            cur = next;
+            phantom = child_phantom;
+            remaining -= 1;
+            elapsed += 1;
+        }
     }
 
     /// Dispatcher: selects between the recursive A-style and the priority-based
