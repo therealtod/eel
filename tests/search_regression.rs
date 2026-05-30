@@ -224,7 +224,6 @@ fn should_not_give_a_play_clue_that_looks_like_a_save() {
 }
 
 #[test]
-#[ignore]
 fn should_not_steal_a_play_clue_from_bob_and_rather_save_his_chop() {
     let action = search_best_action("avoid_stealing_clue");
     match action {

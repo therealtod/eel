@@ -57,13 +57,35 @@ pub trait PlayResolver {
 /// Search-mode resolver: uses truth-POV combined with empathy to determine play identity.
 ///
 /// Wraps the root searcher's POV. Zero-alloc on construction.
+///
+/// `observer` is the *planning self* in a recursive subjective sub-search (the inner player
+/// asking "what would happen if I took this line?"). It is consulted **only** for
+/// [`Self::resolve_discard`]: a teammate's blind discard of a card the planner can plainly
+/// see — e.g. a critical on chop — should register its true identity so the planner's
+/// evaluation accounts for the lost-ceiling consequence it genuinely foresees. It is never
+/// consulted for plays: that would let the planner's X-ray view of a teammate's hidden hand
+/// fabricate play successes the actor had no justified basis to earn.
 pub struct TruthPovResolver<'a> {
     truth: &'a dyn PlayerPOV,
+    observer: Option<&'a dyn PlayerPOV>,
 }
 
 impl<'a> TruthPovResolver<'a> {
     pub fn new(truth: &'a dyn PlayerPOV) -> Self {
-        Self { truth }
+        Self {
+            truth,
+            observer: None,
+        }
+    }
+
+    /// Construct a resolver that additionally lets the planning `observer` reveal discarded
+    /// card identities it can see (see the struct-level note). `truth` remains the acting
+    /// player's POV; `observer` is the inner player simulating the line.
+    pub fn with_observer(truth: &'a dyn PlayerPOV, observer: &'a dyn PlayerPOV) -> Self {
+        Self {
+            truth,
+            observer: Some(observer),
+        }
     }
 }
 
@@ -89,8 +111,23 @@ impl PlayResolver for TruthPovResolver<'_> {
                 None
             }
         });
-        // Truth override: prefer the root searcher's direct observation over empathy.
-        let id = self.truth.card_identity(card_deck_index).or(empathy_id);
+        // Truth override: prefer direct observation over empathy. The acting player's own
+        // sight comes first, then the planning observer's (see `with_observer`): a teammate
+        // simulating this line can foresee the real outcome of a play it can see — a clean
+        // play resolves as the true success, a foreseeable misplay (e.g. a bad touch) as a
+        // real strike — instead of the always-optimistic phantom. The observer can never see
+        // its own holder's hand (a player's `visible_cards` excludes itself), so the actor's
+        // *own* card still falls through to the phantom branches below and the decision-time
+        // POV stays blind. The observer is bounded by the search's effective-visibility
+        // restriction, so this never reveals the root player's hidden hand.
+        let id = self
+            .truth
+            .card_identity(card_deck_index)
+            .or_else(|| {
+                self.observer
+                    .and_then(|obs| obs.card_identity(card_deck_index))
+            })
+            .or(empathy_id);
         if let Some(card_id) = id {
             ResolvedPlay::Known(card_id)
         } else if let Some(card_id) = knowledge.committed_play_identity(card_deck_index) {
@@ -112,12 +149,19 @@ impl PlayResolver for TruthPovResolver<'_> {
         card_deck_index: CardDeckIndex,
         state: &KnowledgeAwareGameState,
     ) -> Option<VariantCardId> {
-        // Mirror `resolve_play`: truth-POV first, then the *actor's own* narrowed empathy.
-        // Never consult other players' team_knowledge — doing so would leak identities the
-        // actor cannot know in a subjective sub-search (e.g. Cathy discarding her own
-        // untouched chop should not resolve as a concrete card just because teammates can
-        // see it). The pile then records an empathically-wide hole, so downstream
-        // critical-mask reasoning doesn't get a free setup it couldn't have foreseen.
+        // Resolve in order of decreasing justification:
+        //   1. the acting player's own direct sight (their truth-POV);
+        //   2. the planning observer's direct sight, if any (see `with_observer`): a teammate
+        //      simulating this line can foresee which physical card leaves the game even when
+        //      the actor discards blindly, so a critical they can see being thrown away must
+        //      register its true identity for lost-ceiling accounting;
+        //   3. the actor's *own* narrowed empathy.
+        // We still never consult *other players'* team_knowledge directly — only the
+        // observer's literal sight, which is bounded by the search's effective-visibility
+        // restriction (the observer cannot see the root player's hidden hand). When the
+        // actor discards a card no one in the line can see, the pile records an
+        // empathically-wide hole, so downstream critical-mask reasoning doesn't get a free
+        // setup it couldn't have foreseen.
         let combined = state
             .team_knowledge
             .player(player_index)
@@ -128,6 +172,10 @@ impl PlayResolver for TruthPovResolver<'_> {
             );
         self.truth
             .card_identity(card_deck_index)
+            .or_else(|| {
+                self.observer
+                    .and_then(|obs| obs.card_identity(card_deck_index))
+            })
             .or_else(|| combined.known_card_id())
     }
 

@@ -406,12 +406,16 @@ impl TreeActionSelectionStrategy {
 
         // Resolution policy depends on whether we're in the root simulation or in a
         // recursive subjective sub-search (see this function's `at_root_sim` doc-comment).
-        // At the root, `observer` is the true root POV — using it lets bad-touch
-        // follow-ons resolve as real strikes. Inside a recursive sub-search, `observer`
-        // is the outer planning self (an inner player) who can see the active player's
-        // hand; using it there would let plays of the active player's own hidden cards
-        // falsely resolve as known successes. Under [`SubjectivePolicy::Priority`] the
-        // recursive sub-search never fires, so `at_root_sim` is always `true`.
+        // At the root, `observer` is the true root POV — resolving against it lets bad-touch
+        // follow-ons resolve as real strikes. Inside a recursive sub-search the *acting*
+        // player's POV drives the decision, but resolution additionally consults the planning
+        // `observer` (an inner player) for what it can already see — so a teammate's play or
+        // discard resolves to its true consequence rather than an optimistic phantom. This is
+        // safe because the observer can never see its own holder's hand, nor (via the
+        // effective-visibility bound) the root player's hand, so neither the actor's
+        // decision-time POV nor the root decision can use information it shouldn't. Under
+        // [`SubjectivePolicy::Priority`] the recursive sub-search never fires, so
+        // `at_root_sim` is always `true`.
         let mut next = state.clone();
         let outcome: ActionOutcome = if at_root_sim {
             next.apply(
@@ -420,10 +424,18 @@ impl TreeActionSelectionStrategy {
                 &mut TruthPovResolver::new(observer),
             )
         } else {
+            // Subjective sub-search: the *acting* player's POV drives the decision (candidate
+            // generation above), but resolution also consults the planning `observer` so the
+            // planner sees the real consequences of what it can already observe — a teammate's
+            // discarded critical registering its lost ceiling, or a teammate's play resolving
+            // to its true success/strike instead of an always-optimistic phantom. The observer
+            // can never see its own holder's hand or (via the effective-visibility bound) the
+            // root player's hand, so the actor's own cards stay hidden at decision time and no
+            // root-hand information leaks back. See [`TruthPovResolver::with_observer`].
             next.apply(
                 &chosen.action,
                 convention_set,
-                &mut TruthPovResolver::new(&inner_pov),
+                &mut TruthPovResolver::with_observer(&inner_pov, observer),
             )
         };
         next.advance_turn();
