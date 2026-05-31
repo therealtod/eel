@@ -1,0 +1,27 @@
+{
+  "scenario_description": "3p, empty stacks, player 0 on turn. Player 0 slot 1 (deck 4) is R1, inferred and directly playable. The downstream is deliberately 'dry and dangerous': Bob and Cathy hold only fully-clued high cards (all five 5s and the four-rank) with no playable card anywhere on the board, and only 2 clue tokens remain, so within the search horizon the team is forced toward catastrophic discards. A horizon-stalling engine would give a wasteful re-clue to push that foreseen discard past the horizon; the correct action is simply to cash the known R1 (deck 4).",
+  "suits": ["red", "yellow", "green", "blue", "purple"],
+  "playing_stacks": [[], [], [], [], []],
+  "discard_pile": [],
+  "clue_tokens": 2,
+  "strikes": 0,
+  "active_player": 0,
+  "hands": [
+    [{"id": "r1", "inferred": "r1"}, "x", "x", "x", "x"],
+    [
+      {"id": "r5", "positive": ["red", "5"], "inferred": "r5"},
+      {"id": "y5", "positive": ["yellow", "5"], "inferred": "y5"},
+      {"id": "g5", "positive": ["green", "5"], "inferred": "g5"},
+      {"id": "b5", "positive": ["blue", "5"], "inferred": "b5"},
+      {"id": "p5", "positive": ["purple", "5"], "inferred": "p5"}
+    ],
+    [
+      {"id": "r4", "positive": ["red", "4"], "inferred": "r4"},
+      {"id": "y4", "positive": ["yellow", "4"], "inferred": "y4"},
+      {"id": "g4", "positive": ["green", "4"], "inferred": "g4"},
+      {"id": "b4", "positive": ["blue", "4"], "inferred": "b4"},
+      {"id": "p4", "positive": ["purple", "4"], "inferred": "p4"}
+    ]
+  ],
+  "prior_actions": []
+}

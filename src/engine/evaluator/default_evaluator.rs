@@ -217,6 +217,31 @@ pub struct DefaultEvaluator {
     ///
     /// Set to 0 to disable.
     pub play_deferral_weight: f64,
+    /// Multiplier for the **future-potential** leaf term: `future_potential_weight * clue_demand`,
+    /// where `clue_demand = Σ_{untouched cards} max(P(playable), P(critical))` (see
+    /// [`Self::clue_demand`]). This is the independent-leaf-term fix for the search-horizon
+    /// "dry state" effect: it credits the *statistical* expected value of unclued cards in hands —
+    /// including freshly drawn cards, which the search otherwise treats as having zero action value.
+    ///
+    /// The existing `clue_demand` was only ever consumed as a *multiplier* on the clue-token term
+    /// (`clue_token_weight * harmonic(n) * (1 + clue_demand_weight * demand)`), so its credit
+    /// collapsed to ~0 whenever the team had no tokens (`harmonic(0) = 0`) — exactly the dry,
+    /// token-starved positions where the horizon artifact bites. Surfacing the same probability
+    /// mass as a standalone term makes leaf valuations depth-stable: a line that cashes a play and
+    /// draws a fresh card no longer scores worse purely because the new card is unknown.
+    ///
+    /// EV interpretation: `clue_demand` sums `P(playable)`-style mass per untouched card, so with
+    /// `future_potential_weight ≈ known_playable_weight` an unknown card is valued at
+    /// `P(playable) × (known-playable value)`, consistent with how a *known* playable scores 1.0.
+    ///
+    /// **Disabled by default (`0.0`), pending evidence.** The full suite passes at default depth
+    /// with this active at `0.5` or `1.0` (no regressions), but a depth-increase experiment showed
+    /// it does *not* resolve the residual horizon failures: across competing root lines the term is
+    /// a near-constant offset (e.g. `+2.9` vs `+3.0`), so it cannot rebalance them. Those failures
+    /// are driven by `game_score`-term dominance over long speculative play-cascades that deeper
+    /// search uncovers — a distinct artifact this term was not designed to address. Kept here as a
+    /// tunable, well-behaved leaf term: set `> 0` to re-enable.
+    pub future_potential_weight: f64,
 }
 
 impl Default for DefaultEvaluator {
@@ -244,6 +269,7 @@ impl Default for DefaultEvaluator {
             critical_exposure_delta_weight: 0.5_f64,
             tempo_cost_weight: 2.5_f64,
             play_deferral_weight: 0.15_f64,
+            future_potential_weight: 0.0_f64,
         }
     }
 }

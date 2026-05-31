@@ -340,3 +340,29 @@ fn should_prefer_finesse_if_no_drawback() {
         panic!("Alice choose the following action: {:?}", action);
     }
 }
+
+// Residual horizon-stall probe. Alice holds a directly-playable known R1 (deck 4) on
+// empty stacks. The downstream is deliberately dry and critical-laden: Bob and Cathy
+// hold only fully-clued 5s and 4s with no play available anywhere, and only 2 clue
+// tokens remain, so the search foresees forced, catastrophic discards a few plies out.
+// This is the "dry state" horizon artifact described in
+// scratchpads/horizon_effect_fix_implementation_plan.md: a stalling engine would give a
+// wasteful re-clue to push the foreseen discard past the horizon instead of cashing the
+// free play. After the deferred-play discount (1579645) and stall-quiescence (a070faa),
+// the engine should simply play R1. This test exists to measure whether any residual
+// stalling survives those fixes; if it ever regresses, the residual is real and a
+// future-potential evaluator term (option 1 in the plan) becomes worth revisiting.
+#[test]
+fn plays_known_playable_despite_critical_dry_downstream() {
+    let action = search_best_action("plays_known_playable_despite_critical_dry_downstream");
+    assert!(
+        matches!(
+            action,
+            GameAction::Play {
+                card_deck_index: 4,
+                ..
+            }
+        ),
+        "expected play of known R1 (deck 4) rather than a horizon-driven stall, got: {action:?}"
+    );
+}

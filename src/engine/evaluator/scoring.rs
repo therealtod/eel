@@ -53,6 +53,7 @@ impl super::Evaluator for DefaultEvaluator {
                 misinformation_penalty: 0.0,
                 critical_exposure_delta: 0.0,
                 tempo_cost: 0.0,
+                future_potential: 0.0,
                 total: game_score - strike_penalty,
             };
         }
@@ -85,12 +86,24 @@ impl super::Evaluator for DefaultEvaluator {
         };
         let harmonic_value =
             DefaultEvaluator::harmonic(table_state.clue_token_bank.whole_clue_tokens_count());
+        // Compute clue_demand once; it feeds both the (token-coupled) demand multiplier and the
+        // standalone future-potential term. Skip the work only when neither consumer is active.
+        let demand = if self.clue_demand_weight != 0.0 || self.future_potential_weight != 0.0 {
+            DefaultEvaluator::clue_demand(table_state, static_data)
+        } else {
+            0.0
+        };
         let demand_factor = if self.clue_demand_weight != 0.0 {
-            1.0 + self.clue_demand_weight * DefaultEvaluator::clue_demand(table_state, static_data)
+            1.0 + self.clue_demand_weight * demand
         } else {
             1.0
         };
         let clue_tokens = self.clue_token_weight * harmonic_value * demand_factor;
+        // Future-potential: the same demand mass, but as an independent leaf term that does NOT
+        // vanish when the clue bank is empty. Credits the statistical EV of unclued/fresh cards so
+        // the search stops treating draw-heavy lines as dry catastrophes. See
+        // `DefaultEvaluator::future_potential_weight`.
+        let future_potential = self.future_potential_weight * demand;
         let known_playable = if self.known_playable_weight != 0.0 {
             self.known_playable_weight
                 * DefaultEvaluator::known_playable_in_hands(
@@ -124,7 +137,8 @@ impl super::Evaluator for DefaultEvaluator {
             + empathy_bonus
             + clue_tokens
             + known_playable
-            - misinformation_penalty;
+            - misinformation_penalty
+            + future_potential;
         ScoreBreakdown {
             game_score,
             strike_penalty,
@@ -139,6 +153,7 @@ impl super::Evaluator for DefaultEvaluator {
             misinformation_penalty,
             critical_exposure_delta: 0.0,
             tempo_cost: 0.0,
+            future_potential,
             total,
         }
     }
@@ -490,8 +505,15 @@ impl super::Evaluator for DefaultEvaluator {
             * DefaultEvaluator::harmonic(crate::game::MAX_CLUE_TOKEN_COUNT)
             * max_demand;
         let max_known_playable = self.known_playable_weight * total_cards as f64;
-        let max_leaf =
-            max_game_score - min_strike_penalty + max_pace + max_clue_tokens + max_known_playable;
+        // Each untouched card contributes at most 1.0 to `clue_demand` (overlap ≤ possibilities),
+        // so the future-potential term is bounded by `weight * total_cards`. Including it keeps the
+        // bound admissible (≥ any achievable leaf) so Branch-and-Bound pruning stays correct.
+        let max_future_potential = self.future_potential_weight * total_cards as f64;
+        let max_leaf = max_game_score - min_strike_penalty
+            + max_pace
+            + max_clue_tokens
+            + max_known_playable
+            + max_future_potential;
         let max_immediate_per_ply = self.play_progress_weight
             + self.clue_precision_weight * total_cards as f64
             + self.team_empathy_weight * total_cards as f64

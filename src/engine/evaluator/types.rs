@@ -48,6 +48,10 @@ pub struct ScoreBreakdown {
     /// Always 0.0 at a pure leaf evaluation — the value is folded in by `tempo_cost` as the
     /// search walks each ply.
     pub tempo_cost: f64,
+    /// `future_potential_weight * clue_demand` — depth-stable statistical EV of untouched cards
+    /// in hands (including fresh draws), decoupled from the clue-token bank. See
+    /// [`super::default_evaluator::DefaultEvaluator::future_potential_weight`].
+    pub future_potential: f64,
     /// Sum of all terms above.
     pub total: f64,
 }
@@ -56,7 +60,7 @@ impl std::fmt::Display for ScoreBreakdown {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "total={:.2} [score={:.1} -strike={:.1} +pace={:.1} -eff={:.1} -crit_exp={:.1} -ceil={:.1} +emp={:.1} +clue={:.1} +play={:.1} +team_emp={:.1} -misinfo={:.1} ±crit_delta={:.1} -tempo={:.1}]",
+            "total={:.2} [score={:.1} -strike={:.1} +pace={:.1} -eff={:.1} -crit_exp={:.1} -ceil={:.1} +emp={:.1} +clue={:.1} +play={:.1} +team_emp={:.1} -misinfo={:.1} ±crit_delta={:.1} -tempo={:.1} +future={:.1}]",
             self.total,
             self.game_score,
             self.strike_penalty,
@@ -71,6 +75,7 @@ impl std::fmt::Display for ScoreBreakdown {
             self.misinformation_penalty,
             self.critical_exposure_delta,
             self.tempo_cost,
+            self.future_potential,
         )
     }
 }
@@ -115,6 +120,7 @@ pub trait Evaluator: Send + Sync {
             misinformation_penalty: 0.0,
             critical_exposure_delta: 0.0,
             tempo_cost: 0.0,
+            future_potential: 0.0,
             total: self.score(state, truth, phantom_plays),
         }
     }
