@@ -45,7 +45,7 @@ use eel::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet
 use eel::engine::knowledge::player_pov::PlayerPOV;
 use eel::engine::replay::reconstruct::ReplayRunner;
 use eel::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
-use eel::external::hanablive::Game;
+use eel::hanablive::dto::game::Game;
 
 #[test]
 fn diag_<short_name>() {
@@ -165,6 +165,84 @@ Read the PVs for the actual choice and its losing rivals side-by-side: an unexpe
 `PlayKnownPlayable` of a trash card in the PV, or two lines converging on the same total
 score (a tie broken by enumeration order), tells you exactly which layer to fix.
 
+## Isolating the responsible evaluator term (weight-isolation sweep)
+
+When a clue/discard outscores an obviously-correct play and you don't yet know *which*
+leaf term is doing it, **re-run `scored_actions` with one evaluator weight zeroed or bumped
+at a time** and watch whether the ranking moves. This is the cheapest, most decisive probe
+— it falsifies whole hypotheses in one run (e.g. "is `known_playable` double-counting
+duplicates the cause?" — zero its weight; if the totals don't budge, it isn't).
+
+```rust
+let probe = |label: &str, mutate: &dyn Fn(&mut DefaultEvaluator)| {
+    let mut ev = DefaultEvaluator::default();
+    mutate(&mut ev);
+    let strat = TreeActionSelectionStrategy { evaluator: Box::new(ev) };
+    println!("\n--- {label} ---");
+    for n in strat.scored_actions(&pov, &conv).iter().take(4) {
+        println!("  total={:.4} action={:?}", n.total_score, n.action);
+    }
+};
+probe("baseline", &|_| {});
+probe("known_playable_weight=0", &|ev| ev.known_playable_weight = 0.0);
+probe("potential_bad_touch_penalty=30", &|ev| ev.potential_bad_touch_penalty = 30.0);
+```
+
+Interpreting it: a weight whose change **moves the total by exactly `Δweight × N`** is being
+applied to `N` units of that term (e.g. bumping `potential_bad_touch_penalty` by 25 and
+seeing the clue drop by exactly 25 proves the penalty *is* firing — so a *missing* penalty
+is not your bug). A weight whose change **leaves the ranking identical** is not the
+differentiator, even if it sounds plausible — cross it off and move on.
+
+## Reconstructing a leaf directly (depth-0 and full-PV)
+
+The `total_score` in `scored_actions` is `immediate_bonus + leaf`, where `leaf` is the
+evaluator's verdict on a state reached *after a full rollout*. To separate "what the leaf
+evaluator thinks of the immediate position" from "what the rollout does to it," replay an
+action sequence yourself and dump the leaf breakdown. Use
+[`TreeActionSelectionStrategy::replay_leaf_breakdown`] — it does the clone-then-borrow dance
+for you and resolves each play with the *acting* player's own POV (ambiguous-but-playable →
+phantom play), exactly as the inner sub-search does:
+
+```rust
+let strategy = TreeActionSelectionStrategy::default();
+// depth-0: one root action, NO rollout — isolates the leaf evaluator's verdict.
+let (bd, phantom) = strategy.replay_leaf_breakdown(&pov, &conv, &[clue_action.clone()]);
+println!("depth-0 leaf (phantom={phantom}): {bd}");
+// full PV: replay a specific line and see where it ACTUALLY lands.
+let (bd, _) = strategy.replay_leaf_breakdown(&pov, &conv, &pv_actions);
+println!("full-line leaf: {bd}");
+```
+
+This is what catches a search that **hallucinates value mid-rollout**: if depth-0 ranks the
+play correctly but `scored_actions` inverts it, the bug is in the rollout, not the leaf — and
+comparing the search's internal `total` against an honest `replay_leaf_breakdown` of the same
+PV quantifies the over/under-credit. (A large gap with the recursive subjective policy is the
+"compound POV-restriction error at deep plies" the policy is documented to risk.)
+
+## The `search-diagnostic` feature (inner-rollout firehose)
+
+When the leaf and depth-0 checks point at the rollout, turn on the `search-diagnostic`
+Cargo feature. It makes `scored_actions` dump **every candidate every inner simulated player
+considers**, with each one's `immediate`, `subtree_score`, `score`, `leaf` breakdown, PV
+`line`, and `outer`/inner flag:
+
+```bash
+cargo test --test _diag diag_<name> --features search-diagnostic -- --nocapture
+```
+
+It is a firehose — thousands of lines for a single position — so reach for it **only after**
+the weight sweep and leaf reconstruction have narrowed the question to "what does the rollout
+actually pick, and why." Reading tips:
+
+- Output is **scored sequentially under this feature** (parallelism is disabled) and each
+  root candidate is preceded by a `===== ROOT CANDIDATE: … =====` banner, so everything
+  between two banners belongs to that one root line. Grep for the banner to index the dump.
+- Filter aggressively: `grep "subjective_candidate_evaluated" | grep "outer=true"` for the
+  top-level picks, or grep a specific `action=Play { … card_deck_index: 9 …`.
+- The `leaf=` field is the same `ScoreBreakdown` Display as everywhere else, so a phantom
+  double-count (score advancing twice for one identity) or a missing strike jumps out.
+
 ## Dumping a sub-search
 
 When the suspect decision is mid-rollout (not at the root), construct the intermediate
@@ -185,15 +263,9 @@ state.advance_turn();
 ```
 
 The clone-then-borrow gymnastics are needed because `apply` takes `&mut self.state`
-while the truth POV holds `&` borrows of the same fields.
-
-> [!TIP]
-> **Leveraging the `search-diagnostic` Feature:**
-> When calling `scored_actions` during a diagnostic test, you can enable the `search-diagnostic` Cargo feature to automatically dump every alternative action considered by inner simulated players, alongside their PV lines, leaf breakdowns, and whether the evaluation is outer or inner. Simply run your diagnostic with:
-> ```bash
-> cargo test --test _diag diag_<name> --features search-diagnostic -- --nocapture
-> ```
-
+while the truth POV holds `&` borrows of the same fields. For the common "replay a line and
+read the leaf" case, prefer [`TreeActionSelectionStrategy::replay_leaf_breakdown`] (see
+"Reconstructing a leaf directly" above) instead of hand-rolling this.
 
 ## Scenario tests, not just replays
 

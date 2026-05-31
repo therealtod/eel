@@ -423,11 +423,34 @@ impl PlayerKnowledge {
             .as_bits();
         let mut mask = baseline;
         // Group hypotheses by cohort, union per cohort, intersect across cohorts.
-        // Only tier-0 (active primary) hypotheses contribute; tier-1 (dormant fallback)
-        // are ignored until promoted.
+        //
+        // A hypothesis contributes to its cohort's union when it is either tier-0 (the active
+        // primary interpretation) OR a settled *co-alternative*: an unconditional tier-1
+        // hypothesis whose cohort's primary is itself unconditional.
+        //
+        // This matters when a higher-priority tech demotes a still-valid alternative to tier-1:
+        // e.g. a rank-2 clue that a 2-Save (priority 0) reads as `{R2,Y2,G2}` while
+        // DirectPlayClue (priority 1) reads as `{B2,P2}`. Both readings are settled (neither
+        // awaits a blind play), and from the receiver's POV both are genuine alternatives, so the
+        // empathy must *accumulate* them — otherwise the true identity is permanently excluded
+        // (an unconditional tier-1 hypothesis has no trigger that could ever promote it).
+        //
+        // The exception is a *pending finesse/prompt*: there the tier-0 primary is provisional
+        // and the tier-1 unconditional is a real fallback that must stay dormant until the
+        // primary is rejected (see `rejection_promotes_tier1_fallback`). We detect that by
+        // whether the cohort's primary tier is provisional.
+        let pending_primary_cohorts: Vec<HypothesisId> = self
+            .hypotheses
+            .iter()
+            .filter(|h| h.tier == 0 && h.trigger.is_some())
+            .map(|h| h.cohort_id)
+            .collect();
+        let contributes = |h: &TrackedHypothesis| {
+            h.tier == 0 || (h.trigger.is_none() && !pending_primary_cohorts.contains(&h.cohort_id))
+        };
         let mut visited_cohorts: Vec<HypothesisId> = Vec::new();
         for h in &self.hypotheses {
-            if h.tier != 0 {
+            if !contributes(h) {
                 continue;
             }
             if visited_cohorts.contains(&h.cohort_id) {
@@ -439,7 +462,7 @@ impl PlayerKnowledge {
             for sibling in self
                 .hypotheses
                 .iter()
-                .filter(|s| s.cohort_id == h.cohort_id && s.tier == 0)
+                .filter(|s| s.cohort_id == h.cohort_id && contributes(s))
             {
                 for u in &sibling.immediate {
                     if let KnowledgeUpdate::NarrowPossibilities {
@@ -807,6 +830,47 @@ mod tests {
             after & mask_b,
             0,
             "tier-1 fallback should be active after promotion"
+        );
+    }
+
+    /// A higher-priority tech can demote a still-valid *unconditional* alternative to
+    /// tier-1: e.g. a 2-Save (priority 0) reading `{R2,Y2,G2}` outranks a DirectPlayClue
+    /// (priority 1) reading `{B2,P2}` on the same rank-2 focus. Because the tier-1
+    /// hypothesis is unconditional — no trigger could ever promote it — its identities must
+    /// still be *accumulated* into the receiver's empathy, not excluded; otherwise the true
+    /// identity (here the directly-playable P2) is permanently lost. Contrast
+    /// `rejection_promotes_tier1_fallback`, where the tier-0 primary is *provisional* and the
+    /// unconditional tier-1 fallback correctly stays dormant until the primary is rejected.
+    #[test]
+    fn unconditional_tier1_alternative_accumulates_into_empathy() {
+        let variant = &NO_VARIANT;
+        let save_mask: u64 = (1 << 1) | (1 << 6) | (1 << 11); // {R2,Y2,G2}
+        let play_mask: u64 = (1 << 16) | (1 << 21); // {B2,P2}
+        let card: CardDeckIndex = 5;
+
+        let mut pk = PlayerKnowledge::new(0);
+        pk.own_hand = 1 << card;
+        pk.inferred_identities[card as usize] =
+            Some(CardIdentityMask::from_bits(save_mask | play_mask));
+        let mut next_id: HypothesisId = 0;
+
+        // Save is tier-0 (higher priority); the play reading is demoted to tier-1. Both are
+        // unconditional (neither awaits a blind play).
+        let save = Hypothesis::unconditional(vec![KnowledgeUpdate::NarrowPossibilities {
+            card_deck_index: card,
+            mask: save_mask,
+        }]);
+        let play = Hypothesis::unconditional(vec![KnowledgeUpdate::NarrowPossibilities {
+            card_deck_index: card,
+            mask: play_mask,
+        }]);
+        pk.apply_cohort(0, vec![(0, save), (1, play)], &mut next_id, variant);
+
+        let eff = pk.effective_inferred_mask(card, variant).as_bits();
+        assert_eq!(
+            eff,
+            save_mask | play_mask,
+            "unconditional tier-1 co-alternative must accumulate into the empathy union"
         );
     }
 

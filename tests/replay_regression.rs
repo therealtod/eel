@@ -188,3 +188,31 @@ fn should_not_steal_clue() {
         _ => println!("Bob chose the following action: {:?}", action),
     }
 }
+
+#[test]
+fn should_play_all_1s() {
+    let action = engine_action_at_turn("should_play_all_1s.json", 8);
+    match action {
+        GameAction::Play {
+            player_index: 1,
+            card_deck_index: 7,
+            ..
+        } => {
+            println!(
+                "Bob played one of his unknown 1s (y1). Action: {:?}",
+                action
+            );
+        }
+        GameAction::Play {
+            player_index: 1,
+            card_deck_index: 9,
+            ..
+        } => {
+            println!(
+                "Bob played one of his unknown 1s (g1). Action: {:?}",
+                action
+            );
+        }
+        _ => panic!("Bob chose the following action: {:?}", action),
+    }
+}

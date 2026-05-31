@@ -16,6 +16,9 @@ use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
 use crate::engine::play_resolver::TruthPovResolver;
 use crate::game::action::game_action::GameAction;
 use crate::game::static_game_data::StaticGameData;
+// Parallel candidate scoring is disabled under `search-diagnostic` (sequential output is
+// readable and attributable), so the rayon prelude is only needed in normal builds.
+#[cfg(not(feature = "search-diagnostic"))]
 use rayon::prelude::*;
 use smallvec::SmallVec;
 
@@ -955,6 +958,66 @@ impl ActionSelectionStrategy for TreeActionSelectionStrategy {
 }
 
 impl TreeActionSelectionStrategy {
+    /// Diagnostic helper: replay `actions` from `pov` and return the leaf
+    /// [`ScoreBreakdown`] of the resulting state, plus the number of phantom plays
+    /// accumulated along the way.
+    ///
+    /// Each action is resolved with the *acting* player's own POV as truth — exactly as the
+    /// inner subjective sub-search does — so an ambiguous-but-playable card resolves as a
+    /// phantom play rather than committing a specific stack. This lets a diagnostic compare
+    /// what the search *internally* credits a line against where that same line actually lands:
+    ///
+    /// - Pass a **single-action** slice to get the depth-0 child leaf — one root action, no
+    ///   rollout — isolating the leaf evaluator's verdict from any continuation.
+    /// - Pass a full **principal variation** to see the leaf a specific line truly reaches.
+    ///
+    /// Encapsulates the clone-then-borrow dance otherwise required because [`apply`] takes
+    /// `&mut state` while the truth POV borrows the same fields.
+    ///
+    /// [`apply`]: KnowledgeAwareGameState::apply
+    pub fn replay_leaf_breakdown(
+        &self,
+        pov: &dyn PlayerPOV,
+        convention_set: &dyn ConventionSet,
+        actions: &[GameAction],
+    ) -> (ScoreBreakdown, u8) {
+        let static_data = pov.static_data();
+        let observer = pov.active_player_index();
+        let table_state = pov.table_state().clone();
+        let next_deck_index =
+            (crate::game::MAX_CARDS_IN_DECK as u8) - table_state.deck.current_size;
+        let mut state = KnowledgeAwareGameState::from_parts(
+            static_data.clone(),
+            table_state,
+            pov.team_knowledge().clone(),
+            next_deck_index,
+        );
+        let mut phantom_plays = 0u8;
+        for action in actions {
+            let actor = state.table_state().active_player_index;
+            // Clone the fields the truth POV borrows so `apply` can take `&mut state`.
+            let actor_knowledge = state.team_knowledge.player(actor).clone();
+            let team = state.team_knowledge.clone();
+            let table = state.table_state().clone();
+            let truth =
+                LightweightPlayerPOV::new(actor, &actor_knowledge, &team, &table, static_data);
+            let outcome = state.apply(action, convention_set, &mut TruthPovResolver::new(&truth));
+            if outcome.is_phantom_play {
+                phantom_plays += 1;
+            }
+            state.advance_turn();
+        }
+        let observer_knowledge = state.team_knowledge.player(observer).clone();
+        let team = state.team_knowledge.clone();
+        let table = state.table_state().clone();
+        let truth =
+            LightweightPlayerPOV::new(observer, &observer_knowledge, &team, &table, static_data);
+        let breakdown = self
+            .evaluator
+            .score_breakdown(&state, &truth, phantom_plays);
+        (breakdown, phantom_plays)
+    }
+
     /// Score every root candidate and return the list, sorted best-first.
     /// Useful for debugging: lets callers inspect why the engine chose a particular action.
     pub fn scored_actions(
@@ -983,79 +1046,97 @@ impl TreeActionSelectionStrategy {
             candidates = candidates.len(),
         );
         let subtree_depth = depth - 1;
+        let eval_candidate = |proposed: ProposedAction| -> ScoredNode {
+            let _guard = span.clone().entered();
+            let root_knowledge = root_state.team_knowledge.player(root_player).clone();
+            let truth_pov = LightweightPlayerPOV::new(
+                root_player,
+                &root_knowledge,
+                &root_state.team_knowledge,
+                root_state.table_state(),
+                static_data,
+            );
+            let mut next = root_state.clone();
+            let outcome: ActionOutcome = next.apply(
+                &proposed.action,
+                convention_set,
+                &mut TruthPovResolver::new(&truth_pov),
+            );
+            next.advance_turn();
+            let child_phantom = if outcome.is_phantom_play { 1 } else { 0 };
+            let immediate_bonus = Self::immediate_action_bonus(
+                &proposed.action,
+                evaluator,
+                &root_state,
+                &next,
+                static_data,
+                &truth_pov,
+                0,
+                child_phantom,
+                depth,
+            );
+            let mut pv_table = PvTable::new(subtree_depth);
+            let (leaf_score, leaf_breakdown) = Self::simulate_forward(
+                &next,
+                static_data,
+                convention_set,
+                evaluator,
+                subtree_depth,
+                &mut pv_table,
+                &truth_pov,
+                child_phantom,
+                true,
+            );
+            let total = leaf_score + immediate_bonus;
+            let pv = pv_table.pv_at(subtree_depth);
+            let mut line = Vec::with_capacity(pv.len() + 1);
+            line.push(LineStep {
+                action: proposed.action.clone(),
+                tech_name: proposed.tech_name,
+                immediate_bonus,
+            });
+            line.extend_from_slice(pv);
+            tracing::debug!(
+                target: "eel::search",
+                action = ?proposed.action,
+                tech = proposed.tech_name,
+                priority = proposed.priority,
+                leaf_score,
+                immediate_bonus,
+                total,
+                leaf = %leaf_breakdown,
+                line = ?line,
+                "candidate_scored",
+            );
+            ScoredNode::leaf(
+                proposed.action,
+                total,
+                proposed.tech_name,
+                line,
+                leaf_breakdown,
+            )
+        };
+        // Under the diagnostic feature, score candidates sequentially and print a banner per
+        // root candidate. This keeps each candidate's inner subjective-sub-search dump
+        // contiguous and attributable, instead of rayon-interleaving the 6k-line firehose
+        // across candidates with no way to tell which root they belong to.
+        #[cfg(feature = "search-diagnostic")]
+        let mut nodes: Vec<ScoredNode> = candidates
+            .into_vec()
+            .into_iter()
+            .map(|proposed| {
+                println!(
+                    "\n===================== ROOT CANDIDATE: {:?} (tech={}) =====================",
+                    proposed.action, proposed.tech_name
+                );
+                eval_candidate(proposed)
+            })
+            .collect();
+        #[cfg(not(feature = "search-diagnostic"))]
         let mut nodes: Vec<ScoredNode> = candidates
             .into_vec()
             .into_par_iter()
-            .map(|proposed| {
-                let _guard = span.clone().entered();
-                let root_knowledge = root_state.team_knowledge.player(root_player).clone();
-                let truth_pov = LightweightPlayerPOV::new(
-                    root_player,
-                    &root_knowledge,
-                    &root_state.team_knowledge,
-                    root_state.table_state(),
-                    static_data,
-                );
-                let mut next = root_state.clone();
-                let outcome: ActionOutcome = next.apply(
-                    &proposed.action,
-                    convention_set,
-                    &mut TruthPovResolver::new(&truth_pov),
-                );
-                next.advance_turn();
-                let child_phantom = if outcome.is_phantom_play { 1 } else { 0 };
-                let immediate_bonus = Self::immediate_action_bonus(
-                    &proposed.action,
-                    evaluator,
-                    &root_state,
-                    &next,
-                    static_data,
-                    &truth_pov,
-                    0,
-                    child_phantom,
-                    depth,
-                );
-                let mut pv_table = PvTable::new(subtree_depth);
-                let (leaf_score, leaf_breakdown) = Self::simulate_forward(
-                    &next,
-                    static_data,
-                    convention_set,
-                    evaluator,
-                    subtree_depth,
-                    &mut pv_table,
-                    &truth_pov,
-                    child_phantom,
-                    true,
-                );
-                let total = leaf_score + immediate_bonus;
-                let pv = pv_table.pv_at(subtree_depth);
-                let mut line = Vec::with_capacity(pv.len() + 1);
-                line.push(LineStep {
-                    action: proposed.action.clone(),
-                    tech_name: proposed.tech_name,
-                    immediate_bonus,
-                });
-                line.extend_from_slice(pv);
-                tracing::debug!(
-                    target: "eel::search",
-                    action = ?proposed.action,
-                    tech = proposed.tech_name,
-                    priority = proposed.priority,
-                    leaf_score,
-                    immediate_bonus,
-                    total,
-                    leaf = %leaf_breakdown,
-                    line = ?line,
-                    "candidate_scored",
-                );
-                ScoredNode::leaf(
-                    proposed.action,
-                    total,
-                    proposed.tech_name,
-                    line,
-                    leaf_breakdown,
-                )
-            })
+            .map(eval_candidate)
             .collect();
         nodes.sort_by(|a, b| b.total_score.total_cmp(&a.total_score));
         nodes

@@ -23,7 +23,7 @@ use eel::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet
 use eel::engine::knowledge::player_pov::PlayerPOV;
 use eel::engine::replay::reconstruct::ReplayRunner;
 use eel::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
-use eel::external::hanablive::Game;
+use eel::hanablive::dto::game::Game;
 
 #[test]
 fn diag_${NAME}() {
