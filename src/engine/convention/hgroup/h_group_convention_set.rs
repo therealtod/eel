@@ -1,6 +1,6 @@
 use crate::engine::convention::convention_set::ConventionSet;
 use crate::engine::convention::convention_tech::ConventionTech;
-use crate::engine::convention::hgroup::h_group_core::good_touch_baseline_mask;
+use crate::engine::convention::hgroup::h_group_core::good_touch_receiver_masks;
 use crate::engine::convention::hgroup::tech::blind_play::BlindPlay;
 use crate::engine::convention::hgroup::tech::clue_burn::ClueBurn;
 use crate::engine::convention::hgroup::tech::critical_save::{ColorCriticalSave, RankCriticalSave};
@@ -78,13 +78,11 @@ impl ConventionSet for HGroupConventionSet {
         &self,
         clue: &Clue,
         touched: &[CardDeckIndex],
+        focus: Option<CardDeckIndex>,
         receiver: PlayerIndex,
         table_state: &TableState,
         static_data: &StaticGameData,
     ) -> Vec<(CardDeckIndex, VariantCardsBitField)> {
-        let Some(mask) = good_touch_baseline_mask(clue, receiver, table_state, static_data) else {
-            return Vec::new();
-        };
-        touched.iter().map(|&idx| (idx, mask)).collect()
+        good_touch_receiver_masks(clue, touched, focus, receiver, table_state, static_data)
     }
 }

@@ -283,10 +283,26 @@ fn should_prioritize_demonstrating_finesse() {
             player_index: 0,
             card_deck_index: 3,
             ..
-        } => println!("Alice blind-played y1 from her finesse position. Action: {:?}", action),
-        _ => panic!(
-            "Alice chose the following action. Action: {:?}",
+        } => println!(
+            "Alice blind-played y1 from her finesse position. Action: {:?}",
             action
         ),
+        _ => panic!("Alice chose the following action. Action: {:?}", action),
+    }
+}
+
+#[test]
+fn should_assign_the_correct_identity_to_the_focus() {
+    let action = engine_action_at_turn("should_assign_the_correct_identity_to_the_focus.json", 46);
+    match action {
+        GameAction::Play {
+            player_index: 0,
+            card_deck_index: 32,
+            ..
+        } => println!(
+            "Alice correctly played the focus of the received green clue: {:?}",
+            action
+        ),
+        _ => panic!("Alice chose the following action. Action: {:?}", action),
     }
 }

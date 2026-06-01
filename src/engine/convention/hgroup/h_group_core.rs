@@ -465,27 +465,103 @@ fn already_clued_ids_mask(
     mask
 }
 
-/// Good-touch baseline mask the receiver should apply to a touched card.
+/// Per-card good-touch baseline masks for every card touched by a clue, respecting the
+/// no-duplication principle.
 ///
-/// Under H-Group's good-touch principle, a touched card is assumed to be eventually useful:
-/// trash and identities already clued in another hand are filtered out. The returned mask
-/// is the intersection of the clue's empathy with the still-needed set, minus identities
-/// already clued elsewhere.
+/// Under H-Group's good-touch principle a touched card is assumed eventually useful, so its
+/// identity narrows to the clue's empathy intersected with the still-needed set, minus
+/// identities already committed elsewhere (`good`). Applying that same `good` set to every
+/// touched card is wrong when the set is smaller than the number of touched cards: each
+/// still-needed identity completes the stack exactly once, so an identity is "good" for at
+/// most one card. The focus has first claim on the communicated identity; once a touched card
+/// is pinned to a single good identity, that identity is consumed and removed from the
+/// remaining touched cards.
 ///
-/// Returns `None` when the intersection is empty — in that case GTP would say the touched
-/// card has no plausible useful identity (a bad-touch on every alternative), so no narrowing
-/// is applied (the receiver cannot honestly conclude anything from GTP alone).
-pub fn good_touch_baseline_mask(
+/// A touched card left with no remaining good identity is known trash: it can only be one of
+/// the clue's already-played (or otherwise not-needed) identities. It is narrowed to
+/// `clue_mask & !already_clued & !still_needed` so the holder treats it as a discard rather
+/// than a phantom play of the duplicated identity.
+///
+/// Returns `(card_deck_index, mask)` pairs in focus-first order. Empty when GTP cannot narrow
+/// anything (no still-useful identity for any touched card — `good` empty).
+pub fn good_touch_receiver_masks(
     clue: &Clue,
+    touched: &[CardDeckIndex],
+    focus: Option<CardDeckIndex>,
     receiver: PlayerIndex,
     table_state: &TableState,
     static_data: &StaticGameData,
-) -> Option<VariantCardsBitField> {
+) -> Vec<(CardDeckIndex, VariantCardsBitField)> {
     let clue_mask = static_data.variant.empathy_for_clue(clue).as_bits();
     let still_needed = still_needed_cards_mask(table_state, static_data);
-    let already_clued = already_clued_ids_mask(receiver, table_state, static_data);
-    let mask = clue_mask & still_needed & !already_clued;
-    if mask == 0 { None } else { Some(mask) }
+    // Identities already committed to a known-clued card: in another player's hand, or in
+    // the receiver's own hand outside the set touched by this clue. A fresh touched card
+    // cannot usefully be any of these (good touch forbids the duplicate), so they drop out
+    // of the "still good" set. (`already_clued_ids_mask` covers only other hands; the
+    // receiver's own already-known duplicates must be excluded too — otherwise a second
+    // touch onto an identity the receiver already holds looks good and collapses two cards
+    // onto it.)
+    let touched_mask: VariantCardsBitField = touched.iter().fold(0, |m, &i| m | (1u64 << i));
+    let mut already_clued = already_clued_ids_mask(receiver, table_state, static_data);
+    for &idx in table_state.hands[receiver].cards() {
+        if touched_mask & (1u64 << idx) != 0 {
+            continue;
+        }
+        if table_state.clue_touched_cards & (1u64 << idx) != 0 {
+            if let Some(id) = table_state.deck.get_global_empathy(idx).known_card_id() {
+                already_clued |= 1u64 << id;
+            }
+        }
+    }
+    let good = clue_mask & still_needed & !already_clued;
+    if good == 0 {
+        // No still-useful identity for any touched card: GTP cannot honestly narrow.
+        return Vec::new();
+    }
+    // Identities a touched card can be if it is *not* a fresh useful card: the clue's
+    // identities that are already clued elsewhere or no longer needed (trash/duplicates).
+    let trash_mask = clue_mask & !already_clued & !still_needed;
+
+    // A touched card already pinned to a single identity (e.g. a previously-clued card the
+    // clue re-touches) claims that identity outright: consume it, and emit no narrowing
+    // (intersecting it with its own identity is a no-op). Doing this first ensures the
+    // remaining good identities the others can take are correct.
+    let mut consumed: VariantCardsBitField = 0;
+    let mut undetermined: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = SmallVec::new();
+    for &idx in touched {
+        match table_state.deck.get_global_empathy(idx).known_card_id() {
+            Some(id) => consumed |= 1u64 << id,
+            None => undetermined.push(idx),
+        }
+    }
+
+    // Allocate the remaining good identities in priority order: the focus first, then the
+    // other undetermined touched cards. Each still-needed identity is useful exactly once,
+    // so a card pinned to a single good identity consumes it for the rest. A card left with
+    // no remaining good identity is a known-trash duplicate.
+    let ordered = focus
+        .filter(|f| undetermined.contains(f))
+        .into_iter()
+        .chain(
+            undetermined
+                .iter()
+                .copied()
+                .filter(|&idx| Some(idx) != focus),
+        );
+
+    let mut result = Vec::with_capacity(undetermined.len());
+    for idx in ordered {
+        let available = good & !consumed;
+        if available != 0 {
+            result.push((idx, available));
+            if available.count_ones() == 1 {
+                consumed |= available;
+            }
+        } else if trash_mask != 0 {
+            result.push((idx, trash_mask));
+        }
+    }
+    result
 }
 
 /// Counts cards in `touched` that violate the good-touch principle.

@@ -30,7 +30,9 @@ pub trait ConventionSet: Sync {
     /// "explains" the clue. For H-Group this encodes the good-touch principle: every
     /// touched card is assumed to be eventually useful, so its identity narrows to the
     /// clue's empathy intersected with still-needed cards minus identities already
-    /// clued in other hands.
+    /// clued in other hands. `focus` (the clue's focus card, if any) is used to resolve
+    /// the no-duplication principle: when fewer good identities remain than cards touched,
+    /// the focus has first claim and the remaining cards collapse to known trash.
     ///
     /// Returns `(card_deck_index, mask)` pairs, applied as baseline `narrow_inferred` on
     /// the receiver's `PlayerKnowledge`. Default: no narrowing.
@@ -38,6 +40,7 @@ pub trait ConventionSet: Sync {
         &self,
         _clue: &Clue,
         _touched: &[CardDeckIndex],
+        _focus: Option<CardDeckIndex>,
         _receiver: PlayerIndex,
         _table_state: &TableState,
         _static_data: &StaticGameData,

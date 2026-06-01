@@ -617,9 +617,26 @@ impl KnowledgeAwareGameState {
             &self.table_state,
             &self.static_data,
         );
+        // Focus must be computed from the PRE-clue table_state so newly-touched cards are
+        // distinguishable from previously-clued ones (see `get_clue_focus`).
+        let focus = {
+            let pre_clue_pov = LightweightPlayerPOV::new(
+                receiver,
+                self.team_knowledge.player(receiver),
+                &self.team_knowledge,
+                &pre_clue_table_state,
+                &self.static_data,
+            );
+            crate::engine::convention::hgroup::h_group_core::get_clue_focus(
+                receiver,
+                touched_card_deck_indexes,
+                &pre_clue_pov,
+            )
+        };
         for (idx, mask) in convention_set.clue_receiver_baseline(
             clue,
             touched_card_deck_indexes,
+            focus,
             receiver,
             &self.table_state,
             &self.static_data,
