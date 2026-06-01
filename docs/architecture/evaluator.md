@@ -370,7 +370,7 @@ identities of the giver's own-hand cards that are themselves touched or play-sig
 (after filtering out trash from both sides).  Models the risk of giving a clue that
 duplicates a card the giver already knows they hold.
 
-**Default weight:** `potential_bad_touch_penalty = 5.0`
+**Default weight:** `potential_bad_touch_penalty = 9.0`
 
 ---
 

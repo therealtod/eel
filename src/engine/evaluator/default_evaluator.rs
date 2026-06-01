@@ -289,7 +289,7 @@ impl Default for DefaultEvaluator {
             signal_ignored_penalty_weight: 5.0_f64,
             misinformation_weight: 0.0_f64,
             play_progress_weight: 2.0_f64,
-            potential_bad_touch_penalty: 5.0_f64,
+            potential_bad_touch_penalty: 9.0_f64,
             bottom_deck_risk_weight: 2.0_f64,
             discard_while_known_playable_penalty: 8.0_f64,
             critical_exposure_delta_weight: 0.5_f64,
