@@ -251,3 +251,26 @@ fn should_not_discard_off_chop() {
         _ => println!("Alice chose the following action: {:?}", action),
     }
 }
+
+#[test]
+fn should_not_discard_with_playables_in_hand() {
+    let action = engine_action_at_turn("should_not_discard_with_playables_in_hand.json", 13);
+    match action {
+        // Correct: Alice cashes her known-playable b1 instead of discarding her chop.
+        GameAction::Play {
+            player_index: 0,
+            card_deck_index: 3,
+            ..
+        } => {}
+        GameAction::Discard {
+            player_index: 0, ..
+        } => panic!(
+            "Alice discarded with a known-playable card (b1) in her hand. Action: {:?}",
+            action
+        ),
+        _ => panic!(
+            "Alice chose neither to play b1 nor discard. Action: {:?}",
+            action
+        ),
+    }
+}

@@ -448,6 +448,33 @@ is preserved. Consumed only by `quiescence_rollout`; inert when `quiescence-sear
 **Sign:** `−`  
 **Default weight:** `score_deferral_weight = 0.75`
 
+#### Declined-play debt (quiescence tail only)
+
+The deferred-score discount above is a *flat* per-ply decay — it narrows the deferral
+arbitrage but does not eliminate its sharpest form: a player who holds a **guaranteed** play
+and *discards/clues instead* still has that play cashed for free past the horizon, so the line
+banks both the discard's value (a clue token, a saved chop) *and* the deferred play's score.
+"Cash now" then only weakly beats — or even loses to — "discard now, cash later".
+
+The debt mechanism closes this at its source. Along the root truth simulation (in-horizon path
+*and* the root action itself), each time a player takes a non-`Play` action while
+`player_has_uncashed_signalled_play` holds for them, a per-player **declined-play debt** is
+incremented (`[u8; MAX_PLAYERS_IN_GAME]`, threaded through `simulate_forward` →
+`quiescence_extend` → `quiescence_rollout`). When the quiescence tail later cashes a play for a
+player carrying debt, that play's full realized score is neutralized:
+
+```
+play_bonus = −play_score_weight − play_deferral_penalty(elapsed) − score_deferral_penalty(elapsed)
+```
+
+The first term exactly cancels the `score_weight` the tail play folds into the leaf (so
+re-cashing the declined play banks *none* of it); the play then pays the same deferral discount
+as any other tail play (no exemption for the wasted turn), landing it net-negative. Deferring a
+play you could have made *now* is thus strictly worse than making it. Like the discounts above
+it only *reduces* leaf values, so `upper_bound` admissibility is preserved. Inert when
+`quiescence-search` is off, and exposed via the `Evaluator::play_score_weight` hook
+(`DefaultEvaluator` returns `score_weight`).
+
 ---
 
 ### 2.7 `discard_action_penalty`

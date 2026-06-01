@@ -14,6 +14,7 @@ use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
 use crate::engine::play_resolver::TruthPovResolver;
+use crate::game::MAX_PLAYERS_IN_GAME;
 use crate::game::action::game_action::GameAction;
 use crate::game::static_game_data::StaticGameData;
 // Parallel candidate scoring is disabled under `search-diagnostic` (sequential output is
@@ -370,6 +371,7 @@ impl TreeActionSelectionStrategy {
     /// actor's own hidden cards (e.g. `LowLevelStall` picking "play slot 1") falsely
     /// resolve as known successes, paying out stack advances the actor couldn't
     /// actually predict from her own POV.
+    #[allow(clippy::too_many_arguments)]
     fn simulate_forward(
         state: &KnowledgeAwareGameState,
         static_data: &StaticGameData,
@@ -380,6 +382,7 @@ impl TreeActionSelectionStrategy {
         observer: &dyn PlayerPOV,
         phantom_plays: u8,
         at_root_sim: bool,
+        declined: [u8; MAX_PLAYERS_IN_GAME],
     ) -> (Score, ScoreBreakdown) {
         if depth == 0 || state.table_state.is_terminal(static_data) {
             // Quiescence extension (experimental, off by default): when this leaf still has a
@@ -395,6 +398,7 @@ impl TreeActionSelectionStrategy {
                 phantom_plays,
                 at_root_sim,
                 depth,
+                declined,
             ) {
                 pv_table.rows[depth].clear();
                 return settled;
@@ -512,6 +516,34 @@ impl TreeActionSelectionStrategy {
             depth,
         );
 
+        // Declined-play accounting (root truth simulation only — the tail that consumes this
+        // runs only there). If the active player took a non-`Play` action while holding a
+        // guaranteed play, record the debt so the quiescence tail cannot later re-credit that
+        // deferred play for free. Closes the deferral arbitrage at its source rather than via a
+        // blunt across-the-board discount.
+        let child_declined = {
+            #[cfg(feature = "quiescence-search")]
+            {
+                let mut d = declined;
+                if at_root_sim
+                    && !matches!(chosen.action, GameAction::Play { .. })
+                    && Self::player_has_uncashed_signalled_play(
+                        state,
+                        static_data,
+                        observer,
+                        active,
+                    )
+                {
+                    d[active] = d[active].saturating_add(1);
+                }
+                d
+            }
+            #[cfg(not(feature = "quiescence-search"))]
+            {
+                declined
+            }
+        };
+
         let (subtree_score, leaf_bd) = Self::simulate_forward(
             &next,
             static_data,
@@ -522,6 +554,7 @@ impl TreeActionSelectionStrategy {
             observer,
             child_phantom,
             at_root_sim,
+            child_declined,
         );
         let total = subtree_score + immediate;
         tracing::trace!(
@@ -560,6 +593,7 @@ impl TreeActionSelectionStrategy {
         _phantom_plays: u8,
         _at_root_sim: bool,
         _depth: usize,
+        _declined: [u8; MAX_PLAYERS_IN_GAME],
     ) -> Option<(Score, ScoreBreakdown)> {
         None
     }
@@ -580,6 +614,7 @@ impl TreeActionSelectionStrategy {
         phantom_plays: u8,
         at_root_sim: bool,
         depth: usize,
+        declined: [u8; MAX_PLAYERS_IN_GAME],
     ) -> Option<(Score, ScoreBreakdown)> {
         if !(at_root_sim
             && depth == 0
@@ -598,6 +633,7 @@ impl TreeActionSelectionStrategy {
             phantom_plays,
             at_root_sim,
             budget,
+            declined,
         ))
     }
 
@@ -616,32 +652,48 @@ impl TreeActionSelectionStrategy {
         static_data: &StaticGameData,
         truth: &dyn PlayerPOV,
     ) -> bool {
+        (0..static_data.number_of_players as usize)
+            .any(|p| Self::player_has_uncashed_signalled_play(state, static_data, truth, p))
+    }
+
+    /// Per-player version of [`Self::has_uncashed_signalled_play`]: does `player` hold a card
+    /// they *signally* know to play (a `Signal::Play`, or a convention-inferred all-playable
+    /// identity that the searcher's `truth` confirms is genuinely playable)?
+    ///
+    /// Used both to compute team-wide loudness above and to detect a *declined play* — a player
+    /// taking a non-`Play` action while this returns true is deferring a guaranteed play, which
+    /// the tail must not later re-credit for free (see [`Self::quiescence_rollout`]).
+    #[cfg(feature = "quiescence-search")]
+    fn player_has_uncashed_signalled_play(
+        state: &KnowledgeAwareGameState,
+        static_data: &StaticGameData,
+        truth: &dyn PlayerPOV,
+        player: usize,
+    ) -> bool {
         let playable_mask = state.table_state.playable_cards(static_data);
-        for p in 0..static_data.number_of_players as usize {
-            let pk = state.team_knowledge.player(p);
-            let mut hand = pk.own_hand;
-            while hand != 0 {
-                let idx = hand.trailing_zeros() as usize;
-                hand &= hand - 1;
-                // Skip cards the searcher knows are not actually playable (misinformation).
-                if let Some(truth_id) = truth.card_identity(idx as u8) {
-                    if (1u64 << truth_id) & playable_mask == 0 {
-                        continue;
-                    }
+        let pk = state.team_knowledge.player(player);
+        let mut hand = pk.own_hand;
+        while hand != 0 {
+            let idx = hand.trailing_zeros() as usize;
+            hand &= hand - 1;
+            // Skip cards the searcher knows are not actually playable (misinformation).
+            if let Some(truth_id) = truth.card_identity(idx as u8) {
+                if (1u64 << truth_id) & playable_mask == 0 {
+                    continue;
                 }
-                // Priority 1: convention play signal.
-                if pk.signals[idx]
-                    .iter()
-                    .any(|s| matches!(s, Signal::Play { .. }))
-                {
+            }
+            // Priority 1: convention play signal.
+            if pk.signals[idx]
+                .iter()
+                .any(|s| matches!(s, Signal::Play { .. }))
+            {
+                return true;
+            }
+            // Priority 2: convention-inferred all-playable identity.
+            if let Some(inferred) = pk.inferred_identities[idx] {
+                let bits = inferred.as_bits();
+                if bits != 0 && (bits & playable_mask) == bits {
                     return true;
-                }
-                // Priority 2: convention-inferred all-playable identity.
-                if let Some(inferred) = pk.inferred_identities[idx] {
-                    let bits = inferred.as_bits();
-                    if bits != 0 && (bits & playable_mask) == bits {
-                        return true;
-                    }
                 }
             }
         }
@@ -669,11 +721,17 @@ impl TreeActionSelectionStrategy {
         phantom_plays: u8,
         at_root_sim: bool,
         budget: usize,
+        declined: [u8; MAX_PLAYERS_IN_GAME],
     ) -> (Score, ScoreBreakdown) {
         let mut cur = state.clone();
         let mut phantom = phantom_plays;
         let mut acc_play_bonus: Score = 0.0;
         let mut remaining = budget;
+        // Per-player declined-play debt carried in from the in-horizon line (see
+        // [`Self::simulate_forward`]). A tail play by a player with outstanding debt merely
+        // repays a play they declined earlier, so its realized score is neutralized rather than
+        // banked — closing the deferral arbitrage at its source.
+        let mut declined = declined;
         // The tail begins one ply past the horizon, so its plays are the most-deferred of
         // all. `elapsed` starts at the leaf depth (`root_depth`) and advances per tail ply,
         // mirroring `immediate_action_bonus`'s `elapsed = root_depth - remaining_depth`.
@@ -736,13 +794,35 @@ impl TreeActionSelectionStrategy {
             let mut play_bonus =
                 evaluator.play_progress_bonus(&chosen.action, &cur, &next, phantom, child_phantom);
             if play_bonus > 0.0 {
-                play_bonus -= evaluator.play_deferral_penalty(elapsed);
-                // Also discount the realized `game_score` (folded into `breakdown.total` below)
-                // by how deep in the tail the play lands. Without this, a tail play banks full
-                // `score_weight`, so a line that defers/manufactures plays into the tail out-scores
-                // one that cashes a guaranteed play now — the horizon arbitrage relocated past the
-                // leaf. See `DefaultEvaluator::score_deferral_weight`.
-                play_bonus -= evaluator.score_deferral_penalty(elapsed);
+                if declined[active] > 0 {
+                    // This tail play repays a play `active` *declined* earlier in this line
+                    // (discarded/clued while holding a guaranteed play). The play still advances
+                    // the stack — so its `score_weight` lands in `breakdown.total` below — but we
+                    // subtract that full realized score here so re-cashing the deferred play banks
+                    // none of it: cashing a play *now* strictly beats declining it and re-cashing
+                    // it past the horizon. It then pays the same deferral discount as any other
+                    // tail play (no exemption for the wasted turn), so the repaid play lands net
+                    // *negative* — closing the arbitrage at its source, where the flat
+                    // `score_deferral` discount alone only narrowed it.
+                    declined[active] -= 1;
+                    play_bonus = -evaluator.play_score_weight()
+                        - evaluator.play_deferral_penalty(elapsed)
+                        - evaluator.score_deferral_penalty(elapsed);
+                } else {
+                    play_bonus -= evaluator.play_deferral_penalty(elapsed);
+                    // Also discount the realized `game_score` (folded into `breakdown.total` below)
+                    // by how deep in the tail the play lands. Without this, a tail play banks full
+                    // `score_weight`, so a line that defers/manufactures plays into the tail out-scores
+                    // one that cashes a guaranteed play now — the horizon arbitrage relocated past the
+                    // leaf. See `DefaultEvaluator::score_deferral_weight`.
+                    play_bonus -= evaluator.score_deferral_penalty(elapsed);
+                }
+            } else if !matches!(chosen.action, GameAction::Play { .. })
+                && Self::player_has_uncashed_signalled_play(&cur, static_data, observer, active)
+            {
+                // A non-play action inside the tail by a player who *could* have cashed a known
+                // play is itself a decline; record the debt so their later tail play is neutralized.
+                declined[active] = declined[active].saturating_add(1);
             }
             acc_play_bonus += play_bonus;
 
@@ -874,6 +954,9 @@ impl TreeActionSelectionStrategy {
                 inner_pov,
                 child_phantom,
                 false,
+                // Inner subjective sub-searches never run the quiescence tail (`at_root_sim ==
+                // false`), so declined-play debt is irrelevant here — start clean.
+                [0; MAX_PLAYERS_IN_GAME],
             );
             let score = subtree_score + immediate;
             #[cfg(feature = "search-diagnostic")]
@@ -1088,6 +1171,26 @@ impl TreeActionSelectionStrategy {
                 child_phantom,
                 depth,
             );
+            // Seed the declined-play debt from the root action itself: if the root player chose a
+            // non-`Play` while holding a guaranteed play, the quiescence tail must not later
+            // re-credit that deferred play for free (see [`Self::quiescence_rollout`]).
+            #[cfg(feature = "quiescence-search")]
+            let declined = {
+                let mut d = [0u8; MAX_PLAYERS_IN_GAME];
+                if !matches!(proposed.action, GameAction::Play { .. })
+                    && Self::player_has_uncashed_signalled_play(
+                        &root_state,
+                        static_data,
+                        &truth_pov,
+                        root_player,
+                    )
+                {
+                    d[root_player] = 1;
+                }
+                d
+            };
+            #[cfg(not(feature = "quiescence-search"))]
+            let declined = [0u8; MAX_PLAYERS_IN_GAME];
             let mut pv_table = PvTable::new(subtree_depth);
             let (leaf_score, leaf_breakdown) = Self::simulate_forward(
                 &next,
@@ -1099,6 +1202,7 @@ impl TreeActionSelectionStrategy {
                 &truth_pov,
                 child_phantom,
                 true,
+                declined,
             );
             let total = leaf_score + immediate_bonus;
             let pv = pv_table.pv_at(subtree_depth);

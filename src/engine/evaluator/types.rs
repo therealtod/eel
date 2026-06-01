@@ -196,6 +196,16 @@ pub trait Evaluator: Send + Sync {
         0.0
     }
 
+    /// The leaf `game_score` reward a single successful play realizes (one card advanced onto a
+    /// stack). Used by the quiescence tail to **fully** neutralize the realized score of a play
+    /// that merely repays a play its holder *declined* earlier (discarded/clued while holding a
+    /// known play): subtracting this exactly cancels the `score_weight` the tail play folds into
+    /// the leaf, so deferring-then-cashing nets zero rather than banking the score for free.
+    /// Default zero.
+    fn play_score_weight(&self) -> Score {
+        0.0
+    }
+
     /// Penalty assessed when `actor` chooses to `Discard`.
     ///
     /// Combines two risks the chop-discard pricing should reflect:
