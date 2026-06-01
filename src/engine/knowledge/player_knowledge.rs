@@ -140,6 +140,39 @@ impl PlayerKnowledge {
         }
     }
 
+    /// Reconcile a card's convention-derived [`inferred_identities`] against the
+    /// authoritative public empathy (the rules-of-the-game possibilities: positive
+    /// clues, negative clues, and visible-copy exhaustion).
+    ///
+    /// Convention reasoning — notably the aggressive good-touch assumption — can
+    /// narrow a card to identities that later public information proves impossible.
+    /// Whenever the public empathy changes, the inferred mask is re-intersected with
+    /// it:
+    /// - **Consistent** (non-empty intersection): the convention narrowing survives
+    ///   within reality and is kept.
+    /// - **Contradiction** (empty intersection): the convention inference disagrees
+    ///   with reality, so it is discarded and the raw public empathy prevails.
+    ///
+    /// Cards with no convention narrowing (`inferred_identities` is `None`) are left
+    /// untouched: there is no claim to reconcile, and the read path already combines
+    /// the public empathy in. This keeps the reconciliation surgical (only cards the
+    /// convention actually constrained) and preserves the `None` "unconstrained by
+    /// convention" sentinel that other layers rely on.
+    pub fn reconcile_inferred_with_public(
+        &mut self,
+        card_deck_index: CardDeckIndex,
+        public: CardIdentityMask,
+    ) {
+        let idx = card_deck_index as usize;
+        let Some(current) = self.inferred_identities[idx] else {
+            return;
+        };
+        self.inferred_identities[idx] = Some(match current.narrow(public.as_bits()) {
+            Some(intersection) => intersection,
+            None => public,
+        });
+    }
+
     /// Attach a baseline signal to a card.
     pub fn add_signal(&mut self, card_deck_index: CardDeckIndex, signal: Signal) {
         self.signals[card_deck_index as usize].push(signal);

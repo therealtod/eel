@@ -216,3 +216,29 @@ fn should_play_all_1s() {
         _ => panic!("Bob chose the following action: {:?}", action),
     }
 }
+
+#[test]
+fn should_not_play_known_trash() {
+    let action = engine_action_at_turn("should_not_play_known_trash.json", 44);
+    match action {
+        GameAction::Play {
+            player_index: 1,
+            card_deck_index: 8,
+            ..
+        } => panic!("Bob known trash. Action: {:?}", action),
+        _ => println!("Bob chose the following action: {:?}", action),
+    }
+}
+
+#[test]
+fn should_not_discard_off_chop() {
+    let action = engine_action_at_turn("should_not_discard_off_chop.json", 19);
+    match action {
+        GameAction::Discard {
+            player_index: 0,
+            card_deck_index: 25,
+            ..
+        } => panic!("Alice discarded off-chop. Action: {:?}", action),
+        _ => println!("Alice chose the following action: {:?}", action),
+    }
+}

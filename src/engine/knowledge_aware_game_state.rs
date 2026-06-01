@@ -117,6 +117,19 @@ pub struct KnowledgeAwareGameState {
     history: Vec<GameStateSnapshot>,
     /// Monotonic counter for unique hypothesis ids.
     next_hypothesis_id: HypothesisId,
+    /// Search-only ledger of playable card identities claimed by phantom plays along the
+    /// current rollout line (one bit per [`VariantCardId`]). A phantom play
+    /// ([`ResolvedPlay::KnownPlayableAmbiguous`]) advances the effective score by one — the
+    /// same reward as a known play — whenever it can claim a still-playable identity not
+    /// already in this mask. The only suppression is duplicate-identity dedup: two ambiguous
+    /// copies that can *only* claim the same single remaining playable identity (e.g. a
+    /// giver's own card duplicated by a teammate's clued card) bank a phantom point once, not
+    /// twice. A later *real* play of a claimed identity does **not** revoke the phantom: the
+    /// phantom card is a distinct physical card and, being known-playable, is optimistically
+    /// assumed to score in its own right — exactly as a concrete known play would. The
+    /// threaded `phantom_plays` count equals this mask's popcount. Always 0 in replay mode
+    /// (the ground-truth resolver never produces phantom plays).
+    phantom_claimed_mask: crate::game::card::VariantCardsBitField,
 }
 
 impl KnowledgeAwareGameState {
@@ -131,6 +144,7 @@ impl KnowledgeAwareGameState {
             next_deck_index: 0,
             history: Vec::new(),
             next_hypothesis_id: 0,
+            phantom_claimed_mask: 0,
         }
     }
 
@@ -149,6 +163,7 @@ impl KnowledgeAwareGameState {
             next_deck_index,
             history: Vec::new(),
             next_hypothesis_id: 0,
+            phantom_claimed_mask: 0,
         }
     }
 
@@ -340,6 +355,15 @@ impl KnowledgeAwareGameState {
                     &self.static_data.variant,
                 );
             }
+
+            // Cross-check convention inference against the now-settled public empathy as
+            // the *real* game advances. A Draw only adds the new card to `own_hand` (no
+            // clue/reveal), so it can never narrow an existing card's empathy — and the
+            // search rollout governs simulated knowledge through its own POV machinery, so
+            // reconcile only when the resolver is advancing the observed game.
+            if resolver.advances_real_game() {
+                self.reconcile_inferred_with_public_empathy();
+            }
         }
         outcome
     }
@@ -412,8 +436,27 @@ impl KnowledgeAwareGameState {
             }
             ResolvedPlay::KnownPlayableAmbiguous => {
                 known_id = None;
+                // Bank a phantom point only if this ambiguous card can claim a still-playable
+                // identity not already realized on this line. Two ambiguous copies of the same
+                // playable identity (a giver's own card duplicated by a teammate's clued card)
+                // therefore advance the effective score only once — closing the rollout
+                // double-count that made deferring a known play look as good as making it.
+                let empathy = self
+                    .team_knowledge
+                    .player(p)
+                    .combined_possible_identities(
+                        card_deck_index,
+                        &self.table_state,
+                        &self.static_data.variant,
+                    )
+                    .as_bits();
+                let playable = self.table_state.playable_cards(&self.static_data);
+                let candidates = empathy & playable & !self.phantom_claimed_mask;
+                if candidates != 0 {
+                    self.phantom_claimed_mask |= 1u64 << candidates.trailing_zeros();
+                    is_phantom = true;
+                }
                 self.table_state.update_with_play_action(card_deck_index);
-                is_phantom = true;
                 stack_advanced = false;
             }
             ResolvedPlay::Unknown => {
@@ -803,6 +846,41 @@ impl KnowledgeAwareGameState {
         }
     }
 
+    /// Re-establish the invariant that every card's convention-derived
+    /// `inferred_identities` stays a subset of what the rules of the game still
+    /// allow — the deck's public empathy (positive clues, negative clues, and
+    /// visible-copy exhaustion).
+    ///
+    /// Called from [`apply`](Self::apply) at the end of every action that advances the
+    /// *real* game (a ground-truth resolver — see
+    /// [`PlayResolver::advances_real_game`]), after the deck empathy has fully settled.
+    /// `apply` is the single choke point all real game progression funnels through, so
+    /// one pass here captures *every* way the public empathy can change — including the
+    /// recursive narrowing `Deck::reveal_card` fans out to arbitrary slots when a card's
+    /// last copy is located, which has no per-event hook of its own. Search rollouts
+    /// deliberately skip this pass and let their own POV machinery govern simulated
+    /// knowledge.
+    ///
+    /// For each hand card carrying a convention narrowing, the inferred mask is
+    /// reconciled with the public empathy; on contradiction the convention inference
+    /// is dropped and reality prevails (see
+    /// [`PlayerKnowledge::reconcile_inferred_with_public`]). This stops an aggressive
+    /// good-touch assumption from surviving as a "known" identity that later public
+    /// information has ruled out.
+    fn reconcile_inferred_with_public_empathy(&mut self) {
+        let num_players = self.static_data.number_of_players as usize;
+        for p in 0..num_players {
+            let slots: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> =
+                self.table_state.hands[p].cards().iter().copied().collect();
+            for idx in slots {
+                let public = self.table_state.deck.get_global_empathy(idx);
+                self.team_knowledge
+                    .player_mut(p)
+                    .reconcile_inferred_with_public(idx, public);
+            }
+        }
+    }
+
     // ── Accessors ─────────────────────────────────────────────────────────────
 
     #[must_use]
@@ -818,6 +896,22 @@ impl KnowledgeAwareGameState {
     #[must_use]
     pub fn team_knowledge(&self) -> &TeamKnowledge {
         &self.team_knowledge
+    }
+
+    /// Number of phantom plays realized along the current rollout line — the popcount of the
+    /// per-line [`phantom_claimed_mask`](Self::phantom_claimed_mask). This is the value to thread
+    /// into the evaluator's `phantom_plays` arguments after applying an action: it already
+    /// accounts for duplicate-identity dedup and for real plays that release an earlier
+    /// optimistic phantom claim.
+    #[must_use]
+    pub fn phantom_play_count(&self) -> u8 {
+        self.phantom_claimed_mask.count_ones() as u8
+    }
+
+    /// Reset the phantom-claim ledger to empty. Used to isolate a nested subjective sub-search
+    /// (which scores from a fresh `phantom_plays = 0` base) from the outer line's claims.
+    pub fn reset_phantom_claims(&mut self) {
+        self.phantom_claimed_mask = 0;
     }
 
     /// Effective game score: real stack progress.

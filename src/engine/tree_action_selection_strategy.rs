@@ -471,7 +471,7 @@ impl TreeActionSelectionStrategy {
         // [`SubjectivePolicy::Priority`] the recursive sub-search never fires, so
         // `at_root_sim` is always `true`.
         let mut next = state.clone();
-        let outcome: ActionOutcome = if at_root_sim {
+        let _outcome: ActionOutcome = if at_root_sim {
             next.apply(
                 &chosen.action,
                 convention_set,
@@ -493,7 +493,9 @@ impl TreeActionSelectionStrategy {
             )
         };
         next.advance_turn();
-        let child_phantom = phantom_plays + if outcome.is_phantom_play { 1 } else { 0 };
+        // The deduped phantom count lives in the rollout state: it rises by one for a fresh
+        // phantom claim and falls again when a later real play realizes that identity.
+        let child_phantom = next.phantom_play_count();
 
         // Score the per-ply contribution from the active player's POV so terms like
         // `discard_action_penalty`/BDR and `critical_exposure_delta_bonus` reflect what
@@ -718,13 +720,13 @@ impl TreeActionSelectionStrategy {
             };
 
             let mut next = cur.clone();
-            let outcome: ActionOutcome = next.apply(
+            let _outcome: ActionOutcome = next.apply(
                 &chosen.action,
                 convention_set,
                 &mut TruthPovResolver::new(observer),
             );
             next.advance_turn();
-            let child_phantom = phantom + if outcome.is_phantom_play { 1 } else { 0 };
+            let child_phantom = next.phantom_play_count();
 
             // Credit only realized play progress; stalls/discards contribute nothing. Apply the
             // same deferred-play discount the in-horizon plies pay (`immediate_action_bonus`),
@@ -819,13 +821,18 @@ impl TreeActionSelectionStrategy {
         let node_ceiling = evaluator.upper_bound(state.table_state(), static_data, depth);
         for proposed in candidates {
             let mut next = state.clone();
-            let outcome: ActionOutcome = next.apply(
+            // This nested sub-search scores from a fresh `phantom_plays = 0` base, so isolate its
+            // phantom-claim ledger from the outer line's claims (whose absolute count would only
+            // add a constant offset, but whose claimed identities could otherwise suppress a
+            // legitimate inner phantom). Dedup still applies within this inner line.
+            next.reset_phantom_claims();
+            let _outcome: ActionOutcome = next.apply(
                 &proposed.action,
                 convention_set,
                 &mut TruthPovResolver::new(inner_pov),
             );
             next.advance_turn();
-            let child_phantom = if outcome.is_phantom_play { 1 } else { 0 };
+            let child_phantom = next.phantom_play_count();
             let immediate = Self::immediate_action_bonus(
                 &proposed.action,
                 evaluator,
@@ -992,7 +999,6 @@ impl TreeActionSelectionStrategy {
             pov.team_knowledge().clone(),
             next_deck_index,
         );
-        let mut phantom_plays = 0u8;
         for action in actions {
             let actor = state.table_state().active_player_index;
             // Clone the fields the truth POV borrows so `apply` can take `&mut state`.
@@ -1001,12 +1007,13 @@ impl TreeActionSelectionStrategy {
             let table = state.table_state().clone();
             let truth =
                 LightweightPlayerPOV::new(actor, &actor_knowledge, &team, &table, static_data);
-            let outcome = state.apply(action, convention_set, &mut TruthPovResolver::new(&truth));
-            if outcome.is_phantom_play {
-                phantom_plays += 1;
-            }
+            let _ = state.apply(action, convention_set, &mut TruthPovResolver::new(&truth));
             state.advance_turn();
         }
+        // Mirror the search's deduped accounting: the count is the popcount of the per-line
+        // phantom-claim ledger, which already discounts duplicate-identity phantoms and releases
+        // claims realized by a later real play.
+        let phantom_plays = state.phantom_play_count();
         let observer_knowledge = state.team_knowledge.player(observer).clone();
         let team = state.team_knowledge.clone();
         let table = state.table_state().clone();
@@ -1057,13 +1064,13 @@ impl TreeActionSelectionStrategy {
                 static_data,
             );
             let mut next = root_state.clone();
-            let outcome: ActionOutcome = next.apply(
+            let _outcome: ActionOutcome = next.apply(
                 &proposed.action,
                 convention_set,
                 &mut TruthPovResolver::new(&truth_pov),
             );
             next.advance_turn();
-            let child_phantom = if outcome.is_phantom_play { 1 } else { 0 };
+            let child_phantom = next.phantom_play_count();
             let immediate_bonus = Self::immediate_action_bonus(
                 &proposed.action,
                 evaluator,

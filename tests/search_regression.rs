@@ -366,3 +366,21 @@ fn plays_known_playable_despite_critical_dry_downstream() {
         "expected play of known R1 (deck 4) rather than a horizon-driven stall, got: {action:?}"
     );
 }
+
+#[test]
+fn should_avoid_potential_1s_bad_touch() {
+    let action = search_best_action("should_avoid_potential_1s_bad_touch");
+    match action {
+        GameAction::Play {
+            player_index: 0,
+            card_deck_index: 0,
+            ..
+        } => println!("Alice choose to play slot 5 (r1): {:?}", action),
+        GameAction::Play {
+            player_index: 0,
+            card_deck_index: 3,
+            ..
+        } => println!("Alice choose to play slot 2 (b1): {:?}", action),
+        _ => panic!("Alice chose the following action: {:?}", action),
+    }
+}

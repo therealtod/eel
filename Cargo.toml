@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-default = ["quiescence-search", "stall-quiescence"]
+default = ["stall-quiescence"]
 test-support = []
 search-diagnostic = []
 # Experimental: extend root-PV leaves with a quiescence tail so pending *signalled*

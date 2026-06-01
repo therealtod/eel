@@ -50,6 +50,20 @@ pub trait PlayResolver {
     /// `deck_size` is the deck's current size after the play/discard (0 → `Empty`).
     /// `next_deck_index` is the state's draw cursor, used by replay to index `actual_deck`.
     fn draw_next(&mut self, deck_size: u8, next_deck_index: u8) -> DrawnCard;
+
+    /// Whether applying an action through this resolver advances the *real, observed*
+    /// game (replay/live) rather than a hypothetical search rollout.
+    ///
+    /// Real progression reconciles each player's convention inference against the
+    /// now-public empathy after every action (see
+    /// [`KnowledgeAwareGameState::reconcile_inferred_with_public_empathy`]), keeping the
+    /// engine's stored knowledge consistent with the rules of the game. Search rollouts
+    /// deliberately *do not* reconcile: simulated knowledge is governed by the search's
+    /// own POV-restriction machinery, which is independently tuned, and an extra
+    /// reconciliation pass would perturb its phantom-play / known-play accounting.
+    fn advances_real_game(&self) -> bool {
+        false
+    }
 }
 
 // ── Search-mode resolver ──────────────────────────────────────────────────────
@@ -226,5 +240,9 @@ impl PlayResolver for GroundTruthResolver<'_> {
         DrawnCard::Known {
             card_id: self.actual_deck[next_deck_index as usize],
         }
+    }
+
+    fn advances_real_game(&self) -> bool {
+        true
     }
 }

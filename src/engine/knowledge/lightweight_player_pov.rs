@@ -233,29 +233,40 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
     fn is_known_trash(&self, card_deck_index: CardDeckIndex) -> bool {
         let possible_bits = self.inferred_identities(card_deck_index).as_bits();
 
+        // Identities still needing to be played (not already on the stacks). The card is
+        // known trash only when *every* such identity is also unreachable; a single live
+        // candidate is enough to make discarding it unsafe.
         let played_cards = self.table_state.playing_stacks.as_bitfield();
-        if possible_bits & !played_cards == 0 {
+        let mut live = possible_bits & !played_cards;
+        if live == 0 {
             return true;
         }
 
         let variant = &self.static_data.variant;
         let discarded = &self.table_state.discard_pile;
-        for bit_pos in 0..variant.card_copies_count_by_id.len() {
-            if possible_bits & (1 << bit_pos) != 0 {
-                let card_id = bit_pos as VariantCardId;
-                let mut prereq = variant.prerequisite(card_id);
-                while let Some(prereq_id) = prereq {
-                    let total = variant.card_copies_count_by_id[prereq_id as usize];
-                    let discarded_count = discarded.copies_of(prereq_id);
-                    if discarded_count == total {
-                        return true;
-                    }
-                    prereq = variant.prerequisite(prereq_id);
+        while live != 0 {
+            let bit_pos = live.trailing_zeros() as usize;
+            live &= live - 1;
+            let card_id = bit_pos as VariantCardId;
+            // An identity is reachable unless one of its prerequisites is fully discarded.
+            let mut prereq = variant.prerequisite(card_id);
+            let mut reachable = true;
+            while let Some(prereq_id) = prereq {
+                let total = variant.card_copies_count_by_id[prereq_id as usize];
+                let discarded_count = discarded.copies_of(prereq_id);
+                if discarded_count == total {
+                    reachable = false;
+                    break;
                 }
+                prereq = variant.prerequisite(prereq_id);
+            }
+            // A live, reachable candidate means the card might still be needed.
+            if reachable {
+                return false;
             }
         }
 
-        false
+        true
     }
 
     fn inferred_identities(&self, card_deck_index: CardDeckIndex) -> CardIdentityMask {
@@ -629,6 +640,43 @@ mod tests {
         );
 
         let knowledge = knowledge_with_empathy(42, R1_MASK | B1_MASK);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert!(!pov.is_known_trash(42));
+    }
+
+    #[test]
+    fn is_not_known_trash_when_live_identity_coexists_with_dead_prerequisite_identity() {
+        // Card 42 could be R2 (playable: R1 is on the stack) or B2 (unreachable: all three
+        // B1 copies are discarded). Even though one candidate is dead, the other is live,
+        // so the card is not known trash — discarding it could lose the needed R2.
+        use crate::game::deck::unit_test_constants::novariant_constants::B2_MASK;
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards::*;
+        use crate::game::deck::unit_test_constants::novariant_constants::R2_MASK;
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        for &idx in &[0u8, 1, 2, 3] {
+            table_state.update_with_draw_action(idx);
+        }
+        // R1 played → R2 is now playable.
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            R1.as_variant_card_id(),
+            &static_data,
+        );
+        // All three B1 copies discarded → B2 is unreachable.
+        for player in 1..=3 {
+            table_state.update_with_discard_action_of_specific_card(
+                player,
+                B1.as_variant_card_id(),
+                &static_data,
+            );
+        }
+
+        let knowledge = knowledge_with_empathy(42, R2_MASK | B2_MASK);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);

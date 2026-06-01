@@ -81,6 +81,8 @@ Signal::Discard { slot_index, turn }
 
 Within a cohort, narrowings are **unioned** (the card could be any of the alternatives). Across cohorts (and against baseline), they are **intersected**.
 
+**Public-empathy reconciliation.** `inferred_identities` carries *convention* reasoning (notably the aggressive good-touch assumption), which can narrow a card to identities later public information rules out — e.g. good-touch collapses a touched 2 to the lone still-useful colour, then a negative colour clue or a copy-set completion makes that colour impossible. To keep convention inference subordinate to the rules of the game, `KnowledgeAwareGameState::apply` reconciles every hand card's `inferred_identities` against the deck's authoritative **public empathy** (positive clues, negative clues, visible-copy exhaustion) at the end of every action that advances the *real* game (`PlayResolver::advances_real_game`). The inferred mask is re-intersected with the public empathy; on an empty intersection the convention inference is discarded and the public empathy prevails. Search rollouts skip this pass — simulated knowledge is governed by the search's own POV machinery. See `PlayerKnowledge::reconcile_inferred_with_public`.
+
 Constructors:
 
 ```rust
