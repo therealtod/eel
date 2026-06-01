@@ -428,6 +428,26 @@ search `upper_bound` admissibility is preserved.
 
 **Default weight:** `play_deferral_weight = 0.15`
 
+#### Deferred-score discount (quiescence tail only)
+
+```
+game_score contribution −= score_deferral_weight × elapsed_plies   (continued past the leaf into the quiescence tail)
+```
+
+The deferred-play discount above only bites on the small `play_progress_bonus`; the dominant
+`score_weight` reward a play realizes is undiscounted. That is harmless **inside** the horizon —
+by the leaf, an early and a late in-horizon play have both landed in `game_score` identically —
+but breaks down in the **quiescence tail** (`quiescence-search`), which cashes pending plays into
+real `game_score` *beyond* the horizon. There, a tail play banks full `score_weight`, so a line
+that **manufactures** extra tail-cashable plays (e.g. cluing more cards playable) out-scores one
+that simply cashes a guaranteed play now — the horizon arbitrage relocated past the leaf. The
+deferred-score discount decays the realized score per deferred ply, restoring "cash now > set up
+for later". Like the play discount it only *reduces* leaf values, so `upper_bound` admissibility
+is preserved. Consumed only by `quiescence_rollout`; inert when `quiescence-search` is off.
+
+**Sign:** `−`  
+**Default weight:** `score_deferral_weight = 0.75`
+
 ---
 
 ### 2.7 `discard_action_penalty`
@@ -496,6 +516,7 @@ dumped may itself be critical.
 | `signal_ignored_penalty_weight` | 5.0 | − | Immediate (any) |
 | `play_progress_weight` | 2.0 | + | Immediate (play) |
 | `play_deferral_weight` | 0.15 | − | Immediate (play, per elapsed ply) |
+| `score_deferral_weight` | 0.75 | − | Quiescence tail (play, per elapsed ply) |
 | `bottom_deck_risk_weight` | 2.0 | − | Immediate (discard) |
 | `discard_while_known_playable_penalty` | 8.0 | − | Immediate (discard) |
 

@@ -4,15 +4,20 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-default = ["stall-quiescence"]
+default = ["stall-quiescence", "quiescence-search"]
 test-support = []
 search-diagnostic = []
-# Experimental: extend root-PV leaves with a quiescence tail so pending *signalled*
-# plays resolve into real game_score before evaluation, rather than being estimated by
-# the static `known_playable` term. Tail plays carry the same deferred-play discount the
-# in-horizon plies pay, so the extension never becomes a penalty-free zone. Off by default
-# pending a cost/quiet-cap review before it can be promoted; the full test suite passes
-# with it enabled. See `quiescence_extend` in `tree_action_selection_strategy.rs`.
+# Extend root-PV leaves with a quiescence tail so pending *signalled* plays resolve into real
+# game_score before evaluation, rather than being estimated by the static `known_playable` term.
+# This un-caps the horizon-saturated `game_score`, closing the banking artifact where a line that
+# *defers* its plays banks extra leaf `known_playable` credit (at the leaf, settled lines show
+# `+play = 0` because pending plays are cashed). Tail plays carry both the `play_deferral_weight`
+# discount on `play_progress_bonus` *and* the `score_deferral_weight` discount on the realized
+# `game_score`, so a play cashed now strictly beats one deferred/manufactured into the tail — without
+# the latter, the arbitrage simply relocated past the leaf (cluing to manufacture tail-cashable
+# plays out-scored cashing a guaranteed play now). On by default: the full test suite passes.
+# See `quiescence_extend`/`quiescence_rollout` in `tree_action_selection_strategy.rs` and
+# `DefaultEvaluator::score_deferral_weight`.
 quiescence-search = []
 # Experimental: terminate a simulated line at the first forced `LowLevelStall` ply and
 # evaluate the pre-stall state statically, instead of simulating the stall and charging its

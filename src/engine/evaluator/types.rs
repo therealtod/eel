@@ -184,6 +184,18 @@ pub trait Evaluator: Send + Sync {
         0.0
     }
 
+    /// Non-negative discount subtracted from the **`game_score`** a successful play realizes,
+    /// scaled by how far (`elapsed_plies`) the play is deferred from the root. Unlike
+    /// [`Self::play_deferral_penalty`] (which only discounts the small `play_progress_bonus`),
+    /// this bites on the dominant `score_weight` reward, so a play cashed *now* strictly beats
+    /// the same play cashed many plies later. Consumed only by the quiescence tail
+    /// (beyond-horizon plays), where the deferral arbitrage otherwise survives: a tail play lands
+    /// in `game_score` at full weight, so a line that manufactures extra tail-cashable plays wins
+    /// unless the realized score itself decays with deferral. Default zero (no discount).
+    fn score_deferral_penalty(&self, _elapsed_plies: usize) -> Score {
+        0.0
+    }
+
     /// Penalty assessed when `actor` chooses to `Discard`.
     ///
     /// Combines two risks the chop-discard pricing should reflect:

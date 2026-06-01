@@ -18,6 +18,15 @@ fn path_for(rel: &str) -> PathBuf {
 /// Load a hanab.live replay JSON, step to `turn`, and return the engine's
 /// recommended action at that position.
 fn engine_action_at_turn(replay_path: &str, turn: usize) -> GameAction {
+    // Opt-in search tracing for debugging (e.g. `RUST_LOG=eel::search=debug ... -- --nocapture`
+    // surfaces the `candidate_scored` lines). Inert otherwise — defaults to "off" and `try_init`
+    // is a no-op if a subscriber is already installed.
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("off")),
+        )
+        .try_init();
     let json = std::fs::read_to_string(path_for(replay_path))
         .unwrap_or_else(|e| panic!("could not read replay {replay_path}: {e}"));
     let game = Game::from_json(&json)

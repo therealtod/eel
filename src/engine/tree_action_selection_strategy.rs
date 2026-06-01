@@ -737,6 +737,12 @@ impl TreeActionSelectionStrategy {
                 evaluator.play_progress_bonus(&chosen.action, &cur, &next, phantom, child_phantom);
             if play_bonus > 0.0 {
                 play_bonus -= evaluator.play_deferral_penalty(elapsed);
+                // Also discount the realized `game_score` (folded into `breakdown.total` below)
+                // by how deep in the tail the play lands. Without this, a tail play banks full
+                // `score_weight`, so a line that defers/manufactures plays into the tail out-scores
+                // one that cashes a guaranteed play now — the horizon arbitrage relocated past the
+                // leaf. See `DefaultEvaluator::score_deferral_weight`.
+                play_bonus -= evaluator.score_deferral_penalty(elapsed);
             }
             acc_play_bonus += play_bonus;
 

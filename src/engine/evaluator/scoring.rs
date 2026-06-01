@@ -276,6 +276,10 @@ impl super::Evaluator for DefaultEvaluator {
         self.play_deferral_weight * elapsed_plies as f64
     }
 
+    fn score_deferral_penalty(&self, elapsed_plies: usize) -> Score {
+        self.score_deferral_weight * elapsed_plies as f64
+    }
+
     fn discard_action_penalty(
         &self,
         action: &GameAction,

@@ -227,6 +227,22 @@ pub struct DefaultEvaluator {
     ///
     /// Set to 0 to disable.
     pub play_deferral_weight: f64,
+    /// Per-ply discount subtracted from the **`game_score`** a successful play realizes, scaled
+    /// by `elapsed = number_of_players × 2 − remaining_depth` (continued past the leaf into the
+    /// quiescence tail). Where [`Self::play_deferral_weight`] only discounts the small
+    /// `play_progress_bonus`, this one bites on the dominant `score_weight` reward.
+    ///
+    /// **Only consumed by the quiescence tail** (`quiescence-search` feature). Beyond the horizon,
+    /// a tail play resolves into `game_score` at full `score_weight`, so without this a line that
+    /// *manufactures* extra tail-cashable plays (e.g. cluing more cards playable) out-scores a line
+    /// that simply cashes a guaranteed play now — the deferral arbitrage relocated past the leaf.
+    /// Discounting the realized score per deferred ply restores "cash now > set up for later".
+    ///
+    /// Kept well below `score_weight` so a deep tail play stays net-positive (it still advances the
+    /// stacks); only lowers leaf values, so `upper_bound` admissibility is preserved.
+    ///
+    /// Set to 0 to disable.
+    pub score_deferral_weight: f64,
     /// Multiplier for the **future-potential** leaf term: `future_potential_weight * clue_demand`,
     /// where `clue_demand = Σ_{untouched cards} max(P(playable), P(critical))` (see
     /// [`Self::clue_demand`]). This is the independent-leaf-term fix for the search-horizon
@@ -279,6 +295,7 @@ impl Default for DefaultEvaluator {
             critical_exposure_delta_weight: 0.5_f64,
             tempo_cost_weight: 2.5_f64,
             play_deferral_weight: 0.15_f64,
+            score_deferral_weight: 0.75_f64,
             future_potential_weight: 0.0_f64,
         }
     }
