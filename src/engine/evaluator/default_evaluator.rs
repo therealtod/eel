@@ -45,22 +45,32 @@ pub struct DefaultEvaluator {
     /// Multiplier for the required-efficiency penalty; higher values penalise states that demand many future discards.
     pub efficiency_weight: f64,
     /// Multiplier for the per-card `critical_exposure_score`. The score for each truth-critical
-    /// card held in a player's hand is `1 / (1 + (rank_from_chop - 1) + 4 * buffer_count)`, where:
+    /// card held in a player's hand is `1 / (1 + rank + 4 * (buffer_count + touched_shield))`,
+    /// where:
     ///
-    /// - `rank_from_chop` is 1 if the card is the player's current chop-eligible card, 2 if the
-    ///   next chop-eligible slot to its left, etc. Only counts cards that are untouched and not
-    ///   known-trash (i.e., the discard order from the holder's perspective).
+    /// - `rank` is the number of untouched chop-eligible cards in front of the critical (closer
+    ///   to chop), i.e. its position in the holder's discard order: 0 if it is the current chop,
+    ///   1 if one untouched card sits ahead of it, etc. Each only pushes the critical one
+    ///   position away (×1).
     /// - `buffer_count` is the number of known-playables plus known-trash cards in the holder's
     ///   hand. Each one represents an action (play or trash-discard) the holder will take before
     ///   being forced to discard the critical card.
+    /// - `touched_shield` is the number of *touched, non-playable, non-critical* cards in front
+    ///   of the critical. These are held indefinitely (never discarded), so saving such a card
+    ///   protects the critical — and, crucially, the term must not *penalise* the save: a card
+    ///   going untouched → touched would otherwise just leave the chop-eligible run and bump the
+    ///   critical one rank closer to chop.
     ///
-    /// Buffer dominates position (factor 4): one buffer action ≈ moving the card four slots
-    /// away from chop, so even the rightmost-but-buffered critical is safer than the
-    /// untouched-and-unbuffered slot-1 critical.
+    /// Buffer/shield dominates position (factor 4): one safe play/trash-discard or one held
+    /// non-critical card in front ≈ moving the critical four slots away from chop, so even a
+    /// well-shielded critical near chop is safer than an unbuffered critical sitting on chop.
+    ///
+    /// Only cards *in front of* the critical protect it; cards *behind* it (further from chop)
+    /// are reached only after it and contribute nothing.
     ///
     /// Cards classified as **touched but not known-playable** (clued saves, prompts, …) are
-    /// neither buffer nor chop-eligible — the holder will keep them indefinitely; they
-    /// contribute zero to the score. Touched + known-playable counts as buffer.
+    /// themselves never at risk — they contribute zero exposure of their own — but a non-critical
+    /// one shields the criticals behind it. Touched + known-playable counts as buffer.
     ///
     /// Truth identity comes from `truth: &dyn PlayerPOV`, so fresh draws (no truth identity)
     /// contribute zero. This is intentional: the term reflects *known* critical risk, not
@@ -327,37 +337,57 @@ impl DefaultEvaluator {
             let pov = LightweightPlayerPOV::new(p, pk, team_knowledge, table_state, static_data);
             let hand = &table_state.hands[p];
 
-            // First pass: classify each slot from p's POV and build the chop-order list
-            // (right-to-left through the hand) of untouched-non-known-trash cards.
+            // First pass: classify every card in chop order (chop first / oldest-to-newest).
+            // `buffer` (known-playable + known-trash) is a *global* count: the holder can play
+            // or trash-discard those instead of any critical regardless of position, so they
+            // shield every critical in the hand. The non-buffer cards are recorded in order so
+            // the second pass can measure each critical's *positional* protection.
             let mut buffer: u32 = 0;
-            let mut chop_eligible: smallvec::SmallVec<[CardDeckIndex; 6]> =
-                smallvec::SmallVec::new();
+            // Per non-buffer card, in chop order: (touched, truth-critical, truth-known).
+            let mut run: smallvec::SmallVec<[(bool, bool, bool); 6]> = smallvec::SmallVec::new();
             for &deck_idx in hand.cards().iter().rev() {
-                let known_trash = pov.is_known_trash(deck_idx);
-                let known_playable = Self::card_known_playable(&pov, deck_idx, playable_mask);
-                if known_trash || known_playable {
+                if pov.is_known_trash(deck_idx)
+                    || Self::card_known_playable(&pov, deck_idx, playable_mask)
+                {
                     buffer += 1;
                     continue;
                 }
-                if pov.is_touched(deck_idx) {
-                    continue; // touched non-playable: held indefinitely, not at risk
-                }
-                chop_eligible.push(deck_idx);
+                let truth_id = truth.card_identity(deck_idx);
+                let is_critical = truth_id.map_or(false, |id| (1u64 << id) & critical_mask != 0);
+                run.push((pov.is_touched(deck_idx), is_critical, truth_id.is_some()));
             }
 
-            // Second pass: each truth-critical card in the chop-eligible list contributes
-            // a threat sized by buffer + rank-from-chop.
-            for (rank_from_chop, &deck_idx) in chop_eligible.iter().enumerate() {
-                // Unknown identity → no contribution here; probabilistic risk is BDR's job.
-                let Some(id) = truth.card_identity(deck_idx) else {
-                    continue;
-                };
-                if (1u64 << id) & critical_mask == 0 {
+            // Second pass: walk that run, accumulating the protection in front of each
+            // truth-critical card:
+            //
+            // - `touched_shield`: touched non-playable cards whose truth identity is non-
+            //   critical. These are held indefinitely (never discarded) and sit in front of
+            //   the critical, so saving such a card protects it at ×4 — and, just as
+            //   importantly, the term must not *penalise* the save: a card going untouched →
+            //   touched would otherwise just leave the chop-eligible run and bump the critical
+            //   one rank closer to chop.
+            // - `rank`: every untouched chop-eligible card seen so far (non-critical, unknown,
+            //   or critical) — the holder's discard order. Each only pushes a later critical
+            //   one position away (×1).
+            //
+            // Cards *behind* a critical (newer / further from chop) are reached only after it
+            // and contribute nothing to its protection.
+            let mut touched_shield: u32 = 0;
+            let mut rank: u32 = 0;
+            for &(touched, is_critical, truth_known) in &run {
+                if touched {
+                    if truth_known && !is_critical {
+                        touched_shield += 1;
+                    }
                     continue;
                 }
-                let r = rank_from_chop as f64; // 0 = chop
-                let threat = 1.0 / (1.0 + r + 4.0 * buffer as f64);
-                total += threat;
+                if is_critical {
+                    let threat = 1.0 / (1.0 + rank as f64 + 4.0 * (buffer + touched_shield) as f64);
+                    total += threat;
+                }
+                // Unknown-identity cards contribute no threat here (probabilistic risk is
+                // BDR's job) but, like every chop-eligible card, push later criticals back.
+                rank += 1;
             }
         }
         total
