@@ -475,6 +475,21 @@ it only *reduces* leaf values, so `upper_bound` admissibility is preserved. Iner
 `quiescence-search` is off, and exposed via the `Evaluator::play_score_weight` hook
 (`DefaultEvaluator` returns `score_weight`).
 
+**Root-playability repay gate.** The debt is a per-player counter, not card-specific, so the
+neutralization is gated on the *cashed* card being a **pre-existing play** — one already playable
+in the *root* state. The set of root-playable identities is threaded through `simulate_forward` →
+`quiescence_extend` → `quiescence_rollout`, and `cashed_play_is_root_playable` checks the acting
+player's own `Signal::Play` committed identity (or inferred set ⊆ root-playable) for the card being
+cashed. A play the line itself unlocks — a finesse payoff that lands one ply past the horizon
+purely from turn order — is **not** root-playable, so it banks its score normally instead of
+repaying the debt.
+
+Without this gate, demonstrating a finesse reads as deferral arbitrage: a teammate continues the
+finesse with a clue while *also* holding a pre-existing play (incrementing the counter), cashes the
+pre-existing play in-horizon, but the lingering debt is then wrongly repaid by — and wipes the score
+of — the unrelated, line-unlocked payoff cashed in the tail. The engine would refuse to demonstrate
+finesses (regression test `should_prioritize_demonstrating_finesse`).
+
 ---
 
 ### 2.7 `discard_action_penalty`

@@ -274,3 +274,19 @@ fn should_not_discard_with_playables_in_hand() {
         ),
     }
 }
+
+#[test]
+fn should_prioritize_demonstrating_finesse() {
+    let action = engine_action_at_turn("should_prioritize_demonstrating_finesse.json", 7);
+    match action {
+        GameAction::Play {
+            player_index: 0,
+            card_deck_index: 3,
+            ..
+        } => println!("Alice blind-played y1 from her finesse position. Action: {:?}", action),
+        _ => panic!(
+            "Alice chose the following action. Action: {:?}",
+            action
+        ),
+    }
+}

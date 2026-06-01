@@ -383,6 +383,10 @@ impl TreeActionSelectionStrategy {
         phantom_plays: u8,
         at_root_sim: bool,
         declined: [u8; MAX_PLAYERS_IN_GAME],
+        // Cards playable in the *root* state, used to gate declined-play debt: only a play that
+        // pre-existed at the root counts as "declined". A play the line itself unlocked (e.g. a
+        // finesse connector cashed earlier in this very line) is not a lazy decline.
+        root_playable: u64,
     ) -> (Score, ScoreBreakdown) {
         if depth == 0 || state.table_state.is_terminal(static_data) {
             // Quiescence extension (experimental, off by default): when this leaf still has a
@@ -399,6 +403,7 @@ impl TreeActionSelectionStrategy {
                 at_root_sim,
                 depth,
                 declined,
+                root_playable,
             ) {
                 pv_table.rows[depth].clear();
                 return settled;
@@ -555,6 +560,7 @@ impl TreeActionSelectionStrategy {
             child_phantom,
             at_root_sim,
             child_declined,
+            root_playable,
         );
         let total = subtree_score + immediate;
         tracing::trace!(
@@ -594,6 +600,7 @@ impl TreeActionSelectionStrategy {
         _at_root_sim: bool,
         _depth: usize,
         _declined: [u8; MAX_PLAYERS_IN_GAME],
+        _root_playable: u64,
     ) -> Option<(Score, ScoreBreakdown)> {
         None
     }
@@ -615,6 +622,7 @@ impl TreeActionSelectionStrategy {
         at_root_sim: bool,
         depth: usize,
         declined: [u8; MAX_PLAYERS_IN_GAME],
+        root_playable: u64,
     ) -> Option<(Score, ScoreBreakdown)> {
         if !(at_root_sim
             && depth == 0
@@ -634,6 +642,7 @@ impl TreeActionSelectionStrategy {
             at_root_sim,
             budget,
             declined,
+            root_playable,
         ))
     }
 
@@ -700,6 +709,46 @@ impl TreeActionSelectionStrategy {
         false
     }
 
+    /// Does the play in `action` cash a card the acting player believes is a **root-playable**
+    /// identity (a `Signal::Play` whose `committed_identity` was playable at the root, or a
+    /// convention-inferred identity set entirely within `root_playable`)?
+    ///
+    /// The declined-play debt is a per-player counter, not card-specific, so a player who declined a
+    /// pre-existing play (debt recorded) and *also* holds a line-unlocked play (e.g. a finesse
+    /// payoff) could have the debt wrongly consumed by the line-unlocked play's tail cash. Gating
+    /// the repay on the *cashed* card being root-playable keeps the neutralization aimed at the
+    /// pre-existing play it was meant for, and lets a genuine finesse payoff bank its score.
+    ///
+    /// Uses the acting player's own knowledge rather than `truth` so it works for the root player's
+    /// own hand too (where `truth` cannot see the identity).
+    #[cfg(feature = "quiescence-search")]
+    fn cashed_play_is_root_playable(
+        pk: &crate::engine::knowledge::player_knowledge::PlayerKnowledge,
+        action: &GameAction,
+        root_playable: u64,
+    ) -> bool {
+        let GameAction::Play {
+            card_deck_index, ..
+        } = action
+        else {
+            return false;
+        };
+        let di = *card_deck_index as usize;
+        if let Some(committed_identity) = pk.signals[di].iter().find_map(|s| match s {
+            Signal::Play {
+                committed_identity, ..
+            } => Some(*committed_identity),
+            _ => None,
+        }) {
+            return (1u64 << committed_identity) & root_playable != 0;
+        }
+        if let Some(inferred) = pk.inferred_identities[di] {
+            let bits = inferred.as_bits();
+            return bits != 0 && (bits & !root_playable) == 0;
+        }
+        false
+    }
+
     /// Quiescence tail: extend a *loud* leaf (one with an uncashed signalled play) until it
     /// goes quiet, so the returned `game_score` reflects pending plays actually resolving
     /// rather than a static estimate. Mirrors [`simulate_forward`]'s pick→apply→advance
@@ -722,6 +771,7 @@ impl TreeActionSelectionStrategy {
         at_root_sim: bool,
         budget: usize,
         declined: [u8; MAX_PLAYERS_IN_GAME],
+        root_playable: u64,
     ) -> (Score, ScoreBreakdown) {
         let mut cur = state.clone();
         let mut phantom = phantom_plays;
@@ -794,16 +844,24 @@ impl TreeActionSelectionStrategy {
             let mut play_bonus =
                 evaluator.play_progress_bonus(&chosen.action, &cur, &next, phantom, child_phantom);
             if play_bonus > 0.0 {
-                if declined[active] > 0 {
-                    // This tail play repays a play `active` *declined* earlier in this line
-                    // (discarded/clued while holding a guaranteed play). The play still advances
-                    // the stack — so its `score_weight` lands in `breakdown.total` below — but we
-                    // subtract that full realized score here so re-cashing the deferred play banks
-                    // none of it: cashing a play *now* strictly beats declining it and re-cashing
-                    // it past the horizon. It then pays the same deferral discount as any other
-                    // tail play (no exemption for the wasted turn), so the repaid play lands net
-                    // *negative* — closing the arbitrage at its source, where the flat
+                if declined[active] > 0
+                    && Self::cashed_play_is_root_playable(active_pk, &chosen.action, root_playable)
+                {
+                    // This tail play repays a *pre-existing* play `active` *declined* earlier in
+                    // this line (discarded/clued while holding a guaranteed play). The play still
+                    // advances the stack — so its `score_weight` lands in `breakdown.total` below —
+                    // but we subtract that full realized score here so re-cashing the deferred play
+                    // banks none of it: cashing a play *now* strictly beats declining it and
+                    // re-cashing it past the horizon. It then pays the same deferral discount as any
+                    // other tail play (no exemption for the wasted turn), so the repaid play lands
+                    // net *negative* — closing the arbitrage at its source, where the flat
                     // `score_deferral` discount alone only narrowed it.
+                    //
+                    // The repay is gated on the *cashed* card being root-playable
+                    // ([`Self::cashed_play_is_root_playable`]): the debt is a per-player counter, so
+                    // without the gate a player who declined a pre-existing play but also holds a
+                    // line-unlocked play (a finesse payoff) would have the debt wrongly consumed by
+                    // — and the payoff wiped from — that unrelated, genuinely new play.
                     declined[active] -= 1;
                     play_bonus = -evaluator.play_score_weight()
                         - evaluator.play_deferral_penalty(elapsed)
@@ -955,8 +1013,10 @@ impl TreeActionSelectionStrategy {
                 child_phantom,
                 false,
                 // Inner subjective sub-searches never run the quiescence tail (`at_root_sim ==
-                // false`), so declined-play debt is irrelevant here — start clean.
+                // false`), so declined-play debt is irrelevant here — start clean. `root_playable`
+                // is likewise unused below the root sim; pass 0.
                 [0; MAX_PLAYERS_IN_GAME],
+                0,
             );
             let score = subtree_score + immediate;
             #[cfg(feature = "search-diagnostic")]
@@ -1142,6 +1202,10 @@ impl TreeActionSelectionStrategy {
             candidates = candidates.len(),
         );
         let subtree_depth = depth - 1;
+        // Cards playable in the root state, threaded through the rollout to gate declined-play
+        // debt: only a play that pre-existed here counts as "declined" (see
+        // [`Self::player_declined_root_playable`]).
+        let root_playable = root_state.table_state().playable_cards(static_data);
         let eval_candidate = |proposed: ProposedAction| -> ScoredNode {
             let _guard = span.clone().entered();
             let root_knowledge = root_state.team_knowledge.player(root_player).clone();
@@ -1203,6 +1267,7 @@ impl TreeActionSelectionStrategy {
                 child_phantom,
                 true,
                 declined,
+                root_playable,
             );
             let total = leaf_score + immediate_bonus;
             let pv = pv_table.pv_at(subtree_depth);
