@@ -384,3 +384,20 @@ fn should_avoid_potential_1s_bad_touch() {
         _ => panic!("Alice chose the following action: {:?}", action),
     }
 }
+
+#[test]
+#[ignore]
+fn should_prompt_over_hard_burn() {
+    let action = search_best_action("should_prompt_over_hard_burn");
+    match action {
+        GameAction::Clue {
+            player_index: 1,
+            clue: Clue {
+                clue_type: ClueType::Rank,
+                clue_value: 4,
+            },
+            ..
+        } => println!("Alice choose to prompt g3 by cluing g4: {:?}", action),
+        _ => panic!("Alice chose the following action: {:?}", action),
+    }
+}

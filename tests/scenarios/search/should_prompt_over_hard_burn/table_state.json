@@ -1,0 +1,25 @@
+{
+  "scenario_description": "There are 8 clues n the bank, but Alice could perform a prompt instead, which conventionally should have priority over an ClueBurn.",
+  "suits": [
+    "red",
+    "yellow",
+    "green",
+    "blue",
+    "purple"
+  ],
+  "active_player": 0,
+  "playing_stacks": [
+    ["r1"], ["y1"], ["g1", "g2"], ["b1", "b2", "b3"], ["p1", "p2", "p3", "p4", "p5"]
+  ],
+  "discard_pile": [
+    "r1", "r1", "r2", "r3", "y1", "g1", "g2", "g3", "b2", "b4", "p1", "p2"
+  ],
+  "clue_tokens": 8,
+  "strikes": 0,
+  "player_on_turn": 0,
+  "hands": [
+    ["x", "x", "x", {"id":  "x", "positive": ["5"], "inferred": "r5y5b5"}, {"id": "x", "positive": ["yellow"], "negative": ["blue", "5"], "inferred": "y2y3y4"}],
+    ["b1", "p1", {"id": "y3", "negative": ["blue", "purple"]}, {"id": "g3", "positive": ["green"], "negative": ["1", "red", "blue","purple"], "inferred":  "g3g4"}, {"id": "g4", "positive": ["green"], "negative": ["1", "red", "blue","purple"], "inferred":  "g3g4"}],
+    ["b3", "r4", {"id": "g4", "negative": ["purple"]}, {"id": "y4", "negative": ["5", "blue", "purple"]}, {"id": "g5", "positive": ["5"], "negative": ["blue","purple"], "inferred": "r5y5g5"}]
+  ]
+}
