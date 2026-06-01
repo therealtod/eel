@@ -252,7 +252,7 @@ impl Default for DefaultEvaluator {
             pace_weight: 1.0_f64,
             efficiency_weight: 1.9_f64,
             critical_exposure_weight: 3.0_f64,
-            lost_score_ceiling_weight: 8.0_f64,
+            lost_score_ceiling_weight: 30.0_f64,
             empathy_weight: 0.0_f64,
             good_touch_penalty: 20.0_f64,
             clue_token_weight: 0.6_f64,
