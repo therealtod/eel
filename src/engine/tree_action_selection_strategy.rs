@@ -2,6 +2,8 @@ use crate::engine::action_outcome::ActionOutcome;
 use crate::engine::action_selection_strategy::ActionSelectionStrategy;
 use crate::engine::convention::convention_set::ConventionSet;
 use crate::engine::convention::convention_tech::ConventionTech;
+use crate::engine::convention::hgroup::game_action_filter::GameActionFilter;
+use crate::engine::convention::hgroup::h_group_core::is_good_touch_principle_compliant;
 #[cfg(feature = "quiescence-search")]
 use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::convention::hgroup::tech::clue_burn::ClueBurn;
@@ -109,6 +111,7 @@ impl TreeActionSelectionStrategy {
     pub fn candidate_actions_with_provenance(
         pov: &dyn PlayerPOV,
         convention_set: &dyn ConventionSet,
+        is_early_game: bool,
     ) -> SmallVec<[ProposedAction; CANDIDATE_INLINE_CAP]> {
         let has_clue_tokens = pov.table_state().clue_token_bank.whole_clue_tokens_count() > 0;
         let mut proposed: SmallVec<[ProposedAction; CANDIDATE_INLINE_CAP]> = convention_set
@@ -169,6 +172,32 @@ impl TreeActionSelectionStrategy {
         if proposed.iter().any(|p| p.tech_name == "DiscardKnownTrash") {
             proposed.retain(|p| p.tech_name != "DiscardChop");
         }
+
+        // Early Game restriction: while still in the Early Game, a player may not discard their
+        // chop if they have a productive, good-touch-compliant alternative tech available (a play,
+        // a known-trash discard, or a GTP-compliant clue — never a stall fallback, which are not in
+        // `proposed`). Expressed as a `GameActionFilter` so the rule lives in the convention layer.
+        let has_productive_alternative = proposed.iter().any(|p| {
+            p.tech_name != "DiscardChop"
+                && match &p.action {
+                    GameAction::Play { .. } | GameAction::Discard { .. } => true,
+                    GameAction::Clue {
+                        player_index,
+                        touched_card_deck_indexes,
+                        clue,
+                        ..
+                    } => is_good_touch_principle_compliant(
+                        clue,
+                        player_index,
+                        touched_card_deck_indexes,
+                        pov,
+                    ),
+                    GameAction::Draw { .. } => false,
+                }
+        });
+        let early_game_filter =
+            GameActionFilter::early_game_chop_discard(is_early_game, has_productive_alternative);
+        proposed.retain(|p| early_game_filter.apply(&p.action, pov));
 
         // Endgame pace constraint: when pace ≤ 0 the team cannot reach max score if any
         // turn is wasted. Drop all discards when a play is available — discarding is
@@ -928,7 +957,9 @@ impl TreeActionSelectionStrategy {
                 inner_pov,
                 outer,
             ),
-            SubjectivePolicy::Priority => Self::pick_subjective_priority(convention_set, inner_pov),
+            SubjectivePolicy::Priority => {
+                Self::pick_subjective_priority(convention_set, inner_pov, state.is_early_game())
+            }
         }
     }
 
@@ -951,7 +982,11 @@ impl TreeActionSelectionStrategy {
         inner_pov: &dyn PlayerPOV,
         outer: bool,
     ) -> Option<ProposedAction> {
-        let candidates = Self::candidate_actions_with_provenance(inner_pov, convention_set);
+        let candidates = Self::candidate_actions_with_provenance(
+            inner_pov,
+            convention_set,
+            state.is_early_game(),
+        );
         #[cfg(feature = "search-diagnostic")]
         {
             println!(
@@ -1095,8 +1130,10 @@ impl TreeActionSelectionStrategy {
     fn pick_subjective_priority(
         convention_set: &dyn ConventionSet,
         inner_pov: &dyn PlayerPOV,
+        is_early_game: bool,
     ) -> Option<ProposedAction> {
-        let candidates = Self::candidate_actions_with_provenance(inner_pov, convention_set);
+        let candidates =
+            Self::candidate_actions_with_provenance(inner_pov, convention_set, is_early_game);
         let chosen = candidates.into_iter().next();
         if let Some(c) = &chosen {
             tracing::trace!(
@@ -1211,7 +1248,11 @@ impl TreeActionSelectionStrategy {
             player_pov.team_knowledge().clone(),
             next_deck_index,
         );
-        let candidates = Self::candidate_actions_with_provenance(player_pov, convention_set);
+        let candidates = Self::candidate_actions_with_provenance(
+            player_pov,
+            convention_set,
+            root_state.is_early_game(),
+        );
         let evaluator = self.evaluator.as_ref();
         let root_player = player_pov.active_player_index();
         let span = tracing::debug_span!(

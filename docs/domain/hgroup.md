@@ -21,6 +21,7 @@ The engine encodes the foundational H-Group principles in `convention/hgroup/h_g
 | **MCVP** — Minimum Clue Value Principle | `is_minimal_clue_value_compliant` | A clue must either touch a not-yet-gotten card or cause more than one card to become "going to play". |
 | **GTP** — Good Touch Principle | `is_good_touch_principle_compliant` / `count_bad_touches` | A clue should not touch a card that is trash or a duplicate of an already-saved identity (a *bad touch*). |
 | **Save Principle** | `is_save_principle_protected` / `is_forced_save` | The team must save from discard every card it cannot afford to lose. |
+| **Early Game restriction** | `GameActionFilter::early_game_chop_discard` (applied in `candidate_actions_with_provenance`) | While the game is still in the [Early Game](#h-group-convention-terminology), a player may not discard their chop if they have a productive, good-touch-compliant tech available (a play, a known-trash discard, or a GTP-compliant clue — never a stall fallback). A *known-trash* chop discard is always allowed (it is a `DiscardKnownTrash`, not a `DiscardChop`). |
 
 The Save Principle's **protected set** has three parts:
 
