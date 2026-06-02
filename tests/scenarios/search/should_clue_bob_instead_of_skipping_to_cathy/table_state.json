@@ -1,0 +1,23 @@
+{
+  "scenario_description": "Alice should clue Bob instead of going for Cathy's 1s, killing Bob's chop which should be protected under the save principle",
+  "suits": [
+    "red",
+    "yellow",
+    "green",
+    "blue",
+    "purple"
+  ],
+  "active_player": 0,
+  "playing_stacks": [
+    ["r1"], [], [], [], []
+  ],
+  "discard_pile": [],
+  "clue_tokens": 7,
+  "strikes": 0,
+  "player_on_turn": 0,
+  "hands": [
+    ["x", "x", "x", "x", "x"],
+    ["p2", "y1", "y2", "r2", "g2"],
+    ["b3", {"id": "p1", "negative": ["red"]}, {"id": "b4", "negative": ["red"]}, {"id": "p4", "negative": ["red"]}, {"id": "y1", "negative": ["red"]}]
+  ]
+}

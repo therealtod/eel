@@ -220,6 +220,15 @@ impl TreeActionSelectionStrategy {
         state_after: &KnowledgeAwareGameState,
         static_data: &StaticGameData,
         truth: &dyn PlayerPOV,
+        // The planning POV used to resolve the *consequences* of a discard (BDR). Distinct from
+        // `truth` (the acting player's POV): a player can't see their own discarded card, so scoring
+        // the loss from the actor's POV diluted the real cost across their empathy. `observer` is the
+        // same POV the leaf is evaluated from (root truth at the root sim, the inner planner inside a
+        // recursive sub-search), so a discarded card the planner *can* see is costed at its true
+        // identity. This never lets a player *choose* better with hidden info — picking still happens
+        // from the actor's POV — it only makes the line's cost accounting honest. See
+        // [`Self::simulate_forward`]'s `observer` doc-comment.
+        observer: &dyn PlayerPOV,
         pre_phantom_plays: u8,
         post_phantom_plays: u8,
         remaining_depth: usize,
@@ -270,7 +279,8 @@ impl TreeActionSelectionStrategy {
         }
         let team_empathy_bonus =
             evaluator.team_empathy_delta_bonus(action, state_before, state_after);
-        let discard_penalty = evaluator.discard_action_penalty(action, actor, state_before, truth);
+        let discard_penalty =
+            evaluator.discard_action_penalty(action, actor, state_before, observer);
         let critical_exposure_delta = evaluator.critical_exposure_delta_bonus(
             action,
             actor,
@@ -508,9 +518,11 @@ impl TreeActionSelectionStrategy {
         // phantom claim and falls again when a later real play realizes that identity.
         let child_phantom = next.phantom_play_count();
 
-        // Score the per-ply contribution from the active player's POV so terms like
-        // `discard_action_penalty`/BDR and `critical_exposure_delta_bonus` reflect what
-        // the actor could actually see when they made the choice.
+        // Score the per-ply contribution from the active player's POV so terms like clue precision
+        // and `critical_exposure_delta_bonus` reflect what the actor could actually see when they
+        // made the choice. The discard consequence (BDR), however, is scored from `observer` — the
+        // same planning POV the leaf uses — so losing a card the planner can identify is costed at
+        // its true value rather than diluted across the discarder's own-card empathy.
         let immediate = Self::immediate_action_bonus(
             &chosen.action,
             evaluator,
@@ -518,6 +530,7 @@ impl TreeActionSelectionStrategy {
             &next,
             static_data,
             &inner_pov,
+            observer,
             phantom_plays,
             child_phantom,
             depth,
@@ -986,6 +999,10 @@ impl TreeActionSelectionStrategy {
                 &next,
                 static_data,
                 inner_pov,
+                // Inside the inner subjective sub-search the planner *is* the acting player, so the
+                // discard consequence is scored from their own POV too (no more-informed observer
+                // exists here).
+                inner_pov,
                 0,
                 child_phantom,
                 depth,
@@ -1232,6 +1249,9 @@ impl TreeActionSelectionStrategy {
                 &root_state,
                 &next,
                 static_data,
+                &truth_pov,
+                // At the root the acting player is the observer (root truth); a discard of the root
+                // player's own card stays empathy-scored since not even root truth sees it.
                 &truth_pov,
                 0,
                 child_phantom,

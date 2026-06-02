@@ -339,3 +339,20 @@ fn should_play_instead_of_discarding() {
         _ => panic!("Cathy has chosen the following action: {:?}", action),
     }
 }
+
+#[test]
+fn should_play_clue_alice() {
+    let action = engine_action_at_turn("should_play_clue_alice.json", 3);
+    match action {
+        GameAction::Clue {
+            player_index: 0,
+            clue:
+                Clue {
+                    clue_type: ClueType::Color,
+                    clue_value: 0,
+                },
+            ..
+        } => println!("Cathy has chosen to play clue Alice: {:?}", action),
+        _ => panic!("Cathy has chosen the following action: {:?}", action),
+    }
+}

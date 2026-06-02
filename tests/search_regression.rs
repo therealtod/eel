@@ -431,3 +431,20 @@ fn should_play_instead_of_discarding() {
         _ => panic!("Alice has chosen the following action: {:?}", action),
     }
 }
+
+#[test]
+fn should_two_save_bob_instead_of_skipping_to_cathy() {
+    let action = search_best_action("should_clue_bob_instead_of_skipping_to_cathy");
+    match action {
+        GameAction::Clue {
+            player_index: 1,
+            clue:
+                Clue {
+                    clue_type: ClueType::Color,
+                    clue_value: 0,
+                },
+            ..
+        } => println!("Alice has chosen to play clue Bob's 2: {:?}", action),
+        _ => panic!("Alice has chosen the following action: {:?}", action),
+    }
+}
