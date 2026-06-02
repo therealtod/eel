@@ -1,3 +1,6 @@
+use crate::engine::convention::hgroup::h_group_core::{
+    get_chop_index, is_save_principle_protected,
+};
 use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::evaluator::types::{HARMONIC_LUT, RECIPROCAL_LUT};
 use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
@@ -23,7 +26,9 @@ use crate::game::static_game_data::StaticGameData;
 /// Per-clue immediate adjustments (applied to every clue action along the search line):
 /// - `empathy_weight * resolved_touched_cards`          — precision bonus for clues that fully resolve touched cards
 /// - `-good_touch_penalty * bad_touch_count`            — penalty for each touched card with no overlap with still-needed
-///                                                        cards (good-touch principle violation)
+///                                                        cards (good-touch principle violation). Each penalty is softened by
+///                                                        `forced_save_bad_touch_relief` when the clue is a forced
+///                                                        Save-Principle save (see `forced_save_bad_touch_relief`).
 /// - `-potential_bad_touch_penalty`                     — flat penalty when a touched-on-receiver still-needed
 ///                                                        identity overlaps with an identity the giver likely
 ///                                                        already holds (potential duplicate)
@@ -86,6 +91,25 @@ pub struct DefaultEvaluator {
     /// (good-touch principle violation). Should be lower than `lost_score_ceiling_weight`
     /// so that ceiling preservation takes precedence.
     pub good_touch_penalty: f64,
+    /// Positive **relief** subtracted from [`Self::good_touch_penalty`] for each bad touch that is
+    /// *forced by a Save-Principle save* — a clue that saves a protected card sitting on the
+    /// receiver's chop, with the chop card touched (see `h_group_core::is_forced_save`). The
+    /// effective per-bad-touch penalty becomes `(good_touch_penalty - forced_save_bad_touch_relief)`
+    /// (floored at 0).
+    ///
+    /// The Save Principle outranks the Good Touch Principle: when saving a protected card on chop
+    /// cannot avoid touching collateral trash, the bad touch is *forced by circumstance*, not
+    /// chosen, so it must not be penalised as harshly as a deliberate one — otherwise the engine
+    /// would rather let a protected card be discarded than incur the full good-touch penalty.
+    ///
+    /// Expressed as a relief (rather than a separate absolute penalty) so it tracks
+    /// `good_touch_penalty` under re-tuning and can never exceed it. Kept **below**
+    /// `good_touch_penalty` so the softened penalty stays **non-zero**: among competing saves of
+    /// the same card, search still prefers one that avoids the bad touch (e.g. a clean rank save
+    /// over a colour save that also touches trash). Suggested default: `15.0` (→ effective `5.0`).
+    ///
+    /// Set to `0.0` to disable the relief (full good-touch penalty even for forced saves).
+    pub forced_save_bad_touch_relief: f64,
     /// Base multiplier for the clue-token term. Value is `clue_token_weight * harmonic(n)`,
     /// where `harmonic(n) = Σ_{i=1}^{n} 1/i`. The 0→1 jump is the largest; each additional
     /// token adds diminishing value, reflecting that scarcity matters most at very low counts.
@@ -180,8 +204,34 @@ pub struct DefaultEvaluator {
     /// cost. Below `score_weight`, such artifacts can flip a clearly-correct known play to a chop
     /// discard (see the `should_play_instead_of_discarding` replay regression).
     ///
+    /// Softened by [`Self::save_pressure_known_playable_relief`] when the team is under save
+    /// pressure (a protected card is about to be discarded), excusing the actor for using the
+    /// turn on the save instead of cashing their play.
+    ///
     /// Set to 0 to disable.
     pub discard_while_known_playable_penalty: f64,
+    /// Positive **relief** subtracted from [`Self::discard_while_known_playable_penalty`] when the
+    /// actor — though holding a known-playable — is under *Save-Principle pressure*: another
+    /// player's unclued chop holds a protected card ([`is_save_principle_protected`]) and that
+    /// holder has no known-playable of their own, so the card is in concrete danger of being
+    /// discarded. The effective penalty becomes
+    /// `(discard_while_known_playable_penalty - save_pressure_known_playable_relief)` (floored at 0).
+    ///
+    /// The Save Principle outranks the team's tempo expectation that a player always cashes a known
+    /// play: when a protected card is about to be lost, the team is in "save mode", and a player
+    /// who spends the turn helping the save (e.g. cycling for a clue token) rather than cashing
+    /// their own play should not be charged the full "you sat on a known play" penalty. This is the
+    /// deferral-side dual of [`Self::forced_save_bad_touch_relief`], and uses the same relief shape
+    /// for consistency.
+    ///
+    /// This is also self-limiting against the artifact the base penalty guards: the same save now
+    /// costs less in the play line's rollout thanks to `forced_save_bad_touch_relief`, so softening
+    /// here does not reopen the discard-over-play hole. Kept **below**
+    /// `discard_while_known_playable_penalty` so the softened penalty stays non-zero. Suggested
+    /// default: `5.0` (→ effective `5.0`).
+    ///
+    /// Set to `0.0` to disable the relief.
+    pub save_pressure_known_playable_relief: f64,
     /// Flat penalty applied when the clue may duplicate, in the receiver's hand, a still-needed
     /// identity the giver likely already holds.
     ///
@@ -288,6 +338,7 @@ impl Default for DefaultEvaluator {
             lost_score_ceiling_weight: 30.0_f64,
             empathy_weight: 0.0_f64,
             good_touch_penalty: 20.0_f64,
+            forced_save_bad_touch_relief: 15.0_f64,
             clue_token_weight: 0.6_f64,
             clue_demand_weight: 0.05_f64,
             clue_precision_weight: 0.4_f64,
@@ -299,6 +350,7 @@ impl Default for DefaultEvaluator {
             potential_bad_touch_penalty: 9.0_f64,
             bottom_deck_risk_weight: 2.0_f64,
             discard_while_known_playable_penalty: 10.0_f64,
+            save_pressure_known_playable_relief: 5.0_f64,
             critical_exposure_delta_weight: 0.5_f64,
             tempo_cost_weight: 2.5_f64,
             play_deferral_weight: 0.15_f64,
@@ -809,5 +861,46 @@ impl DefaultEvaluator {
             }
         }
         count
+    }
+
+    /// True when the team is under *Save-Principle pressure* from `actor`'s seat: some **other**
+    /// player's unclued chop holds a Save-Principle-protected card ([`is_save_principle_protected`])
+    /// and that holder has no known-playable of their own — so, absent intervention, they are in
+    /// concrete danger of discarding the protected card on their turn.
+    ///
+    /// `truth` resolves the teammates' chop identities (the searcher's POV sees every hand). Used
+    /// to soften [`Self::discard_while_known_playable_penalty`]: when a protected card is about to
+    /// be lost, a player spending the turn on the save instead of cashing a known play is excused.
+    pub(crate) fn save_principle_card_in_danger(
+        actor: PlayerIndex,
+        table_state: &TableState,
+        static_data: &StaticGameData,
+        team_knowledge: &TeamKnowledge,
+        truth: &dyn PlayerPOV,
+    ) -> bool {
+        let num_players = static_data.number_of_players as usize;
+        let playable_mask = table_state.playable_cards(static_data);
+        for p in 0..num_players {
+            if p == actor {
+                continue;
+            }
+            let pk = team_knowledge.player(p);
+            let pov = LightweightPlayerPOV::new(p, pk, team_knowledge, table_state, static_data);
+            let Some(chop) = get_chop_index(p, &pov) else {
+                continue;
+            };
+            // A holder with a known-playable plays it rather than discarding the chop, so the
+            // protected card is not actually in danger this turn.
+            if Self::count_known_playable(&pov, playable_mask) > 0 {
+                continue;
+            }
+            let Some(chop_id) = truth.card_identity(chop) else {
+                continue;
+            };
+            if is_save_principle_protected(chop_id, truth) {
+                return true;
+            }
+        }
+        false
     }
 }

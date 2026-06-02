@@ -29,6 +29,17 @@ pub struct Variant {
     pub rank_by_id: [u8; MAX_UNIQUE_CARDS_IN_DECK],
     pub stack_starting_cards: VariantCardsBitField,
     pub stack_ending_cards: VariantCardsBitField,
+    /// Save Principle extension: identities that must be saved from being discarded *even when
+    /// they are not yet critical* (i.e. more than one copy is still live). This is the
+    /// variant-dependent half of the Save Principle's protected set — the universal half being
+    /// every critical card. In the base game this is every **2**: only two copies exist and both
+    /// are frequently exposed early, so losing tempo on them is expensive enough that the team
+    /// saves them pre-emptively. (Every 5 is single-copy and therefore *always* critical, so 5s
+    /// are already covered by the critical half and need not appear here.)
+    ///
+    /// Consumed by the Save Principle helpers in
+    /// `engine::convention::hgroup::h_group_core` — see `is_save_principle_protected`.
+    pub always_save_cards: VariantCardsBitField,
 }
 
 impl Variant {
@@ -94,6 +105,7 @@ pub mod test_variants {
         0, 0, 0, 0, 0,
     ];
     const ONES_BITFIELD: VariantCardsBitField = 1 | 1 << 5 | 1 << 10 | 1 << 15 | 1 << 20;
+    const TWOS_BITFIELD: VariantCardsBitField = 1 << 1 | 1 << 6 | 1 << 11 | 1 << 16 | 1 << 21;
     const FIVES_BITFIELD: VariantCardsBitField = 1 << 4 | 1 << 9 | 1 << 14 | 1 << 19 | 1 << 24;
 
     // Color clue value i touches suit i: bits [i*5 .. i*5+4]
@@ -138,5 +150,6 @@ pub mod test_variants {
         ],
         stack_starting_cards: ONES_BITFIELD,
         stack_ending_cards: FIVES_BITFIELD,
+        always_save_cards: TWOS_BITFIELD,
     };
 }

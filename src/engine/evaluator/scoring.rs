@@ -1,5 +1,5 @@
 use crate::engine::convention::hgroup::h_group_core::{
-    count_bad_touches, get_chop_index, is_potential_bad_touch,
+    count_bad_touches, get_chop_index, is_forced_save, is_potential_bad_touch,
 };
 use crate::engine::decision_tree::Score;
 use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
@@ -193,6 +193,17 @@ impl super::Evaluator for DefaultEvaluator {
         let bad_touch_count =
             count_bad_touches(clue, touched, receiver, truth, table_state, static_data);
 
+        // Save Principle outranks Good Touch: a bad touch forced by saving a protected card on
+        // the receiver's chop is less culpable than a deliberate one, so the good-touch penalty is
+        // softened by `forced_save_bad_touch_relief` (the softened penalty stays non-zero, so a
+        // cleaner save of the same card is still preferred by search).
+        let per_bad_touch_penalty =
+            if bad_touch_count > 0 && is_forced_save(touched, receiver, truth) {
+                (self.good_touch_penalty - self.forced_save_bad_touch_relief).max(0.0)
+            } else {
+                self.good_touch_penalty
+            };
+
         let potential_bad_touch = self.potential_bad_touch_penalty != 0.0
             && is_potential_bad_touch(
                 touched,
@@ -204,7 +215,7 @@ impl super::Evaluator for DefaultEvaluator {
             );
 
         precision_bonus
-            - bad_touch_count as f64 * self.good_touch_penalty
+            - bad_touch_count as f64 * per_bad_touch_penalty
             - if potential_bad_touch {
                 self.potential_bad_touch_penalty
             } else {
@@ -320,7 +331,23 @@ impl super::Evaluator for DefaultEvaluator {
                 static_data,
                 pre.team_knowledge(),
             ) {
-            self.discard_while_known_playable_penalty
+            // Save Principle outranks the cash-your-known-play tempo expectation: when a protected
+            // card is in concrete danger of being discarded, excuse the actor for spending the turn
+            // on the save instead of cashing their play by softening the penalty with
+            // `save_pressure_known_playable_relief` (floored at 0, kept non-zero).
+            if DefaultEvaluator::save_principle_card_in_danger(
+                actor,
+                table_state,
+                static_data,
+                pre.team_knowledge(),
+                truth,
+            ) {
+                (self.discard_while_known_playable_penalty
+                    - self.save_pressure_known_playable_relief)
+                    .max(0.0)
+            } else {
+                self.discard_while_known_playable_penalty
+            }
         } else {
             0.0
         };

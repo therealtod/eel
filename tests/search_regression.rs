@@ -426,8 +426,7 @@ fn should_play_instead_of_discarding() {
     let action = search_best_action("should_play_instead_of_discarding");
     match action {
         GameAction::Play {
-            player_index: 0,
-            ..
+            player_index: 0, ..
         } => println!("Alice has chosen play her known playable p4: {:?}", action),
         _ => panic!("Alice has chosen the following action: {:?}", action),
     }
