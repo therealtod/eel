@@ -133,12 +133,22 @@ fn critical_save_matches(
     // Match if any chop identity consistent with the observer's empathy and the clue mask would
     // have constituted a critical save from the giver's view. Receiver: wide empathy → genuine
     // existential. Others: singleton empathy → collapses to the previous direct check.
+    //
+    // An identity that is already *gotten* (its sole surviving copy is located and touched
+    // elsewhere on the team) cannot be the thing this clue is saving — saving an already-safe
+    // critical card is meaningless, and good touch forbids the chop from being a duplicate of it.
+    // Excluding gotten identities prevents a play clue whose focus merely *could* be a critical
+    // card (by wide empathy) from being misread as a critical save.
     let static_data = observer_pov.static_data();
     let total_ids =
         static_data.variant.number_of_suits as usize * static_data.variant.stacks_size as usize;
     let clue_mask = static_data.variant.empathy_for_clue(clue).as_bits();
     let candidates = observer_pov.inferred_identities(chop).as_bits() & clue_mask;
-    (0..total_ids).any(|id| (candidates & (1u64 << id)) != 0 && is_critical_save_id(id, &giver_pov))
+    (0..total_ids).any(|id| {
+        (candidates & (1u64 << id)) != 0
+            && is_critical_save_id(id, &giver_pov)
+            && !giver_pov.is_gotten(id)
+    })
 }
 
 /// Save a critical card on chop by cluing its color (suit) or rank.

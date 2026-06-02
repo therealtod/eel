@@ -38,7 +38,6 @@ impl HGroupConventionSet {
             techs,
             fallback_techs: vec![
                 Box::new(FiveStall),
-                Box::new(TempoClue),
                 Box::new(ClueBurn),
                 Box::new(LowLevelStall),
             ],
@@ -53,6 +52,7 @@ impl Default for HGroupConventionSet {
             Box::new(BlindPlay),
             Box::new(DirectPlayClue),
             Box::new(DelayedPlayClue),
+            Box::new(TempoClue),
             Box::new(SimplePrompt),
             Box::new(SimpleFinesse),
             Box::new(ColorCriticalSave),

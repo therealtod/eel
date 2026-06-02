@@ -9,7 +9,6 @@ use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::convention::hgroup::tech::clue_burn::ClueBurn;
 use crate::engine::convention::hgroup::tech::five_stall::FiveStall;
 use crate::engine::convention::hgroup::tech::low_level_stall::LowLevelStall;
-use crate::engine::convention::hgroup::tech::tempo_clue::TempoClue;
 use crate::engine::decision_tree::{LineStep, Score, ScoredNode};
 use crate::engine::evaluator::{DefaultEvaluator, Evaluator, ScoreBreakdown};
 use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
@@ -134,7 +133,6 @@ impl TreeActionSelectionStrategy {
         if proposed.is_empty() {
             for (tech, name) in [
                 (&FiveStall as &dyn ConventionTech, FiveStall.name()),
-                (&TempoClue as &dyn ConventionTech, TempoClue.name()),
                 (&ClueBurn as &dyn ConventionTech, ClueBurn.name()),
                 (&LowLevelStall as &dyn ConventionTech, LowLevelStall.name()),
             ] {

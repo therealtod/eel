@@ -22,25 +22,27 @@ impl GameActionFilter {
 
     /// Rejects clue actions that violate the Minimum Clue Value Principle (MVCP).
     /// Non-clue actions always pass.
+    ///
+    /// Exception: a clue to a player whose hand is **locked** always passes, even when the
+    /// clue itself does not meet the MCVP. A locked hand has no safe discard and no known
+    /// play, so unlocking it (e.g. a Tempo Clue marking an already-gotten card as playable)
+    /// is valuable in its own right.
     pub fn minimum_clue_value() -> Self {
         GameActionFilter {
             filter: Box::new(|action, pov| {
-                if let GameAction::Clue {
+                let GameAction::Clue {
                     player_index,
                     touched_card_deck_indexes,
                     clue,
                     ..
                 } = action
-                {
-                    is_minimal_clue_value_compliant(
-                        clue,
-                        player_index,
-                        touched_card_deck_indexes,
-                        pov,
-                    )
-                } else {
-                    true
+                else {
+                    return true;
+                };
+                if pov.as_player_pov(*player_index).is_hand_locked() {
+                    return true;
                 }
+                is_minimal_clue_value_compliant(clue, player_index, touched_card_deck_indexes, pov)
             }),
         }
     }
@@ -81,11 +83,19 @@ impl GameActionFilter {
 mod tests {
     use super::GameActionFilter;
     use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
-    use crate::engine::knowledge::player_knowledge::{knowledge_for_hand, knowledge_with_empathy};
+    use crate::engine::knowledge::player_pov::PlayerPOV;
+    use crate::engine::knowledge::player_knowledge::{
+        PlayerKnowledge, knowledge_for_hand, knowledge_with_empathy, knowledge_with_visible,
+    };
     use crate::engine::knowledge::team_knowledge::TeamKnowledge;
     use crate::game::action::game_action::GameAction;
+    use crate::game::card::CardIdentityMask;
+    use crate::game::clue::Clue;
+    use crate::game::clue_type::ClueType;
     use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards::{R1, Y1};
-    use crate::game::deck::unit_test_constants::novariant_constants::{R1_MASK, Y1_MASK};
+    use crate::game::deck::unit_test_constants::novariant_constants::{
+        B2_MASK, G2_MASK, R1_MASK, R2_MASK, Y1_MASK, Y2_MASK,
+    };
     use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
         NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
     };
@@ -96,6 +106,84 @@ mod tests {
             card_deck_index,
             turn: 1,
         }
+    }
+
+    fn color_clue(player_index: usize, touched: u8) -> GameAction {
+        GameAction::Clue {
+            player_index,
+            touched_card_deck_indexes: smallvec::smallvec![touched],
+            clue: Clue {
+                clue_type: ClueType::Color,
+                clue_value: 0,
+            },
+            turn: 1,
+        }
+    }
+
+    // ── minimum_clue_value ─────────────────────────────────────────────────
+
+    #[test]
+    fn minimum_clue_value_passes_non_clue_actions() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_draw_action(10);
+        let knowledge = knowledge_for_hand(&[10]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let filter = GameActionFilter::minimum_clue_value();
+        assert!(filter.apply(&discard(10), &pov));
+    }
+
+    #[test]
+    fn minimum_clue_value_rejects_non_compliant_clue_to_unlocked_hand() {
+        // Player 1 holds card 10, already clued and known (from the giver's POV) to be R1.
+        // Re-cluing an already-gotten card touches nothing new and makes no extra card play,
+        // so it violates the MCVP. Player 1's hand is not locked, so the filter rejects it.
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10);
+        table_state.active_player_index = 0;
+        table_state.clue_touched_cards |= 1 << 10;
+
+        let knowledge = knowledge_with_visible(0, &[(10, R1_MASK)]);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let filter = GameActionFilter::minimum_clue_value();
+        assert!(!filter.apply(&color_clue(1, 10), &pov));
+    }
+
+    #[test]
+    fn minimum_clue_value_allows_clue_to_locked_hand() {
+        // Same non-compliant re-clue as above, but now player 1's hand is locked: both of
+        // their cards are touched and ambiguous (R2/Y2, G2/B2 — neither playable nor trash on
+        // empty stacks). Unlocking the hand is valuable, so the MCVP filter lets the clue pass.
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10);
+        table_state.update_with_draw_action(11);
+        table_state.active_player_index = 0;
+        table_state.clue_touched_cards |= (1 << 10) | (1 << 11);
+
+        let knowledge = PlayerKnowledge::new(0);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let p1 = team_knowledge.player_mut(1);
+        p1.own_hand = (1 << 10) | (1 << 11);
+        p1.inferred_identities[10] = Some(CardIdentityMask::from_bits(R2_MASK | Y2_MASK));
+        p1.inferred_identities[11] = Some(CardIdentityMask::from_bits(G2_MASK | B2_MASK));
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        // Sanity: the receiver's hand really is locked from their own POV.
+        assert!(pov.as_player_pov(1).is_hand_locked());
+
+        let filter = GameActionFilter::minimum_clue_value();
+        assert!(filter.apply(&color_clue(1, 10), &pov));
     }
 
     #[test]

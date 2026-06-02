@@ -1,6 +1,5 @@
 use super::play_clue;
 use crate::engine::convention::convention_tech::ClueTech;
-use crate::engine::convention::hgroup::game_action_filter::GameActionFilter;
 use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, PlayClueTech, priority};
 use crate::engine::game_state_snapshot::GameStateSnapshot;
 use crate::engine::knowledge::knowledge_update::Hypothesis;
@@ -78,13 +77,7 @@ impl ClueTech for TempoClue {
     }
 }
 
-impl HGroupClueTech for TempoClue {
-    /// Tempo clues intentionally violate the Minimum Clue Value Principle (the card is already
-    /// gotten), so no MCVP filter is applied.
-    fn clue_action_filters(&self) -> Vec<GameActionFilter> {
-        vec![]
-    }
-}
+impl HGroupClueTech for TempoClue {}
 impl PlayClueTech for TempoClue {}
 impl_convention_tech_for_hgroup_clue_tech!(TempoClue, priority::SIMPLE_PLAY_CLUE);
 
@@ -139,7 +132,7 @@ mod tests {
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
-        let actions = TempoClue.game_actions(&pov);
+        let actions = TempoClue.clue_game_actions(&pov);
 
         assert_eq!(
             actions,
@@ -216,7 +209,7 @@ mod tests {
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
-        let actions = TempoClue.game_actions(&pov);
+        let actions = TempoClue.clue_game_actions(&pov);
 
         assert!(actions.contains(&GameAction::Clue {
             player_index: 1,
