@@ -433,7 +433,7 @@ fn should_play_instead_of_discarding() {
 }
 
 #[test]
-fn should_two_save_bob_instead_of_skipping_to_cathy() {
+fn should_clue_bob_instead_of_skipping_to_cathy() {
     let action = search_best_action("should_clue_bob_instead_of_skipping_to_cathy");
     match action {
         GameAction::Clue {

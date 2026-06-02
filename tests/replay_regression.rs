@@ -356,3 +356,17 @@ fn should_play_clue_alice() {
         _ => panic!("Cathy has chosen the following action: {:?}", action),
     }
 }
+
+#[test]
+#[ignore]
+fn should_play_known_playable_1() {
+    let action = engine_action_at_turn("should_play_known_playable_1.json", 8);
+    match action {
+        GameAction::Play {
+            player_index: 0,
+            card_deck_index: 6,
+            ..
+        } => println!("Bob has chose to play his known playable 1: {:?}", action),
+        _ => panic!("Bob has chosen the following action: {:?}", action),
+    }
+}
