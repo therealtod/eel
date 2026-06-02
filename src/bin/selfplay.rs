@@ -158,7 +158,7 @@ fn run_game(
         // Detect the start of the final round (deck just became empty after a draw).
         if final_round.is_none() && runner.game.table_state.deck.current_size == 0 {
             // The player who just went already took their last turn; num_players-1 remain.
-            final_round = Some(num_players - 1);
+            final_round = Some(num_players);
         }
 
         // Decrement the final-round counter after every turn once active.
