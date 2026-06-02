@@ -1425,7 +1425,7 @@ mod tests {
     #[test]
     fn count_bad_touches_detects_trash_via_truth_pov_after_clue_narrowing() {
         // Regression for the rank-1 → bad-touch P1 case from
-        // tests/replays/should_clue_g1_by_color_avoiding_bad_touch.json.
+        // tests/fixtures/regression/should_clue_g1_by_color_avoiding_bad_touch/replay.json.
         //
         // Card 10 is in player 1's hand. Its truth is P1 (purple-1). Purple is already
         // complete on the stacks, so P1 is trash. The receiver's *public* empathy on

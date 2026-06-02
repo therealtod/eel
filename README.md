@@ -156,7 +156,7 @@ cargo fmt                  # format
 
 ## Test scenarios
 
-Game positions are stored as JSON files under `tests/scenarios/`. Load them via helpers in `tests/common/mod.rs`:
+Game positions are stored as JSON files under `tests/fixtures/regression/`. Load them via helpers in `tests/common/mod.rs`:
 
 ```rust
 // Board state only (numeric scenario)

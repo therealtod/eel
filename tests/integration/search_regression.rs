@@ -1,12 +1,8 @@
-mod common;
-
 use crate::common::utils::search_best_action;
 use eel::game::action::game_action::GameAction;
 use eel::game::clue::Clue;
 use eel::game::clue_type::ClueType;
 
-// 3p, empty stacks. Player 0 knows their slot-1 card is R1 (directly playable).
-// No useful clue targets exist. Expected: play deck 4 (R1).
 #[test]
 fn play_known_playable() {
     let action = search_best_action("play_known_playable");
@@ -37,8 +33,6 @@ fn play_known_playable_even_when_foreseeing_stall() {
     );
 }
 
-// 3p, empty stacks. Player 1's slot-1 card is R1 (visible to player 0).
-// Player 0 has no known playable cards. Expected: direct-play clue to player 1 touching R1 (deck 9).
 #[test]
 fn direct_play_clue_is_top_choice() {
     let action = search_best_action("direct_play_clue_is_top_choice");
@@ -57,11 +51,6 @@ fn direct_play_clue_is_top_choice() {
     }
 }
 
-// Ignored: this is not a search-horizon problem. The blue→Cathy line's payoff is a future
-// *yellow* clue to Cathy (touching y1+y2+y3) that the subjective rollout never gives, so
-// Cathy's yellows are never *signalled* — quiescence (even feature-on) correctly leaves the
-// leaf quiet and cannot realize the setup. Tracked for a scenario redesign / rollout-policy
-// fix, separate from the quiescence-search experiment.
 #[test]
 #[ignore]
 fn prefers_blue_clue_to_cathy_over_rank1_clue_to_bob() {
@@ -341,17 +330,6 @@ fn should_prefer_finesse_if_no_drawback() {
     }
 }
 
-// Residual horizon-stall probe. Alice holds a directly-playable known R1 (deck 4) on
-// empty stacks. The downstream is deliberately dry and critical-laden: Bob and Cathy
-// hold only fully-clued 5s and 4s with no play available anywhere, and only 2 clue
-// tokens remain, so the search foresees forced, catastrophic discards a few plies out.
-// This is the "dry state" horizon artifact described in
-// scratchpads/horizon_effect_fix_implementation_plan.md: a stalling engine would give a
-// wasteful re-clue to push the foreseen discard past the horizon instead of cashing the
-// free play. After the deferred-play discount (1579645) and stall-quiescence (a070faa),
-// the engine should simply play R1. This test exists to measure whether any residual
-// stalling survives those fixes; if it ever regresses, the residual is real and a
-// future-potential evaluator term (option 1 in the plan) becomes worth revisiting.
 #[test]
 fn plays_known_playable_despite_critical_dry_downstream() {
     let action = search_best_action("plays_known_playable_despite_critical_dry_downstream");

@@ -3,14 +3,14 @@ name: diag-replay-state
 description: |
   Debug a failing replay regression test by dumping the engine's internal state at the
   failing turn — per-card empathy, signals, hypotheses, and what each convention tech
-  proposes. Use when an integration test in tests/replay_regression.rs fails and you
+  proposes.   Use when an integration test in tests/integration/replay_regression.rs fails and you
   need to understand WHY the engine chose its action (rather than just that it did).
   Faster and cleaner than println debugging or pure code reasoning.
 ---
 
 # Diagnose a replay regression failure
 
-When a `tests/replay_regression.rs` (or similar replay-driven) test fails, the assertion
+When a `tests/integration/replay_regression.rs` (or similar replay-driven) test fails, the assertion
 only tells you *what* the engine did wrong. The decision is the output of a long chain:
 clue interpretation → empathy update → convention tech firing → tree search ranking.
 Find the divergence by **dumping engine state at the failing turn** with a throwaway
@@ -50,7 +50,7 @@ use eel::hanablive::dto::game::Game;
 #[test]
 fn diag_<short_name>() {
     let path = format!(
-        "{}/tests/replays/<REPLAY_FILE>.json",
+        "{}/tests/fixtures/regression/<REPLAY_NAME>/replay.json",
         env!("CARGO_MANIFEST_DIR")
     );
     let json = std::fs::read_to_string(&path).unwrap();

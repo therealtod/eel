@@ -8,7 +8,7 @@ use eel::game::action::game_action::GameAction;
 /// Load a named search regression scenario and ask the engine for its best action.
 pub fn search_best_action(name: &str) -> GameAction {
     let (table_state, static_data, team_knowledge, _, _) =
-        common::load_scenario_by_name_with_knowledge(&format!("search/{name}"));
+        common::load_scenario_by_name_with_knowledge(name);
     let active = table_state.active_player_index as usize;
     let knowledge = team_knowledge.player(active).clone();
     let pov = LightweightPlayerPOV::new(

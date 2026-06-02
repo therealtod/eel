@@ -4,30 +4,33 @@ Integration tests live in `tests/`, inline unit tests use `#[cfg(test)]` blocks 
 
 | File | Purpose |
 |------|---------|
-| `tests/simple_finesse_tests.rs` | Per-tech tests for `SimpleFinesse` — generation, knowledge updates, hypothesis resolution |
-| `tests/simple_prompt_tests.rs` | Per-tech tests for `SimplePrompt` — generation and knowledge-update semantics |
-| `tests/search_regression.rs` | Engine non-regression suite — verifies the full search stack selects the correct best action on known positions |
-| `tests/replay_regression.rs` | Replay-based regression suite — steps a hanab.live JSON replay to a specific turn and asserts the engine's recommendation. See `tests/replays/` for the corpus. |
+| `tests/integration.rs` | Single test-binary entry point — compiles all integration tests together |
+| `tests/integration/simple_finesse_tests.rs` | Per-tech tests for `SimpleFinesse` — generation, knowledge updates, hypothesis resolution |
+| `tests/integration/simple_prompt_tests.rs` | Per-tech tests for `SimplePrompt` — generation and knowledge-update semantics |
+| `tests/integration/search_regression.rs` | Engine non-regression suite — verifies the full search stack selects the correct best action on known positions |
+| `tests/integration/replay_regression.rs` | Replay-based regression suite — steps a hanab.live JSON replay to a specific turn and asserts the engine's recommendation |
+
+Fixtures live under `tests/fixtures/regression/`. Each test case has its own subdirectory containing either `replay.json`, `table_state.json`, or both.
 
 ### When to use a replay test vs. a search-regression scenario
 
 Use a **replay test** when the correct action at turn N depends on decisions that happened in earlier turns (e.g. which clue was given three turns ago changes what the engine should do now). The replay runner reconstructs the full game history, so convention state accumulated over prior actions is preserved.
 
-Use a **search-regression scenario** (JSON in `tests/scenarios/search/`) when the position itself is sufficient to determine the correct action. Scenarios are self-contained and fast to create; they are the preferred format whenever history is not load-bearing.
+Use a **search-regression scenario** (JSON in `tests/fixtures/regression/<name>/table_state.json`) when the position itself is sufficient to determine the correct action. Scenarios are self-contained and fast to create; they are the preferred format whenever history is not load-bearing.
 
 ### Per-tech tests
 
-Each file exercises one convention tech in isolation: `game_actions` generation, `knowledge_updates`, and hypothesis resolution. Scenarios live under `tests/scenarios/{tech}/{n}/table_state.json` (numeric IDs).
+Each file exercises one convention tech in isolation: `game_actions` generation, `knowledge_updates`, and hypothesis resolution. Scenarios live under `tests/fixtures/regression/{tech}/{n}/table_state.json` (numeric IDs).
 
 ### Search regression suite
 
-`tests/search_regression.rs` holds positions where the correct best action is known in advance. The test runs the full `TreeActionSelectionStrategy` (minimax search + `DefaultEvaluator`) with the complete `HGroupConventionSet` and asserts the top-ranked action. Scenarios live under `tests/scenarios/search/{name}/table_state.json` (semantic folder names).
+`tests/integration/search_regression.rs` holds positions where the correct best action is known in advance. The test runs the full `TreeActionSelectionStrategy` (minimax search + `DefaultEvaluator`) with the complete `HGroupConventionSet` and asserts the top-ranked action. Scenarios live under `tests/fixtures/regression/{name}/table_state.json` (semantic folder names).
 
 Each scenario JSON needs only a board position (`playing_stacks`, `hands`, `clue_tokens`, etc.) — no `prior_actions` are required unless history is needed. The expected action is declared as a Rust pattern-match assertion in the test function.
 
 **Adding a new search regression scenario:**
-1. Create `tests/scenarios/search/{descriptive_name}/table_state.json` describing the position.
-2. Add a `#[test]` function in `tests/search_regression.rs` that calls `search_best_action("{descriptive_name}")` and pattern-matches the result.
+1. Create `tests/fixtures/regression/{descriptive_name}/table_state.json` describing the position.
+2. Add a `#[test]` function in `tests/integration/search_regression.rs` that calls `search_best_action("{descriptive_name}")` and pattern-matches the result.
 3. Choose positions where the correct action is unambiguous enough that any correct implementation of the full convention set must agree.
 
 Player name conventions (Alice = 0, Bob = 1, etc.) are defined in `docs/domain/hgroup.md`.
@@ -40,11 +43,11 @@ Player name conventions (Alice = 0, Bob = 1, etc.) are defined in `docs/domain/h
 cargo run --release --bin snapshot -- \
     --replay logs/14/game_0042.json \
     --turn 22 \
-    --out tests/scenarios/search/slowplay_at_22/table_state.json \
+    --out tests/fixtures/regression/slowplay_at_22/table_state.json \
     --description "Bot slowplayed g3 instead of saving b5 on chop"
 ```
 
-The tool prints the engine recommendation at that turn and a suggested test stub for `search_regression.rs`. It also compares the engine recommendation before and after serialisation — if they differ, the scenario format cannot faithfully represent the convention state accumulated over prior turns, and the tool warns you to use a replay regression test instead.
+The tool prints the engine recommendation at that turn and a suggested test stub for `tests/integration/search_regression.rs`. It also compares the engine recommendation before and after serialisation — if they differ, the scenario format cannot faithfully represent the convention state accumulated over prior turns, and the tool warns you to use a replay regression test instead.
 
 ## `test-support` Feature
 
@@ -88,7 +91,7 @@ Enable it from the command line:
 cargo test --features search-diagnostic -- --nocapture
 ```
 
-**Scenario tests**: Game positions are stored as JSON files at `tests/scenarios/{tech}/{n}/table_state.json`.
+**Scenario tests**: Game positions are stored as JSON files at `tests/fixtures/regression/{tech}/{n}/table_state.json`.
 Each tech folder can contain multiple numbered scenarios.
 
 Load helpers (in `tests/common/mod.rs`):
@@ -102,11 +105,11 @@ let (table_state, static_data, team_knowledge, history, actions) =
     common::load_scenario_with_knowledge("simple_finesse", 2);
 
 // Board state only (semantic path — used by search_regression.rs)
-let (table_state, static_data) = common::load_scenario_by_name("search/play_known_playable");
+let (table_state, static_data) = common::load_scenario_by_name("play_known_playable");
 
 // Board state + team knowledge (semantic path)
 let (table_state, static_data, team_knowledge, history, actions) =
-    common::load_scenario_by_name_with_knowledge("search/direct_play_clue_is_top_choice");
+    common::load_scenario_by_name_with_knowledge("direct_play_clue_is_top_choice");
 ```
 
 `history[i]` is the `GameStateSnapshot` before `actions[i]`, so tests can call

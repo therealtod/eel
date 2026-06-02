@@ -38,7 +38,8 @@ pub fn load_scenario(tech: &str, scenario: u32) -> (TableState, StaticGameData) 
     let path: PathBuf = [
         env!("CARGO_MANIFEST_DIR"),
         "tests",
-        "scenarios",
+        "fixtures",
+        "regression",
         tech,
         &format!("{scenario}"),
         "table_state.json",
@@ -93,9 +94,9 @@ fn apply_action_for_history(
     }
 }
 
-/// Load a scenario by a semantic name (e.g. `"search/play_known_playable"`).
+/// Load a scenario by a semantic name (e.g. `"play_known_playable"`).
 ///
-/// Constructs the path as `tests/scenarios/{name}/table_state.json`. Otherwise identical
+/// Constructs the path as `tests/fixtures/regression/{name}/table_state.json`. Otherwise identical
 /// to [`load_scenario_with_knowledge`].
 #[allow(dead_code)]
 pub fn load_scenario_by_name_with_knowledge(
@@ -109,7 +110,7 @@ pub fn load_scenario_by_name_with_knowledge(
 ) {
     init_tracing();
     let path: PathBuf = {
-        let mut p: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "scenarios"]
+        let mut p: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", "regression"]
             .iter()
             .collect();
         for component in name.split('/') {
@@ -139,7 +140,8 @@ pub fn load_scenario_by_name_with_knowledge(
     (table_state, static_data, team_knowledge, history, actions)
 }
 
-/// Load a scenario by a semantic name, returning only board state and static data.
+/// Load a scenario by a semantic name (e.g. `"simple_finesse"`), returning only board state and
+/// static data.
 #[allow(dead_code)]
 pub fn load_scenario_by_name(name: &str) -> (TableState, StaticGameData) {
     let (ts, sd, _, _, _) = load_scenario_by_name_with_knowledge(name);
@@ -169,7 +171,8 @@ pub fn load_scenario_with_knowledge(
     let path: PathBuf = [
         env!("CARGO_MANIFEST_DIR"),
         "tests",
-        "scenarios",
+        "fixtures",
+        "regression",
         tech,
         &format!("{scenario}"),
         "table_state.json",

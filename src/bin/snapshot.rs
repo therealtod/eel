@@ -1,7 +1,7 @@
 /// Extract a self-contained scenario JSON from a hanab.live replay at a given turn.
 ///
-/// The output can be placed under `tests/scenarios/search/<name>/table_state.json` and
-/// used directly with the `search_regression.rs` harness.  When the position is
+/// The output can be placed under `tests/fixtures/regression/<name>/table_state.json` and
+/// used directly with the search-regression test harness.  When the position is
 /// history-dependent (convention state accumulated over prior turns changes the engine
 /// recommendation), the tool emits a warning and advises using the replay harness instead.
 ///
@@ -9,7 +9,7 @@
 ///   cargo run --release --bin snapshot -- \
 ///       --replay logs/14/game_0042.json \
 ///       --turn 22 \
-///       --out tests/scenarios/search/slowplay_at_22/table_state.json \
+///       --out tests/fixtures/regression/slowplay_at_22/table_state.json \
 ///       --description "Bot slowplayed g3 instead of saving b5 on chop"
 use std::fs;
 use std::path::PathBuf;
@@ -38,7 +38,7 @@ struct Args {
     #[arg(long)]
     turn: usize,
 
-    /// Output path for the scenario JSON (e.g. tests/scenarios/search/my_bug/table_state.json).
+    /// Output path for the scenario JSON (e.g. tests/fixtures/regression/my_bug/table_state.json).
     #[arg(long)]
     out: PathBuf,
 
@@ -113,7 +113,7 @@ fn main() {
         args.turn
     );
     eprintln!();
-    eprintln!("Add a test in tests/search_regression.rs:");
+    eprintln!("Add a test in tests/integration/search_regression.rs:");
     eprintln!();
     eprintln!("    #[test]");
     eprintln!("    fn {scenario_name}_picks_correct_action() {{");

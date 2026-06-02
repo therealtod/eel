@@ -57,7 +57,7 @@ fn reconstruct_clues(deck_empathy: u64, variant: &Variant) -> (Vec<String>, Vec<
 
 /// Serialise `game` as a `ScenarioJson`-compatible `serde_json::Value`.
 ///
-/// The produced JSON can be written to `tests/scenarios/<name>/table_state.json` and loaded
+/// The produced JSON can be written to `tests/fixtures/regression/<name>/table_state.json` and loaded
 /// by the helpers in `tests/common/mod.rs`.  `prior_actions` is always emitted empty — the
 /// snapshot captures the state at one moment in time; history belongs to the replay harness.
 ///

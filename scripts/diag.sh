@@ -27,9 +27,11 @@ use eel::hanablive::dto::game::Game;
 
 #[test]
 fn diag_${NAME}() {
+    let stem = std::path::Path::new("${REPLAY}")
+        .file_stem().unwrap().to_str().unwrap();
     let path = format!(
-        "{}/tests/replays/${REPLAY}",
-        env!("CARGO_MANIFEST_DIR")
+        "{}/tests/fixtures/regression/{stem}/replay.json",
+        env!("CARGO_MANIFEST_DIR"),
     );
     let json = std::fs::read_to_string(&path).unwrap();
     let game = Game::from_json(&json).unwrap();
