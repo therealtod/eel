@@ -323,3 +323,16 @@ fn should_clue_instead_of_discarding() {
         _ => panic!("Bob has chosen the following action: {:?}", action),
     }
 }
+
+#[test]
+fn should_play_instead_of_discarding() {
+    let action = engine_action_at_turn("should_play_instead_of_discarding.json", 18);
+    match action {
+        GameAction::Play {
+            player_index: 2,
+            card_deck_index: 15,
+            ..
+        } => println!("Cathy has chosen to play her known-playable p4: {:?}", action),
+        _ => panic!("Cathy has chosen the following action: {:?}", action),
+    }
+}

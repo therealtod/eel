@@ -171,7 +171,14 @@ pub struct DefaultEvaluator {
     ///
     /// Models the H-Group expectation that a player with a known-playable plays it; a
     /// discard instead implies the team did not save a critical onto chop, so the chop
-    /// being dumped may itself be critical. The penalty is large enough to prefer the play.
+    /// being dumped may itself be critical.
+    ///
+    /// Sized at [`Self::score_weight`] (the value of one realized play): discarding while
+    /// holding a guaranteed play forgoes a full point's worth of progress, so the penalty must
+    /// at least match that to keep the play preferred even when a deep-rollout artifact (e.g. a
+    /// POV-restricted teammate forced into a bad-touch save) inflates the play line's apparent
+    /// cost. Below `score_weight`, such artifacts can flip a clearly-correct known play to a chop
+    /// discard (see the `should_play_instead_of_discarding` replay regression).
     ///
     /// Set to 0 to disable.
     pub discard_while_known_playable_penalty: f64,
@@ -291,7 +298,7 @@ impl Default for DefaultEvaluator {
             play_progress_weight: 2.0_f64,
             potential_bad_touch_penalty: 9.0_f64,
             bottom_deck_risk_weight: 2.0_f64,
-            discard_while_known_playable_penalty: 8.0_f64,
+            discard_while_known_playable_penalty: 10.0_f64,
             critical_exposure_delta_weight: 0.5_f64,
             tempo_cost_weight: 2.5_f64,
             play_deferral_weight: 0.15_f64,

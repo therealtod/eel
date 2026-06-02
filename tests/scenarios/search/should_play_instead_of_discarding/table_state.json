@@ -1,0 +1,25 @@
+{
+  "scenario_description": "Alice has a known-playable p4 in hand and she has no reason not to play it",
+  "suits": [
+    "red",
+    "yellow",
+    "green",
+    "blue",
+    "purple"
+  ],
+  "active_player": 0,
+  "playing_stacks": [
+    [], ["y1"], ["g1"], [], ["p1", "p2", "p3"]
+  ],
+  "discard_pile": [
+    "y3"
+  ],
+  "clue_tokens": 4,
+  "strikes": 0,
+  "player_on_turn": 0,
+  "hands": [
+    [{"id": "x", "negative": ["purple"], "inferred": "g2"}, {"id": "x", "positive": ["purple"], "negative": ["1"], "inferred": "p4"}, {"id": "x", "negative": ["1", "yellow", "purple"]}, {"id": "x", "positive": ["purple"], "negative": ["1", "yellow"], "inferred": "p5"}, {"id": "x", "negative": ["1", "yellow", "purple"]}],
+    ["r5", {"id": "y1", "negative": ["3"]}, {"id": "y3", "positive": ["3"],"negative": ["2"], "inferred": "r3y3g3b3"}, {"id": "g2", "positive": ["2"],"negative": ["3", "5"], "inferred": "r2y2g2b2"}, {"id": "g5", "positive": ["3"],"negative": ["2"], "inferred": "r5y5g5b5"}],
+    ["r4", "g4", {"id": "y1", "negative": ["purple"]}, {"id": "r2", "negative": ["purple"]}, {"id": "y4", "negative": ["purple"]}]
+  ]
+}
