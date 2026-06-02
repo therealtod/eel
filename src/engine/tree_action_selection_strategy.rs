@@ -235,10 +235,12 @@ impl TreeActionSelectionStrategy {
         let clue_bonus = if let GameAction::Clue {
             touched_card_deck_indexes,
             player_index,
+            clue,
             ..
         } = action
         {
             evaluator.clue_precision_bonus(
+                clue,
                 touched_card_deck_indexes,
                 *player_index,
                 actor,

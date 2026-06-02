@@ -8,6 +8,7 @@ use crate::engine::knowledge::team_knowledge::TeamKnowledge;
 use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::CardDeckIndex;
+use crate::game::clue::Clue;
 use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
@@ -160,6 +161,7 @@ impl super::Evaluator for DefaultEvaluator {
 
     fn clue_precision_bonus(
         &self,
+        clue: &Clue,
         touched: &[u8],
         receiver: usize,
         giver: usize,
@@ -188,7 +190,8 @@ impl super::Evaluator for DefaultEvaluator {
             0.0
         };
 
-        let bad_touch_count = count_bad_touches(touched, receiver, truth, table_state, static_data);
+        let bad_touch_count =
+            count_bad_touches(clue, touched, receiver, truth, table_state, static_data);
 
         let potential_bad_touch = self.potential_bad_touch_penalty != 0.0
             && is_potential_bad_touch(

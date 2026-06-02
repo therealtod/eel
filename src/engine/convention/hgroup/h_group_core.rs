@@ -564,11 +564,11 @@ pub fn good_touch_receiver_masks(
     result
 }
 
-/// Counts cards in `touched` that violate the good-touch principle.
+/// Counts cards in `touched` that *harmfully* violate the good-touch principle.
 ///
 /// A card is a bad touch if:
 /// - its identity (truth, when visible to the searcher; public empathy otherwise) has no
-///   overlap with still-needed cards, OR
+///   overlap with still-needed cards **and the receiver cannot tell it is trash**, OR
 /// - its exact identity is already clued in another player's hand, OR
 /// - its exact identity is already clued in the receiver's hand on a card outside the
 ///   current `touched` set, OR
@@ -586,7 +586,18 @@ pub fn good_touch_receiver_masks(
 /// hand containing trash P1 makes its public empathy `{R1, G1, B1, P1}`, all overlapping
 /// still-needed, even though the searcher knows it is P1). Truth-based detection sees
 /// through this.
+///
+/// Truth-trash is *harmless*, however, when the receiver can resolve the card to **known
+/// trash**. A clue may unavoidably touch a dead card (e.g. a rank-2 clue focusing the last
+/// useful 2 also touches a now-dead 2): after focus-first good-touch allocation the receiver
+/// pins that extra card to trash and simply discards it — it is never held as useful nor
+/// misplayed, so it must not be penalised. This mirrors the receiver-side
+/// [`good_touch_receiver_masks`] (see commit c8941de): a touched card whose receiver-resolved
+/// mask shares no identity with `still_needed` is *not* a bad touch even though its truth is
+/// dead. Cards the receiver cannot resolve via GTP (already pinned to a singleton, or a clue
+/// with no still-useful identity at all) fall back to being counted, matching prior behaviour.
 pub(crate) fn count_bad_touches(
+    clue: &Clue,
     touched: &[CardDeckIndex],
     receiver: PlayerIndex,
     truth: &dyn PlayerPOV,
@@ -644,6 +655,22 @@ pub(crate) fn count_bad_touches(
 
     let already_clued = already_clued_other_hands | already_clued_receiver;
 
+    // Receiver-side good-touch resolution: the identity set the receiver assigns each touched
+    // card after focus-first allocation. A truth-trash card whose resolved mask still overlaps
+    // `still_needed` looks useful to the receiver (it will be held / possibly misplayed) — a
+    // real bad touch. One whose mask is pure trash is known-trash to the receiver — harmless.
+    // Cards absent from the result (pinned to a singleton, or a clue with no good identity at
+    // all) are treated conservatively as "held useful", preserving prior behaviour.
+    let focus = get_clue_focus(receiver, touched, truth);
+    let receiver_masks =
+        good_touch_receiver_masks(clue, touched, focus, receiver, table_state, static_data);
+    let receiver_resolves_to_trash = |idx: CardDeckIndex| -> bool {
+        receiver_masks
+            .iter()
+            .find(|(i, _)| *i == idx)
+            .is_some_and(|(_, mask)| mask & still_needed == 0)
+    };
+
     // Track exact identities already accounted for among prior entries in `touched`,
     // so an intra-clue duplicate (e.g. two R1s in the same hand touched together)
     // counts as a bad touch on the second occurrence.
@@ -656,8 +683,10 @@ pub(crate) fn count_bad_touches(
         };
         let is_singleton = bits.count_ones() == 1;
         let dup_within_touched = is_singleton && (bits & seen_in_touched) != 0;
-        let bad = bits & still_needed == 0 || bits & already_clued != 0 || dup_within_touched;
-        if bad {
+        let is_duplicate = bits & already_clued != 0 || dup_within_touched;
+        // Dead-trash touches only harm when the receiver can't recognise them as trash.
+        let harmful_trash = bits & still_needed == 0 && !receiver_resolves_to_trash(idx);
+        if is_duplicate || harmful_trash {
             count += 1;
         }
         if is_singleton {
@@ -715,12 +744,13 @@ pub(crate) fn is_potential_bad_touch(
 }
 
 pub fn is_good_touch_principle_compliant(
-    _clue: &Clue,
+    clue: &Clue,
     clue_receiver_player_index: &PlayerIndex,
     touched_cards: &[CardDeckIndex],
     player_pov: &dyn PlayerPOV,
 ) -> bool {
     count_bad_touches(
+        clue,
         touched_cards,
         *clue_receiver_player_index,
         player_pov,
@@ -1116,7 +1146,17 @@ mod tests {
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         let truth = make_truth_pov(&knowledge, &team_knowledge, &table_state, &static_data);
         assert_eq!(
-            super::count_bad_touches(&[10], 1, &truth, &table_state, &static_data),
+            super::count_bad_touches(
+                &Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 1
+                },
+                &[10],
+                1,
+                &truth,
+                &table_state,
+                &static_data
+            ),
             0
         );
     }
@@ -1151,7 +1191,17 @@ mod tests {
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         let truth = make_truth_pov(&knowledge, &team_knowledge, &table_state, &static_data);
         assert_eq!(
-            super::count_bad_touches(&[10], 1, &truth, &table_state, &static_data),
+            super::count_bad_touches(
+                &Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 1
+                },
+                &[10],
+                1,
+                &truth,
+                &table_state,
+                &static_data
+            ),
             1
         );
     }
@@ -1184,7 +1234,17 @@ mod tests {
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         let truth = make_truth_pov(&knowledge, &team_knowledge, &table_state, &static_data);
         assert_eq!(
-            super::count_bad_touches(&[10], 1, &truth, &table_state, &static_data),
+            super::count_bad_touches(
+                &Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 1
+                },
+                &[10],
+                1,
+                &truth,
+                &table_state,
+                &static_data
+            ),
             1
         );
     }
@@ -1240,9 +1300,155 @@ mod tests {
         let truth = make_truth_pov(&knowledge, &team_knowledge, &table_state, &static_data);
 
         assert_eq!(
-            super::count_bad_touches(&[10], 1, &truth, &table_state, &static_data),
+            super::count_bad_touches(
+                &Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 1
+                },
+                &[10],
+                1,
+                &truth,
+                &table_state,
+                &static_data
+            ),
             1,
             "trash P1 in receiver's hand should be flagged via truth POV"
+        );
+    }
+
+    #[test]
+    fn count_bad_touches_zero_when_nonfocus_trash_resolves_to_known_trash() {
+        // Regression for tests/replays/should_clue_instead_of_discarding.json, mirroring
+        // the receiver-side fix in commit c8941de on the evaluator side.
+        //
+        // Every rank-2 except B2 is played (R2, Y2, G2, P2 on the stacks), so among the
+        // 2s only B2 is still useful. A rank-2 clue focuses the receiver's chop (truth B2,
+        // still needed) and unavoidably also touches a now-dead G2. After focus-first
+        // good-touch allocation the receiver pins B2 to the focus and the extra card to
+        // pure trash {R2,Y2,G2,P2} — it is simply discarded, never held as useful nor
+        // misplayed. So the dead G2 touch is *harmless* and must NOT count as a bad touch.
+        use crate::game::card::CardIdentityMask;
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards;
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+
+        // Play every rank-2 except blue: R1,R2,Y1,Y2,G1,G2,P1,P2 (deck positions 0..8).
+        for (deck_idx, card) in [
+            (0u8, NoVarCards::R1),
+            (1, NoVarCards::R2),
+            (2, NoVarCards::Y1),
+            (3, NoVarCards::Y2),
+            (4, NoVarCards::G1),
+            (5, NoVarCards::G2),
+            (6, NoVarCards::P1),
+            (7, NoVarCards::P2),
+        ] {
+            table_state.update_with_draw_action(deck_idx);
+            table_state.update_with_play_action_of_specific_card(
+                deck_idx,
+                card.as_variant_card_id(),
+                &static_data,
+            );
+        }
+
+        // Receiver (player 1) draws card 10 (oldest → chop) then card 11 (newest). Neither
+        // is publicly revealed, so the receiver's empathy is not a singleton and the
+        // focus-first allocation treats both as undetermined. The chop (card 10) is touched,
+        // so it is the clue focus.
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10);
+        table_state.update_with_draw_action(11);
+
+        // The searcher (player 0) sees card 10 as B2 (still needed) and card 11 as a dead G2.
+        let mut knowledge = knowledge_for_hand(&[]);
+        knowledge.inferred_identities[10] = Some(CardIdentityMask::from_bits(
+            1 << NoVarCards::B2.as_variant_card_id(),
+        ));
+        knowledge.inferred_identities[11] = Some(CardIdentityMask::from_bits(
+            1 << NoVarCards::G2.as_variant_card_id(),
+        ));
+        knowledge.visible_cards |= (1 << 10) | (1 << 11);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let truth = make_truth_pov(&knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert_eq!(
+            super::count_bad_touches(
+                &Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 2
+                },
+                &[10, 11],
+                1,
+                &truth,
+                &table_state,
+                &static_data
+            ),
+            0,
+            "dead non-focus card that the receiver resolves to known trash must not be a bad touch"
+        );
+    }
+
+    #[test]
+    fn count_bad_touches_one_when_nonfocus_trash_resolves_to_useful_identity() {
+        // Contrast to the harmless case above: when *two* rank-2s are still useful (B2 and
+        // Y2), the focus-first allocation leaves the non-focus card with an ambiguous
+        // still-useful mask {Y2,B2} — the receiver believes it is good and will hold (and
+        // may eventually misplay) it. Its truth is a dead G2, so the touch IS harmful and
+        // must count as a bad touch.
+        use crate::game::card::CardIdentityMask;
+        use crate::game::deck::unit_test_constants::novariant_constants::NoVarCards;
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+
+        // Play R1,R2,G1,G2,P1,P2 and Y1 — leaving Y2 and B2 both still useful.
+        for (deck_idx, card) in [
+            (0u8, NoVarCards::R1),
+            (1, NoVarCards::R2),
+            (2, NoVarCards::G1),
+            (3, NoVarCards::G2),
+            (4, NoVarCards::P1),
+            (5, NoVarCards::P2),
+            (6, NoVarCards::Y1),
+        ] {
+            table_state.update_with_draw_action(deck_idx);
+            table_state.update_with_play_action_of_specific_card(
+                deck_idx,
+                card.as_variant_card_id(),
+                &static_data,
+            );
+        }
+
+        table_state.active_player_index = 1;
+        table_state.update_with_draw_action(10);
+        table_state.update_with_draw_action(11);
+
+        let mut knowledge = knowledge_for_hand(&[]);
+        knowledge.inferred_identities[10] = Some(CardIdentityMask::from_bits(
+            1 << NoVarCards::B2.as_variant_card_id(),
+        ));
+        knowledge.inferred_identities[11] = Some(CardIdentityMask::from_bits(
+            1 << NoVarCards::G2.as_variant_card_id(),
+        ));
+        knowledge.visible_cards |= (1 << 10) | (1 << 11);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        let truth = make_truth_pov(&knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert_eq!(
+            super::count_bad_touches(
+                &Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 2
+                },
+                &[10, 11],
+                1,
+                &truth,
+                &table_state,
+                &static_data
+            ),
+            1,
+            "dead non-focus card the receiver resolves to a still-useful identity is a bad touch"
         );
     }
 
@@ -1274,7 +1480,17 @@ mod tests {
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         let truth = make_truth_pov(&knowledge, &team_knowledge, &table_state, &static_data);
         assert_eq!(
-            super::count_bad_touches(&[10, 11], 1, &truth, &table_state, &static_data),
+            super::count_bad_touches(
+                &Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 1
+                },
+                &[10, 11],
+                1,
+                &truth,
+                &table_state,
+                &static_data
+            ),
             1,
             "intra-clue duplicate identities in same hand should count as one bad touch"
         );
@@ -1310,7 +1526,17 @@ mod tests {
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         let truth = make_truth_pov(&knowledge, &team_knowledge, &table_state, &static_data);
         assert_eq!(
-            super::count_bad_touches(&[11], 1, &truth, &table_state, &static_data),
+            super::count_bad_touches(
+                &Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 1
+                },
+                &[11],
+                1,
+                &truth,
+                &table_state,
+                &static_data
+            ),
             1,
             "newly touched card whose identity is already clued in receiver's own hand should be a bad touch"
         );
@@ -1354,7 +1580,17 @@ mod tests {
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         let truth = make_truth_pov(&knowledge, &team_knowledge, &table_state, &static_data);
         assert_eq!(
-            super::count_bad_touches(&[10], 1, &truth, &table_state, &static_data),
+            super::count_bad_touches(
+                &Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 1
+                },
+                &[10],
+                1,
+                &truth,
+                &table_state,
+                &static_data
+            ),
             1,
             "Y1 touched by a multi-value clue in another hand must be detected as already-clued via truth POV"
         );
@@ -2057,7 +2293,17 @@ mod tests {
             &static_data,
         );
         assert_eq!(
-            super::count_bad_touches(&[10, 11], 1, &omniscient_truth, &table_state, &static_data),
+            super::count_bad_touches(
+                &Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 1
+                },
+                &[10, 11],
+                1,
+                &omniscient_truth,
+                &table_state,
+                &static_data
+            ),
             1,
             "baseline: intra-clue duplicate detected with omniscient truth"
         );
@@ -2072,7 +2318,17 @@ mod tests {
             !0u64 & !(1u64 << 10) & !(1u64 << 11),
         );
         assert_eq!(
-            super::count_bad_touches(&[10, 11], 1, &blinded_truth, &table_state, &static_data),
+            super::count_bad_touches(
+                &Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 1
+                },
+                &[10, 11],
+                1,
+                &blinded_truth,
+                &table_state,
+                &static_data
+            ),
             0,
             "should not count intra-clue duplicate when card identities are blinded"
         );

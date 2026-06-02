@@ -306,3 +306,20 @@ fn should_assign_the_correct_identity_to_the_focus() {
         _ => panic!("Alice chose the following action. Action: {:?}", action),
     }
 }
+
+#[test]
+fn should_clue_instead_of_discarding() {
+    let action = engine_action_at_turn("should_clue_instead_of_discarding.json", 44);
+    match action {
+        GameAction::Clue {
+            player_index: 2,
+            clue:
+                Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 2,
+                },
+            ..
+        } => println!("Bob has chosen to play clue b2: {:?}", action),
+        _ => panic!("Bob has chosen the following action: {:?}", action),
+    }
+}

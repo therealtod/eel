@@ -3,6 +3,7 @@ use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
 use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
 use crate::game::action::game_action::GameAction;
+use crate::game::clue::Clue;
 use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
@@ -127,10 +128,12 @@ pub trait Evaluator: Send + Sync {
 
     /// Immediate bonus/penalty for a clue action.
     ///
+    /// `clue` is the clue being given (needed for receiver-side good-touch resolution).
     /// `touched` are the deck indices directly touched by the clue.
     /// `receiver` is the clue target; `giver` is the acting player.
     fn clue_precision_bonus(
         &self,
+        _clue: &Clue,
         _touched: &[u8],
         _receiver: usize,
         _giver: usize,

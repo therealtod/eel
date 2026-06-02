@@ -1,0 +1,23 @@
+{
+  "scenario_description": "Alice should avoid cluing duplicates b1, as this would lead to a bad-touch and most likely a strike",
+  "suits": [
+    "red",
+    "yellow",
+    "green",
+    "blue",
+    "purple"
+  ],
+  "active_player": 0,
+  "playing_stacks": [
+    [], [], [], [], []
+  ],
+  "discard_pile": [],
+  "clue_tokens": 7,
+  "strikes": 0,
+  "player_on_turn": 0,
+  "hands": [
+    ["x", "x", "x", "x", "x"],
+    [{"id": "y2", "negative": ["5"]}, {"id": "p2", "negative": ["5"]}, {"id": "b2", "negative": ["5"]}, {"id": "b4", "negative": ["5"]}, {"id": "g5", "positive": ["5"], "inferred": "r5y5g5b5p5"}],
+    ["b4", "g4", "b1", "b1", "y4"]
+  ]
+}

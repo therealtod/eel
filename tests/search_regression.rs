@@ -392,12 +392,31 @@ fn should_prompt_over_hard_burn() {
     match action {
         GameAction::Clue {
             player_index: 1,
-            clue: Clue {
-                clue_type: ClueType::Rank,
-                clue_value: 4,
-            },
+            clue:
+                Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 4,
+                },
             ..
         } => println!("Alice choose to prompt g3 by cluing g4: {:?}", action),
         _ => panic!("Alice chose the following action: {:?}", action),
+    }
+}
+
+#[test]
+#[ignore]
+fn should_avoid_duplicate_ones() {
+    let action = search_best_action("should_avoid_duplicate_ones");
+    match action {
+        GameAction::Clue {
+            player_index: 2,
+            clue:
+                Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 1,
+                },
+            ..
+        } => panic!("Alice has chosen to clue duplicate b1s: {:?}", action),
+        _ => println!("Alice has chosen the following action: {:?}", action),
     }
 }
