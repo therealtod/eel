@@ -1,4 +1,7 @@
+use crate::engine::convention::convention_tech::ConventionTech;
 use crate::engine::convention::hgroup::signal::Signal;
+use crate::engine::convention::hgroup::tech::discard_chop::DiscardChop;
+use crate::engine::game_state_snapshot::GameStateSnapshot;
 use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
@@ -871,6 +874,75 @@ pub fn has_on_finesse_position(
         .iter()
         .find(|&&idx| !observer_pov.is_touched(idx))
         .is_some_and(|&idx| observer_pov.card_identity(idx) == Some(card_id))
+}
+
+/// Returns `true` while the game is still in the **Early Game** phase.
+///
+/// The Early Game lasts until the first time any player performs a
+/// [`DiscardChop`] — i.e. discards their chop, the oldest unclued (and
+/// unsignalled) card in hand. Giving clues, playing cards, and even discarding
+/// *known trash* all keep the game in the Early Game; only a genuine chop
+/// discard ends it.
+///
+/// Detection replays the recorded turn `history`: each consecutive pair of
+/// snapshots brackets exactly one action, and a discard is recognised when the
+/// discard pile grew by one with no new strike (a misplay also fills the pile
+/// but adds a strike). The card that left the actor's hand is then tested
+/// against [`DiscardChop`] from the actor's POV *at that turn*, so the
+/// definition stays single-sourced with the tech itself.
+///
+/// `current` is the live table state, paired against the final recorded
+/// snapshot so the most recent action — which has no trailing snapshot yet — is
+/// also considered.
+#[must_use]
+pub fn is_early_game(
+    history: &[GameStateSnapshot],
+    current: &TableState,
+    static_data: &StaticGameData,
+) -> bool {
+    let recorded = history.windows(2).map(|w| (&w[0], &w[1].table_state));
+    let latest = history.last().map(|before| (before, current));
+    !recorded
+        .chain(latest)
+        .any(|(before, after)| transition_is_chop_discard(before, after, static_data))
+}
+
+/// Returns `true` if the single action bracketed by `before` (state before the
+/// action) and `after` (state after it) was a chop discard by `before`'s active
+/// player. See [`is_early_game`].
+fn transition_is_chop_discard(
+    before: &GameStateSnapshot,
+    after: &TableState,
+    static_data: &StaticGameData,
+) -> bool {
+    let before_state = &before.table_state;
+    let discarded_one = after.discard_pile.size() == before_state.discard_pile.size() + 1;
+    let no_new_strike = after.strike_tokens == before_state.strike_tokens;
+    if !(discarded_one && no_new_strike) {
+        return false;
+    }
+
+    let actor = before_state.active_player_index();
+    let after_cards = after.hands[actor].cards();
+    let Some(discarded) = before_state.hands[actor]
+        .cards()
+        .iter()
+        .copied()
+        .find(|idx| !after_cards.contains(idx))
+    else {
+        return false;
+    };
+
+    let pov = before.player_pov(actor, static_data);
+    DiscardChop.matches_action(
+        &GameAction::Discard {
+            player_index: actor,
+            card_deck_index: discarded,
+            turn: before_state.current_turn,
+        },
+        &[],
+        &pov,
+    )
 }
 
 #[cfg(test)]
@@ -2565,5 +2637,87 @@ mod tests {
         let (ts, k, tk) = receiver_chop_pov(R3_MASK, &[], &[]);
         let pov = LightweightPlayerPOV::new(0, &k, &tk, &ts, &static_data);
         assert!(!super::is_forced_save(&[10], 1, &pov));
+    }
+
+    // ── is_early_game ─────────────────────────────────────────────────────────
+
+    /// Build a `TableState` where player 0 holds `cards` (oldest→newest), all
+    /// unclued, with `clue_touched_cards` set from `touched`.
+    fn state_with_hand(cards: &[u8], touched: &[u8]) -> TableState {
+        let mut table_state = initial_five_players_table_state();
+        for &idx in cards {
+            table_state.update_with_draw_action(idx);
+        }
+        for &idx in touched {
+            table_state.clue_touched_cards |= 1 << idx;
+        }
+        table_state
+    }
+
+    fn snapshot(table_state: &TableState) -> GameStateSnapshot {
+        GameStateSnapshot::new(
+            table_state.clone(),
+            TeamKnowledge::new(NOVAR_5_PLAYERS_STATIC_GAME_DATA.number_of_players as usize),
+        )
+    }
+
+    /// Apply a discard of `card` by the active player to a clone of `table_state`.
+    fn after_discard(table_state: &TableState, card: u8) -> TableState {
+        let mut after = table_state.clone();
+        let actor = after.active_player_index();
+        after.hands[actor].remove_card(card);
+        after.discard_pile.add_card();
+        after
+    }
+
+    #[test]
+    fn early_game_holds_with_no_history() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let current = state_with_hand(&[10, 20, 30], &[]);
+        assert!(is_early_game(&[], &current, &static_data));
+    }
+
+    #[test]
+    fn chop_discard_in_history_ends_early_game() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        // Player 0 holds [10, 20, 30] all unclued → chop = 10.
+        let before = state_with_hand(&[10, 20, 30], &[]);
+        let after = after_discard(&before, 10); // discards the chop
+        let current = state_with_hand(&[20, 30], &[]);
+        let history = vec![snapshot(&before), snapshot(&after)];
+        assert!(!is_early_game(&history, &current, &static_data));
+    }
+
+    #[test]
+    fn off_chop_trash_discard_keeps_early_game() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        // Chop = 10 (oldest unclued); discarding the newest card (30) is not a
+        // DiscardChop, so the Early Game continues.
+        let before = state_with_hand(&[10, 20, 30], &[]);
+        let after = after_discard(&before, 30);
+        let history = vec![snapshot(&before), snapshot(&after)];
+        assert!(is_early_game(&history, &after, &static_data));
+    }
+
+    #[test]
+    fn misplay_keeps_early_game() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let before = state_with_hand(&[10, 20, 30], &[]);
+        // A misplay also fills the discard pile but adds a strike — not a discard.
+        let mut after = after_discard(&before, 10);
+        after.strike_tokens += 1;
+        let history = vec![snapshot(&before), snapshot(&after)];
+        assert!(is_early_game(&history, &after, &static_data));
+    }
+
+    #[test]
+    fn chop_discard_as_latest_action_ends_early_game() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        // Only the pre-action snapshot is recorded; the chop discard is detected
+        // by pairing the last snapshot against the live `current` state.
+        let before = state_with_hand(&[10, 20, 30], &[]);
+        let current = after_discard(&before, 10);
+        let history = vec![snapshot(&before)];
+        assert!(!is_early_game(&history, &current, &static_data));
     }
 }

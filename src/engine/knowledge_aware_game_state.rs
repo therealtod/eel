@@ -1045,6 +1045,22 @@ impl KnowledgeAwareGameState {
     pub fn history_len(&self) -> usize {
         self.history.len()
     }
+
+    /// Returns `true` while the game is still in the **Early Game** phase — i.e.
+    /// no player has yet performed a `DiscardChop` (discarded their chop).
+    ///
+    /// Relies on the recorded turn `history`; call
+    /// [`record_snapshot`](Self::record_snapshot) before each action so every
+    /// turn is represented. See
+    /// [`h_group_core::is_early_game`](crate::engine::convention::hgroup::h_group_core::is_early_game).
+    #[must_use]
+    pub fn is_early_game(&self) -> bool {
+        crate::engine::convention::hgroup::h_group_core::is_early_game(
+            &self.history,
+            &self.table_state,
+            &self.static_data,
+        )
+    }
 }
 
 #[cfg(test)]
