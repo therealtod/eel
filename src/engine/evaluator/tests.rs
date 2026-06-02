@@ -304,57 +304,50 @@ fn critical_exposure_zero_when_critical_is_touched() {
 }
 
 #[test]
-fn bdr_full_deck_is_small() {
+fn bdr_is_deck_position_independent() {
+    // BDR no longer multiplies by a Laplace `1 / deck_remaining` bottom-card probability:
+    // turning a card critical is charged the same whether the deck is full or nearly empty.
     let static_data = StaticGameData {
         number_of_players: 3,
         variant: NO_VARIANT,
     };
-    let deck = Deck::new(&NO_VARIANT);
-    let hands = Hand::empty_array();
-    let state = TableState::from_parts(
-        ClueTokenBank::new(10),
-        deck,
-        hands,
-        0,
-        0,
-        PlayingStacks::empty(),
-        0,
-        CopiesCountingCardCollection::empty(),
-    );
-    let truth = TruthFixture::new(&static_data);
-    let truth_pov = truth.pov(&state, &static_data);
-    let bdr = DefaultEvaluator::bottom_deck_risk_score(0, &state, &static_data, &truth_pov);
-    assert!(
-        bdr < 0.5,
-        "full-deck BDR should be small (got {bdr}); Term B = 1/50 should dominate"
-    );
-}
 
-#[test]
-fn bdr_empty_deck_is_large() {
-    let static_data = StaticGameData {
-        number_of_players: 3,
-        variant: NO_VARIANT,
+    let build = |deck_size: u8| {
+        let mut deck = Deck::new(&NO_VARIANT);
+        deck.current_size = deck_size;
+        TableState::from_parts(
+            ClueTokenBank::new(10),
+            deck,
+            Hand::empty_array(),
+            0,
+            0,
+            PlayingStacks::empty(),
+            0,
+            CopiesCountingCardCollection::empty(),
+        )
     };
-    let mut deck = Deck::new(&NO_VARIANT);
-    deck.current_size = 1;
-    let hands = Hand::empty_array();
-    let state = TableState::from_parts(
-        ClueTokenBank::new(10),
-        deck,
-        hands,
-        0,
-        0,
-        PlayingStacks::empty(),
-        0,
-        CopiesCountingCardCollection::empty(),
-    );
+
+    let full = build(Deck::new(&NO_VARIANT).current_size);
+    let almost_empty = build(1);
+
     let truth = TruthFixture::new(&static_data);
-    let truth_pov = truth.pov(&state, &static_data);
-    let bdr = DefaultEvaluator::bottom_deck_risk_score(0, &state, &static_data, &truth_pov);
+    let bdr_full = DefaultEvaluator::bottom_deck_risk_score(
+        0,
+        &full,
+        &static_data,
+        &truth.pov(&full, &static_data),
+    );
+    let bdr_empty = DefaultEvaluator::bottom_deck_risk_score(
+        0,
+        &almost_empty,
+        &static_data,
+        &truth.pov(&almost_empty, &static_data),
+    );
+
+    assert!(bdr_full > 0.0, "BDR should be positive (got {bdr_full})");
     assert!(
-        bdr > 1.0,
-        "near-empty-deck BDR should be large (got {bdr}); Term B = 1/1 = 1.0"
+        (bdr_full - bdr_empty).abs() < 1e-9,
+        "BDR must be deck-position-independent: full={bdr_full} empty={bdr_empty}"
     );
 }
 

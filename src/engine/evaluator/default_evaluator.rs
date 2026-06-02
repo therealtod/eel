@@ -177,13 +177,15 @@ pub struct DefaultEvaluator {
     /// For each candidate identity `id` in the discarded card's empathy, if discarding this
     /// copy would make `id` newly critical (`remaining_copies − 1 == 1`) **and** no other
     /// player's hand visibly holds the surviving copy (truth POV), the term contributes
-    /// `P(card_is_id) × P(surviving_copy_lost) × loss_if_lost(id)` where:
+    /// `P(card_is_id) × loss_if_lost(id)` where:
     ///
     /// - `P(card_is_id)` = `1 / popcount` — uniform over empathy (Term A).
-    /// - `P(surviving_copy_lost)` = `1 / max(1, deck_remaining)` — Laplace bottom-card
-    ///   probability; small with a full deck, approaches 1 as the deck empties (Term B).
     /// - `loss_if_lost` = achievable ranks from `rank_idx` upward, stopping at the first
     ///   rank already fully in the discard pile (Term C).
+    ///
+    /// The charge is **deck-position-independent**: a discard that turns a card critical costs the
+    /// same whether the deck is full or nearly empty (no Laplace `1 / deck_remaining` factor). See
+    /// [`Self::bottom_deck_risk_score`] for why that probabilistic discount was removed.
     ///
     /// Terminal-rank ids are skipped (single-copy by construction).
     ///
@@ -348,7 +350,7 @@ impl Default for DefaultEvaluator {
             misinformation_weight: 0.0_f64,
             play_progress_weight: 2.0_f64,
             potential_bad_touch_penalty: 9.0_f64,
-            bottom_deck_risk_weight: 2.0_f64,
+            bottom_deck_risk_weight: 0.8_f64,
             discard_while_known_playable_penalty: 10.0_f64,
             save_pressure_known_playable_relief: 5.0_f64,
             critical_exposure_delta_weight: 0.5_f64,
@@ -483,20 +485,18 @@ impl DefaultEvaluator {
     /// KP penalty — it could fire on cards neither tech would offer as a play,
     /// trapping the actor between a strike (if she plays) and the penalty (if
     /// she doesn't).
+    ///
+    /// Thin wrapper over the engine's single "known playable" predicate,
+    /// [`PlayerPOV::is_playable_with_playable_mask`], passing a precomputed
+    /// `playable_mask` to avoid recomputing it per card in evaluator hot paths. The
+    /// mask-less [`PlayerPOV::is_playable`] (and hence `is_hand_locked`) route through
+    /// the same method, so all consumers share one definition.
     pub(crate) fn card_known_playable(
         pov: &dyn PlayerPOV,
         deck_idx: CardDeckIndex,
         playable_mask: VariantCardsBitField,
     ) -> bool {
-        let pk = pov.team_knowledge().player(pov.player_index());
-        if pk.signals[deck_idx as usize]
-            .iter()
-            .any(|s| matches!(s, Signal::Play { .. }))
-        {
-            return true;
-        }
-        let bits = pov.inferred_identities(deck_idx).as_bits();
-        bits != 0 && (bits & playable_mask) == bits
+        pov.is_playable_with_playable_mask(deck_idx, playable_mask)
     }
 
     /// Sum of identity-bits eliminated across all clued cards in every player's own hand.
@@ -725,18 +725,21 @@ impl DefaultEvaluator {
 
     /// Bottom Deck Risk score for discarding `discarded_deck_idx` from `table_state`.
     ///
-    /// Uses a three-term expected-value model per eligible identity `id`:
+    /// Uses a two-term expected-value model per eligible identity `id`:
     ///
-    ///   `P(card_is_id)  ×  P(surviving_copy_lost)  ×  loss_if_lost(id)`
+    ///   `P(card_is_id)  ×  loss_if_lost(id)`
     ///
     /// - **Term A** `P(card_is_id)` = `1 / popcount` — uniform over empathy.
-    /// - **Term B** `P(surviving_copy_lost)` = `1 / max(1, deck_remaining)` — Laplace
-    ///   bottom-card probability; low with a full deck, rising toward 1 as it empties.
-    ///   This is the dominant correction over the old worst-case model. See
-    ///   `bottom_deck_risk_weight` doc for the probabilistic counterpart to
-    ///   `critical_exposure_weight` (which handles known-critical risk).
     /// - **Term C** `loss_if_lost` = achievable ranks from `rank_idx` upward before the
     ///   first fully-discarded rank (already-lost ranks are excluded from the loss).
+    ///
+    /// The model is **deck-position-independent**: turning a card critical is charged the same
+    /// whether it happens early or late. We deliberately *do not* multiply by a Laplace
+    /// `1 / deck_remaining` bottom-card probability — under that model the penalty for stranding a
+    /// teammate into dumping a soon-to-be-critical card collapsed to a fraction of a point early in
+    /// the game, when the team can least afford to be cavalier about it. The cost of converting a
+    /// card from two live copies to one (or one to zero) is treated as a fixed liability, not a
+    /// gamble on where the survivor sits in the deck.
     ///
     /// An identity is skipped when: it has only one total copy (terminal); its rank is
     /// the top of the stack; its suit is already past this rank; discarding doesn't drive
@@ -776,8 +779,6 @@ impl DefaultEvaluator {
                 }
             }
         }
-        let deck_remaining = table_state.deck.current_size as f64;
-        let p_surviving_lost = 1.0 / deck_remaining.max(1.0);
         let mut score = 0.0f64;
         let mut bits = empathy;
         while bits != 0 {
@@ -813,7 +814,7 @@ impl DefaultEvaluator {
                 }
                 loss_count += 1;
             }
-            score += p_card_is_id * p_surviving_lost * loss_count as f64;
+            score += p_card_is_id * loss_count as f64;
         }
         score
     }

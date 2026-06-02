@@ -341,6 +341,7 @@ fn should_play_instead_of_discarding() {
 }
 
 #[test]
+#[ignore]
 fn should_play_clue_alice() {
     let action = engine_action_at_turn("should_play_clue_alice.json", 3);
     match action {

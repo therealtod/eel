@@ -1,7 +1,10 @@
+use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
 use crate::game::action::game_action::GameAction;
-use crate::game::card::{CardDeckIndex, CardIdentityMask, DeckCardsBitField, VariantCardId};
+use crate::game::card::{
+    CardDeckIndex, CardIdentityMask, DeckCardsBitField, VariantCardId, VariantCardsBitField,
+};
 use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
@@ -28,7 +31,42 @@ pub trait PlayerPOV {
 
     fn own_playable_cards(&self) -> DeckCardsBitField;
 
-    fn is_playable(&self, card_deck_index: CardDeckIndex) -> bool;
+    /// Canonical "known playable" predicate: the holder of `card_deck_index` knows it
+    /// is currently playable, either because they carry a [`Signal::Play`] on it, or
+    /// because every identity their empathy still allows is inside `playable_mask`
+    /// (an empty mask — a contradiction — is never known-playable).
+    ///
+    /// This is the single source of truth for "known playable" across the engine:
+    /// [`is_playable`](Self::is_playable) (and hence [`is_hand_locked`](Self::is_hand_locked))
+    /// delegate here after computing the mask, and the evaluator's
+    /// `DefaultEvaluator::card_known_playable` delegates here directly (passing a
+    /// precomputed mask to avoid recomputing it per card in hot paths).
+    ///
+    /// The signal source is `team_knowledge().player(player_index())`, which equals the
+    /// POV's own knowledge under the construction invariant (a POV's knowledge is its
+    /// entry in `team_knowledge`).
+    fn is_playable_with_playable_mask(
+        &self,
+        card_deck_index: CardDeckIndex,
+        playable_mask: VariantCardsBitField,
+    ) -> bool {
+        let pk = self.team_knowledge().player(self.player_index());
+        if pk.signals[card_deck_index as usize]
+            .iter()
+            .any(|s| matches!(s, Signal::Play { .. }))
+        {
+            return true;
+        }
+        let bits = self.inferred_identities(card_deck_index).as_bits();
+        bits != 0 && (bits & playable_mask) == bits
+    }
+
+    /// Whether the holder knows `card_deck_index` is currently playable. Computes the
+    /// current playable mask and delegates to [`Self::is_playable_with_playable_mask`].
+    fn is_playable(&self, card_deck_index: CardDeckIndex) -> bool {
+        let playable_mask = self.table_state().playable_cards(self.static_data());
+        self.is_playable_with_playable_mask(card_deck_index, playable_mask)
+    }
 
     /// Touched by a clue: the card has at least one positive clue mark on it
     /// (i.e. the bit is set in `table_state.clue_touched_cards`).
@@ -41,6 +79,32 @@ pub trait PlayerPOV {
     /// Touched in any sense — clue-touched OR signal-touched.
     fn is_touched(&self, card_deck_index: CardDeckIndex) -> bool {
         self.is_clue_touched(card_deck_index) || self.is_signal_touched(card_deck_index)
+    }
+
+    /// Returns true if this POV's player has a **locked hand**: every card in
+    /// their hand is touched (clue- or signal-touched) and none of them is known
+    /// to be playable or known trash.
+    ///
+    /// A player with a locked hand has no safe discard and no known play — every
+    /// card is "stuck" awaiting further information.
+    ///
+    /// An empty hand is not considered locked.
+    fn is_hand_locked(&self) -> bool {
+        let mut hand = self.team_knowledge().player(self.player_index()).own_hand;
+        if hand == 0 {
+            return false;
+        }
+        while hand != 0 {
+            let card_deck_index = hand.trailing_zeros() as CardDeckIndex;
+            hand &= hand - 1;
+            if !self.is_touched(card_deck_index) {
+                return false;
+            }
+            if self.is_playable(card_deck_index) || self.is_known_trash(card_deck_index) {
+                return false;
+            }
+        }
+        true
     }
 
     /// Returns true if the holder of this card knows its exact identity

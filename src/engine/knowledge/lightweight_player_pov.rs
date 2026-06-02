@@ -130,33 +130,18 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
     }
 
     fn own_playable_cards(&self) -> DeckCardsBitField {
-        let playable_cards = self.table_state.playable_cards(self.static_data);
-        let own_hand = self.knowledge.own_hand;
+        // Precompute the playable mask once, then reuse the canonical per-card predicate.
+        let playable_mask = self.table_state.playable_cards(self.static_data);
         let mut result: DeckCardsBitField = 0;
-        let mut hand_mask = own_hand;
+        let mut hand_mask = self.knowledge.own_hand;
         while hand_mask != 0 {
             let card_deck_index = hand_mask.trailing_zeros() as CardDeckIndex;
-            let possible_bits = self.inferred_identities(card_deck_index).as_bits();
-            let empathy_playable = (possible_bits & playable_cards) == possible_bits;
-            let signal_playable = self.knowledge.signals[card_deck_index as usize]
-                .iter()
-                .any(|s| matches!(s, Signal::Play { .. }));
-            if empathy_playable || signal_playable {
+            if self.is_playable_with_playable_mask(card_deck_index, playable_mask) {
                 result |= 1 << card_deck_index;
             }
-            hand_mask &= !(1u64 << card_deck_index);
+            hand_mask &= hand_mask - 1;
         }
         result
-    }
-
-    fn is_playable(&self, card_deck_index: CardDeckIndex) -> bool {
-        let playable_cards = self.table_state.playable_cards(self.static_data);
-        let possible_bits = self.inferred_identities(card_deck_index).as_bits();
-        let empathy_playable = (possible_bits & playable_cards) == possible_bits;
-        let signal_playable = self.knowledge.signals[card_deck_index as usize]
-            .iter()
-            .any(|s| matches!(s, Signal::Play { .. }));
-        empathy_playable || signal_playable
     }
 
     fn is_clue_touched(&self, card_deck_index: CardDeckIndex) -> bool {
@@ -815,6 +800,140 @@ mod tests {
 
         let gotten = pov.gotten_cards();
         assert_eq!(gotten.as_bits(), 0);
+    }
+
+    /// Build a `PlayerKnowledge` for player 0 with several hand cards, each given an
+    /// explicit empathy mask. `own_hand` is set to the union of the supplied indices.
+    fn knowledge_with_hand(cards: &[(CardDeckIndex, u64)]) -> PlayerKnowledge {
+        let mut k = PlayerKnowledge::new(0);
+        for &(idx, mask) in cards {
+            k.inferred_identities[idx as usize] = Some(CardIdentityMask::from_bits(mask));
+            k.own_hand |= 1 << idx;
+        }
+        k
+    }
+
+    #[test]
+    fn hand_is_locked_when_all_cards_touched_and_ambiguous() {
+        // Empty stacks: R2/Y2/G2 are neither playable (their 1s aren't down) nor
+        // trash, so each touched card is "stuck" — the hand is locked.
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_draw_action(0);
+        table_state.update_with_draw_action(1);
+        table_state.update_with_draw_action(2);
+        table_state.clue_touched_cards |= (1 << 0) | (1 << 1) | (1 << 2);
+
+        let knowledge = knowledge_with_hand(&[
+            (0, R2_MASK | Y2_MASK),
+            (1, G2_MASK | B2_MASK),
+            (2, P2_MASK | R3_MASK),
+        ]);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(0).own_hand = knowledge.own_hand;
+
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert!(pov.is_hand_locked());
+    }
+
+    #[test]
+    fn hand_is_not_locked_when_a_card_is_untouched() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_draw_action(0);
+        table_state.update_with_draw_action(1);
+        // Only card 0 is touched; card 1 is not.
+        table_state.clue_touched_cards |= 1 << 0;
+
+        let knowledge = knowledge_with_hand(&[(0, R2_MASK | Y2_MASK), (1, G2_MASK | B2_MASK)]);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(0).own_hand = knowledge.own_hand;
+
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert!(!pov.is_hand_locked());
+    }
+
+    #[test]
+    fn hand_is_not_locked_when_a_card_is_known_playable() {
+        // Card 1 is the known-playable R1 (empty stacks), so the hand isn't locked.
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_draw_action(0);
+        table_state.update_with_draw_action(1);
+        table_state.clue_touched_cards |= (1 << 0) | (1 << 1);
+
+        let knowledge = knowledge_with_hand(&[(0, R2_MASK | Y2_MASK), (1, R1_MASK)]);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(0).own_hand = knowledge.own_hand;
+
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert!(!pov.is_hand_locked());
+    }
+
+    #[test]
+    fn hand_is_locked_when_a_card_is_playable_but_holder_is_unaware() {
+        // Card 0 could be R1 (playable on empty stacks) or R2 (not). Even though the
+        // card might *physically* be the playable R1, the holder cannot tell — empathy
+        // is ambiguous and there's no play signal — so it is not "known playable" and
+        // the hand stays locked.
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_draw_action(0);
+        table_state.update_with_draw_action(1);
+        table_state.clue_touched_cards |= (1 << 0) | (1 << 1);
+
+        let knowledge = knowledge_with_hand(&[(0, R1_MASK | R2_MASK), (1, G2_MASK | B2_MASK)]);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(0).own_hand = knowledge.own_hand;
+
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert!(pov.is_hand_locked());
+    }
+
+    #[test]
+    fn hand_is_not_locked_when_a_card_is_known_trash() {
+        // R1 is played, so a known-R1 card (card 1) is trash → hand not locked.
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_draw_action(0);
+        table_state.update_with_draw_action(1);
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            R1.as_variant_card_id(),
+            &static_data,
+        );
+        table_state.clue_touched_cards |= (1 << 1) | (1 << 2);
+
+        let knowledge = knowledge_with_hand(&[(1, R2_MASK | Y2_MASK), (2, R1_MASK)]);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        team_knowledge.player_mut(0).own_hand = knowledge.own_hand;
+
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert!(!pov.is_hand_locked());
+    }
+
+    #[test]
+    fn empty_hand_is_not_locked() {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let table_state = initial_five_players_table_state();
+
+        let knowledge = PlayerKnowledge::new(0);
+        let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        assert!(!pov.is_hand_locked());
     }
 
     #[test]
