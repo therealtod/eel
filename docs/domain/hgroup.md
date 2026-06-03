@@ -39,7 +39,7 @@ Principle is at stake:
 - **Forced-save bad touch** (`forced_save_bad_touch_relief`): saving a protected card on chop
   sometimes cannot avoid a bad touch (e.g. a colour critical-save that also touches a dead card of
   that suit). Because the save is *forced* by the higher-priority Save Principle, each such bad
-  touch is charged `good_touch_penalty - forced_save_bad_touch_relief` instead of the full rate —
+  touch is charged `bad_touch_penalty - forced_save_bad_touch_relief` instead of the full rate —
   small enough that the engine never lets a protected card be discarded to avoid the collateral
   touch, but non-zero so a cleaner save of the same card is still preferred.
 - **Known-playable discard under save pressure** (`save_pressure_known_playable_relief`): the

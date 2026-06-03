@@ -25,7 +25,7 @@ use crate::game::static_game_data::StaticGameData;
 ///
 /// Per-clue immediate adjustments (applied to every clue action along the search line):
 /// - `empathy_weight * resolved_touched_cards`          — precision bonus for clues that fully resolve touched cards
-/// - `-good_touch_penalty * bad_touch_count`            — penalty for each touched card with no overlap with still-needed
+/// - `-bad_touch_penalty * bad_touch_count`            — penalty for each touched card with no overlap with still-needed
 ///                                                        cards (good-touch principle violation). Each penalty is softened by
 ///                                                        `forced_save_bad_touch_relief` when the clue is a forced
 ///                                                        Save-Principle save (see `forced_save_bad_touch_relief`).
@@ -90,11 +90,11 @@ pub struct DefaultEvaluator {
     /// Penalty per touched card that has no overlap with still-needed cards
     /// (good-touch principle violation). Should be lower than `lost_score_ceiling_weight`
     /// so that ceiling preservation takes precedence.
-    pub good_touch_penalty: f64,
-    /// Positive **relief** subtracted from [`Self::good_touch_penalty`] for each bad touch that is
+    pub bad_touch_penalty: f64,
+    /// Positive **relief** subtracted from [`Self::bad_touch_penalty`] for each bad touch that is
     /// *forced by a Save-Principle save* — a clue that saves a protected card sitting on the
     /// receiver's chop, with the chop card touched (see `h_group_core::is_forced_save`). The
-    /// effective per-bad-touch penalty becomes `(good_touch_penalty - forced_save_bad_touch_relief)`
+    /// effective per-bad-touch penalty becomes `(bad_touch_penalty - forced_save_bad_touch_relief)`
     /// (floored at 0).
     ///
     /// The Save Principle outranks the Good Touch Principle: when saving a protected card on chop
@@ -103,18 +103,18 @@ pub struct DefaultEvaluator {
     /// would rather let a protected card be discarded than incur the full good-touch penalty.
     ///
     /// Expressed as a relief (rather than a separate absolute penalty) so it tracks
-    /// `good_touch_penalty` under re-tuning and can never exceed it. Kept **below**
-    /// `good_touch_penalty` so the softened penalty stays **non-zero**: among competing saves of
+    /// `bad_touch_penalty` under re-tuning and can never exceed it. Kept **below**
+    /// `bad_touch_penalty` so the softened penalty stays **non-zero**: among competing saves of
     /// the same card, search still prefers one that avoids the bad touch (e.g. a clean rank save
     /// over a colour save that also touches trash). Suggested default: `15.0` (→ effective `5.0`).
     ///
     /// Set to `0.0` to disable the relief (full good-touch penalty even for forced saves).
     pub forced_save_bad_touch_relief: f64,
-    /// Positive **relief** subtracted from [`Self::good_touch_penalty`] for each bad touch on a clue
+    /// Positive **relief** subtracted from [`Self::bad_touch_penalty`] for each bad touch on a clue
     /// that is *forced by a stall situation* — the clue-token bank is full
     /// ([`MAX_CLUE_TOKEN_COUNT`](crate::game::MAX_CLUE_TOKEN_COUNT)), so the giver cannot discard and
     /// must give *some* clue. The effective per-bad-touch penalty becomes
-    /// `(good_touch_penalty - forced_stall_bad_touch_relief)` (floored at 0).
+    /// `(bad_touch_penalty - forced_stall_bad_touch_relief)` (floored at 0).
     ///
     /// Same rationale and shape as [`Self::forced_save_bad_touch_relief`]: a bad touch incurred only
     /// because the rules leave no legal discard is *forced by circumstance*, not chosen, so it must
@@ -124,7 +124,7 @@ pub struct DefaultEvaluator {
     /// genuinely forced. This is the deferral that keeps the engine from cluing trash early when a
     /// clean discard is available.
     ///
-    /// Kept **below** `good_touch_penalty` so the softened penalty stays **non-zero**: even when
+    /// Kept **below** `bad_touch_penalty` so the softened penalty stays **non-zero**: even when
     /// forced to clue, a stall clue that bad-touches less is still preferred. Suggested default:
     /// `15.0` (→ effective `5.0`).
     ///
@@ -189,8 +189,8 @@ pub struct DefaultEvaluator {
     /// potentially useful, so they sit in hand instead of being discarded. See
     /// [`Self::parked_dead_weight`].
     ///
-    /// This is the leaf-resident dual of [`Self::good_touch_penalty`] (which is charged once,
-    /// at clue time). Where `good_touch_penalty` punishes the *act* of a bad touch, this term
+    /// This is the leaf-resident dual of [`Self::bad_touch_penalty`] (which is charged once,
+    /// at clue time). Where `bad_touch_penalty` punishes the *act* of a bad touch, this term
     /// punishes the *standing state* of duplicates left parked in a hand, so the search keeps
     /// paying for them across the rollout rather than recouping the one-time charge with
     /// optimistic plays the short horizon can't refute.
@@ -372,7 +372,7 @@ impl Default for DefaultEvaluator {
             critical_exposure_weight: 3.0_f64,
             lost_score_ceiling_weight: 30.0_f64,
             empathy_weight: 0.0_f64,
-            good_touch_penalty: 25.0_f64,
+            bad_touch_penalty: 25.0_f64,
             forced_save_bad_touch_relief: 15.0_f64,
             forced_stall_bad_touch_relief: 15.0_f64,
             clue_token_weight: 0.6_f64,
@@ -658,7 +658,7 @@ impl DefaultEvaluator {
     /// still-needed set), so they will sit in hand rather than be discarded — and may even be
     /// misplayed into a strike.
     ///
-    /// This is the leaf-resident counterpart to the one-time `good_touch_penalty` charged at
+    /// This is the leaf-resident counterpart to the one-time `bad_touch_penalty` charged at
     /// clue time. A bad touch's true cost is not the instant of cluing — it is that the dead
     /// duplicates stay parked across the whole rollout, occupying slots and inviting a strike
     /// the short search horizon never reaches. Charging it at every leaf makes the search keep

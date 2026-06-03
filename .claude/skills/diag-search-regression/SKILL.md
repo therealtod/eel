@@ -98,7 +98,7 @@ The most common large-magnitude culprits:
 
 - **`clue_bonus` ≈ −19 to −20**: A clue touched a card whose exact identity is already
   present in the same hand (duplicate) or already fully played. `count_bad_touches` found
-  1 bad touch; penalty = `good_touch_penalty × 1` = 20.0 by default. Check the touched
+  1 bad touch; penalty = `bad_touch_penalty × 1` = 20.0 by default. Check the touched
   deck indexes against the hand — are two cards the same identity?
 
 - **`discard_penalty` ≈ −8**: `discard_action_penalty` fired. Either `bottom_deck_risk_score`

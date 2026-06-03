@@ -10,7 +10,7 @@ pub type Score = f64;
 /// One step along a principal variation.
 ///
 /// `immediate_bonus` is the per-action contribution applied along the search line
-/// (currently non-zero only for clues: `clue_precision_bonus − good_touch_penalty * bad_touches`).
+/// (currently non-zero only for clues: `clue_precision_bonus − bad_touch_penalty * bad_touches`).
 /// Summing `immediate_bonus` across the line and adding it to `leaf_breakdown.total`
 /// reproduces [`ScoredNode::total_score`].
 #[derive(Debug, Clone)]

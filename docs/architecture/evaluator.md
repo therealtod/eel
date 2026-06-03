@@ -349,7 +349,7 @@ the post-clue state.
 #### 2.4b Good-touch penalty
 
 ```
-−good_touch_penalty × bad_touch_count
+−bad_touch_penalty × bad_touch_count
 ```
 
 `bad_touch_count` = number of touched cards whose truth identity is already played on the
@@ -357,7 +357,7 @@ stacks, already in the discard pile, or otherwise no longer needed — a violati
 good-touch principle.  Should be lower than `lost_score_ceiling_weight` so that ceiling
 preservation takes precedence over avoiding bad touches.
 
-**Default weight:** `good_touch_penalty = 25.0`
+**Default weight:** `bad_touch_penalty = 25.0`
 
 #### 2.4c Potential bad-touch penalty
 
@@ -553,7 +553,7 @@ dumped may itself be critical.
 | `critical_exposure_delta_weight` | 0.5               | ± | Immediate (per turn) |
 | `tempo_cost_weight` | 2.5               | − | Immediate (per turn) |
 | `clue_precision_weight` | 0.4               | + | Immediate (clue) |
-| `good_touch_penalty` | 25.0              | − | Immediate (clue) |
+| `bad_touch_penalty` | 25.0              | − | Immediate (clue) |
 | `potential_bad_touch_penalty` | 9.0               | − | Immediate (clue) |
 | `signal_ignored_penalty_weight` | 5.0               | − | Immediate (any) |
 | `play_progress_weight` | 2.0               | + | Immediate (play) |

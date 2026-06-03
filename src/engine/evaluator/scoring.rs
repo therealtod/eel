@@ -232,7 +232,7 @@ impl super::Evaluator for DefaultEvaluator {
         } else {
             0.0
         };
-        let per_bad_touch_penalty = (self.good_touch_penalty - relief).max(0.0);
+        let per_bad_touch_penalty = (self.bad_touch_penalty - relief).max(0.0);
 
         let potential_bad_touch = self.potential_bad_touch_penalty != 0.0
             && is_potential_bad_touch(
