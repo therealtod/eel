@@ -369,3 +369,18 @@ fn should_pick_up_y1_without_bad_touch() {
         _ => panic!("Bob has chosen the following action: {:?}", action),
     }
 }
+
+#[test]
+fn should_not_clue_1s_to_cathy() {
+    let action = engine_action_at_turn("should_not_clue_1s_to_cathy.json", 17);
+    match action {
+        GameAction::Discard {
+            player_index: 1,
+            ..
+        } => println!(
+            "Bob has chosen to discard his chop: {:?}",
+            action
+        ),
+        _ => panic!("Bob has chosen the following action: {:?}", action),
+    }
+}

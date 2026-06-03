@@ -110,6 +110,26 @@ pub struct DefaultEvaluator {
     ///
     /// Set to `0.0` to disable the relief (full good-touch penalty even for forced saves).
     pub forced_save_bad_touch_relief: f64,
+    /// Positive **relief** subtracted from [`Self::good_touch_penalty`] for each bad touch on a clue
+    /// that is *forced by a stall situation* — the clue-token bank is full
+    /// ([`MAX_CLUE_TOKEN_COUNT`](crate::game::MAX_CLUE_TOKEN_COUNT)), so the giver cannot discard and
+    /// must give *some* clue. The effective per-bad-touch penalty becomes
+    /// `(good_touch_penalty - forced_stall_bad_touch_relief)` (floored at 0).
+    ///
+    /// Same rationale and shape as [`Self::forced_save_bad_touch_relief`]: a bad touch incurred only
+    /// because the rules leave no legal discard is *forced by circumstance*, not chosen, so it must
+    /// not be penalised as harshly as a deliberate one. Crucially, the relief is gated on the bank
+    /// actually being full, so a player who can *still discard* pays the **full** good-touch penalty
+    /// for a bad-touch clue — and therefore prefers to discard now and defer such a clue until it is
+    /// genuinely forced. This is the deferral that keeps the engine from cluing trash early when a
+    /// clean discard is available.
+    ///
+    /// Kept **below** `good_touch_penalty` so the softened penalty stays **non-zero**: even when
+    /// forced to clue, a stall clue that bad-touches less is still preferred. Suggested default:
+    /// `15.0` (→ effective `5.0`).
+    ///
+    /// Set to `0.0` to disable the relief (full good-touch penalty even for forced stalls).
+    pub forced_stall_bad_touch_relief: f64,
     /// Base multiplier for the clue-token term. Value is `clue_token_weight * harmonic(n)`,
     /// where `harmonic(n) = Σ_{i=1}^{n} 1/i`. The 0→1 jump is the largest; each additional
     /// token adds diminishing value, reflecting that scarcity matters most at very low counts.
@@ -352,8 +372,9 @@ impl Default for DefaultEvaluator {
             critical_exposure_weight: 3.0_f64,
             lost_score_ceiling_weight: 30.0_f64,
             empathy_weight: 0.0_f64,
-            good_touch_penalty: 20.0_f64,
+            good_touch_penalty: 25.0_f64,
             forced_save_bad_touch_relief: 15.0_f64,
+            forced_stall_bad_touch_relief: 15.0_f64,
             clue_token_weight: 0.6_f64,
             clue_demand_weight: 0.05_f64,
             clue_precision_weight: 0.4_f64,

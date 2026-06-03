@@ -9,6 +9,7 @@ use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::CardDeckIndex;
 use crate::game::clue::Clue;
+use crate::game::MAX_CLUE_TOKEN_COUNT;
 use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
@@ -207,16 +208,31 @@ impl super::Evaluator for DefaultEvaluator {
         let bad_touch_count =
             count_bad_touches(clue, touched, receiver, truth, table_state, static_data);
 
-        // Save Principle outranks Good Touch: a bad touch forced by saving a protected card on
-        // the receiver's chop is less culpable than a deliberate one, so the good-touch penalty is
-        // softened by `forced_save_bad_touch_relief` (the softened penalty stays non-zero, so a
-        // cleaner save of the same card is still preferred by search).
-        let per_bad_touch_penalty =
-            if bad_touch_count > 0 && is_forced_save(touched, receiver, truth) {
-                (self.good_touch_penalty - self.forced_save_bad_touch_relief).max(0.0)
-            } else {
-                self.good_touch_penalty
-            };
+        // A bad touch is less culpable when it is *forced by circumstance* rather than chosen, so
+        // the good-touch penalty is softened by the most generous applicable relief (the softened
+        // penalty stays non-zero, so a cleaner clue is still preferred by search):
+        //   * Save Principle outranks Good Touch — saving a protected card on the receiver's chop
+        //     (`is_forced_save`) softens by `forced_save_bad_touch_relief`.
+        //   * Stall situation — the clue-token bank is full (`truth.table_state()` is the pre-clue
+        //     state), so the giver cannot discard and must give *some* clue; softened by
+        //     `forced_stall_bad_touch_relief`. A giver who can still discard pays the full penalty,
+        //     so they prefer to discard now and defer a bad-touch clue until it is actually forced.
+        let relief = if bad_touch_count > 0 {
+            let mut relief = 0.0_f64;
+            if is_forced_save(touched, receiver, truth) {
+                relief = relief.max(self.forced_save_bad_touch_relief);
+            }
+            if self.forced_stall_bad_touch_relief != 0.0
+                && truth.table_state().clue_token_bank.whole_clue_tokens_count()
+                    >= MAX_CLUE_TOKEN_COUNT
+            {
+                relief = relief.max(self.forced_stall_bad_touch_relief);
+            }
+            relief
+        } else {
+            0.0
+        };
+        let per_bad_touch_penalty = (self.good_touch_penalty - relief).max(0.0);
 
         let potential_bad_touch = self.potential_bad_touch_penalty != 0.0
             && is_potential_bad_touch(
