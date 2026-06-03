@@ -22,6 +22,45 @@ use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
 
+/// An H-Group convention level.
+///
+/// Each level is a cumulative superset of the levels below it: playing at a
+/// given level means using every tech from that level and all lower ones.
+///
+/// For now each level re-declares the full list of techs it enables, one by
+/// one, rather than importing the lower level's list. This keeps each level's
+/// roster explicit and easy to read at the cost of some duplication.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HGroupLevel {
+    /// Level 1 — the foundational conventions.
+    One,
+}
+
+impl HGroupLevel {
+    /// The full, cumulative list of techs enabled at this level (including
+    /// those inherited from lower levels).
+    #[must_use]
+    pub fn techs(self) -> Vec<Box<dyn ConventionTech>> {
+        match self {
+            HGroupLevel::One => vec![
+                Box::new(PlayKnownPlayable),
+                Box::new(BlindPlay),
+                Box::new(DirectPlayClue),
+                Box::new(DelayedPlayClue),
+                Box::new(TempoClue),
+                Box::new(SimplePrompt),
+                Box::new(SimpleFinesse),
+                Box::new(ColorCriticalSave),
+                Box::new(RankCriticalSave),
+                Box::new(FiveSave),
+                Box::new(TwoSave),
+                Box::new(DiscardKnownTrash),
+                Box::new(DiscardChop),
+            ],
+        }
+    }
+}
+
 /// The H-Group convention framework.
 pub struct HGroupConventionSet {
     techs: Vec<Box<dyn ConventionTech>>,
@@ -43,25 +82,17 @@ impl HGroupConventionSet {
             ],
         }
     }
+
+    /// Build a convention set enabling every tech up to and including `level`.
+    #[must_use]
+    pub fn for_level(level: HGroupLevel) -> Self {
+        HGroupConventionSet::new(level.techs())
+    }
 }
 
 impl Default for HGroupConventionSet {
     fn default() -> Self {
-        HGroupConventionSet::new(vec![
-            Box::new(PlayKnownPlayable),
-            Box::new(BlindPlay),
-            Box::new(DirectPlayClue),
-            Box::new(DelayedPlayClue),
-            Box::new(TempoClue),
-            Box::new(SimplePrompt),
-            Box::new(SimpleFinesse),
-            Box::new(ColorCriticalSave),
-            Box::new(RankCriticalSave),
-            Box::new(FiveSave),
-            Box::new(TwoSave),
-            Box::new(DiscardKnownTrash),
-            Box::new(DiscardChop),
-        ])
+        HGroupConventionSet::for_level(HGroupLevel::One)
     }
 }
 
