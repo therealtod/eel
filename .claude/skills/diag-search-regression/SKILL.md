@@ -1,7 +1,7 @@
 ---
 name: diag-search-regression
 description: |
-  Diagnose a failing tests/search_regression.rs test by reading the candidate_scored
+  Diagnose a failing tests/integration/search_regression.rs test by reading the candidate_scored
   DEBUG output — decompose each candidate's total score, isolate the immediate_bonus
   step driving the wrong choice, and map it to the responsible evaluator term or
   scenario defect. Use when the engine picks the wrong action in a scenario-driven
@@ -10,7 +10,7 @@ description: |
 
 # Diagnose a search regression failure
 
-A `tests/search_regression.rs` failure tells you *what* the engine chose, not *why* it
+A `tests/integration/search_regression.rs` failure tells you *what* the engine chose, not *why* it
 ranked that action above the expected one. The answer lives in the `candidate_scored`
 DEBUG lines the test already emits — no extra diagnostic code needed.
 
