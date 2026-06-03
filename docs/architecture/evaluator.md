@@ -357,7 +357,7 @@ stacks, already in the discard pile, or otherwise no longer needed — a violati
 good-touch principle.  Should be lower than `lost_score_ceiling_weight` so that ceiling
 preservation takes precedence over avoiding bad touches.
 
-**Default weight:** `good_touch_penalty = 20.0`
+**Default weight:** `good_touch_penalty = 25.0`
 
 #### 2.4c Potential bad-touch penalty
 
@@ -536,31 +536,31 @@ dumped may itself be critical.
 
 ## 3 — Weight Reference
 
-| Field | Default | Sign | Category |
-|-------|---------|------|----------|
-| `score_weight` | 10.0 | + | Leaf |
+| Field | Default           | Sign | Category |
+|-------|-------------------|------|----------|
+| `score_weight` | 10.0              | + | Leaf |
 | `strike_penalties` | [0, 10, 30, 1000] | − | Leaf |
-| `pace_weight` | 1.0 | + | Leaf |
-| `efficiency_weight` | 1.9 | − | Leaf |
-| `critical_exposure_weight` | 3.0 | − | Leaf |
-| `lost_score_ceiling_weight` | 8.0 | − | Leaf |
-| `empathy_weight` | 0.0 | + | Leaf (disabled) |
-| `clue_token_weight` | 0.6 | + | Leaf |
-| `clue_demand_weight` | 0.05 | + (amplifier) | Leaf |
-| `known_playable_weight` | 1.0 | + | Leaf |
-| `misinformation_weight` | 0.0 | − | Leaf (disabled) |
-| `team_empathy_weight` | 0.3 | + | Immediate (clue Δ) |
-| `critical_exposure_delta_weight` | 0.5 | ± | Immediate (per turn) |
-| `tempo_cost_weight` | 2.5 | − | Immediate (per turn) |
-| `clue_precision_weight` | 0.4 | + | Immediate (clue) |
-| `good_touch_penalty` | 20.0 | − | Immediate (clue) |
-| `potential_bad_touch_penalty` | 5.0 | − | Immediate (clue) |
-| `signal_ignored_penalty_weight` | 5.0 | − | Immediate (any) |
-| `play_progress_weight` | 2.0 | + | Immediate (play) |
-| `play_deferral_weight` | 0.15 | − | Immediate (play, per elapsed ply) |
-| `score_deferral_weight` | 0.75 | − | Quiescence tail (play, per elapsed ply) |
-| `bottom_deck_risk_weight` | 2.0 | − | Immediate (discard) |
-| `discard_while_known_playable_penalty` | 8.0 | − | Immediate (discard) |
+| `pace_weight` | 1.0               | + | Leaf |
+| `efficiency_weight` | 1.9               | − | Leaf |
+| `critical_exposure_weight` | 3.0               | − | Leaf |
+| `lost_score_ceiling_weight` | 8.0               | − | Leaf |
+| `empathy_weight` | 0.0               | + | Leaf (disabled) |
+| `clue_token_weight` | 0.6               | + | Leaf |
+| `clue_demand_weight` | 0.05              | + (amplifier) | Leaf |
+| `known_playable_weight` | 1.0               | + | Leaf |
+| `misinformation_weight` | 0.0               | − | Leaf (disabled) |
+| `team_empathy_weight` | 0.3               | + | Immediate (clue Δ) |
+| `critical_exposure_delta_weight` | 0.5               | ± | Immediate (per turn) |
+| `tempo_cost_weight` | 2.5               | − | Immediate (per turn) |
+| `clue_precision_weight` | 0.4               | + | Immediate (clue) |
+| `good_touch_penalty` | 25.0              | − | Immediate (clue) |
+| `potential_bad_touch_penalty` | 9.0               | − | Immediate (clue) |
+| `signal_ignored_penalty_weight` | 5.0               | − | Immediate (any) |
+| `play_progress_weight` | 2.0               | + | Immediate (play) |
+| `play_deferral_weight` | 0.15              | − | Immediate (play, per elapsed ply) |
+| `score_deferral_weight` | 0.75              | − | Quiescence tail (play, per elapsed ply) |
+| `bottom_deck_risk_weight` | 2.0               | − | Immediate (discard) |
+| `discard_while_known_playable_penalty` | 8.0               | − | Immediate (discard) |
 
 ---
 
