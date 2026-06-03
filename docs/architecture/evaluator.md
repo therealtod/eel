@@ -554,6 +554,7 @@ dumped may itself be critical.
 | `tempo_cost_weight` | 2.5               | − | Immediate (per turn) |
 | `clue_precision_weight` | 0.4               | + | Immediate (clue) |
 | `bad_touch_penalty` | 25.0              | − | Immediate (clue) |
+| `parked_dead_weight_penalty` | 12.0              | − | Leaf |
 | `potential_bad_touch_penalty` | 9.0               | − | Immediate (clue) |
 | `signal_ignored_penalty_weight` | 5.0               | − | Immediate (any) |
 | `play_progress_weight` | 2.0               | + | Immediate (play) |

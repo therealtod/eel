@@ -1,6 +1,26 @@
 # Scratchpad — `should_wait_for_g1_duplicate_to_discard` regression
 
-Status: **diagnosed, no fix applied.** Decision on direction still pending with the user.
+Status: **FIXED.** `parked_dead_weight_penalty` raised `6.0 → 12.0` (candidate fix #1,
+parked-dead-weight variant). Target test passes; full suite green (no regressions).
+
+## Chosen fix (applied)
+
+Raised `parked_dead_weight_penalty` from `6.0` to `12.0` in
+`src/engine/evaluator/default_evaluator.rs` (and added the missing row to the weight
+table in `docs/architecture/evaluator.md`).
+
+Why this lever (not `bad_touch_penalty`):
+- The differentiator is **duplicate-waste pricing**, and the g1 line carries exactly
+  **1 unit of parked dead weight** in the real search leaf (the duplicate deck[9], dead
+  once the green chain plays); the red line carries **0** (it is unchanged under
+  `parked_dead_weight_penalty ×3`). So the lever bites *only* the offending line.
+- It is **independent of the `bad_touch` reliefs** (forced-save / forced-stall), so the
+  recent relief-calibration work is untouched — unlike raising `bad_touch_penalty`, which
+  is also far too blunt here (×3 swings the g1 line by 50 points).
+
+Calibration (from the `tests/_diag.rs` sweep): g1 `+53.54` vs red `+50.45`, gap `3.09`,
+1 dead-weight unit. Flip threshold is between `9` (g1 still wins by 0.09) and `10` (red
+wins by 0.91). Chose `12.0` (2× the prior value) for a ~2.9-point margin.
 
 ## The scenario
 
