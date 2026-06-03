@@ -717,6 +717,35 @@ impl PlayerKnowledge {
         table_state: &TableState,
         variant: &Variant,
     ) -> VariantCardsBitField {
+        let remaining = self.observable_remaining_copies(visible_cards, table_state, variant);
+        let stacks_size = variant.stacks_size as usize;
+        let mut result: VariantCardsBitField = 0;
+        for suit in 0..variant.number_of_suits as usize {
+            for rank_idx in 0..stacks_size {
+                let card_id = suit * stacks_size + rank_idx;
+                if remaining[card_id] > 0 {
+                    result |= 1u64 << card_id;
+                }
+            }
+        }
+        result
+    }
+
+    /// Per-identity count of copies that could still occupy a cell **this player cannot
+    /// observe** (i.e. its own hand): `total − played − discarded − copies seen in other
+    /// players' hands`. A value of `0` means every copy is already accounted for elsewhere,
+    /// so the identity is impossible for any unseen own-hand card.
+    ///
+    /// This is the numeric form of [`observable_identity_mask`]; callers that need to reason
+    /// about how many copies remain (e.g. own-hand card-count elimination across multiple
+    /// own cards) use the counts rather than the collapsed mask.
+    #[must_use]
+    pub fn observable_remaining_copies(
+        &self,
+        visible_cards: DeckCardsBitField,
+        table_state: &TableState,
+        variant: &Variant,
+    ) -> [u8; MAX_UNIQUE_CARDS_IN_DECK] {
         let stacks_size = variant.stacks_size as usize;
 
         // Restrict counting to copies currently held in another player's hand.
@@ -742,7 +771,7 @@ impl PlayerKnowledge {
             bits &= bits - 1;
         }
 
-        let mut result: VariantCardsBitField = 0;
+        let mut remaining = [0u8; MAX_UNIQUE_CARDS_IN_DECK];
         for suit in 0..variant.number_of_suits as usize {
             let stack_top = table_state.playing_stacks.stack_size(suit) as usize;
             for rank_idx in 0..stacks_size {
@@ -750,12 +779,11 @@ impl PlayerKnowledge {
                 let total = variant.card_copies_count_by_id[card_id];
                 let played = if rank_idx < stack_top { 1u8 } else { 0u8 };
                 let discarded = table_state.discard_pile.copies_of(card_id as VariantCardId);
-                if played + discarded + seen_in_others[card_id] < total {
-                    result |= 1u64 << card_id;
-                }
+                let accounted = played + discarded + seen_in_others[card_id];
+                remaining[card_id] = total.saturating_sub(accounted);
             }
         }
-        result
+        remaining
     }
 }
 

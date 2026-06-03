@@ -554,6 +554,13 @@ impl DefaultEvaluator {
         let num_players = static_data.number_of_players as usize;
         let playable_mask = table_state.playable_cards(static_data);
         let mut total = 0.0f64;
+        // A playable identity can only be played once: the stack advances by exactly one when
+        // the first copy plays, after which any remaining copies of that identity are dead. So a
+        // playable identity the searcher can pin down (via truth view) is credited at most once,
+        // globally across all hands. This prevents over-rewarding a clue that touches several
+        // duplicate copies of the same playable (e.g. a rank-1 clue landing on three P1s), which
+        // is a bad touch, not three plays.
+        let mut credited_truth_ids: VariantCardsBitField = 0;
         for p in 0..num_players {
             let pk = team_knowledge.player(p);
             let mut hand = pk.own_hand;
@@ -562,35 +569,49 @@ impl DefaultEvaluator {
                 hand &= hand - 1;
                 // Detect the misinformation case: searcher knows the truth and it's
                 // unplayable. Skip even if the holder's local knowledge thinks otherwise.
-                if let Some(truth_id) = truth.card_identity(idx as CardDeckIndex) {
+                let truth_id = truth.card_identity(idx as CardDeckIndex);
+                if let Some(truth_id) = truth_id {
                     if (1u64 << truth_id) & playable_mask == 0 {
                         continue;
                     }
                 }
-                // Priority 1: convention signal
-                if pk.signals[idx]
-                    .iter()
-                    .any(|s| matches!(s, Signal::Play { .. }))
-                {
-                    total += 1.0;
+                // Does the holder know (by any priority) that this card is playable?
+                let counts = {
+                    // Priority 1: convention signal
+                    if pk.signals[idx]
+                        .iter()
+                        .any(|s| matches!(s, Signal::Play { .. }))
+                    {
+                        true
+                    } else if let Some(inferred) = pk.inferred_identities[idx] {
+                        // Priority 2: convention-inferred identity (currently unpopulated)
+                        let bits = inferred.as_bits();
+                        bits != 0 && (bits & playable_mask) == bits
+                    } else {
+                        // Priority 3: game-rule empathy from Deck (global)
+                        let bits = table_state
+                            .deck
+                            .get_global_empathy(idx as CardDeckIndex)
+                            .as_bits();
+                        bits != 0 && (bits & playable_mask) == bits
+                    }
+                };
+                if !counts {
                     continue;
                 }
-                // Priority 2: convention-inferred identity (currently unpopulated)
-                if let Some(inferred) = pk.inferred_identities[idx] {
-                    let bits = inferred.as_bits();
-                    if bits != 0 && (bits & playable_mask) == bits {
-                        total += 1.0;
+                // A playable identity the searcher can pin down via truth is credited at most
+                // once, globally: only the first copy will play, after which the stack advances
+                // and the rest are dead. This stops a bad-touch clue that lands on several
+                // duplicate copies of one playable (e.g. a rank-1 clue touching three P1s) from
+                // being scored as several independent plays.
+                if let Some(truth_id) = truth_id {
+                    let id_bit = 1u64 << truth_id;
+                    if id_bit & credited_truth_ids != 0 {
                         continue;
                     }
+                    credited_truth_ids |= id_bit;
                 }
-                // Priority 3: game-rule empathy from Deck (global)
-                let bits = table_state
-                    .deck
-                    .get_global_empathy(idx as CardDeckIndex)
-                    .as_bits();
-                if bits != 0 && (bits & playable_mask) == bits {
-                    total += 1.0;
-                }
+                total += 1.0;
             }
         }
         total

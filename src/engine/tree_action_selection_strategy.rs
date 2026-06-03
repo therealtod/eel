@@ -17,6 +17,7 @@ use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
 use crate::engine::play_resolver::TruthPovResolver;
 use crate::game::MAX_PLAYERS_IN_GAME;
 use crate::game::action::game_action::GameAction;
+use crate::game::card::CardDeckIndex;
 use crate::game::static_game_data::StaticGameData;
 // Parallel candidate scoring is disabled under `search-diagnostic` (sequential output is
 // readable and attributable), so the rayon prelude is only needed in normal builds.
@@ -479,7 +480,7 @@ impl TreeActionSelectionStrategy {
 
         // Policy: pick what the active player would do from *their* POV. See
         // [`SUBJECTIVE_POLICY`] for the variant in effect.
-        let Some(chosen) = Self::pick_subjective(
+        let Some(mut chosen) = Self::pick_subjective(
             state,
             static_data,
             convention_set,
@@ -504,6 +505,32 @@ impl TreeActionSelectionStrategy {
             let breakdown = Self::leaf_breakdown(evaluator, state, observer, phantom_plays);
             pv_table.rows[depth].clear();
             return (breakdown.total, breakdown);
+        }
+
+        // Pessimistic disambiguation: if the chosen play is one of several subjectively
+        // indistinguishable known-playables and the planning `observer` can see that a sibling
+        // copy would strike (a bad-touched duplicate), redirect the play to that dead copy so
+        // the strike surfaces instead of being optimized away. See [`worst_case_symmetric_play`].
+        if let GameAction::Play {
+            player_index,
+            card_deck_index,
+            turn,
+        } = chosen.action
+        {
+            let redirected = Self::worst_case_symmetric_play(
+                state,
+                static_data,
+                observer,
+                player_index,
+                card_deck_index,
+            );
+            if redirected != card_deck_index {
+                chosen.action = GameAction::Play {
+                    player_index,
+                    card_deck_index: redirected,
+                    turn,
+                };
+            }
         }
 
         // Resolution policy depends on whether we're in the root simulation or in a
@@ -931,6 +958,74 @@ impl TreeActionSelectionStrategy {
             remaining -= 1;
             elapsed += 1;
         }
+    }
+
+    /// Pessimistic disambiguation of a play among a *symmetric known-playable cohort*.
+    ///
+    /// When the active player is about to play a card that is subjectively indistinguishable
+    /// from one or more sibling cards in their own hand (identical combined empathy), they
+    /// cannot know which physical copy they are choosing. If a bad touch left a *duplicate*
+    /// among that cohort — a copy whose true identity is no longer playable — a real player
+    /// runs a genuine risk of grabbing the dead copy and striking. The optimistic rollout
+    /// would instead let the search pick the one good copy on every turn, hiding the strike
+    /// the bad touch actually creates.
+    ///
+    /// Resolve that pessimistically: if `sight` (a teammate observer with direct physical
+    /// sight of the actor's hand) can see that a cohort sibling would strike on the current
+    /// stacks, redirect the play to that worst-case copy so the strike surfaces. Because each
+    /// ply removes the redirected card, successive plies consume the non-playable duplicates
+    /// first and leave the genuinely-playable copy to be played later — exactly the worst-case
+    /// ordering a player who cannot tell the copies apart would risk.
+    ///
+    /// Sight is gated on `sight.visible_cards()`, so this only ever reorders teammate cards the
+    /// observer can physically see; the root player's own hidden hand (no sight) is untouched
+    /// and stays optimistic, consistent with [`TruthPovResolver`]'s resolution philosophy.
+    fn worst_case_symmetric_play(
+        state: &KnowledgeAwareGameState,
+        static_data: &StaticGameData,
+        sight: &dyn PlayerPOV,
+        actor: usize,
+        card_deck_index: CardDeckIndex,
+    ) -> CardDeckIndex {
+        let visible = sight.visible_cards();
+        // No sight of the played card → cannot foresee a strike; leave the choice optimistic.
+        if visible & (1u64 << card_deck_index) == 0 {
+            return card_deck_index;
+        }
+        let knowledge = state.team_knowledge.player(actor);
+        let variant = &static_data.variant;
+        let empathy = knowledge
+            .combined_possible_identities(card_deck_index, &state.table_state, variant)
+            .as_bits();
+        let playable = state.table_state.playable_cards(static_data);
+        // If the chosen card itself already strikes, no reordering is needed.
+        if let Some(truth) = sight.card_identity(card_deck_index) {
+            if (1u64 << truth) & playable == 0 {
+                return card_deck_index;
+            }
+        }
+        // Look for a subjectively-indistinguishable sibling whose true identity is *not*
+        // playable — that is the copy the actor could just as easily have grabbed first.
+        let mut hand = knowledge.own_hand & visible;
+        while hand != 0 {
+            let idx = hand.trailing_zeros() as u8;
+            hand &= hand - 1;
+            if idx == card_deck_index {
+                continue;
+            }
+            let sib_empathy = knowledge
+                .combined_possible_identities(idx, &state.table_state, variant)
+                .as_bits();
+            if sib_empathy != empathy {
+                continue; // distinguishable — the actor would not confuse the two
+            }
+            if let Some(truth) = sight.card_identity(idx) {
+                if (1u64 << truth) & playable == 0 {
+                    return idx;
+                }
+            }
+        }
+        card_deck_index
     }
 
     /// Dispatcher: selects between the recursive A-style and the priority-based

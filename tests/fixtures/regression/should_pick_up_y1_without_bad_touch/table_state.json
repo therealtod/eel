@@ -1,0 +1,23 @@
+{
+  "scenario_description": "Alice should not clue rank-1 as that would generate a bad touch. A yellow clue to only get y1 should be preferred",
+  "suits": [
+    "red",
+    "yellow",
+    "green",
+    "blue",
+    "purple"
+  ],
+  "active_player": 0,
+  "playing_stacks": [
+    [], [], [], [], []
+  ],
+  "discard_pile": [],
+  "clue_tokens": 7,
+  "strikes": 0,
+  "player_on_turn": 0,
+  "hands": [
+    [{"id":  "x", "negative": ["5"]}, {"id":  "x", "negative": ["5"]}, {"id":  "x", "negative": ["5"]}, {"id":  "x", "negative": ["5"]}, {"id":  "x", "positive": ["5"], "inferred": "r5y5g5b5p5"}],
+    ["p1", "p1", "y1", "g3", "p1"],
+    ["g1", "y2", "g4", "g1", "y2"]
+  ]
+}

@@ -34,9 +34,15 @@ impl SimplePrompt {
     /// 2. Skip: the first touched card whose holder empathy admits `connecting_id` IS the
     ///    connecting card — the player will skip over any preceding cards whose clue empathy
     ///    excludes the connecting identity.
+    ///
+    /// `focus_idx` is the deck index of the clue's focus card. When the focus lives in the same
+    /// hand as the connecting card (a self-prompt), it must be excluded from the connecting-card
+    /// search: the focus is the card being newly clued, and its fresh clue is exactly what
+    /// disambiguates it from the connecting card, so it can never itself be the connection.
     fn is_valid_prompt_situation(
         connecting_id: VariantCardId,
         target_player: PlayerIndex,
+        focus_idx: CardDeckIndex,
         pov: &dyn PlayerPOV,
     ) -> bool {
         let hand = pov.table_state().hands[target_player].cards();
@@ -44,7 +50,7 @@ impl SimplePrompt {
         let touched: Vec<CardDeckIndex> = hand
             .iter()
             .copied()
-            .filter(|&idx| pov.is_touched(idx))
+            .filter(|&idx| idx != focus_idx && pov.is_touched(idx))
             .collect();
 
         let pos = touched.iter().position(|&idx| {
@@ -75,6 +81,27 @@ impl SimplePrompt {
         }
         false
     }
+
+    /// Whether `focus_id` is already gotten by some touched, identity-known card **other than
+    /// the focus card itself**.
+    ///
+    /// `pov.is_gotten` counts the focus card's own touched state as evidence the identity is
+    /// secured, which wrongly blocks prompts that re-clue an already-touched focus to
+    /// disambiguate it (e.g. cluing a rank to one card of an ambiguous {g3,g4} pair). The
+    /// guard's real purpose is to skip redundant clues on *duplicate* copies, so the focus
+    /// card must be excluded from that determination.
+    fn focus_identity_gotten_elsewhere(
+        focus_idx: CardDeckIndex,
+        focus_id: VariantCardId,
+        pov: &dyn PlayerPOV,
+    ) -> bool {
+        let num_players = pov.static_data().number_of_players as usize;
+        (0..num_players).any(|p| {
+            pov.table_state().hands[p].cards().iter().any(|&idx| {
+                idx != focus_idx && pov.is_touched(idx) && pov.card_identity(idx) == Some(focus_id)
+            })
+        })
+    }
 }
 
 impl ClueTech for SimplePrompt {
@@ -89,14 +116,15 @@ impl ClueTech for SimplePrompt {
                     .into_iter()
                     .filter_map(move |(action, focus_idx)| {
                         if let Some(card_id) = pov.card_identity(focus_idx) {
-                            if pov.away_value(card_id) != Some(1) || pov.is_gotten(card_id) {
+                            if pov.away_value(card_id) != Some(1)
+                                || Self::focus_identity_gotten_elsewhere(focus_idx, card_id, pov)
+                            {
                                 return None;
                             }
                             let connecting_id = card_id - 1;
-                            if (0..num_players)
-                                .filter(|&p| p != active)
-                                .any(|p| Self::is_valid_prompt_situation(connecting_id, p, pov))
-                            {
+                            if (0..num_players).filter(|&p| p != active).any(|p| {
+                                Self::is_valid_prompt_situation(connecting_id, p, focus_idx, pov)
+                            }) {
                                 Some(action)
                             } else {
                                 None
@@ -136,13 +164,15 @@ impl ClueTech for SimplePrompt {
             if (candidates & (1u64 << focus_id)) == 0 {
                 return false;
             }
-            if giver_pov.away_value(focus_id) != Some(1) || giver_pov.is_gotten(focus_id) {
+            if giver_pov.away_value(focus_id) != Some(1)
+                || Self::focus_identity_gotten_elsewhere(focus, focus_id, &giver_pov)
+            {
                 return false;
             }
             let connecting_id = focus_id - 1;
             (0..num_players)
                 .filter(|&p| p != giver)
-                .any(|p| Self::is_valid_prompt_situation(connecting_id, p, &giver_pov))
+                .any(|p| Self::is_valid_prompt_situation(connecting_id, p, focus, &giver_pov))
         })
     }
 
@@ -170,13 +200,16 @@ impl ClueTech for SimplePrompt {
             let focus = get_clue_focus(clue_receiver_index, touched, &giver_pov);
             if let Some(focus) = focus {
                 let focus_id = match giver_pov.card_identity(focus) {
-                    Some(id) if giver_pov.away_value(id) == Some(1) && !giver_pov.is_gotten(id) => {
+                    Some(id)
+                        if giver_pov.away_value(id) == Some(1)
+                            && !Self::focus_identity_gotten_elsewhere(focus, id, &giver_pov) =>
+                    {
                         id
                     }
                     _ => return Hypothesis::empty(),
                 };
                 let connecting_id = focus_id - 1;
-                if Self::is_valid_prompt_situation(connecting_id, current, &giver_pov) {
+                if Self::is_valid_prompt_situation(connecting_id, current, focus, &giver_pov) {
                     let hand = giver_pov.table_state().hands[current].cards();
                     let touched_in_hand: Vec<CardDeckIndex> = hand
                         .iter()
@@ -218,10 +251,10 @@ impl ClueTech for SimplePrompt {
                 .filter(|&id| {
                     (1u64 << id) & clue_mask != 0
                         && giver_pov.away_value(id) == Some(1)
-                        && !giver_pov.is_gotten(id)
+                        && !Self::focus_identity_gotten_elsewhere(focus, id, &giver_pov)
                         && (0..num_players)
                             .filter(|&p| p != giver_idx)
-                            .any(|p| Self::is_valid_prompt_situation(id - 1, p, &giver_pov))
+                            .any(|p| Self::is_valid_prompt_situation(id - 1, p, focus, &giver_pov))
                 })
                 .fold(0u64, |acc, id| acc | (1 << id));
             if mask != 0 {

@@ -1,11 +1,14 @@
 use super::{get_clue_focus, get_finesse_position};
 use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
+use crate::engine::knowledge::player_knowledge::PlayerKnowledge;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::card::{CardDeckIndex, VariantCardId};
 use crate::game::clue::Clue;
 use crate::game::state::PlayerIndex;
+use crate::game::state::table_state::TableState;
 use crate::game::variant::Variant;
+use crate::game::{MAX_UNIQUE_CARDS_IN_DECK};
 use smallvec::SmallVec;
 
 /// https://hanabi.github.io/beginner/minimum-clue-value-principle/
@@ -141,6 +144,10 @@ fn compute_going_to_play(pov: &dyn PlayerPOV, overlay: Option<&ClueOverlay>) -> 
     for player_idx in 0..num_players {
         let pk = pov.team_knowledge().player(player_idx);
 
+        // Build this holder's entries first so own-hand card-count elimination can run across
+        // them before they join the global set.
+        let mut holder_entries: SmallVec<[(CardDeckIndex, u64, Option<VariantCardId>); 5]> =
+            SmallVec::new();
         for &c in table_state.hands[player_idx].cards() {
             let mut empathy = pk
                 .combined_possible_identities(c, table_state, variant)
@@ -194,8 +201,11 @@ fn compute_going_to_play(pov: &dyn PlayerPOV, overlay: Option<&ClueOverlay>) -> 
                 }
             }
 
-            entries.push((c, empathy, signaled));
+            holder_entries.push((c, empathy, signaled));
         }
+
+        prune_own_hand_exhausted(&mut holder_entries, pk, table_state, variant);
+        entries.extend(holder_entries);
     }
 
     let mut playing_cards: u64 = 0;
@@ -238,6 +248,53 @@ fn compute_going_to_play(pov: &dyn PlayerPOV, overlay: Option<&ClueOverlay>) -> 
     }
 
     playing_cards
+}
+
+/// Own-hand card-count elimination across a single holder's cards.
+///
+/// `observable_*` reasoning only counts copies in *other* players' hands, so it never lets one of
+/// a holder's own cards exhaust an identity for the holder's other cards. But when some of a
+/// holder's cards are pinned to a singleton identity (by direct knowledge, a Play signal, or — in
+/// the overlay — a candidate clue), those copies are located in this hand and can exhaust the
+/// identity for the holder's remaining cards. Example: a clue rank-pins one card of an ambiguous
+/// `{g3,g4}` pair to `g4`; with both `g4` copies then located, the sibling collapses to `g3`.
+fn prune_own_hand_exhausted(
+    entries: &mut SmallVec<[(CardDeckIndex, u64, Option<VariantCardId>); 5]>,
+    pk: &PlayerKnowledge,
+    table_state: &TableState,
+    variant: &Variant,
+) {
+    // Copies of each identity already located in this holder's own hand (singleton empathy or a
+    // committed Play signal).
+    let mut own_located = [0u8; MAX_UNIQUE_CARDS_IN_DECK];
+    for &(_, empathy, signaled) in entries.iter() {
+        if let Some(id) = signaled {
+            own_located[id as usize] += 1;
+        } else if empathy.count_ones() == 1 {
+            own_located[empathy.trailing_zeros() as usize] += 1;
+        }
+    }
+
+    // Copies of each identity that could still occupy an unseen own-hand cell. A non-singleton
+    // card cannot be identity X once X's own-hand copies are fully located by *other* cards.
+    let remaining = pk.observable_remaining_copies(pk.visible_cards, table_state, variant);
+
+    for (_, empathy, signaled) in entries.iter_mut() {
+        if signaled.is_some() || empathy.count_ones() <= 1 {
+            continue;
+        }
+        let mut bits = *empathy;
+        while bits != 0 {
+            let id = bits.trailing_zeros() as usize;
+            bits &= bits - 1;
+            // This card is non-singleton, so it does not contribute to `own_located[id]`; no
+            // self-exclusion needed. If every own-hand copy of `id` is located elsewhere in this
+            // hand, `id` is impossible here.
+            if own_located[id] >= remaining[id] {
+                *empathy &= !(1u64 << id);
+            }
+        }
+    }
 }
 
 /// True when identity `id` is reachable on the stacks given `playable` (immediate playables) and

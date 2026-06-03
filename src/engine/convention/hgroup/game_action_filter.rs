@@ -83,10 +83,10 @@ impl GameActionFilter {
 mod tests {
     use super::GameActionFilter;
     use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
-    use crate::engine::knowledge::player_pov::PlayerPOV;
     use crate::engine::knowledge::player_knowledge::{
         PlayerKnowledge, knowledge_for_hand, knowledge_with_empathy, knowledge_with_visible,
     };
+    use crate::engine::knowledge::player_pov::PlayerPOV;
     use crate::engine::knowledge::team_knowledge::TeamKnowledge;
     use crate::game::action::game_action::GameAction;
     use crate::game::card::CardIdentityMask;

@@ -339,7 +339,33 @@ fn should_play_her_known_playable_and_let_bob_clue() {
             player_index: 0,
             card_deck_index: 2,
             ..
-        } => println!("Alice has decided to play her known-playable 3 Cathy: {:?}", action),
+        } => println!(
+            "Alice has decided to play her known-playable 3 Cathy: {:?}",
+            action
+        ),
         _ => panic!("Alice has chosen the following action: {:?}", action),
+    }
+}
+
+#[test]
+fn should_pick_up_y1_without_bad_touch() {
+    let action = engine_action_at_turn("should_pick_up_y1_without_bad_touch.json", 2);
+    // Active player is Bob (1); the lone y1 sits in Cathy's (player 2) hand alongside three
+    // P1 duplicates. The clean pickup is a Color/1 clue to Cathy touching only the y1 — a
+    // rank-1 clue would bad-touch the duplicate P1s.
+    match action {
+        GameAction::Clue {
+            player_index: 2,
+            clue:
+                Clue {
+                    clue_type: ClueType::Color,
+                    clue_value: 1,
+                },
+            ..
+        } => println!(
+            "Bob has chosen to pick up y1 without bad touch: {:?}",
+            action
+        ),
+        _ => panic!("Bob has chosen the following action: {:?}", action),
     }
 }

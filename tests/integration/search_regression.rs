@@ -364,7 +364,6 @@ fn should_avoid_potential_1s_bad_touch() {
 }
 
 #[test]
-#[ignore]
 fn should_prompt_over_hard_burn() {
     let action = search_best_action("should_prompt_over_hard_burn");
     match action {
@@ -444,3 +443,22 @@ fn should_not_clue_duplicate_y1() {
     }
 }
 
+#[test]
+fn should_pick_up_y1_without_bad_touch() {
+    let action = search_best_action("should_pick_up_y1_without_bad_touch");
+    match action {
+        GameAction::Clue {
+            player_index: 1,
+            clue:
+                Clue {
+                    clue_type: ClueType::Color,
+                    clue_value: 1,
+                },
+            ..
+        } => println!(
+            "Alice has chosen to pick up y1 without bad touch: {:?}",
+            action
+        ),
+        _ => panic!("Alice has chosen the following action: {:?}", action),
+    }
+}
