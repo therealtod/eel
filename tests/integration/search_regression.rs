@@ -426,3 +426,21 @@ fn should_clue_bob_instead_of_skipping_to_cathy() {
         _ => panic!("Alice has chosen the following action: {:?}", action),
     }
 }
+
+#[test]
+fn should_not_clue_duplicate_y1() {
+    let action = search_best_action("should_not_clue_duplicate_y1");
+    match action {
+        GameAction::Clue {
+            player_index: 2,
+            clue:
+            Clue {
+                clue_type: ClueType::Rank,
+                clue_value: 2,
+            },
+            ..
+        } => println!("Alice has chosen to start with a 2-save on Cathy: {:?}", action),
+        _ => panic!("Alice has chosen the following action: {:?}", action),
+    }
+}
+
