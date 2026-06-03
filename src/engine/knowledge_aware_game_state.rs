@@ -487,6 +487,7 @@ impl KnowledgeAwareGameState {
         // in every player's hand against the updated `still_needed` mask.
         if stack_advanced {
             self.reapply_good_touch_after_state_change();
+            self.neutralize_landed_play_signals();
         }
 
         self.apply_actor_cohort(p, &actor_hypotheses);
@@ -834,6 +835,34 @@ impl KnowledgeAwareGameState {
     /// its empathy under GTP ("touched cards are eventually useful, so they are not
     /// duplicates of cards already on the stacks"). Cards that are already fully
     /// known-trash are left alone — same conservative skip as the clue-time GTP path.
+    /// Neutralize any baseline [`Signal::Play`](crate::engine::convention::hgroup::signal::Signal)
+    /// whose committed identity has already landed on the stacks.
+    ///
+    /// A play signal promises "this card is the named playable identity." Once a copy of that
+    /// identity is actually played, the promise is spent: the held card is now a trash
+    /// duplicate, and acting on the stale signal would blind-play it for a strike. This fires
+    /// after every stack advance — the single moment a committed identity can become played —
+    /// so the signal is retired the instant it is fulfilled, in both real-game application and
+    /// search rollouts.
+    fn neutralize_landed_play_signals(&mut self) {
+        use crate::engine::convention::hgroup::signal::Signal;
+        let num_players = self.static_data.number_of_players as usize;
+        let stacks = &self.table_state.playing_stacks;
+        for p in 0..num_players {
+            let slots: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> =
+                self.table_state.hands[p].cards().iter().copied().collect();
+            let knowledge = self.team_knowledge.player_mut(p);
+            for idx in slots {
+                knowledge.signals[idx as usize].retain(|s| match s {
+                    Signal::Play {
+                        committed_identity, ..
+                    } => !stacks.contains_card_with_id(*committed_identity),
+                    _ => true,
+                });
+            }
+        }
+    }
+
     fn reapply_good_touch_after_state_change(&mut self) {
         let still_needed = crate::engine::convention::hgroup::h_group_core::still_needed_cards_mask(
             &self.table_state,

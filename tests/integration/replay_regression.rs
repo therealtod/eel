@@ -330,3 +330,16 @@ fn should_play_known_playable_1() {
         _ => panic!("Bob has chosen the following action: {:?}", action),
     }
 }
+
+#[test]
+fn should_play_her_known_playable_and_let_bob_clue() {
+    let action = engine_action_at_turn("should_play_her_known_playable_and_let_bob_clue.json", 13);
+    match action {
+        GameAction::Play {
+            player_index: 0,
+            card_deck_index: 2,
+            ..
+        } => println!("Alice has decided to play her known-playable 3 Cathy: {:?}", action),
+        _ => panic!("Alice has chosen the following action: {:?}", action),
+    }
+}
