@@ -301,7 +301,6 @@ fn should_play_instead_of_discarding() {
 }
 
 #[test]
-#[ignore]
 fn should_play_clue_alice() {
     let action = engine_action_at_turn("should_play_clue_alice.json", 3);
     match action {
@@ -313,21 +312,37 @@ fn should_play_clue_alice() {
                     clue_value: 0,
                 },
             ..
-        } => println!("Cathy has chosen to play clue Alice: {:?}", action),
+        } => println!("Cathy has chosen to play clue Alice's r2: {:?}", action),
+        GameAction::Clue {
+            player_index: 0,
+            clue:
+            Clue {
+                clue_type: ClueType::Color,
+                clue_value: 1,
+            },
+            ..
+        } => println!("Cathy has chosen to play clue Alice's y1: {:?}", action),
         _ => panic!("Cathy has chosen the following action: {:?}", action),
     }
 }
 
 #[test]
-#[ignore]
-fn should_play_known_playable_1() {
-    let action = engine_action_at_turn("should_play_known_playable_1.json", 8);
+fn should_not_discard() {
+    let action = engine_action_at_turn("should_not_discard.json", 8);
     match action {
         GameAction::Play {
             player_index: 0,
             card_deck_index: 6,
             ..
-        } => println!("Bob has chose to play his known playable 1: {:?}", action),
+        } => println!("Bob has chosen to play his known playable 1: {:?}", action),
+        GameAction::Clue {
+            player_index: 0,
+            clue: Clue {
+                clue_type: ClueType::Color,
+                clue_value: 0,
+            },
+            ..
+        } => println!("Bob has chosen to clue red to Alice: {:?}", action),
         _ => panic!("Bob has chosen the following action: {:?}", action),
     }
 }
