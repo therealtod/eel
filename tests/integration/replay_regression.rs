@@ -384,3 +384,22 @@ fn should_not_clue_1s_to_cathy() {
         _ => panic!("Bob has chosen the following action: {:?}", action),
     }
 }
+
+#[test]
+fn should_wait_for_g1_duplicate_to_discard() {
+    let action = engine_action_at_turn("should_wait_for_g1_duplicate_to_discard.json", 10);
+    match action {
+        GameAction::Clue {
+            player_index: 2,
+            clue: Clue {
+                clue_type: ClueType::Color,
+                clue_value: 0,
+            },
+            ..
+        } => println!(
+            "Alice has chosen to clue Cathy's red 2 and calling for Bob's chop to discard: {:?}",
+            action
+        ),
+        _ => panic!("Alice has chosen the following action: {:?}", action),
+    }
+}
