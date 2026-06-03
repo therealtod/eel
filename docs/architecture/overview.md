@@ -12,15 +12,18 @@ The codebase is split into two modules:
 
 ### `src/engine/` — Strategy and AI
 
-- **`KnowledgeAwareGameState`** (`knowledge_aware_game_state.rs`): WIP wrapper combining `TableState` with strategic
-  knowledge. The intended integration point between game mechanics and conventions. Call `snapshot()` to capture the
+- **`KnowledgeAwareGameState`** (`knowledge_aware_game_state.rs`): Core wrapper combining `TableState` with strategic
+  knowledge. The integration point between game mechanics and conventions. Call `snapshot()` to capture the
   current `(TableState, TeamKnowledge)` pair as an owned `GameStateSnapshot` for history tracking.
 - **`PlayerKnowledgeState`**, **`TeamKnowledge`**, **`PlayerPOV`** (`knowledge/`): Track what each player knows about
   their own hand and others'. `LightweightPlayerPOV` is the concrete borrow-based implementation; `MockPlayerPOV` (generated
   via `mockall`) is used in unit tests.
 - **`ConventionSet`** (`convention/`): System for interpreting clues and selecting actions. The H-Group convention set
   lives in `convention/hgroup/`, with individual techniques as separate files in `tech/` (e.g., `critical_save`,
-  `five_save`, `two_save`, `simple_prompt`, `simple_finesse`, `delayed_play_clue`).
+  `five_save`, `two_save`, `simple_prompt`, `simple_finesse`, `delayed_play_clue`). Shared H-Group utilities are split
+  across five focused modules in `hgroup/h_group_core/`: `hand_position` (chop/focus/finesse queries), `clue_gen`
+  (clue enumeration), `mcvp` (minimum-clue-value principle), `gtp` (good-touch principle), and `save_principle`
+  (save principle and early-game detection).
 - **`ConventionTech`**: Each technique implements `game_actions` (what to do), `matches_action` (does this tech
   explain an observed action?), and `knowledge_updates` (what to infer — returns a single `Hypothesis`). Techs that
   need to emit several mutually-exclusive sub-alternatives for the same observation (e.g. `DelayedPlayClue` fanning
