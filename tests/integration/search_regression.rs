@@ -462,3 +462,23 @@ fn should_pick_up_y1_without_bad_touch() {
         _ => panic!("Alice has chosen the following action: {:?}", action),
     }
 }
+
+#[test]
+fn should_avoid_the_bad_touch_option() {
+    let action = search_best_action("should_avoid_the_bad_touch_option");
+    match action {
+        GameAction::Clue {
+            player_index: 1,
+            clue:
+            Clue {
+                clue_type: ClueType::Color,
+                clue_value: o,
+            },
+            ..
+        } => println!(
+            "Alice has chosen to pick up r1 from Bob's hand without bad touch: {:?}",
+            action
+        ),
+        _ => panic!("Alice has chosen the following action: {:?}", action),
+    }
+}

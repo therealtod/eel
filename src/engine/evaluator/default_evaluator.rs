@@ -1,5 +1,5 @@
 use crate::engine::convention::hgroup::h_group_core::{
-    get_chop_index, is_save_principle_protected,
+    get_chop_index, is_save_principle_protected, still_needed_cards_mask,
 };
 use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::evaluator::types::{HARMONIC_LUT, RECIPROCAL_LUT};
@@ -164,6 +164,19 @@ pub struct DefaultEvaluator {
     ///
     /// Set to 0 to disable. Suggested default: 3.0.
     pub misinformation_weight: f64,
+    /// Per-card standing penalty for **parked dead weight** — clue-touched cards whose true
+    /// identity is already dead (not still-needed) but whose holder still believes them
+    /// potentially useful, so they sit in hand instead of being discarded. See
+    /// [`Self::parked_dead_weight`].
+    ///
+    /// This is the leaf-resident dual of [`Self::good_touch_penalty`] (which is charged once,
+    /// at clue time). Where `good_touch_penalty` punishes the *act* of a bad touch, this term
+    /// punishes the *standing state* of duplicates left parked in a hand, so the search keeps
+    /// paying for them across the rollout rather than recouping the one-time charge with
+    /// optimistic plays the short horizon can't refute.
+    ///
+    /// Set to 0 to disable.
+    pub parked_dead_weight_penalty: f64,
     /// Reward per card successfully played to the stacks within the search horizon.
     ///
     /// Counteracts the structural bias where lines that play more cards lose ~1 pace point per
@@ -348,6 +361,7 @@ impl Default for DefaultEvaluator {
             team_empathy_weight: 0.3_f64,
             signal_ignored_penalty_weight: 5.0_f64,
             misinformation_weight: 0.0_f64,
+            parked_dead_weight_penalty: 6.0_f64,
             play_progress_weight: 2.0_f64,
             potential_bad_touch_penalty: 9.0_f64,
             bottom_deck_risk_weight: 0.8_f64,
@@ -615,6 +629,62 @@ impl DefaultEvaluator {
             }
         }
         total
+    }
+
+    /// Standing count of clue-touched cards that are **dead weight**: their true identity is
+    /// no longer still-needed (already played, or every remaining copy is a duplicate), yet
+    /// the holder still believes them potentially useful (their empathy overlaps the
+    /// still-needed set), so they will sit in hand rather than be discarded — and may even be
+    /// misplayed into a strike.
+    ///
+    /// This is the leaf-resident counterpart to the one-time `good_touch_penalty` charged at
+    /// clue time. A bad touch's true cost is not the instant of cluing — it is that the dead
+    /// duplicates stay parked across the whole rollout, occupying slots and inviting a strike
+    /// the short search horizon never reaches. Charging it at every leaf makes the search keep
+    /// paying for the parked cards instead of recouping the one-time charge with optimistic
+    /// plays elsewhere. Only the searcher-resolvable (truth-visible) cards are counted; an
+    /// own-hand card the searcher cannot see contributes nothing.
+    pub(crate) fn parked_dead_weight(
+        table_state: &TableState,
+        static_data: &StaticGameData,
+        team_knowledge: &TeamKnowledge,
+        truth: &dyn PlayerPOV,
+    ) -> f64 {
+        let still_needed = still_needed_cards_mask(table_state, static_data);
+        let touched = table_state.clue_touched_cards;
+        let num_players = static_data.number_of_players as usize;
+        let variant = &static_data.variant;
+        let mut count = 0.0f64;
+        for p in 0..num_players {
+            let pk = team_knowledge.player(p);
+            let mut hand = pk.own_hand & touched;
+            while hand != 0 {
+                let idx = hand.trailing_zeros() as usize;
+                hand &= hand - 1;
+                // Only count cards the searcher can pin to a truth identity.
+                let Some(truth_id) = truth.card_identity(idx as CardDeckIndex) else {
+                    continue;
+                };
+                // Truth identity still useful → not dead weight.
+                if (1u64 << truth_id) & still_needed != 0 {
+                    continue;
+                }
+                // Only a bad touch the holder *cannot recognise as trash* is a liability: the
+                // card is believed useful, so it is parked in hand and risks a misplay-strike.
+                // A touched-but-dead card whose empathy has collapsed to pure trash is harmless —
+                // the holder will simply discard it (e.g. a rank-2 clue whose only still-useful 2
+                // is locked onto the focus makes every other touched 2 provably trash). Charging
+                // those would punish a perfectly good clue for an unavoidable, deducible bad touch.
+                let empathy = pk
+                    .combined_possible_identities(idx as CardDeckIndex, table_state, variant)
+                    .as_bits();
+                if empathy & still_needed == 0 {
+                    continue;
+                }
+                count += 1.0;
+            }
+        }
+        count
     }
 
     /// Fraction of identity uncertainty eliminated across all own-hand cards for all players.

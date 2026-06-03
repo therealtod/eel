@@ -55,6 +55,7 @@ impl super::Evaluator for DefaultEvaluator {
                 critical_exposure_delta: 0.0,
                 tempo_cost: 0.0,
                 future_potential: 0.0,
+                parked_dead_weight: 0.0,
                 total: game_score - strike_penalty,
             };
         }
@@ -105,6 +106,17 @@ impl super::Evaluator for DefaultEvaluator {
         // the search stops treating draw-heavy lines as dry catastrophes. See
         // `DefaultEvaluator::future_potential_weight`.
         let future_potential = self.future_potential_weight * demand;
+        let parked_dead_weight = if self.parked_dead_weight_penalty != 0.0 {
+            self.parked_dead_weight_penalty
+                * DefaultEvaluator::parked_dead_weight(
+                    table_state,
+                    static_data,
+                    team_knowledge,
+                    truth,
+                )
+        } else {
+            0.0
+        };
         let known_playable = if self.known_playable_weight != 0.0 {
             self.known_playable_weight
                 * DefaultEvaluator::known_playable_in_hands(
@@ -139,7 +151,8 @@ impl super::Evaluator for DefaultEvaluator {
             + clue_tokens
             + known_playable
             - misinformation_penalty
-            + future_potential;
+            + future_potential
+            - parked_dead_weight;
         ScoreBreakdown {
             game_score,
             strike_penalty,
@@ -155,6 +168,7 @@ impl super::Evaluator for DefaultEvaluator {
             critical_exposure_delta: 0.0,
             tempo_cost: 0.0,
             future_potential,
+            parked_dead_weight,
             total,
         }
     }
