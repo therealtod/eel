@@ -1,6 +1,6 @@
 use crate::common;
 use eel::engine::action_selection_strategy::ActionSelectionStrategy;
-use eel::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet;
+use eel::engine::convention::hgroup::h_group_convention_set::{HGroupConventionSet, HGroupLevel};
 use eel::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 use eel::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
 use eel::game::action::game_action::GameAction;
@@ -19,6 +19,6 @@ pub fn search_best_action(name: &str) -> GameAction {
         &static_data,
     );
     let strategy = TreeActionSelectionStrategy::default();
-    let conventions = HGroupConventionSet::default();
+    let conventions = HGroupConventionSet::for_level(HGroupLevel::One, &static_data.variant);
     strategy.select_active_player_action(&pov, &conventions)
 }

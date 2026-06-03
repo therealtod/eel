@@ -21,6 +21,7 @@ use crate::game::clue::Clue;
 use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
+use crate::game::variant::Variant;
 
 /// An H-Group convention level.
 ///
@@ -85,14 +86,8 @@ impl HGroupConventionSet {
 
     /// Build a convention set enabling every tech up to and including `level`.
     #[must_use]
-    pub fn for_level(level: HGroupLevel) -> Self {
+    pub fn for_level(level: HGroupLevel, _variant: &Variant) -> Self {
         HGroupConventionSet::new(level.techs())
-    }
-}
-
-impl Default for HGroupConventionSet {
-    fn default() -> Self {
-        HGroupConventionSet::for_level(HGroupLevel::One)
     }
 }
 

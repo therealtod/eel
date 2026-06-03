@@ -1,13 +1,14 @@
 use std::path::PathBuf;
 
 use crate::common;
-use eel::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet;
+use eel::engine::convention::hgroup::h_group_convention_set::{HGroupConventionSet, HGroupLevel};
 use eel::engine::knowledge::player_pov::PlayerPOV;
 use eel::engine::replay::reconstruct::ReplayRunner;
 use eel::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
 use eel::game::action::game_action::GameAction;
 use eel::game::clue::Clue;
 use eel::game::clue_type::ClueType;
+use eel::game::variant::test_variants::NO_VARIANT;
 use eel::hanablive::dto::game::Game;
 
 fn path_for(rel: &str) -> PathBuf {
@@ -25,7 +26,7 @@ fn engine_action_at_turn(replay_path: &str, turn: usize) -> GameAction {
         .unwrap_or_else(|e| panic!("could not read replay {replay_path}: {e}"));
     let game = Game::from_json(&json)
         .unwrap_or_else(|e| panic!("could not parse replay {replay_path}: {e}"));
-    let conv = HGroupConventionSet::default();
+    let conv = HGroupConventionSet::for_level(HGroupLevel::One, &NO_VARIANT);
     let mut runner = ReplayRunner::from_hanablive(&game, &conv)
         .unwrap_or_else(|e| panic!("could not build runner from {replay_path}: {e}"));
     runner
@@ -55,7 +56,7 @@ fn delayed_play_clue_admits_full_rank2_union_on_focus() {
     let json = std::fs::read_to_string(path_for("should_understand_delayed_play_clue.json"))
         .expect("read replay");
     let game = Game::from_json(&json).expect("parse replay");
-    let conv = HGroupConventionSet::default();
+    let conv = HGroupConventionSet::for_level(HGroupLevel::One, &NO_VARIANT);
     let mut runner = ReplayRunner::from_hanablive(&game, &conv).expect("build runner");
     runner.step_to_turn(7).expect("step to turn 7");
 

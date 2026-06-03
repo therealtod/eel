@@ -17,12 +17,13 @@ use std::path::PathBuf;
 use clap::Parser;
 
 use eel::engine::action_selection_strategy::ActionSelectionStrategy;
-use eel::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet;
+use eel::engine::convention::hgroup::h_group_convention_set::{HGroupConventionSet, HGroupLevel};
 use eel::engine::replay::from_scenario::knowledge_aware_from_scenario;
 use eel::engine::replay::reconstruct::ReplayRunner;
 use eel::engine::replay::snapshot::to_scenario_json;
 use eel::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
 use eel::game::state::table_state_json::parse_scenario;
+use eel::game::variant::test_variants::NO_VARIANT;
 use eel::hanablive::dto::game::Game;
 
 #[derive(Parser, Debug)]
@@ -55,7 +56,7 @@ fn main() {
     let game = Game::from_json(&json)
         .unwrap_or_else(|e| panic!("could not parse {}: {e}", args.replay.display()));
 
-    let conv = HGroupConventionSet::default();
+    let conv = HGroupConventionSet::for_level(HGroupLevel::One, &NO_VARIANT);
     let mut runner = ReplayRunner::from_hanablive(&game, &conv)
         .unwrap_or_else(|e| panic!("could not build runner: {e}"));
     runner

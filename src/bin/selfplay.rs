@@ -29,7 +29,7 @@ use rand::seq::SliceRandom;
 
 use eel::engine::action_selection_strategy::ActionSelectionStrategy;
 use eel::engine::convention::convention_set::ConventionSet;
-use eel::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet;
+use eel::engine::convention::hgroup::h_group_convention_set::{HGroupConventionSet, HGroupLevel};
 use eel::engine::replay::reconstruct::{ReplayRunner, variant_card_id_to_hanablive};
 use eel::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
 use eel::game::action::game_action::GameAction;
@@ -218,7 +218,7 @@ fn main() {
         number_of_players: args.players,
         variant: NO_VARIANT,
     };
-    let convention_set = HGroupConventionSet::default();
+    let convention_set = HGroupConventionSet::for_level(HGroupLevel::One, &static_data.variant);
     let strategy = TreeActionSelectionStrategy::default();
 
     let mut scores: Vec<u8> = Vec::with_capacity(args.games as usize);

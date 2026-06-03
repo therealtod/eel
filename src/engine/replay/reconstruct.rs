@@ -378,7 +378,7 @@ pub fn variant_card_id_to_hanablive(id: VariantCardId, static_data: &StaticGameD
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet;
+    use crate::engine::convention::hgroup::h_group_convention_set::{HGroupConventionSet, HGroupLevel};
     use crate::hanablive::game_builder::GameBuilder;
     use crate::hanablive::game_options::GameOptions;
 
@@ -477,7 +477,7 @@ mod tests {
             o.variant = Some("6 Suits".to_string());
             o
         });
-        let conv = HGroupConventionSet::default();
+        let conv = HGroupConventionSet::for_level(HGroupLevel::One, &NO_VARIANT);
         assert!(matches!(
             ReplayRunner::from_hanablive(&game, &conv),
             Err(ReplayError::UnsupportedVariant(_))
@@ -498,7 +498,7 @@ mod tests {
                 (ActionType::Discard, 5, None), // Bob discards deck[5] = Y1
             ],
         );
-        let conv = HGroupConventionSet::default();
+        let conv = HGroupConventionSet::for_level(HGroupLevel::One, &NO_VARIANT);
         let mut runner = ReplayRunner::from_hanablive(&game, &conv).unwrap();
 
         assert_eq!(runner.current_turn(), 1);
@@ -523,7 +523,7 @@ mod tests {
                 (ActionType::RankClue, 2, Some(1)), // Clue rank-1 to Charlie
             ],
         );
-        let conv = HGroupConventionSet::default();
+        let conv = HGroupConventionSet::for_level(HGroupLevel::One, &NO_VARIANT);
 
         let mut runner_a = ReplayRunner::from_hanablive(&game, &conv).unwrap();
         let mut runner_b = ReplayRunner::from_hanablive(&game, &conv).unwrap();
@@ -564,7 +564,7 @@ mod tests {
                 (ActionType::Play, 5, None), // Bob plays deck[5] = Y1
             ],
         );
-        let conv = HGroupConventionSet::default();
+        let conv = HGroupConventionSet::for_level(HGroupLevel::One, &NO_VARIANT);
 
         // from_hanablive path
         let mut runner_hl = ReplayRunner::from_hanablive(&game, &conv).unwrap();

@@ -201,7 +201,7 @@ pub fn to_scenario_json(game: &KnowledgeAwareGameState) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet;
+    use crate::engine::convention::hgroup::h_group_convention_set::{HGroupConventionSet, HGroupLevel};
     use crate::engine::replay::reconstruct::{ReplayRunner, hand_size_for};
     use crate::game::state::table_state_json::{build_from_scenario, parse_scenario};
     use crate::game::static_game_data::StaticGameData;
@@ -273,7 +273,7 @@ mod tests {
     #[test]
     fn roundtrip_preserves_table_state_after_play_and_discard() {
         let deck = ordered_deck();
-        let conv = HGroupConventionSet::default();
+        let conv = HGroupConventionSet::for_level(HGroupLevel::One, &NO_VARIANT);
         // Deck[0] = R1 → Alice plays it; deck[5] = Y1 → Bob discards it.
         let runner = runner_after_actions(
             &deck,
@@ -325,7 +325,7 @@ mod tests {
     #[test]
     fn roundtrip_preserves_clue_touched_cards() {
         let deck = ordered_deck();
-        let conv = HGroupConventionSet::default();
+        let conv = HGroupConventionSet::for_level(HGroupLevel::One, &NO_VARIANT);
         // hand_size=5 for 3 players:
         //   Alice:   deck[0..4]  = R1 R1 R1 R2 R2 (oldest→newest)
         //   Bob:     deck[5..9]  = R3 R3 R4 R4 R5
@@ -433,7 +433,7 @@ mod tests {
             variant: NO_VARIANT,
         };
         let hand_size = hand_size_for(3);
-        let conv = HGroupConventionSet::default();
+        let conv = HGroupConventionSet::for_level(HGroupLevel::One, &NO_VARIANT);
         let deck_ids: Vec<usize> = ordered_deck()
             .iter()
             .map(|&(s, r)| s * 5 + (r as usize - 1))
