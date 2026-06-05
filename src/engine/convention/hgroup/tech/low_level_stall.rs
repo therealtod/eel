@@ -8,7 +8,6 @@ use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::MAX_CLUE_TOKEN_COUNT;
 use crate::game::action::game_action::GameAction;
 use crate::game::clue::Clue;
-use crate::game::clue_type::ClueType;
 use crate::game::state::PlayerIndex;
 
 /// Last-resort stall: invoked when no other tech produces an action.

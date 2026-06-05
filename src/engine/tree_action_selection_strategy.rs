@@ -33,20 +33,6 @@ const CANDIDATE_INLINE_CAP: usize = 20;
 /// Selects which subjective-action policy [`TreeActionSelectionStrategy::pick_subjective`]
 /// uses at inner plies. Single-line toggle: change this constant to swap policies.
 ///
-/// - `SubjectivePolicy::Recursive` — A-style: each inner player runs their own forward
-///   sub-search from their own POV and returns the best-scoring candidate. Expressive
-///   but can compound POV-restriction error at deep plies.
-/// - `SubjectivePolicy::Priority` — H-Group-style: each inner player picks the
-///   highest-priority tech proposal that fires for them. Deterministic, cheap, no
-///   recursive POV compounding.
-const SUBJECTIVE_POLICY: SubjectivePolicy = SubjectivePolicy::Recursive;
-
-#[derive(Copy, Clone, PartialEq, Eq)]
-enum SubjectivePolicy {
-    Recursive,
-    Priority,
-}
-
 /// Pre-allocated triangular PV table used to record the principal variation without
 /// heap-allocating inside the search hot path.
 ///
@@ -383,8 +369,8 @@ impl TreeActionSelectionStrategy {
     /// This is a **cooperative simulation** — there is no adversary, and only the root iterates
     /// over its own candidate actions. After the root picks `a`:
     /// 1. `a` is applied and the turn advances to the next player.
-    /// 2. Each subsequent player is *simulated* picking one action via [`pick_subjective`]
-    ///    (see [`SUBJECTIVE_POLICY`] for the policy variants). No branching over teammate
+    /// 2. Each subsequent player is *simulated* picking one action via [`pick_subjective`].
+    ///    No branching over teammate
     ///    alternatives happens in this outer simulation — only one path forward per ply.
     /// 3. The leaf state is evaluated with the root observer's truth so the line value
     ///    accurately reflects what really happens (e.g. a bad-touch follow-on resolves
@@ -478,8 +464,7 @@ impl TreeActionSelectionStrategy {
             effective_visible,
         );
 
-        // Policy: pick what the active player would do from *their* POV. See
-        // [`SUBJECTIVE_POLICY`] for the variant in effect.
+        // Policy: pick what the active player would do from *their* POV.
         let Some(mut chosen) = Self::pick_subjective(
             state,
             static_data,
@@ -1028,9 +1013,7 @@ impl TreeActionSelectionStrategy {
         card_deck_index
     }
 
-    /// Dispatcher: selects between the recursive A-style and the priority-based
-    /// subjective policies based on [`SUBJECTIVE_POLICY`]. The unused branch is
-    /// dead-code-eliminated since `SUBJECTIVE_POLICY` is a compile-time constant.
+    /// Dispatches to the recursive A-style subjective policy.
     fn pick_subjective(
         state: &KnowledgeAwareGameState,
         static_data: &StaticGameData,
@@ -1038,22 +1021,17 @@ impl TreeActionSelectionStrategy {
         evaluator: &dyn Evaluator,
         depth: usize,
         inner_pov: &dyn PlayerPOV,
-        outer: bool,
+        _outer: bool,
     ) -> Option<ProposedAction> {
-        match SUBJECTIVE_POLICY {
-            SubjectivePolicy::Recursive => Self::pick_subjective_recursive(
-                state,
-                static_data,
-                convention_set,
-                evaluator,
-                depth,
-                inner_pov,
-                outer,
-            ),
-            SubjectivePolicy::Priority => {
-                Self::pick_subjective_priority(convention_set, inner_pov, state.is_early_game())
-            }
-        }
+        Self::pick_subjective_recursive(
+            state,
+            static_data,
+            convention_set,
+            evaluator,
+            depth,
+            inner_pov,
+            false,
+        )
     }
 
     /// A-style subjective policy: ask "what would the active player do?" by running their
@@ -1073,7 +1051,7 @@ impl TreeActionSelectionStrategy {
         evaluator: &dyn Evaluator,
         depth: usize,
         inner_pov: &dyn PlayerPOV,
-        outer: bool,
+        _outer: bool,
     ) -> Option<ProposedAction> {
         let candidates = Self::candidate_actions_with_provenance(
             inner_pov,
@@ -1149,7 +1127,7 @@ impl TreeActionSelectionStrategy {
                 continue;
             }
             let mut pv_table = PvTable::new(depth.saturating_sub(1));
-            let (subtree_score, leaf_bd) = Self::simulate_forward(
+            let (subtree_score, _leaf_bd) = Self::simulate_forward(
                 &next,
                 static_data,
                 convention_set,
@@ -1208,37 +1186,6 @@ impl TreeActionSelectionStrategy {
             }
         }
         best_proposed
-    }
-
-    /// Priority-based subjective policy: pick the highest-priority tech proposal
-    /// that fires for the active player from their own POV.
-    ///
-    /// [`candidate_actions_with_provenance`] returns candidates already sorted by
-    /// action type (Play > Clue > Discard) and, within each type, by the
-    /// originating tech's `interpretation_priority` ascending — so the first entry
-    /// is the action a player following H-Group convention priority would choose.
-    /// No recursive sub-search: nested subjective simulation compounded POV-
-    /// restriction error and
-    /// added cost without buying meaningfully better picks.
-    fn pick_subjective_priority(
-        convention_set: &dyn ConventionSet,
-        inner_pov: &dyn PlayerPOV,
-        is_early_game: bool,
-    ) -> Option<ProposedAction> {
-        let candidates =
-            Self::candidate_actions_with_provenance(inner_pov, convention_set, is_early_game);
-        let chosen = candidates.into_iter().next();
-        if let Some(c) = &chosen {
-            tracing::trace!(
-                target: "eel::search",
-                player = inner_pov.active_player_index(),
-                action = ?c.action,
-                tech = c.tech_name,
-                priority = c.priority,
-                "subjective_pick_priority",
-            );
-        }
-        chosen
     }
 }
 

@@ -1,4 +1,3 @@
-use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::MAX_HAND_SIZE;
 use crate::game::card::{CardDeckIndex, VariantCardId};
@@ -138,20 +137,6 @@ pub fn prompt_connector_index(
     None
 }
 
-/// Returns true if `player_index` already has a pending `Signal::Play` on `card_deck_index`.
-///
-/// Use this in `clue_game_actions` to avoid generating a play clue or finesse for a card that
-/// is already committed to being played (e.g., from an earlier finesse or prompt on this card).
-pub fn has_pending_play_signal(
-    player_index: PlayerIndex,
-    card_deck_index: CardDeckIndex,
-    pov: &dyn PlayerPOV,
-) -> bool {
-    pov.team_knowledge().player(player_index).signals[card_deck_index as usize]
-        .iter()
-        .any(|s| matches!(s, Signal::Play { .. }))
-}
-
 /// Returns true if `player`'s finesse position (first unclued card, newest) holds `card_id`.
 pub fn has_on_finesse_position(
     card_id: VariantCardId,
@@ -168,6 +153,7 @@ pub fn has_on_finesse_position(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engine::convention::hgroup::signal::Signal;
     use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
     use crate::engine::knowledge::player_knowledge::{knowledge_for_hand, knowledge_with_visible};
     use crate::engine::knowledge::team_knowledge::TeamKnowledge;

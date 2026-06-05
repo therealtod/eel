@@ -9,7 +9,6 @@ use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::CardDeckIndex;
 use crate::game::clue::Clue;
-use crate::game::clue_type::ClueType;
 use crate::game::state::PlayerIndex;
 use crate::impl_convention_tech_for_hgroup_clue_tech;
 
