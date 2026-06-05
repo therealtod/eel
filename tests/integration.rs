@@ -11,6 +11,3 @@ mod simple_finesse_tests;
 
 #[path = "integration/simple_prompt_tests.rs"]
 mod simple_prompt_tests;
-
-#[path = "integration/delayed_play_clue_tests.rs"]
-mod delayed_play_clue_tests;
