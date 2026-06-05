@@ -1,12 +1,12 @@
 use super::get_clue_focus;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
+use crate::game::MAX_HAND_SIZE;
 use crate::game::card::{CardDeckIndex, VariantCardId, VariantCardsBitField};
 use crate::game::clue::Clue;
 use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
-use crate::game::MAX_HAND_SIZE;
 use smallvec::SmallVec;
 
 /// Bitmask of variant card IDs still needed to complete the stacks.

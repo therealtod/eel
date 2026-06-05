@@ -110,9 +110,14 @@ pub fn load_scenario_by_name_with_knowledge(
 ) {
     init_tracing();
     let path: PathBuf = {
-        let mut p: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", "regression"]
-            .iter()
-            .collect();
+        let mut p: PathBuf = [
+            env!("CARGO_MANIFEST_DIR"),
+            "tests",
+            "fixtures",
+            "regression",
+        ]
+        .iter()
+        .collect();
         for component in name.split('/') {
             p.push(component);
         }

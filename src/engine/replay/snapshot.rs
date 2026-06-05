@@ -201,7 +201,9 @@ pub fn to_scenario_json(game: &KnowledgeAwareGameState) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::convention::hgroup::h_group_convention_set::{HGroupConventionSet, HGroupLevel};
+    use crate::engine::convention::hgroup::h_group_convention_set::{
+        HGroupConventionSet, HGroupLevel,
+    };
     use crate::engine::replay::reconstruct::{ReplayRunner, hand_size_for};
     use crate::game::state::table_state_json::{build_from_scenario, parse_scenario};
     use crate::game::static_game_data::StaticGameData;

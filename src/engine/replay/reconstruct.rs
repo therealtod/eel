@@ -378,7 +378,9 @@ pub fn variant_card_id_to_hanablive(id: VariantCardId, static_data: &StaticGameD
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::convention::hgroup::h_group_convention_set::{HGroupConventionSet, HGroupLevel};
+    use crate::engine::convention::hgroup::h_group_convention_set::{
+        HGroupConventionSet, HGroupLevel,
+    };
     use crate::hanablive::game_builder::GameBuilder;
     use crate::hanablive::game_options::GameOptions;
 

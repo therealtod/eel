@@ -696,7 +696,24 @@ impl PlayerKnowledge {
             self.inferred_identities[card_deck_index as usize].map_or(u64::MAX, |m| m.as_bits());
         let safe = baseline_bits & observable;
         if safe != 0 {
-            CardIdentityMask::from_bits(safe)
+            return CardIdentityMask::from_bits(safe);
+        }
+        // The convention-narrowed `inferred_identities` is itself contradicted by what
+        // this player observes (e.g. good-touch collapsed a clued card to an identity
+        // whose only remaining copy is visible in a teammate's hand). Dropping straight
+        // to bare `observable` would also throw away the *public* clue constraints
+        // (positive/negative clues) that the convention narrowing overwrote. Recover
+        // them from the deck's public empathy, which still carries those constraints,
+        // and intersect with observable. This keeps a clued-but-impossible card pinned
+        // to the legal clue identities (all of which may be trash) instead of widening
+        // it back to every observable identity.
+        let public_bits = table_state
+            .deck
+            .get_global_empathy(card_deck_index)
+            .as_bits();
+        let public_safe = public_bits & observable;
+        if public_safe != 0 {
+            CardIdentityMask::from_bits(public_safe)
         } else {
             CardIdentityMask::from_bits(observable)
         }
@@ -1701,5 +1718,71 @@ mod tests {
             "R1 should be excluded from result"
         );
         assert_ne!(result.as_bits() & R2_MASK, 0, "R2 should be in observable");
+    }
+
+    /// Regression: when convention narrowing is contradicted by observation, the
+    /// fallback must keep the *public clue* constraint (recovered from the deck's
+    /// public empathy) instead of widening to every observable identity.
+    ///
+    /// Mirrors `should_discard_known_trash_before_chop`: a green-clued card the
+    /// good-touch convention collapsed to G5, but the only G5 copy is visible in a
+    /// teammate's hand → G5 is impossible. The card must stay pinned to the legal
+    /// green identities (all trash here), never widen to non-green colors.
+    #[test]
+    fn combined_keeps_public_clue_constraint_on_contradiction_fallback() {
+        use crate::game::deck::unit_test_constants::novariant_constants::{
+            G1_MASK, G2_MASK, G3_MASK, G4_MASK, G5_MASK, NoVarCards::*,
+        };
+        use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
+            NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
+        };
+
+        let static_data = &NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        let green_mask = G1_MASK | G2_MASK | G3_MASK | G4_MASK | G5_MASK;
+
+        // Own (unseen) card 42, publicly clued green → deck empathy = all greens.
+        let own_card: CardDeckIndex = 42;
+        table_state.hands[0].add_card_to_slot_1(own_card);
+        table_state.all_hands_bitfield |= 1u64 << own_card;
+        table_state
+            .deck
+            .update_positive_empathy(own_card, green_mask, &static_data.variant);
+
+        // A teammate holds the single G5 copy, directly visible to us → observable
+        // exhausts G5 for our unseen card.
+        let teammate_card: CardDeckIndex = 7;
+        table_state.hands[1].add_card_to_slot_1(teammate_card);
+        table_state.all_hands_bitfield |= 1u64 << teammate_card;
+        let visible_cards: DeckCardsBitField = 1u64 << teammate_card;
+
+        let mut pk = PlayerKnowledge::new(0);
+        pk.own_hand = 1u64 << own_card;
+        pk.direct_sight_identities[teammate_card as usize] = Some(G5.as_variant_card_id());
+        // Aggressive good-touch collapsed the green card to G5 — now impossible.
+        pk.inferred_identities[own_card as usize] = Some(CardIdentityMask::from_bits(G5_MASK));
+
+        let result = pk
+            .combined_possible_identities_with_visible(
+                own_card,
+                visible_cards,
+                &table_state,
+                &static_data.variant,
+            )
+            .as_bits();
+
+        // G5 is excluded (seen elsewhere); the green clue is retained, so the result
+        // stays a subset of green and never widens to other colors.
+        assert_eq!(
+            result & G5_MASK,
+            0,
+            "G5 must be excluded — copy seen elsewhere"
+        );
+        assert_eq!(
+            result & !green_mask,
+            0,
+            "non-green identities must not leak in: clue constraint must be kept"
+        );
+        assert_ne!(result, 0, "some legal green identity must remain");
     }
 }

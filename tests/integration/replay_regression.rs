@@ -425,3 +425,24 @@ fn should_wait_for_g1_duplicate_to_discard() {
         _ => panic!("Alice has chosen the following action: {:?}", action),
     }
 }
+
+#[test]
+fn should_discard_known_trash_before_chop() {
+    let action = engine_action_at_turn("should_discard_known_trash_before_chop.json", 34);
+    match action {
+        GameAction::Discard {
+            player_index: 0,
+            card_deck_index: 4,
+            ..
+        } => println!("Alice has chosen to discard her known trash: {:?}", action),
+        GameAction::Discard {
+            player_index: 0,
+            card_deck_index: 23,
+            ..
+        } => panic!(
+            "Alice has chosen to discard her chop over safely discarding known trash: {:?}",
+            action
+        ),
+        _ => panic!("Alice has chosen the following action: {:?}", action),
+    }
+}

@@ -6,10 +6,10 @@ use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 use crate::engine::knowledge::player_pov::PlayerPOV;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
 use crate::engine::knowledge_aware_game_state::KnowledgeAwareGameState;
+use crate::game::MAX_CLUE_TOKEN_COUNT;
 use crate::game::action::game_action::GameAction;
 use crate::game::card::CardDeckIndex;
 use crate::game::clue::Clue;
-use crate::game::MAX_CLUE_TOKEN_COUNT;
 use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
@@ -223,7 +223,10 @@ impl super::Evaluator for DefaultEvaluator {
                 relief = relief.max(self.forced_save_bad_touch_relief);
             }
             if self.forced_stall_bad_touch_relief != 0.0
-                && truth.table_state().clue_token_bank.whole_clue_tokens_count()
+                && truth
+                    .table_state()
+                    .clue_token_bank
+                    .whole_clue_tokens_count()
                     >= MAX_CLUE_TOKEN_COUNT
             {
                 relief = relief.max(self.forced_stall_bad_touch_relief);
