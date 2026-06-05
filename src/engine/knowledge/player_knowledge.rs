@@ -472,7 +472,7 @@ impl PlayerKnowledge {
         // and the tier-1 unconditional is a real fallback that must stay dormant until the
         // primary is rejected (see `rejection_promotes_tier1_fallback`). We detect that by
         // whether the cohort's primary tier is provisional.
-        let pending_primary_cohorts: Vec<HypothesisId> = self
+        let pending_primary_cohorts: SmallVec<[HypothesisId; 4]> = self
             .hypotheses
             .iter()
             .filter(|h| h.tier == 0 && h.trigger.is_some())
@@ -481,7 +481,7 @@ impl PlayerKnowledge {
         let contributes = |h: &TrackedHypothesis| {
             h.tier == 0 || (h.trigger.is_none() && !pending_primary_cohorts.contains(&h.cohort_id))
         };
-        let mut visited_cohorts: Vec<HypothesisId> = Vec::new();
+        let mut visited_cohorts: SmallVec<[HypothesisId; 4]> = SmallVec::new();
         for h in &self.hypotheses {
             if !contributes(h) {
                 continue;

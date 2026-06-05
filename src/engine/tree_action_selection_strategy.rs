@@ -23,6 +23,11 @@ use crate::game::static_game_data::StaticGameData;
 use rayon::prelude::*;
 use smallvec::SmallVec;
 
+/// Quiescence tail depth per player: allows each player one play ply and one signal-cash ply
+/// before the rollout budget is exhausted.
+#[cfg(feature = "quiescence-search")]
+const QUIESCENCE_PLIES_PER_PLAYER: usize = 2;
+
 /// Selects which subjective-action policy [`TreeActionSelectionStrategy::pick_subjective`]
 /// uses at inner plies. Single-line toggle: change this constant to swap policies.
 ///
@@ -630,7 +635,7 @@ impl TreeActionSelectionStrategy {
         {
             return None;
         }
-        let budget = (static_data.number_of_players * 2) as usize;
+        let budget = static_data.number_of_players as usize * QUIESCENCE_PLIES_PER_PLAYER;
         Some(Self::quiescence_rollout(
             state,
             static_data,

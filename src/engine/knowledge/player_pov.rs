@@ -1,4 +1,3 @@
-use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
 use crate::game::action::game_action::GameAction;
@@ -51,10 +50,7 @@ pub trait PlayerPOV {
         playable_mask: VariantCardsBitField,
     ) -> bool {
         let pk = self.team_knowledge().player(self.player_index());
-        if pk.signals[card_deck_index as usize]
-            .iter()
-            .any(|s| matches!(s, Signal::Play { .. }))
-        {
+        if pk.has_play_signal(card_deck_index) {
             return true;
         }
         let bits = self.inferred_identities(card_deck_index).as_bits();
