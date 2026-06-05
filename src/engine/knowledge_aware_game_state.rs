@@ -92,6 +92,52 @@ fn collect_stall_hypotheses(
     vec![]
 }
 
+/// Route hypothesis collection to either the primary techs or the stall fallback chain,
+/// depending on whether the giver had a primary candidate action at decision time.
+/// Shared by the receiver and per-observer interpretation paths in [`KnowledgeAwareGameState::apply_clue`].
+fn collect_pov_hypotheses(
+    convention_set: &dyn ConventionSet,
+    actor_had_primary_candidate: bool,
+    action: &GameAction,
+    history: &[GameStateSnapshot],
+    observer_pov: &dyn PlayerPOV,
+) -> Vec<(u8, Hypothesis)> {
+    if actor_had_primary_candidate {
+        collect_hypotheses(convention_set.techs(), action, history, observer_pov)
+    } else {
+        collect_stall_hypotheses(
+            convention_set.fallback_techs(),
+            action,
+            history,
+            observer_pov,
+        )
+    }
+}
+
+/// Reconstruct the giver's POV at decision time and report whether any primary tech had a
+/// candidate action. If none did, the giver was stalling and clue interpretation must route
+/// to the fallback techs instead of the primary techs — otherwise registered techs (e.g.
+/// `DirectPlayClue`, `FiveSave`) would wrongly claim a stall clue as a play/save and emit bad
+/// knowledge updates. Clue actions are discounted when the giver has no whole clue tokens.
+fn giver_had_primary_candidate(
+    snapshot: &GameStateSnapshot,
+    giver: usize,
+    convention_set: &dyn ConventionSet,
+    static_data: &StaticGameData,
+) -> bool {
+    let actor_pov = snapshot.player_pov(giver, static_data);
+    let has_clue_tokens = actor_pov
+        .table_state()
+        .clue_token_bank
+        .whole_clue_tokens_count()
+        > 0;
+    convention_set.techs().iter().any(|tech| {
+        tech.game_actions(&actor_pov)
+            .into_iter()
+            .any(|a| has_clue_tokens || !matches!(a, GameAction::Clue { .. }))
+    })
+}
+
 /// A [TableState] with associated player knowledge and convention awareness.
 ///
 /// This is the main integration point for the engine: it wraps a [TableState] with a
@@ -587,10 +633,80 @@ impl KnowledgeAwareGameState {
             &self.static_data,
         );
 
-        // Raw clue narrowing on the receiver's hand: touched cards must match the clue mask,
-        // untouched cards must not. These are hard facts derived purely from the public clue;
-        // applying them first ensures that softer convention inferences (good-touch, tech
-        // hypotheses) can never widen empathy past what the literal clue establishes.
+        // Phase 1 — raw narrowing: apply the hard public facts of the literal clue, then the
+        // softer convention baselines. Order matters: raw facts first so baselines can only
+        // intersect, never widen, the empathy the clue mask establishes.
+        self.apply_raw_clue_narrowing(receiver, touched_card_deck_indexes, clue);
+        self.apply_receiver_baseline(
+            receiver,
+            touched_card_deck_indexes,
+            clue,
+            &pre_clue_table_state,
+            convention_set,
+        );
+
+        let cohort_id = self.next_hypothesis_id;
+        self.next_hypothesis_id += 1;
+
+        // Phase 2 — build the per-clue tech history. The snapshot pairs the PRE-clue
+        // table_state with the POST-raw-narrowing team_knowledge:
+        //
+        // - pre-clue table_state.clue_touched_cards: get_clue_focus can correctly
+        //   distinguish "already clued before this clue" from "newly touched", so chop
+        //   detection and focus selection work correctly.
+        //
+        // - post-raw team_knowledge: convention techs see the narrowed empathy that the
+        //   clue mask imposes. DelayedPlayClue needs this to recognise when a connecting
+        //   card becomes uniquely known *because of* the clue, and DirectPlayClue needs
+        //   it to detect good-touch duplicates introduced by the same clue.
+        let tech_snapshot =
+            GameStateSnapshot::new(pre_clue_table_state, self.team_knowledge.clone());
+        let actor_had_primary_candidate =
+            giver_had_primary_candidate(&tech_snapshot, giver, convention_set, &self.static_data);
+
+        let action_turn = match action {
+            GameAction::Clue { turn, .. } => *turn,
+            _ => 0,
+        };
+        // Techs only consult `history.get(turn - 1)` (the clue being interpreted); padding to
+        // `action_turn` covers search's nonzero turn indices without copying the full
+        // `self.history`. We pad to at least 1 entry so techs can also access the giver's
+        // pre-clue snapshot when `action_turn == 0` (scenarios that start mid-game at turn 0).
+        let local_history = vec![tech_snapshot; action_turn.max(1)];
+
+        // Phase 3 — convention interpretation: derive hypotheses for the receiver and for every
+        // observer, applying each as a cohort tagged with the shared `cohort_id`.
+        self.interpret_clue_for_receiver(
+            receiver,
+            giver,
+            action,
+            &local_history,
+            cohort_id,
+            actor_had_primary_candidate,
+            convention_set,
+        );
+        self.interpret_clue_for_observers(
+            receiver,
+            giver,
+            action,
+            &local_history,
+            cohort_id,
+            actor_had_primary_candidate,
+            convention_set,
+        );
+    }
+
+    /// Phase 1a of [`apply_clue`](Self::apply_clue): raw clue narrowing on the receiver's hand.
+    /// Touched cards must match the clue mask, untouched cards must not. These are hard facts
+    /// derived purely from the public clue; applying them first ensures that softer convention
+    /// inferences (good-touch, tech hypotheses) can never widen empathy past what the literal
+    /// clue establishes.
+    fn apply_raw_clue_narrowing(
+        &mut self,
+        receiver: usize,
+        touched_card_deck_indexes: &SmallVec<[CardDeckIndex; MAX_HAND_SIZE]>,
+        clue: &Clue,
+    ) {
         let clue_mask = self.static_data.variant.empathy_for_clue(clue).as_bits();
         let hand_slots: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = self.table_state.hands[receiver]
             .cards()
@@ -605,15 +721,25 @@ impl KnowledgeAwareGameState {
                 receiver_knowledge.exclude_inferred(*slot, clue_mask, &self.static_data.variant);
             }
         }
+    }
 
-        // Convention-wide baseline narrowings on the receiver (e.g. H-Group good-touch
-        // principle: every touched card is assumed eventually useful). Applied as
-        // unconditional baseline so it intersects with per-tech cohort hypotheses.
-        //
-        // Per-card exception: if a touched card's post-raw empathy is already a subset of
-        // non-needed identities (every candidate is trash by public information), the
-        // holder won't misplay it without GTP help. Skip the GTP narrowing for that card
-        // so we don't smuggle in fake "still-useful" plausibility on top of trash empathy.
+    /// Phase 1b of [`apply_clue`](Self::apply_clue): convention-wide baseline narrowings on the
+    /// receiver (e.g. H-Group good-touch principle: every touched card is assumed eventually
+    /// useful). Applied as an unconditional baseline so it intersects with per-tech cohort
+    /// hypotheses.
+    ///
+    /// Per-card exception: if a touched card's post-raw empathy is already a subset of
+    /// non-needed identities (every candidate is trash by public information), the holder won't
+    /// misplay it without GTP help. Skip the GTP narrowing for that card so we don't smuggle in
+    /// fake "still-useful" plausibility on top of trash empathy.
+    fn apply_receiver_baseline(
+        &mut self,
+        receiver: usize,
+        touched_card_deck_indexes: &SmallVec<[CardDeckIndex; MAX_HAND_SIZE]>,
+        clue: &Clue,
+        pre_clue_table_state: &TableState,
+        convention_set: &dyn ConventionSet,
+    ) {
         let still_needed = crate::engine::convention::hgroup::h_group_core::still_needed_cards_mask(
             &self.table_state,
             &self.static_data,
@@ -625,7 +751,7 @@ impl KnowledgeAwareGameState {
                 receiver,
                 self.team_knowledge.player(receiver),
                 &self.team_knowledge,
-                &pre_clue_table_state,
+                pre_clue_table_state,
                 &self.static_data,
             );
             crate::engine::convention::hgroup::h_group_core::get_clue_focus(
@@ -655,76 +781,35 @@ impl KnowledgeAwareGameState {
                 &self.static_data.variant,
             );
         }
+    }
 
-        let cohort_id = self.next_hypothesis_id;
-        self.next_hypothesis_id += 1;
-        let num_players = self.static_data.number_of_players as usize;
-
-        // Build the snapshot for local_history using the PRE-clue table_state but the
-        // POST-raw-narrowing team_knowledge. This combination gives techs what they need:
-        //
-        // - pre-clue table_state.clue_touched_cards: get_clue_focus can correctly
-        //   distinguish "already clued before this clue" from "newly touched", so chop
-        //   detection and focus selection work correctly.
-        //
-        // - post-raw team_knowledge: convention techs see the narrowed empathy that the
-        //   clue mask imposes. DelayedPlayClue needs this to recognise when a connecting
-        //   card becomes uniquely known *because of* the clue, and DirectPlayClue needs
-        //   it to detect good-touch duplicates introduced by the same clue.
-        let tech_snapshot =
-            GameStateSnapshot::new(pre_clue_table_state, self.team_knowledge.clone());
-
-        // Reconstruct the giver's POV at decision time to determine whether they were in
-        // a stall situation (no primary tech had a candidate action). If they were, route
-        // interpretation to the fallback techs instead of the primary techs — this prevents
-        // registered techs (e.g. DirectPlayClue, FiveSave) from incorrectly claiming a
-        // stall clue as a play/save and producing wrong knowledge updates.
-        let actor_had_primary_candidate = {
-            let actor_pov = tech_snapshot.player_pov(giver, &self.static_data);
-            let has_clue_tokens = actor_pov
-                .table_state()
-                .clue_token_bank
-                .whole_clue_tokens_count()
-                > 0;
-            convention_set.techs().iter().any(|tech| {
-                tech.game_actions(&actor_pov)
-                    .into_iter()
-                    .any(|a| has_clue_tokens || !matches!(a, GameAction::Clue { .. }))
-            })
-        };
-
-        let action_turn = match action {
-            GameAction::Clue { turn, .. } => *turn,
-            _ => 0,
-        };
-        // Techs only consult `history.get(turn - 1)` (the clue being interpreted); padding to
-        // `action_turn` covers search's nonzero turn indices without copying the full
-        // `self.history`. We pad to at least 1 entry so techs can also access the giver's
-        // pre-clue snapshot when `action_turn == 0` (scenarios that start mid-game at turn 0).
-        let local_history = vec![tech_snapshot; action_turn.max(1)];
-        let knowledge_history: &[GameStateSnapshot] = &local_history;
-
-        // Receiver: collect all matching techs' hypotheses from the receiver's own POV.
-        // Use the current (post-raw) table_state so the receiver's POV reflects the clue
-        // token spent and the deck narrowing, while local_history supplies pre-clue
-        // clue_touched_cards for focus calculation inside the techs.
-        let receiver_pov = LightweightPlayerPOV::new(
-            receiver,
-            self.team_knowledge.player(receiver),
-            &self.team_knowledge,
-            &self.table_state,
-            &self.static_data,
-        );
-        let receiver_hypotheses = if actor_had_primary_candidate {
-            collect_hypotheses(
-                convention_set.techs(),
-                action,
-                knowledge_history,
-                &receiver_pov,
-            )
-        } else {
-            collect_stall_hypotheses(
-                convention_set.fallback_techs(),
+    /// Phase 3a of [`apply_clue`](Self::apply_clue): collect all matching techs' hypotheses from
+    /// the receiver's own POV and apply them as a cohort. Uses the current (post-raw) `table_state`
+    /// so the receiver's POV reflects the clue token spent and the deck narrowing, while
+    /// `knowledge_history` supplies pre-clue `clue_touched_cards` for focus calculation inside the
+    /// techs.
+    #[allow(clippy::too_many_arguments)]
+    fn interpret_clue_for_receiver(
+        &mut self,
+        receiver: usize,
+        giver: usize,
+        action: &GameAction,
+        knowledge_history: &[GameStateSnapshot],
+        cohort_id: HypothesisId,
+        actor_had_primary_candidate: bool,
+        convention_set: &dyn ConventionSet,
+    ) {
+        let receiver_hypotheses = {
+            let receiver_pov = LightweightPlayerPOV::new(
+                receiver,
+                self.team_knowledge.player(receiver),
+                &self.team_knowledge,
+                &self.table_state,
+                &self.static_data,
+            );
+            collect_pov_hypotheses(
+                convention_set,
+                actor_had_primary_candidate,
                 action,
                 knowledge_history,
                 &receiver_pov,
@@ -739,30 +824,42 @@ impl KnowledgeAwareGameState {
             &mut self.next_hypothesis_id,
             &self.static_data.variant,
         );
+    }
 
-        // Non-receivers: each observer evaluates all techs from their own POV. Receiver-targeted
-        // updates are filtered down to the observer's own hand (other-hand updates are redundant
-        // since they can see those hands directly via visible_cards).
+    /// Phase 3b of [`apply_clue`](Self::apply_clue): each non-receiver evaluates all techs from
+    /// their own POV. Receiver-targeted updates are filtered down to the observer's own hand
+    /// (other-hand updates are redundant since they can see those hands directly via
+    /// `visible_cards`).
+    ///
+    /// Each observer's POV only differs from the shared `table_state` in `active_player_index`.
+    /// Rather than cloning the whole `TableState` per observer just to overwrite that one field,
+    /// temporarily point the shared state at the observer and restore it after the loop.
+    #[allow(clippy::too_many_arguments)]
+    fn interpret_clue_for_observers(
+        &mut self,
+        receiver: usize,
+        giver: usize,
+        action: &GameAction,
+        knowledge_history: &[GameStateSnapshot],
+        cohort_id: HypothesisId,
+        actor_had_primary_candidate: bool,
+        convention_set: &dyn ConventionSet,
+    ) {
+        let num_players = self.static_data.number_of_players as usize;
+        let original_active = self.table_state.active_player_index;
         for target in (0..num_players).filter(|&t| t != receiver) {
-            let mut target_table_state = self.table_state.clone();
-            target_table_state.active_player_index = target;
-            let target_pov = LightweightPlayerPOV::new(
-                target,
-                self.team_knowledge.player(giver),
-                &self.team_knowledge,
-                &target_table_state,
-                &self.static_data,
-            );
-            let raw = if actor_had_primary_candidate {
-                collect_hypotheses(
-                    convention_set.techs(),
-                    action,
-                    knowledge_history,
-                    &target_pov,
-                )
-            } else {
-                collect_stall_hypotheses(
-                    convention_set.fallback_techs(),
+            self.table_state.active_player_index = target;
+            let raw = {
+                let target_pov = LightweightPlayerPOV::new(
+                    target,
+                    self.team_knowledge.player(giver),
+                    &self.team_knowledge,
+                    &self.table_state,
+                    &self.static_data,
+                );
+                collect_pov_hypotheses(
+                    convention_set,
+                    actor_had_primary_candidate,
                     action,
                     knowledge_history,
                     &target_pov,
@@ -797,6 +894,7 @@ impl KnowledgeAwareGameState {
                 &self.static_data.variant,
             );
         }
+        self.table_state.active_player_index = original_active;
     }
 
     /// Advance `active_player_index` to the next player.
