@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use crate::common;
+use crate::common::utils::search_best_action;
 use eel::engine::convention::hgroup::h_group_convention_set::{HGroupConventionSet, HGroupLevel};
 use eel::engine::knowledge::player_pov::PlayerPOV;
 use eel::engine::replay::reconstruct::ReplayRunner;
@@ -13,9 +14,16 @@ use eel::hanablive::dto::game::Game;
 
 fn path_for(rel: &str) -> PathBuf {
     let name = rel.strip_suffix(".json").unwrap_or(rel);
-    [env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", "regression", name, "replay.json"]
-        .iter()
-        .collect()
+    [
+        env!("CARGO_MANIFEST_DIR"),
+        "tests",
+        "fixtures",
+        "regression",
+        name,
+        "replay.json",
+    ]
+    .iter()
+    .collect()
 }
 
 /// Load a hanab.live replay JSON, step to `turn`, and return the engine's
@@ -316,10 +324,10 @@ fn should_play_clue_alice() {
         GameAction::Clue {
             player_index: 0,
             clue:
-            Clue {
-                clue_type: ClueType::Color,
-                clue_value: 1,
-            },
+                Clue {
+                    clue_type: ClueType::Color,
+                    clue_value: 1,
+                },
             ..
         } => println!("Cathy has chosen to play clue Alice's y1: {:?}", action),
         _ => panic!("Cathy has chosen the following action: {:?}", action),
@@ -337,10 +345,11 @@ fn should_not_discard() {
         } => println!("Bob has chosen to play his known playable 1: {:?}", action),
         GameAction::Clue {
             player_index: 0,
-            clue: Clue {
-                clue_type: ClueType::Color,
-                clue_value: 0,
-            },
+            clue:
+                Clue {
+                    clue_type: ClueType::Color,
+                    clue_value: 0,
+                },
             ..
         } => println!("Bob has chosen to clue red to Alice: {:?}", action),
         _ => panic!("Bob has chosen the following action: {:?}", action),
@@ -391,12 +400,8 @@ fn should_not_clue_1s_to_cathy() {
     let action = engine_action_at_turn("should_not_clue_1s_to_cathy.json", 17);
     match action {
         GameAction::Discard {
-            player_index: 1,
-            ..
-        } => println!(
-            "Bob has chosen to discard his chop: {:?}",
-            action
-        ),
+            player_index: 1, ..
+        } => println!("Bob has chosen to discard his chop: {:?}", action),
         _ => panic!("Bob has chosen the following action: {:?}", action),
     }
 }
@@ -407,10 +412,11 @@ fn should_wait_for_g1_duplicate_to_discard() {
     match action {
         GameAction::Clue {
             player_index: 2,
-            clue: Clue {
-                clue_type: ClueType::Color,
-                clue_value: 0,
-            },
+            clue:
+                Clue {
+                    clue_type: ClueType::Color,
+                    clue_value: 0,
+                },
             ..
         } => println!(
             "Alice has chosen to clue Cathy's red 2 and calling for Bob's chop to discard: {:?}",

@@ -1,14 +1,14 @@
-use super::{get_clue_focus, get_finesse_position};
+use super::{get_clue_focus, get_finesse_position, prompt_connector_index};
 use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::knowledge::knowledge_update::KnowledgeUpdate;
 use crate::engine::knowledge::player_knowledge::PlayerKnowledge;
 use crate::engine::knowledge::player_pov::PlayerPOV;
+use crate::game::MAX_UNIQUE_CARDS_IN_DECK;
 use crate::game::card::{CardDeckIndex, VariantCardId};
 use crate::game::clue::Clue;
 use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::variant::Variant;
-use crate::game::{MAX_UNIQUE_CARDS_IN_DECK};
 use smallvec::SmallVec;
 
 /// https://hanabi.github.io/beginner/minimum-clue-value-principle/
@@ -50,7 +50,9 @@ struct ClueOverlay<'a> {
     clue_mask: u64,
     /// Cards (and committed identities) that should be treated as receiving a `Signal::Play`
     /// as a result of the clue's positional inference (finesse). Each entry pins the card's
-    /// empathy to a singleton and forces it into the "going to play" set unconditionally.
+    /// empathy to a singleton and forces it into the "going to play" set unconditionally. For a
+    /// detected finesse this includes both the connecting card on the teammate's finesse position
+    /// and the focus itself (the 1-away card), since a finesse commits both.
     finesse_signals: SmallVec<[(CardDeckIndex, VariantCardId); 4]>,
 }
 
@@ -76,9 +78,19 @@ pub(crate) fn count_newly_going_to_play(
     (post & !pre).count_ones() as usize
 }
 
-/// Detects finesse signals introduced by the candidate clue. A 1-away focus with the connecting
-/// card sitting on a teammate's finesse position (where the teammate plays before the receiver)
-/// pins that finesse-position card to the connecting identity.
+/// Detects the play signals a candidate 1-away play clue introduces via positional inference,
+/// so MCVP can count the cards it newly commits to play.
+///
+/// Two shapes commit a connecting card alongside the focus:
+///
+/// - **Finesse**: the connecting card sits on a teammate's finesse position (an unclued card,
+///   where the teammate plays before the receiver). It is pinned to the connecting identity.
+/// - **Prompt**: the connecting card is an already-clued, identity-ambiguous card in a teammate's
+///   (or the receiver's own) hand — the holder is prompted to play their leftmost touched card
+///   that could be the connector. [`prompt_connector_index`] locates and validates it.
+///
+/// When any connector is found the focus itself is also pinned to its (1-away) identity, mirroring
+/// the two plays both a finesse and a prompt actually commit.
 fn compute_finesse_signal_overlay(
     receiver: PlayerIndex,
     touched: &[CardDeckIndex],
@@ -101,17 +113,28 @@ fn compute_finesse_signal_overlay(
     let active = pov.active_player_index();
     let num_players = pov.static_data().number_of_players as usize;
     for p in 0..num_players {
-        if p == active || p == receiver {
+        if p == active {
             continue;
         }
-        if !pov.static_data().plays_before(p, receiver, active) {
-            continue;
-        }
-        if let Some(finesse_idx) = get_finesse_position(p, pov) {
-            if pov.card_identity(finesse_idx) == Some(connecting_id) {
-                result.push((finesse_idx, connecting_id));
+        // Finesse: connector on a teammate's finesse position (teammate plays before receiver).
+        if p != receiver && pov.static_data().plays_before(p, receiver, active) {
+            if let Some(finesse_idx) = get_finesse_position(p, pov) {
+                if pov.card_identity(finesse_idx) == Some(connecting_id) {
+                    result.push((finesse_idx, connecting_id));
+                    continue;
+                }
             }
         }
+        // Prompt: connector is an already-clued, ambiguous card in p's hand (excluding the focus).
+        if let Some(connector_idx) = prompt_connector_index(connecting_id, p, focus, pov) {
+            result.push((connector_idx, connecting_id));
+        }
+    }
+    // A finesse or prompt commits TWO cards: the connector(s) pinned above AND the focus itself.
+    // Only when a real connector was found (the precondition held) do we pin the focus to its
+    // 1-away identity, so MCVP counts the focus as newly going-to-play alongside the connector.
+    if !result.is_empty() {
+        result.push((focus, focus_id));
     }
     result
 }
@@ -328,9 +351,9 @@ mod tests {
     use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
     use crate::engine::knowledge::player_knowledge::knowledge_with_visible;
     use crate::engine::knowledge::team_knowledge::TeamKnowledge;
+    use crate::game::MAX_HAND_SIZE;
     use crate::game::card::CardIdentityMask;
     use crate::game::clue_type::ClueType;
-    use crate::game::MAX_HAND_SIZE;
     use crate::game::deck::unit_test_constants::novariant_constants::{R1_MASK, R2_MASK};
     use crate::game::state::table_state::unit_test_constants::no_variant_constants::{
         NOVAR_5_PLAYERS_STATIC_GAME_DATA, initial_five_players_table_state,
@@ -550,6 +573,66 @@ mod tests {
             super::count_newly_going_to_play(&clue, 2, &touched, &pov),
             2,
             "Bob's R1 (signaled via finesse) and Cathy's R2 (chain-reachable through R1) both \
+             transition from not-going-to-play to going-to-play"
+        );
+    }
+
+    #[test]
+    fn mcvp_passes_via_condition2_when_reclue_completes_a_prompt_chain() {
+        // Stacks: R1, R2 played → R3 is directly playable, R4 is 1-away.
+        // Cathy (P2) holds two already-color-clued, rank-ambiguous reds:
+        //   slot 1 (newest) = R4 (card 21), slot 2 = R3 (card 20). Neither identity is known to
+        //   Cathy (empathy still {red ranks}), so neither is going-to-play before the clue.
+        // Both identities are gotten (P0 sees the touched cards' true ids) → condition 1 fails.
+        // A *rank-4 re-clue* on card 21 (focus, away=1) prompts Cathy's leftmost remaining touched
+        // red (card 20 = R3, playable) as the connector. The overlay pins R3 and the R4 focus, so
+        // both newly become going-to-play → condition 2 passes.
+        use crate::game::deck::unit_test_constants::novariant_constants::{
+            NoVarCards, R3_MASK, R4_MASK,
+        };
+
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            NoVarCards::R1.as_variant_card_id(),
+            &static_data,
+        );
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            NoVarCards::R2.as_variant_card_id(),
+            &static_data,
+        );
+
+        // Cathy (P2): draw R3 then R4 so newest-first is [21=R4, 20=R3].
+        table_state.active_player_index = 2;
+        table_state.update_with_draw_action(20); // R3 → slot 1
+        table_state.update_with_draw_action(21); // R4 → slot 1, R3 shifts to slot 2
+        table_state.clue_touched_cards |= (1 << 20) | (1 << 21);
+        table_state.active_player_index = 0;
+
+        let knowledge = knowledge_with_visible(0, &[(20, R3_MASK), (21, R4_MASK)]);
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        // Cathy holds both, with NO empathy narrowing (identities unknown to her).
+        team_knowledge.player_mut(2).own_hand |= (1 << 20) | (1 << 21);
+        let pov =
+            LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
+
+        let clue = Clue {
+            clue_type: ClueType::Rank,
+            clue_value: 4,
+        };
+        let touched: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = smallvec::smallvec![21];
+
+        assert!(
+            is_minimal_clue_value_compliant(&clue, &2, &touched, &pov),
+            "rank-4 prompt re-clue should pass MCVP via condition 2 (Cathy's R3 prompt + R4 focus \
+             both newly become going-to-play)"
+        );
+        assert_eq!(
+            super::count_newly_going_to_play(&clue, 2, &touched, &pov),
+            2,
+            "Cathy's R3 (prompted connector) and R4 (focus, chain-reachable through R3) both \
              transition from not-going-to-play to going-to-play"
         );
     }

@@ -433,12 +433,27 @@ fn should_not_clue_duplicate_y1() {
         GameAction::Clue {
             player_index: 2,
             clue:
-            Clue {
-                clue_type: ClueType::Rank,
-                clue_value: 2,
-            },
+                Clue {
+                    clue_type: ClueType::Rank,
+                    clue_value: 2,
+                },
             ..
-        } => println!("Alice has chosen to start with a 2-save on Cathy: {:?}", action),
+        } => println!(
+            "Alice has chosen to start with a 2-save on Cathy: {:?}",
+            action
+        ),
+        GameAction::Clue {
+            player_index: 2,
+            clue:
+                Clue {
+                    clue_type: ClueType::Color,
+                    clue_value: 0,
+                },
+            ..
+        } => println!(
+            "Alice has chosen to start with direct play clue on Cathy's r1: {:?}",
+            action
+        ),
         _ => panic!("Alice has chosen the following action: {:?}", action),
     }
 }
@@ -457,26 +472,6 @@ fn should_pick_up_y1_without_bad_touch() {
             ..
         } => println!(
             "Alice has chosen to pick up y1 without bad touch: {:?}",
-            action
-        ),
-        _ => panic!("Alice has chosen the following action: {:?}", action),
-    }
-}
-
-#[test]
-fn should_avoid_the_bad_touch_option() {
-    let action = search_best_action("should_avoid_the_bad_touch_option");
-    match action {
-        GameAction::Clue {
-            player_index: 1,
-            clue:
-            Clue {
-                clue_type: ClueType::Color,
-                clue_value: o,
-            },
-            ..
-        } => println!(
-            "Alice has chosen to pick up r1 from Bob's hand without bad touch: {:?}",
             action
         ),
         _ => panic!("Alice has chosen the following action: {:?}", action),

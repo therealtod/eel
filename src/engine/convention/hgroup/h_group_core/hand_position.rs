@@ -1,9 +1,9 @@
 use crate::engine::convention::hgroup::signal::Signal;
 use crate::engine::knowledge::player_pov::PlayerPOV;
+use crate::game::MAX_HAND_SIZE;
 use crate::game::card::{CardDeckIndex, VariantCardId};
 use crate::game::clue::Clue;
 use crate::game::state::PlayerIndex;
-use crate::game::MAX_HAND_SIZE;
 use smallvec::SmallVec;
 
 /// Returns the deck indices of cards in `player_index`'s hand that are touched by `clue`.
@@ -83,6 +83,59 @@ pub fn get_finesse_position(
         .iter()
         .copied()
         .find(|&idx| !player_pov.is_touched(idx))
+}
+
+/// Returns the deck index of the card that a prompt for `connecting_id` would cause
+/// `target_player` to play, or `None` if no valid prompt situation exists.
+///
+/// A prompt assumes the holder plays the **leftmost** (newest) of their touched cards that
+/// could be the connecting card. This is valid only when one of the following holds:
+///
+/// - Chain: every touched card from the leftmost up to and including the actual connecting card
+///   is currently playable (the holder plays each in turn, eventually reaching the connector), or
+/// - Skip: the first touched card whose holder empathy admits `connecting_id` IS the connecting
+///   card — the holder skips over any preceding cards whose clue empathy excludes that identity.
+///
+/// `focus_idx` is excluded from the search: a self-prompt's focus is the card being newly clued,
+/// and its fresh clue is exactly what disambiguates it from the connecting card.
+pub fn prompt_connector_index(
+    connecting_id: VariantCardId,
+    target_player: PlayerIndex,
+    focus_idx: CardDeckIndex,
+    pov: &dyn PlayerPOV,
+) -> Option<CardDeckIndex> {
+    let hand = pov.table_state().hands[target_player].cards();
+
+    let touched: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = hand
+        .iter()
+        .copied()
+        .filter(|&idx| idx != focus_idx && pov.is_touched(idx))
+        .collect();
+
+    let pos = touched.iter().position(|&idx| {
+        pov.card_identity(idx) == Some(connecting_id) && !pov.is_identity_known_to_holder(idx)
+    })?;
+
+    // Chain: all cards from leftmost touched up to and including the connecting card are playable.
+    if touched[..=pos].iter().all(|&idx| pov.is_playable(idx)) {
+        return Some(touched[pos]);
+    }
+
+    // Skip: the first touched card whose holder empathy admits connecting_id must BE the connector.
+    let holder_knowledge = pov.team_knowledge().player(target_player);
+    for &idx in &touched[..=pos] {
+        let holder_empathy = holder_knowledge.combined_possible_identities(
+            idx,
+            pov.table_state(),
+            &pov.static_data().variant,
+        );
+        if holder_empathy.as_bits() & (1u64 << connecting_id) != 0 {
+            return (pov.card_identity(idx) == Some(connecting_id)
+                && !pov.is_identity_known_to_holder(idx))
+            .then_some(idx);
+        }
+    }
+    None
 }
 
 /// Returns true if `player_index` already has a pending `Signal::Play` on `card_deck_index`.

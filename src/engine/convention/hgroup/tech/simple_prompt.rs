@@ -1,6 +1,6 @@
 use crate::engine::convention::convention_tech::ClueTech;
 use crate::engine::convention::hgroup::h_group_core::{
-    clues_for_player_with_focus, get_clue_focus,
+    clues_for_player_with_focus, get_clue_focus, prompt_connector_index,
 };
 use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, PlayClueTech, priority};
 use crate::engine::game_state_snapshot::GameStateSnapshot;
@@ -45,41 +45,7 @@ impl SimplePrompt {
         focus_idx: CardDeckIndex,
         pov: &dyn PlayerPOV,
     ) -> bool {
-        let hand = pov.table_state().hands[target_player].cards();
-
-        let touched: Vec<CardDeckIndex> = hand
-            .iter()
-            .copied()
-            .filter(|&idx| idx != focus_idx && pov.is_touched(idx))
-            .collect();
-
-        let pos = touched.iter().position(|&idx| {
-            pov.card_identity(idx) == Some(connecting_id) && !pov.is_identity_known_to_holder(idx)
-        });
-
-        let Some(p) = pos else {
-            return false;
-        };
-
-        // Chain: all cards from leftmost touched up to and including the connecting card are playable.
-        if touched[..=p].iter().all(|&idx| pov.is_playable(idx)) {
-            return true;
-        }
-
-        // Skip: the first touched card whose holder empathy admits connecting_id IS the connecting card.
-        let holder_knowledge = pov.team_knowledge().player(target_player);
-        for &idx in &touched[..=p] {
-            let holder_empathy = holder_knowledge.combined_possible_identities(
-                idx,
-                pov.table_state(),
-                &pov.static_data().variant,
-            );
-            if holder_empathy.as_bits() & (1u64 << connecting_id) != 0 {
-                return pov.card_identity(idx) == Some(connecting_id)
-                    && !pov.is_identity_known_to_holder(idx);
-            }
-        }
-        false
+        prompt_connector_index(connecting_id, target_player, focus_idx, pov).is_some()
     }
 
     /// Whether `focus_id` is already gotten by some touched, identity-known card **other than
