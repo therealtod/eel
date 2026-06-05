@@ -1,9 +1,29 @@
 use crate::engine::convention::convention_tech::ConventionTech;
+use crate::engine::knowledge::player_pov::PlayerPOV;
+use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, VariantCardsBitField};
 use crate::game::clue::Clue;
 use crate::game::state::PlayerIndex;
 use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
+use smallvec::SmallVec;
+
+/// Inline capacity for candidate action lists. 20 covers all realistic Hanabi scenarios
+/// (5-card hands × play+discard + a handful of convention-proposed clues) without spilling
+/// to the heap on the hot recursive path.
+pub const CANDIDATE_INLINE_CAP: usize = 20;
+
+/// A proposed candidate action together with the tech that proposed it.
+#[derive(Debug, Clone)]
+pub struct ProposedAction {
+    pub action: GameAction,
+    pub tech_name: &'static str,
+    pub priority: u8,
+}
+
+/// The candidate action list produced and filtered during action selection. Backed by
+/// inline storage so the typical case never touches the heap on the recursive hot path.
+pub type CandidateActions = SmallVec<[ProposedAction; CANDIDATE_INLINE_CAP]>;
 
 /// A complete convention framework agreed on by all players before the game.
 ///
@@ -46,5 +66,21 @@ pub trait ConventionSet: Sync {
         _static_data: &StaticGameData,
     ) -> Vec<(CardDeckIndex, VariantCardsBitField)> {
         Vec::new()
+    }
+
+    /// Convention-specific pruning of the deduplicated candidate action list, applied by the
+    /// search layer after tech proposals are gathered and before move ordering.
+    ///
+    /// This is where a framework expresses priority and legality rules that decide *which of its
+    /// own proposals survive* — e.g. dropping a chop discard when a known-trash discard exists, or
+    /// forbidding a discard in a situation the convention considers a play-mandatory. Keeping it
+    /// behind this hook is what stops framework-specific priority logic from leaking into the
+    /// generic search layer. Default: no pruning.
+    fn filter_candidate_actions(
+        &self,
+        _proposed: &mut CandidateActions,
+        _pov: &dyn PlayerPOV,
+        _is_early_game: bool,
+    ) {
     }
 }

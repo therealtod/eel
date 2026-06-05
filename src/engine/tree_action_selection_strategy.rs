@@ -1,13 +1,11 @@
 use crate::engine::action_outcome::ActionOutcome;
 use crate::engine::action_selection_strategy::ActionSelectionStrategy;
-use crate::engine::convention::convention_set::ConventionSet;
+use crate::engine::convention::convention_set::{
+    CANDIDATE_INLINE_CAP, CandidateActions, ConventionSet, ProposedAction,
+};
 use crate::engine::convention::convention_tech::ConventionTech;
-use crate::engine::convention::hgroup::game_action_filter::GameActionFilter;
-use crate::engine::convention::hgroup::h_group_core::is_good_touch_principle_compliant;
 #[cfg(feature = "quiescence-search")]
 use crate::engine::convention::hgroup::signal::Signal;
-use crate::engine::convention::hgroup::tech::clue_burn::ClueBurn;
-use crate::engine::convention::hgroup::tech::five_stall::FiveStall;
 use crate::engine::convention::hgroup::tech::low_level_stall::LowLevelStall;
 use crate::engine::decision_tree::{LineStep, Score, ScoredNode};
 use crate::engine::evaluator::{DefaultEvaluator, Evaluator, ScoreBreakdown};
@@ -24,11 +22,6 @@ use crate::game::static_game_data::StaticGameData;
 #[cfg(not(feature = "search-diagnostic"))]
 use rayon::prelude::*;
 use smallvec::SmallVec;
-
-/// Inline capacity for candidate action lists. 20 covers all realistic Hanabi scenarios
-/// (5-card hands × play+discard + a handful of convention-proposed clues) without spilling
-/// to the heap on the hot recursive path.
-const CANDIDATE_INLINE_CAP: usize = 20;
 
 /// Selects which subjective-action policy [`TreeActionSelectionStrategy::pick_subjective`]
 /// uses at inner plies. Single-line toggle: change this constant to swap policies.
@@ -69,14 +62,6 @@ impl PvTable {
     }
 }
 
-/// An action together with the tech that proposed it.
-#[derive(Debug, Clone)]
-pub struct ProposedAction {
-    pub action: GameAction,
-    pub tech_name: &'static str,
-    pub priority: u8,
-}
-
 pub struct TreeActionSelectionStrategy {
     pub evaluator: Box<dyn Evaluator>,
 }
@@ -98,9 +83,9 @@ impl TreeActionSelectionStrategy {
         pov: &dyn PlayerPOV,
         convention_set: &dyn ConventionSet,
         is_early_game: bool,
-    ) -> SmallVec<[ProposedAction; CANDIDATE_INLINE_CAP]> {
+    ) -> CandidateActions {
         let has_clue_tokens = pov.table_state().clue_token_bank.whole_clue_tokens_count() > 0;
-        let mut proposed: SmallVec<[ProposedAction; CANDIDATE_INLINE_CAP]> = convention_set
+        let mut proposed: CandidateActions = convention_set
             .techs()
             .iter()
             .flat_map(|tech| {
@@ -118,12 +103,11 @@ impl TreeActionSelectionStrategy {
             .collect();
 
         if proposed.is_empty() {
-            for (tech, name) in [
-                (&FiveStall as &dyn ConventionTech, FiveStall.name()),
-                (&ClueBurn as &dyn ConventionTech, ClueBurn.name()),
-                (&LowLevelStall as &dyn ConventionTech, LowLevelStall.name()),
-            ] {
-                let actions: SmallVec<[ProposedAction; CANDIDATE_INLINE_CAP]> = tech
+            // Last-resort fallback chain (first match wins), supplied by the convention so the
+            // generic search layer never names framework-specific stall techs.
+            for tech in convention_set.fallback_techs() {
+                let name = tech.name();
+                let actions: CandidateActions = tech
                     .game_actions(pov)
                     .into_iter()
                     .filter(|a| has_clue_tokens || !matches!(a, GameAction::Clue { .. }))
@@ -152,49 +136,10 @@ impl TreeActionSelectionStrategy {
             }
         });
 
-        // DiscardKnownTrash takes priority: if a known-trash discard was proposed, drop all
-        // DiscardChop candidates so the search only considers the safe discard.
-        if proposed.iter().any(|p| p.tech_name == "DiscardKnownTrash") {
-            proposed.retain(|p| p.tech_name != "DiscardChop");
-        }
-
-        // Early Game restriction: while still in the Early Game, a player may not discard their
-        // chop if they have a productive, good-touch-compliant alternative tech available (a play,
-        // a known-trash discard, or a GTP-compliant clue — never a stall fallback, which are not in
-        // `proposed`). Expressed as a `GameActionFilter` so the rule lives in the convention layer.
-        let has_productive_alternative = proposed.iter().any(|p| {
-            p.tech_name != "DiscardChop"
-                && match &p.action {
-                    GameAction::Play { .. } | GameAction::Discard { .. } => true,
-                    GameAction::Clue {
-                        player_index,
-                        touched_card_deck_indexes,
-                        clue,
-                        ..
-                    } => is_good_touch_principle_compliant(
-                        clue,
-                        player_index,
-                        touched_card_deck_indexes,
-                        pov,
-                    ),
-                    GameAction::Draw { .. } => false,
-                }
-        });
-        let early_game_filter =
-            GameActionFilter::early_game_chop_discard(is_early_game, has_productive_alternative);
-        proposed.retain(|p| early_game_filter.apply(&p.action, pov));
-
-        // Endgame pace constraint: when pace ≤ 0 the team cannot reach max score if any
-        // turn is wasted. Drop all discards when a play is available — discarding is
-        // mathematically forbidden at this point.
-        let pace = pov.table_state().pace(pov.static_data());
-        if pace <= 0
-            && proposed
-                .iter()
-                .any(|p| matches!(&p.action, GameAction::Play { .. }))
-        {
-            proposed.retain(|p| !matches!(&p.action, GameAction::Discard { .. }));
-        }
+        // Convention-specific candidate pruning (e.g. H-Group's known-trash discard priority,
+        // early-game chop restriction, and endgame pace constraint). Kept behind a `ConventionSet`
+        // hook so framework priority logic does not live in the generic search layer.
+        convention_set.filter_candidate_actions(&mut proposed, pov, is_early_game);
 
         // Move ordering: Play > Clue > Discard.
         proposed.sort_by_key(|p| match &p.action {

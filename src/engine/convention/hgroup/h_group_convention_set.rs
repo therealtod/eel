@@ -1,6 +1,9 @@
-use crate::engine::convention::convention_set::ConventionSet;
+use crate::engine::convention::convention_set::{CandidateActions, ConventionSet};
 use crate::engine::convention::convention_tech::ConventionTech;
-use crate::engine::convention::hgroup::h_group_core::good_touch_receiver_masks;
+use crate::engine::convention::hgroup::game_action_filter::GameActionFilter;
+use crate::engine::convention::hgroup::h_group_core::{
+    good_touch_receiver_masks, is_good_touch_principle_compliant,
+};
 use crate::engine::convention::hgroup::tech::blind_play::BlindPlay;
 use crate::engine::convention::hgroup::tech::clue_burn::ClueBurn;
 use crate::engine::convention::hgroup::tech::critical_save::{ColorCriticalSave, RankCriticalSave};
@@ -16,6 +19,8 @@ use crate::engine::convention::hgroup::tech::simple_finesse::SimpleFinesse;
 use crate::engine::convention::hgroup::tech::simple_prompt::SimplePrompt;
 use crate::engine::convention::hgroup::tech::tempo_clue::TempoClue;
 use crate::engine::convention::hgroup::tech::two_save::TwoSave;
+use crate::engine::knowledge::player_pov::PlayerPOV;
+use crate::game::action::game_action::GameAction;
 use crate::game::card::{CardDeckIndex, VariantCardsBitField};
 use crate::game::clue::Clue;
 use crate::game::state::PlayerIndex;
@@ -110,5 +115,56 @@ impl ConventionSet for HGroupConventionSet {
         static_data: &StaticGameData,
     ) -> Vec<(CardDeckIndex, VariantCardsBitField)> {
         good_touch_receiver_masks(clue, touched, focus, receiver, table_state, static_data)
+    }
+
+    fn filter_candidate_actions(
+        &self,
+        proposed: &mut CandidateActions,
+        pov: &dyn PlayerPOV,
+        is_early_game: bool,
+    ) {
+        // DiscardKnownTrash takes priority: if a known-trash discard was proposed, drop all
+        // DiscardChop candidates so the search only considers the safe discard.
+        if proposed.iter().any(|p| p.tech_name == "DiscardKnownTrash") {
+            proposed.retain(|p| p.tech_name != "DiscardChop");
+        }
+
+        // Early Game restriction: while still in the Early Game, a player may not discard their
+        // chop if they have a productive, good-touch-compliant alternative tech available (a play,
+        // a known-trash discard, or a GTP-compliant clue — never a stall fallback, which are not in
+        // `proposed`). Expressed as a `GameActionFilter` so the rule lives in the convention layer.
+        let has_productive_alternative = proposed.iter().any(|p| {
+            p.tech_name != "DiscardChop"
+                && match &p.action {
+                    GameAction::Play { .. } | GameAction::Discard { .. } => true,
+                    GameAction::Clue {
+                        player_index,
+                        touched_card_deck_indexes,
+                        clue,
+                        ..
+                    } => is_good_touch_principle_compliant(
+                        clue,
+                        player_index,
+                        touched_card_deck_indexes,
+                        pov,
+                    ),
+                    GameAction::Draw { .. } => false,
+                }
+        });
+        let early_game_filter =
+            GameActionFilter::early_game_chop_discard(is_early_game, has_productive_alternative);
+        proposed.retain(|p| early_game_filter.apply(&p.action, pov));
+
+        // Endgame pace constraint: when pace ≤ 0 the team cannot reach max score if any
+        // turn is wasted. Drop all discards when a play is available — discarding is
+        // mathematically forbidden at this point.
+        let pace = pov.table_state().pace(pov.static_data());
+        if pace <= 0
+            && proposed
+                .iter()
+                .any(|p| matches!(&p.action, GameAction::Play { .. }))
+        {
+            proposed.retain(|p| !matches!(&p.action, GameAction::Discard { .. }));
+        }
     }
 }
