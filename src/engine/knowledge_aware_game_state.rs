@@ -5,7 +5,6 @@ use crate::engine::game_state_snapshot::GameStateSnapshot;
 use crate::engine::knowledge::knowledge_update::{Hypothesis, HypothesisId};
 use crate::engine::knowledge::lightweight_player_pov::LightweightPlayerPOV;
 use crate::engine::knowledge::player_pov::PlayerPOV;
-use crate::engine::knowledge::player_pov_snapshot::PlayerPOVSnapshot;
 use crate::engine::knowledge::team_knowledge::TeamKnowledge;
 use crate::engine::play_resolver::{DrawnCard, PlayResolver};
 use crate::game::MAX_HAND_SIZE;
@@ -16,6 +15,7 @@ use crate::game::state::table_state::TableState;
 use crate::game::static_game_data::StaticGameData;
 use crate::game::variant::Variant;
 use smallvec::SmallVec;
+use std::sync::Arc;
 
 /// Collect hypotheses for `action` from `observer_pov`, respecting interpretation priority.
 ///
@@ -147,20 +147,16 @@ fn giver_had_primary_candidate(
 /// - `*_of_specific_card`: used when the card identity is known (spectator / replay mode).
 /// - without suffix: used when the identity is unknown (alpha-beta search over hidden state).
 ///
-/// Call [`record_snapshot`](Self::record_snapshot) before each action to build up a turn
-/// history. Use [`pov_at_turn`](Self::pov_at_turn) to retrieve any player's POV as it looked
-/// at that moment — useful for retrospective analysis of why a player chose a given action.
+/// `static_data` is stored behind an [`Arc`] so that cloning a search node (the hot path)
+/// bumps a refcount rather than copying the ~200-byte [`StaticGameData`].
 #[derive(Clone)]
 pub struct KnowledgeAwareGameState {
     pub table_state: TableState,
     pub team_knowledge: TeamKnowledge,
-    static_data: StaticGameData,
+    static_data: Arc<StaticGameData>,
     /// The deck index that will be assigned to the next synthesized draw.
     /// Initialized to `MAX_CARDS_IN_DECK - deck.current_size`.
     pub next_deck_index: u8,
-    /// Per-turn snapshots recorded by [`record_snapshot`](Self::record_snapshot).
-    /// Index `i` holds the state *before* the action taken on turn `i`.
-    history: Vec<GameStateSnapshot>,
     /// Monotonic counter for unique hypothesis ids.
     next_hypothesis_id: HypothesisId,
     /// Search-only ledger of playable card identities claimed by phantom plays along the
@@ -181,6 +177,7 @@ pub struct KnowledgeAwareGameState {
 impl KnowledgeAwareGameState {
     #[must_use]
     pub fn new(static_data: StaticGameData) -> Self {
+        let static_data = Arc::new(static_data);
         let table_state = TableState::new(&static_data);
         let team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
         KnowledgeAwareGameState {
@@ -188,7 +185,6 @@ impl KnowledgeAwareGameState {
             team_knowledge,
             static_data,
             next_deck_index: 0,
-            history: Vec::new(),
             next_hypothesis_id: 0,
             phantom_claimed_mask: 0,
         }
@@ -205,9 +201,8 @@ impl KnowledgeAwareGameState {
         KnowledgeAwareGameState {
             table_state,
             team_knowledge,
-            static_data,
+            static_data: Arc::new(static_data),
             next_deck_index,
-            history: Vec::new(),
             next_hypothesis_id: 0,
             phantom_claimed_mask: 0,
         }
@@ -333,11 +328,6 @@ impl KnowledgeAwareGameState {
     /// Apply a `GameAction` and propagate convention knowledge.
     /// Does NOT advance the turn; call `advance_turn()` separately.
     ///
-    /// For clue actions the `turn` field is set to `self.history_len() - 1` so the action
-    /// permanently records which snapshot in `history` captures the state before this clue.
-    /// Call [`record_snapshot`](Self::record_snapshot) *before* `apply` so the snapshot is
-    /// already in `history` when this assignment runs.
-    ///
     /// The search uses clone-and-recurse, so no undo token is needed.
     ///
     /// `resolver` determines how played/discarded card identities are resolved and how
@@ -435,7 +425,7 @@ impl KnowledgeAwareGameState {
             &self.static_data,
         );
         let actor_hypotheses =
-            collect_hypotheses(convention_set.techs(), &action, &self.history, &pov);
+            collect_hypotheses(convention_set.techs(), &action, &[], &pov);
         if !actor_hypotheses.is_empty() {
             tracing::debug!(target: "eel::apply", giver = p, action = ?action, "tech_matched");
         }
@@ -1034,7 +1024,7 @@ impl KnowledgeAwareGameState {
 
     #[must_use]
     pub fn static_data(&self) -> &StaticGameData {
-        &self.static_data
+        &*self.static_data
     }
 
     #[must_use]
@@ -1143,47 +1133,16 @@ impl KnowledgeAwareGameState {
         GameStateSnapshot::new(self.table_state.clone(), self.team_knowledge.clone())
     }
 
-    /// Push a snapshot of the current state onto the history.
-    ///
-    /// Call this *before* applying the action for a given turn so that
-    /// `history[t]` reflects the state each player saw when deciding on turn `t`.
-    pub fn record_snapshot(&mut self) {
-        self.history.push(self.snapshot());
-    }
-
-    /// Retrieve the POV of `player_index` as it looked at the start of turn `turn` (1-based).
-    ///
-    /// Returns `None` if `turn` is out of range (no snapshot was recorded for it)
-    /// or `player_index` is invalid.
-    ///
-    /// Call [`PlayerPOVSnapshot::as_pov`] with [`Self::static_data`] to materialise a
-    /// [`LightweightPlayerPOV`] from the returned snapshot.
-    #[must_use]
-    pub fn pov_at_turn(&self, turn: usize, player_index: usize) -> Option<PlayerPOVSnapshot> {
-        let snapshot = self.history.get(turn.saturating_sub(1))?.clone();
-        if player_index >= self.static_data.number_of_players as usize {
-            return None;
-        }
-        Some(PlayerPOVSnapshot::new(player_index, snapshot))
-    }
-
-    /// The number of snapshots recorded so far.
-    #[must_use]
-    pub fn history_len(&self) -> usize {
-        self.history.len()
-    }
-
     /// Returns `true` while the game is still in the **Early Game** phase — i.e.
     /// no player has yet performed a `DiscardChop` (discarded their chop).
     ///
-    /// Relies on the recorded turn `history`; call
-    /// [`record_snapshot`](Self::record_snapshot) before each action so every
-    /// turn is represented. See
+    /// The history slice is always empty in search rollouts (snapshots are not recorded during
+    /// search), so this reflects the phase as of the root state throughout a line. See
     /// [`h_group_core::is_early_game`](crate::engine::convention::hgroup::h_group_core::is_early_game).
     #[must_use]
     pub fn is_early_game(&self) -> bool {
         crate::engine::convention::hgroup::h_group_core::is_early_game(
-            &self.history,
+            &[],
             &self.table_state,
             &self.static_data,
         )
