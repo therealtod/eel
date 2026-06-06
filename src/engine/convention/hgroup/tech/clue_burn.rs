@@ -20,6 +20,7 @@ use crate::impl_convention_tech_for_hgroup_clue_tech;
 pub struct ClueBurn;
 
 impl ClueTech for ClueBurn {
+    #[allow(clippy::cast_possible_truncation)]
     fn clue_game_actions(&self, pov: &dyn PlayerPOV) -> Vec<GameAction> {
         let active = pov.active_player_index();
         let num_players = pov.static_data().number_of_players as usize;

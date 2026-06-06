@@ -129,6 +129,7 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
         self.inferred_identities(card_deck_index).known_card_id()
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     fn own_playable_cards(&self) -> DeckCardsBitField {
         // Precompute the playable mask once, then reuse the canonical per-card predicate.
         let playable_mask = self.table_state.playable_cards(self.static_data);
@@ -237,7 +238,7 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
             let mut prereq = variant.prerequisite(card_id);
             let mut reachable = true;
             while let Some(prereq_id) = prereq {
-                let total = variant.card_copies_count_by_id[prereq_id as usize];
+                let total = variant.card_copies_count_by_id[prereq_id];
                 let discarded_count = discarded.copies_of(prereq_id);
                 if discarded_count == total {
                     reachable = false;
@@ -263,6 +264,7 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
         )
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     fn valid_actions(&self) -> Vec<GameAction> {
         let player_index = self.player_index;
         let clue_tokens = self.table_state.clue_token_bank.whole_clue_tokens_count();
@@ -307,11 +309,10 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
         for player_index in 0..num_players {
             let player_hand = &self.table_state.hands[player_index];
             for &card_deck_index in player_hand.cards() {
-                if let Some(card_identity) = self.card_identity(card_deck_index) {
-                    if self.is_touched(card_deck_index) {
-                        bits |= 1 << card_identity
+                if let Some(card_identity) = self.card_identity(card_deck_index)
+                    && self.is_touched(card_deck_index) {
+                        bits |= 1 << card_identity;
                     }
-                }
             }
         }
         CardIdentityMask::from_bits(bits)

@@ -55,6 +55,7 @@ pub enum InstructionType {
 }
 
 impl InstructionType {
+    #[must_use]
     pub fn from_string(s: &str) -> Option<Self> {
         match s {
             "chat" => Some(InstructionType::Chat),

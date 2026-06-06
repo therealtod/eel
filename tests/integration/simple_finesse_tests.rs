@@ -2,7 +2,7 @@ use crate::common;
 
 use eel::engine::convention::convention_tech::ConventionTech;
 use eel::engine::convention::hgroup::signal::Signal;
-use eel::engine::convention::hgroup::tech::critical_save::RankCriticalSave;
+use eel::engine::convention::hgroup::tech::critical_save::RANK_CRITICAL_SAVE;
 use eel::engine::convention::hgroup::tech::direct_play_clue::DirectPlayClue;
 use eel::engine::convention::hgroup::tech::play_known_playable::PlayKnownPlayable;
 use eel::engine::convention::hgroup::tech::simple_finesse::SimpleFinesse;
@@ -250,7 +250,7 @@ fn rank_3_clue_on_chop_three_interpretations_finesse_excluded_by_critical_save()
         &static_data,
     );
     assert!(
-        RankCriticalSave
+        RANK_CRITICAL_SAVE
             .game_actions(&alice_pov)
             .contains(clue_action),
         "Alice should generate a rank-3 critical save to Cathy (deck 10 = g3, critical chop)"
@@ -290,7 +290,7 @@ fn rank_3_clue_on_chop_three_interpretations_finesse_excluded_by_critical_save()
 
     let finesse_hypothesis = SimpleFinesse.knowledge_updates(clue_action, &history, &cathy_pov);
     let critical_save_hypothesis =
-        RankCriticalSave.knowledge_updates(clue_action, &history, &cathy_pov);
+        RANK_CRITICAL_SAVE.knowledge_updates(clue_action, &history, &cathy_pov);
     let direct_play_hypothesis =
         DirectPlayClue.knowledge_updates(clue_action, &history, &cathy_pov);
 

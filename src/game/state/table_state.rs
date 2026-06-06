@@ -94,7 +94,7 @@ impl TableState {
         self.active_player_index = (self.active_player_index + 1) % num_players;
     }
 
-    /// Update this [crate::game::game_state::GameState] when the player draws the given card with
+    /// Update this [`crate::game::game_state::GameState`] when the player draws the given card with
     /// the given `player index`
     pub fn update_with_draw_action(&mut self, card_deck_index: CardDeckIndex) {
         self.hands[self.active_player_index].add_card_to_slot_1(card_deck_index);
@@ -102,14 +102,14 @@ impl TableState {
         self.all_hands_bitfield |= 1u64 << card_deck_index;
     }
 
-    /// Update this [crate::game::game_state::GameState] when the player with the given
+    /// Update this [`crate::game::game_state::GameState`] when the player with the given
     /// `player_index` tries to play a card
     pub fn update_with_play_action(&mut self, card_deck_index: CardDeckIndex) {
         self.hands[self.active_player_index].remove_card(card_deck_index);
         self.all_hands_bitfield &= !(1u64 << card_deck_index);
     }
 
-    /// Update this [crate::game::game_state::GameState] when the player with the given
+    /// Update this [`crate::game::game_state::GameState`] when the player with the given
     /// `player_index` tries to play a card whose identity is `card_id`
     pub fn update_with_play_action_of_specific_card(
         &mut self,
@@ -140,7 +140,7 @@ impl TableState {
         }
     }
 
-    /// Update this [crate::game::game_state::GameState] when the player with the given
+    /// Update this [`crate::game::game_state::GameState`] when the player with the given
     /// `player_index` discards a card
     pub fn update_with_discard_action(
         &mut self,
@@ -154,7 +154,7 @@ impl TableState {
         self.clue_token_bank.add_tokens(bonus_tokens);
     }
 
-    /// Update this [crate::game::game_state::GameState] when the player with the given
+    /// Update this [`crate::game::game_state::GameState`] when the player with the given
     /// `player_index` discards a card whose identity is `card_id`
     pub fn update_with_discard_action_of_specific_card(
         &mut self,
@@ -171,8 +171,11 @@ impl TableState {
             .reveal_card(card_deck_index, card_id, &static_game_data.variant);
     }
 
-    /// Update this [crate::game::game_state::GameState] when the player with the given
+    /// Update this [`crate::game::game_state::GameState`] when the player with the given
     /// `player_index` is given a [Clue] that touches the specified cards
+    ///
+    /// # Panics
+    /// Panics if there are no clue tokens available.
     pub fn update_with_clue_action(
         &mut self,
         card_deck_index: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]>,
@@ -197,7 +200,7 @@ impl TableState {
         self.clues_given += 1;
     }
 
-    /// Return a [VariantCardsBitField] of the cards that can be played successfully in the current
+    /// Return a [`VariantCardsBitField`] of the cards that can be played successfully in the current
     /// game state
     #[must_use]
     pub fn playable_cards(&self, static_game_data: &StaticGameData) -> VariantCardsBitField {
@@ -218,15 +221,14 @@ impl TableState {
         self.strike_tokens >= 3 || self.score(&static_data.variant) >= max_score
     }
 
-    /// Pace = score + cards_in_deck + num_players - max_theoretical_score.
+    /// Pace = score + `cards_in_deck` + `num_players` - `max_theoretical_score`.
     /// Positive pace means the team has "breathing room"; negative means they're behind.
     #[must_use]
     pub fn pace(&self, static_game_data: &StaticGameData) -> i32 {
-        let max_score = (static_game_data.variant.number_of_suits
-            * static_game_data.variant.stacks_size) as i32;
-        self.score(&static_game_data.variant) as i32
-            + self.deck.current_size as i32
-            + static_game_data.number_of_players as i32
+        let max_score = i32::from(static_game_data.variant.number_of_suits * static_game_data.variant.stacks_size);
+        i32::from(self.score(&static_game_data.variant))
+            + i32::from(self.deck.current_size)
+            + i32::from(static_game_data.number_of_players)
             - max_score
     }
 
@@ -235,17 +237,17 @@ impl TableState {
     /// "Live setups" are clue-touched cards still in hands — they are already lined up and reduce
     /// the future clue burden.
     ///
-    /// Returns 0.0 when the game is already won; f32::INFINITY when no spare turns remain, but
+    /// Returns 0.0 when the game is already won; `f32::INFINITY` when no spare turns remain, but
     /// cards are still needed.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_precision_loss)]
     #[must_use]
     pub fn required_efficiency(&self, static_game_data: &StaticGameData) -> f32 {
-        let max_score = (static_game_data.variant.number_of_suits
-            * static_game_data.variant.stacks_size) as i32;
+        let max_score = i32::from(static_game_data.variant.number_of_suits * static_game_data.variant.stacks_size);
         let num_players = static_game_data.number_of_players as usize;
         let hands = &self.hands[..num_players];
         let hand_cards: i32 = hands.iter().map(|h| h.cards().len() as i32).sum();
-        let remaining = self.deck.current_size as i32 + hand_cards;
-        let still_to_play = max_score - self.score(&static_game_data.variant) as i32;
+        let remaining = i32::from(self.deck.current_size) + hand_cards;
+        let still_to_play = max_score - i32::from(self.score(&static_game_data.variant));
         let spare_turns = (remaining - still_to_play).max(0);
         if still_to_play <= 0 {
             return 0.0;
@@ -261,6 +263,8 @@ impl TableState {
     /// Maximum score still achievable given the current discard pile.
     /// For each suit, walks ranks from the current stack top; stops at the first rank
     /// where all copies have been discarded (that rank and everything above it is lost).
+    #[allow(clippy::cast_possible_truncation)]
+    #[must_use]
     pub fn max_achievable_score(&self, static_data: &StaticGameData) -> u32 {
         let variant = &static_data.variant;
         let stacks_size = variant.stacks_size as usize;
@@ -279,10 +283,10 @@ impl TableState {
             total += suit_max as u32;
         }
         let max_possible =
-            static_data.variant.stacks_size as u32 * static_data.variant.number_of_suits as u32;
-        let remaining_plays = self.score(&static_data.variant) as u32
-            + self.deck.current_size as u32
-            + static_data.number_of_players as u32;
+            u32::from(static_data.variant.stacks_size) * u32::from(static_data.variant.number_of_suits);
+        let remaining_plays = u32::from(self.score(&static_data.variant))
+            + u32::from(self.deck.current_size)
+            + u32::from(static_data.number_of_players);
         total.min(remaining_plays.min(max_possible))
     }
 }
@@ -304,14 +308,15 @@ pub mod unit_test_constants {
             variant: NO_VARIANT,
         };
 
+        #[must_use]
         pub fn initial_five_players_table_state() -> TableState {
             let clue_token_bank = ClueTokenBank::new(16);
             let deck = Deck::new(&NO_VARIANT);
-            let hand1 = Hand::new(&vec![]);
-            let hand2 = Hand::new(&vec![]);
-            let hand3 = Hand::new(&vec![]);
-            let hand4 = Hand::new(&vec![]);
-            let hand5 = Hand::new(&vec![]);
+            let hand1 = Hand::new(&[]);
+            let hand2 = Hand::new(&[]);
+            let hand3 = Hand::new(&[]);
+            let hand4 = Hand::new(&[]);
+            let hand5 = Hand::new(&[]);
             let hands = [hand1, hand2, hand3, hand4, hand5, Hand::empty()];
             let playing_stacks = PlayingStacks::empty();
             let strike_tokens = 0;
@@ -329,13 +334,14 @@ pub mod unit_test_constants {
         }
 
         /// 3-player state with empty playing stacks.
+        #[must_use]
         pub fn empty_stacks_table_state(active_player_index: usize) -> TableState {
             let clue_token_bank = ClueTokenBank::new(10);
             let deck = Deck::new(&NO_VARIANT);
             let mut hands = Hand::empty_array();
-            hands[0] = Hand::new(&vec![0, 1, 2, 3]);
-            hands[1] = Hand::new(&vec![5, 6, 7, 8, 9]);
-            hands[2] = Hand::new(&vec![10, 11, 12, 13]);
+            hands[0] = Hand::new(&[0, 1, 2, 3]);
+            hands[1] = Hand::new(&[5, 6, 7, 8, 9]);
+            hands[2] = Hand::new(&[10, 11, 12, 13]);
             let playing_stacks = PlayingStacks::empty();
             let discard_pile = CopiesCountingCardCollection::empty();
             TableState {
@@ -357,13 +363,14 @@ pub mod unit_test_constants {
         }
 
         /// 3-player state with B1–B4 on the playing stacks.
+        #[must_use]
         pub fn stacked_table_state(active_player_index: usize) -> TableState {
             let clue_token_bank = ClueTokenBank::new(10);
             let deck = Deck::new(&NO_VARIANT);
             let mut hands = Hand::empty_array();
-            hands[0] = Hand::new(&vec![0, 1, 2, 3, 4]);
-            hands[1] = Hand::new(&vec![5, 6, 7, 8, 9]);
-            hands[2] = Hand::new(&vec![10, 11, 12, 13]);
+            hands[0] = Hand::new(&[0, 1, 2, 3, 4]);
+            hands[1] = Hand::new(&[5, 6, 7, 8, 9]);
+            hands[2] = Hand::new(&[10, 11, 12, 13]);
             let mut playing_stacks = PlayingStacks::empty();
             playing_stacks.add_card(15, &NO_VARIANT);
             playing_stacks.add_card(16, &NO_VARIANT);
@@ -510,7 +517,7 @@ mod tests {
     // max_achievable_score
     // -----------------------------------------------------------------------
 
-    /// Helper: build a TableState whose only meaningful fields are the playing
+    /// Helper: build a `TableState` whose only meaningful fields are the playing
     /// stacks and discard pile.  The rest (hands, deck, clue tokens, …) are
     /// filled with harmless defaults.
     fn state_with(playing_stacks: PlayingStacks, discards: &[VariantCardId]) -> TableState {

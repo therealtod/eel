@@ -163,6 +163,9 @@ pub struct ScenarioJson {
 ///   G1=10, G2=11, G3=12, G4=13, G5=14
 ///   B1=15, B2=16, B3=17, B4=18, B5=19
 ///   P1=20, P2=21, P3=22, P4=23, P5=24
+///
+/// # Panics
+/// Panics if the string is empty, the suit character is unknown, or the rank portion is invalid.
 #[must_use]
 pub fn parse_card(s: &str) -> usize {
     let s = s.to_lowercase();
@@ -181,6 +184,9 @@ pub fn parse_card(s: &str) -> usize {
 /// Parse a concatenated empathy string like `"b3b4"` into a bitmask of possible card identities.
 ///
 /// The string is split greedily: each card is one letter (suit) followed by one digit (rank).
+///
+/// # Panics
+/// Panics if the string has an odd length or contains invalid card substrings.
 #[must_use]
 pub fn parse_empathy_mask(s: &str) -> u64 {
     let s = s.to_lowercase();
@@ -200,6 +206,9 @@ pub fn parse_empathy_mask(s: &str) -> u64 {
 /// Rank clues: `"1"`–`"5"` → `(Rank, rank)`.
 /// Colour clues: `"red"` / `"r"`, `"yellow"` / `"y"`, `"green"` / `"g"`,
 /// `"blue"` / `"b"`, `"purple"` / `"pink"` / `"p"` → `(Color, suit_index)`.
+///
+/// # Panics
+/// Panics if the string does not match any known clue value.
 #[must_use]
 pub fn parse_clue_string(s: &str) -> (ClueType, u8) {
     match s.to_lowercase().as_str() {
@@ -236,6 +245,7 @@ fn build_discard_pile(scenario: &ScenarioJson) -> CopiesCountingCardCollection {
 
 /// Returns hands array. JSON is slot1-first (newest→oldest); deck indices are assigned
 /// oldest-first so the oldest card (rightmost in JSON) gets the lowest index.
+#[allow(clippy::cast_possible_truncation)]
 fn build_hands(scenario: &ScenarioJson) -> [Hand; MAX_PLAYERS_IN_GAME] {
     let mut hands = core::array::from_fn(|_| Hand::empty());
     let mut next_deck_index: u8 = 0;
@@ -254,10 +264,11 @@ fn build_hands(scenario: &ScenarioJson) -> [Hand; MAX_PLAYERS_IN_GAME] {
 /// Subtracting only the dealt hand cards would leave `current_size` ≈ 50 even mid-game,
 /// inflating both the Laplace bottom-card probability used by BDR and the
 /// `next_deck_index = MAX_CARDS_IN_DECK − current_size` cursor used by search-time draws.
+#[allow(clippy::cast_possible_truncation)]
 fn build_deck(scenario: &ScenarioJson, variant: &Variant) -> Deck {
     let mut deck = Deck::new(variant);
-    let in_hands: usize = scenario.hands.iter().map(|h| h.len()).sum();
-    let played: usize = scenario.playing_stacks.iter().map(|s| s.len()).sum();
+    let in_hands: usize = scenario.hands.iter().map(std::vec::Vec::len).sum();
+    let played: usize = scenario.playing_stacks.iter().map(std::vec::Vec::len).sum();
     let discarded = scenario.discard_pile.len();
     let drawn = in_hands + played + discarded;
     deck.decrement_size(drawn as u8);
@@ -280,7 +291,7 @@ fn build_deck(scenario: &ScenarioJson, variant: &Variant) -> Deck {
 /// Applies per-slot positive and negative clue touches, updating deck empathy and
 /// `clue_touched_cards`. Replaces the old separate `empathy` and `clued_cards` fields.
 ///
-/// Beyond the explicit per-slot annotations, every (clue_type, clue_value) that appears
+/// Beyond the explicit per-slot annotations, every (`clue_type`, `clue_value`) that appears
 /// as a *positive* on any slot in a hand is treated as a clue that was given to that
 /// hand, so the slots that don't carry it as a positive receive it as a negative. This
 /// matches how `update_with_clue_action` propagates negatives at runtime: a Hanabi clue
@@ -288,6 +299,7 @@ fn build_deck(scenario: &ScenarioJson, variant: &Variant) -> Deck {
 /// Without this, scenario authors would have to spell out a per-slot negative for every
 /// clue that ever touched any sibling slot, and slots like Alice's chop here would keep
 /// a full 25-id empathy even after multiple clues.
+#[allow(clippy::cast_possible_truncation)]
 fn apply_slot_clues(
     scenario: &ScenarioJson,
     deck: &mut Deck,
@@ -350,6 +362,7 @@ fn apply_slot_clues(
 /// clue's empathy mask. `"x"` (unknown) cards are skipped. The `turn` field on each action
 /// matches its index in `prior_actions`, so `actions[i]` has `turn = i` and the loader can
 /// record `history[i]` as the snapshot taken before that action.
+#[allow(clippy::cast_possible_truncation)]
 #[must_use]
 pub fn build_game_actions(scenario: &ScenarioJson, variant: &Variant) -> Vec<GameAction> {
     let player_bases: Vec<u8> = {
@@ -433,6 +446,7 @@ pub fn build_game_actions(scenario: &ScenarioJson, variant: &Variant) -> Vec<Gam
 }
 
 /// Build a `(TableState, StaticGameData)` pair from a `ScenarioJson` and a `Variant`.
+#[allow(clippy::cast_possible_truncation)]
 #[must_use]
 pub fn build_from_scenario(
     scenario: &ScenarioJson,
@@ -470,7 +484,7 @@ pub fn build_from_scenario(
     table_state.all_hands_bitfield = table_state.hands
         [..static_game_data.number_of_players as usize]
         .iter()
-        .flat_map(|h| h.cards())
+        .flat_map(super::super::hand::Hand::cards)
         .fold(0u64, |acc, &idx| acc | (1u64 << idx));
 
     table_state.clue_touched_cards = clue_touched_cards;
@@ -479,6 +493,9 @@ pub fn build_from_scenario(
 }
 
 /// Load a `ScenarioJson` from a JSON string.
+///
+/// # Panics
+/// Panics if the JSON string is not valid scenario JSON.
 #[must_use]
 pub fn parse_scenario(json: &str) -> ScenarioJson {
     serde_json::from_str(json).expect("failed to parse scenario JSON")

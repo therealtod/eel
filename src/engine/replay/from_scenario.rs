@@ -14,6 +14,7 @@ use crate::game::variant::Variant;
 /// Build a `TeamKnowledge` from a `ScenarioJson`, applying all `positive`/`negative` clue
 /// constraints and `inferred` masks declared in the scenario.
 #[must_use]
+#[allow(clippy::cast_possible_truncation)]
 pub fn team_knowledge_from_scenario(scenario: &ScenarioJson, variant: &Variant) -> TeamKnowledge {
     let num_players = scenario.hands.len();
     let mut team_knowledge = TeamKnowledge::new(num_players);
@@ -68,8 +69,8 @@ pub fn team_knowledge_from_scenario(scenario: &ScenarioJson, variant: &Variant) 
             if slot_pos >= hand_size {
                 break;
             }
-            if let Some(inferred_str) = slot.inferred() {
-                if inferred_str != "x" {
+            if let Some(inferred_str) = slot.inferred()
+                && inferred_str != "x" {
                     let deck_idx = indices[hand_size - 1 - slot_pos];
                     let mask = parse_empathy_mask(inferred_str);
                     let emp = CardIdentityMask::from_bits(mask);
@@ -78,7 +79,6 @@ pub fn team_knowledge_from_scenario(scenario: &ScenarioJson, variant: &Variant) 
                         team_knowledge.player_mut(p).visible_cards |= 1u64 << deck_idx;
                     }
                 }
-            }
         }
     }
 
@@ -116,6 +116,7 @@ pub fn team_knowledge_from_scenario(scenario: &ScenarioJson, variant: &Variant) 
 /// Deck indices in the resulting state follow the scenario format (0..N, sequential per player).
 /// The `next_deck_index` is set to the total number of dealt cards.
 #[must_use]
+#[allow(clippy::cast_possible_truncation)]
 pub fn knowledge_aware_from_scenario(
     scenario: &ScenarioJson,
     variant: Variant,

@@ -18,6 +18,7 @@ use super::default_evaluator::DefaultEvaluator;
 use super::types::ScoreBreakdown;
 
 impl super::Evaluator for DefaultEvaluator {
+    #[allow(clippy::cast_precision_loss)]
     fn score(
         &self,
         state: &KnowledgeAwareGameState,
@@ -27,6 +28,7 @@ impl super::Evaluator for DefaultEvaluator {
         self.score_breakdown(state, truth, phantom_plays).total
     }
 
+    #[allow(clippy::cast_precision_loss)]
     fn score_breakdown(
         &self,
         state: &KnowledgeAwareGameState,
@@ -37,7 +39,7 @@ impl super::Evaluator for DefaultEvaluator {
         let static_data = state.static_data();
         let team_knowledge = state.team_knowledge();
         let game_score =
-            self.score_weight * state.score(&static_data.variant, phantom_plays) as f64;
+            self.score_weight * f64::from(state.score(&static_data.variant, phantom_plays));
         let strikes = table_state.strike_tokens as usize;
         let strike_penalty = self.strike_penalties.get(strikes).copied().unwrap_or(0.0);
         if table_state.is_terminal(static_data) {
@@ -61,12 +63,14 @@ impl super::Evaluator for DefaultEvaluator {
             };
         }
         let pace = self.pace_weight
-            * state
+            * f64::from(state
                 .pace(phantom_plays)
-                .clamp(-10, static_data.number_of_players as i32) as f64;
+                .clamp(-10, i32::from(static_data.number_of_players)));
         let efficiency_penalty =
             self.efficiency_weight * f64::from(state.required_efficiency(phantom_plays));
-        let critical_exposure_penalty = if self.critical_exposure_weight != 0.0 {
+        let critical_exposure_penalty = if self.critical_exposure_weight == 0.0 {
+            0.0
+        } else {
             self.critical_exposure_weight
                 * DefaultEvaluator::critical_exposure_score(
                     table_state,
@@ -74,18 +78,16 @@ impl super::Evaluator for DefaultEvaluator {
                     team_knowledge,
                     truth,
                 )
-        } else {
-            0.0
         };
         let theoretical_max =
-            (static_data.variant.number_of_suits * static_data.variant.stacks_size) as f64;
+            f64::from(static_data.variant.number_of_suits * static_data.variant.stacks_size);
         let lost_ceiling_penalty = self.lost_score_ceiling_weight
-            * (theoretical_max - table_state.max_achievable_score(static_data) as f64);
-        let empathy_bonus = if self.empathy_weight != 0.0 {
+            * (theoretical_max - f64::from(table_state.max_achievable_score(static_data)));
+        let empathy_bonus = if self.empathy_weight == 0.0 {
+            0.0
+        } else {
             self.empathy_weight
                 * DefaultEvaluator::empathy_precision(table_state, static_data, team_knowledge)
-        } else {
-            0.0
         };
         let harmonic_value =
             DefaultEvaluator::harmonic(table_state.clue_token_bank.whole_clue_tokens_count());
@@ -96,10 +98,10 @@ impl super::Evaluator for DefaultEvaluator {
         } else {
             0.0
         };
-        let demand_factor = if self.clue_demand_weight != 0.0 {
-            1.0 + self.clue_demand_weight * demand
-        } else {
+        let demand_factor = if self.clue_demand_weight == 0.0 {
             1.0
+        } else {
+            1.0 + self.clue_demand_weight * demand
         };
         let clue_tokens = self.clue_token_weight * harmonic_value * demand_factor;
         // Future-potential: the same demand mass, but as an independent leaf term that does NOT
@@ -107,7 +109,9 @@ impl super::Evaluator for DefaultEvaluator {
         // the search stops treating draw-heavy lines as dry catastrophes. See
         // `DefaultEvaluator::future_potential_weight`.
         let future_potential = self.future_potential_weight * demand;
-        let parked_dead_weight = if self.parked_dead_weight_penalty != 0.0 {
+        let parked_dead_weight = if self.parked_dead_weight_penalty == 0.0 {
+            0.0
+        } else {
             self.parked_dead_weight_penalty
                 * DefaultEvaluator::parked_dead_weight(
                     table_state,
@@ -115,10 +119,10 @@ impl super::Evaluator for DefaultEvaluator {
                     team_knowledge,
                     truth,
                 )
-        } else {
-            0.0
         };
-        let known_playable = if self.known_playable_weight != 0.0 {
+        let known_playable = if self.known_playable_weight == 0.0 {
+            0.0
+        } else {
             self.known_playable_weight
                 * DefaultEvaluator::known_playable_in_hands(
                     table_state,
@@ -126,14 +130,14 @@ impl super::Evaluator for DefaultEvaluator {
                     team_knowledge,
                     truth,
                 )
-        } else {
-            0.0
         };
         // team_empathy is no longer a leaf term — it accumulates through clue actions via
         // `team_empathy_delta_bonus`. The breakdown field is kept (zeroed here) so callers
         // that aggregate per-line bonuses can record what the clue deltas contributed.
         let team_empathy = 0.0;
-        let misinformation_penalty = if self.misinformation_weight != 0.0 {
+        let misinformation_penalty = if self.misinformation_weight == 0.0 {
+            0.0
+        } else {
             self.misinformation_weight
                 * DefaultEvaluator::misinformation_score(
                     static_data,
@@ -141,8 +145,6 @@ impl super::Evaluator for DefaultEvaluator {
                     table_state,
                     truth,
                 )
-        } else {
-            0.0
         };
         let total = game_score - strike_penalty + pace
             - efficiency_penalty
@@ -185,7 +187,9 @@ impl super::Evaluator for DefaultEvaluator {
         team_knowledge: &TeamKnowledge,
         table_state: &TableState,
     ) -> Score {
-        let precision_bonus = if self.clue_precision_weight != 0.0 {
+        let precision_bonus = if self.clue_precision_weight == 0.0 {
+            0.0
+        } else {
             touched
                 .iter()
                 .filter(|&&idx| {
@@ -201,8 +205,6 @@ impl super::Evaluator for DefaultEvaluator {
                 })
                 .count() as f64
                 * self.clue_precision_weight
-        } else {
-            0.0
         };
 
         let bad_touch_count =
@@ -256,6 +258,7 @@ impl super::Evaluator for DefaultEvaluator {
             }
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     fn signal_ignored_penalty(
         &self,
         action: &GameAction,
@@ -346,7 +349,9 @@ impl super::Evaluator for DefaultEvaluator {
         };
         let table_state = pre.table_state();
         let static_data = pre.static_data();
-        let bdr = if self.bottom_deck_risk_weight != 0.0 {
+        let bdr = if self.bottom_deck_risk_weight == 0.0 {
+            0.0
+        } else {
             self.bottom_deck_risk_weight
                 * DefaultEvaluator::bottom_deck_risk_score(
                     *card_deck_index,
@@ -354,8 +359,6 @@ impl super::Evaluator for DefaultEvaluator {
                     static_data,
                     truth,
                 )
-        } else {
-            0.0
         };
         let kp_penalty = if self.discard_while_known_playable_penalty != 0.0
             && DefaultEvaluator::actor_has_known_playable(
@@ -548,6 +551,7 @@ impl super::Evaluator for DefaultEvaluator {
         -self.tempo_cost_weight
     }
 
+    #[allow(clippy::cast_precision_loss)]
     fn upper_bound(
         &self,
         table_state: &TableState,
@@ -555,13 +559,13 @@ impl super::Evaluator for DefaultEvaluator {
         depth: usize,
     ) -> Score {
         let max_game_score =
-            self.score_weight * table_state.max_achievable_score(static_data) as f64;
+            self.score_weight * f64::from(table_state.max_achievable_score(static_data));
         let min_strike_penalty = self
             .strike_penalties
             .get(table_state.strike_tokens as usize)
             .copied()
             .unwrap_or(0.0);
-        let max_pace = self.pace_weight * static_data.number_of_players as f64;
+        let max_pace = self.pace_weight * f64::from(static_data.number_of_players);
         let num_players = static_data.number_of_players as usize;
         let total_cards: usize = table_state.hands[..num_players]
             .iter()
@@ -589,7 +593,7 @@ impl super::Evaluator for DefaultEvaluator {
             + self.clue_precision_weight * total_cards as f64
             + self.team_empathy_weight * total_cards as f64
             + self.critical_exposure_delta_weight
-                * (static_data.number_of_players as f64 - 1.0).max(0.0);
+                * (f64::from(static_data.number_of_players) - 1.0).max(0.0);
         max_leaf + max_immediate_per_ply * depth as f64
     }
 }

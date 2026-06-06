@@ -16,8 +16,8 @@ impl TeamKnowledge {
     #[must_use]
     pub fn new(num_players: usize) -> Self {
         let mut player_knowledge = std::array::from_fn(|_| PlayerKnowledge::empty());
-        for i in 0..num_players {
-            player_knowledge[i] = PlayerKnowledge::new(i);
+        for (i, pk) in player_knowledge.iter_mut().enumerate().take(num_players) {
+            *pk = PlayerKnowledge::new(i);
         }
         TeamKnowledge {
             player_knowledge,

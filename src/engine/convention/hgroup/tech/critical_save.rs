@@ -155,12 +155,11 @@ fn critical_save_matches(
 #[derive(Clone, Copy)]
 pub struct CriticalSave(pub ClueType);
 
-#[allow(non_upper_case_globals)]
-pub const ColorCriticalSave: CriticalSave = CriticalSave(ClueType::Color);
-#[allow(non_upper_case_globals)]
-pub const RankCriticalSave: CriticalSave = CriticalSave(ClueType::Rank);
+pub const COLOR_CRITICAL_SAVE: CriticalSave = CriticalSave(ClueType::Color);
+pub const RANK_CRITICAL_SAVE: CriticalSave = CriticalSave(ClueType::Rank);
 
 impl ClueTech for CriticalSave {
+    #[allow(clippy::cast_possible_truncation)]
     fn clue_game_actions(&self, pov: &dyn PlayerPOV) -> Vec<GameAction> {
         match self.0 {
             ClueType::Color => {
@@ -243,7 +242,7 @@ mod tests {
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
-        let actions = ColorCriticalSave.game_actions(&pov);
+        let actions = COLOR_CRITICAL_SAVE.game_actions(&pov);
 
         assert_eq!(actions.len(), 1);
         assert!(
@@ -259,7 +258,7 @@ mod tests {
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
-        let actions = RankCriticalSave.game_actions(&pov);
+        let actions = RANK_CRITICAL_SAVE.game_actions(&pov);
 
         assert_eq!(actions.len(), 1);
         assert!(
@@ -280,8 +279,8 @@ mod tests {
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
-        assert!(ColorCriticalSave.game_actions(&pov).is_empty());
-        assert!(RankCriticalSave.game_actions(&pov).is_empty());
+        assert!(COLOR_CRITICAL_SAVE.game_actions(&pov).is_empty());
+        assert!(RANK_CRITICAL_SAVE.game_actions(&pov).is_empty());
     }
 
     #[test]
@@ -298,8 +297,8 @@ mod tests {
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
-        assert!(ColorCriticalSave.game_actions(&pov).is_empty());
-        assert!(RankCriticalSave.game_actions(&pov).is_empty());
+        assert!(COLOR_CRITICAL_SAVE.game_actions(&pov).is_empty());
+        assert!(RANK_CRITICAL_SAVE.game_actions(&pov).is_empty());
     }
 
     #[test]
@@ -317,7 +316,7 @@ mod tests {
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
-        let actions = ColorCriticalSave.game_actions(&pov);
+        let actions = COLOR_CRITICAL_SAVE.game_actions(&pov);
 
         assert_eq!(actions.len(), 1);
         let touched = match &actions[0] {
@@ -350,14 +349,14 @@ mod tests {
             },
             turn: 1,
         };
-        assert!(ColorCriticalSave.matches_action(&action, &[snapshot], &pov));
+        assert!(COLOR_CRITICAL_SAVE.matches_action(&action, &[snapshot], &pov));
     }
 
     // ── empty-history behaviour ─────────────────────────────────────────────────
 
     #[test]
     fn matches_action_false_when_history_is_empty() {
-        // Both ColorCriticalSave and RankCriticalSave safely return false with &[].
+        // Both COLOR_CRITICAL_SAVE and RANK_CRITICAL_SAVE safely return false with &[].
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
         let mut table_state = initial_five_players_table_state();
         table_state.active_player_index = 1;
@@ -378,8 +377,8 @@ mod tests {
             },
             turn: 1,
         };
-        assert!(!ColorCriticalSave.matches_action(&action, &[], &pov));
-        assert!(!RankCriticalSave.matches_action(&action, &[], &pov));
+        assert!(!COLOR_CRITICAL_SAVE.matches_action(&action, &[], &pov));
+        assert!(!RANK_CRITICAL_SAVE.matches_action(&action, &[], &pov));
     }
 
     #[test]
@@ -392,7 +391,7 @@ mod tests {
         let pov =
             LightweightPlayerPOV::new(0, &knowledge, &team_knowledge, &table_state, &static_data);
 
-        let updates = ColorCriticalSave.knowledge_updates(
+        let updates = COLOR_CRITICAL_SAVE.knowledge_updates(
             &GameAction::Clue {
                 player_index: 1,
                 touched_card_deck_indexes: smallvec::smallvec![10],
@@ -431,6 +430,6 @@ mod tests {
             },
             turn: 1,
         };
-        assert!(!ColorCriticalSave.matches_action(&action, &[snapshot], &pov));
+        assert!(!COLOR_CRITICAL_SAVE.matches_action(&action, &[snapshot], &pov));
     }
 }

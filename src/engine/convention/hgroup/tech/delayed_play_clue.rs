@@ -46,7 +46,8 @@ impl DelayedPlayClue {
         (1..=away_value as usize).all(|offset| {
             let connecting_id = card_id - offset;
             let connecting_bit = 1u64 << connecting_id;
-            let found = (0..num_players).any(|p| {
+            
+            (0..num_players).any(|p| {
                 let pk = pov.team_knowledge().player(p);
                 table_state.hands[p].cards().iter().any(|&idx| {
                     if !pov.is_touched(idx) {
@@ -74,11 +75,10 @@ impl DelayedPlayClue {
                     // determine the actual identity and it doesn't match connecting_id,
                     // the card is provably not the connector — even if the holder's empathy
                     // includes connecting_id as a possibility.
-                    if let Some(giver_id) = pov.card_identity(idx) {
-                        if giver_id != connecting_id {
+                    if let Some(giver_id) = pov.card_identity(idx)
+                        && giver_id != connecting_id {
                             return false;
                         }
-                    }
                     let possibilities = pk
                         .combined_possible_identities(idx, table_state, variant)
                         .as_bits();
@@ -86,8 +86,7 @@ impl DelayedPlayClue {
                         && (possibilities & !playable_mask) == 0
                         && (possibilities & connecting_bit) != 0
                 })
-            });
-            found
+            })
         })
     }
 }
@@ -183,7 +182,7 @@ impl ClueTech for DelayedPlayClue {
     ///
     /// Falls back to the union-mask single-hypothesis behavior for focus
     /// identities whose connecting card is uniquely known to its holder (no
-    /// alt_group structure needed) or whose `away_value > 1` (deeper chains —
+    /// `alt_group` structure needed) or whose `away_value > 1` (deeper chains —
     /// not yet handled).
     fn clue_knowledge_updates_multi(
         &self,
@@ -199,9 +198,8 @@ impl ClueTech for DelayedPlayClue {
         };
         let giver = snap.table_state.active_player_index;
         let giver_pov = snap.player_pov(giver, observer_pov.static_data());
-        let focus = match get_clue_focus(player_index, touched, &giver_pov) {
-            Some(f) => f,
-            None => return HypothesisSet::new(),
+        let Some(focus) = get_clue_focus(player_index, touched, &giver_pov) else {
+            return HypothesisSet::new();
         };
 
         let static_data = observer_pov.static_data();
@@ -311,7 +309,7 @@ impl ClueTech for DelayedPlayClue {
                     .iter()
                     .find_map(|u| match u {
                         KnowledgeUpdate::NarrowPossibilities { mask, .. } => Some(*mask),
-                        _ => None,
+                        KnowledgeUpdate::AddSignal { .. } => None,
                     })
                     .unwrap_or(0),
                 h.trigger.as_ref().and_then(|t| match t {
@@ -1015,7 +1013,7 @@ mod tests {
     /// `clue_knowledge_updates_multi` must split the delayed-play interpretation
     /// across each candidate connecting identity when the connecting card is
     /// ambiguous-known-playable in its holder's empathy. Each sub-hypothesis
-    /// pins the focus to `connecting_id + 1`, carries a BlindPlay trigger keyed
+    /// pins the focus to `connecting_id + 1`, carries a `BlindPlay` trigger keyed
     /// on the connecting card's deck index AND its identity, and shares an
     /// `alt_group` with its same-card siblings.
     #[test]
@@ -1130,9 +1128,9 @@ mod tests {
             }
             got_alt_groups.push(h.alt_group);
         }
-        got_masks.sort();
+        got_masks.sort_unstable();
         let mut expected_masks = vec![R2_MASK, Y2_MASK, G2_MASK];
-        expected_masks.sort();
+        expected_masks.sort_unstable();
         assert_eq!(got_masks, expected_masks);
         // All sub-hypotheses for the same connecting card share an alt_group.
         assert!(

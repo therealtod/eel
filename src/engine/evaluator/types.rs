@@ -318,6 +318,7 @@ pub trait Evaluator: Send + Sync {
     }
 }
 
+#[allow(clippy::cast_precision_loss)]
 const fn build_reciprocal_lut() -> [f64; 65] {
     let mut arr = [0.0f64; 65];
     let mut i = 1usize;
@@ -331,6 +332,7 @@ const fn build_reciprocal_lut() -> [f64; 65] {
 /// Precomputed 1/n for n = 0..=64. Index 0 maps to 0.0 (sentinel for zero-possibility cards).
 pub(crate) const RECIPROCAL_LUT: [f64; 65] = build_reciprocal_lut();
 
+#[allow(clippy::cast_precision_loss)]
 const fn build_harmonic_lut() -> [f64; 9] {
     let mut arr = [0.0f64; 9];
     let mut i = 1usize;

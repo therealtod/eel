@@ -104,7 +104,7 @@ fn should_choose_finesse_over_direct_play_clue() {
         ..
     } = action
     {
-        println!("Alice chose correctly")
+        println!("Alice chose correctly");
     } else {
         panic!("Alice should give a finesse to get both y1 and y2. Instead got: {action:?}");
     }
@@ -138,7 +138,7 @@ fn should_not_steal_clue() {
                 },
             ..
         } => {
-            println!("Bob choose to save Cathy's chop. Action: {:?}", action);
+            println!("Bob choose to save Cathy's chop. Action: {action:?}");
         }
         GameAction::Clue {
             player_index: 0,
@@ -162,7 +162,7 @@ fn should_not_steal_clue() {
                 "Bob chose to aggressively discard even though it's not as safe as saving Cathy's chop {action:?}"
             )
         }
-        _ => println!("Bob chose the following action: {:?}", action),
+        _ => println!("Bob chose the following action: {action:?}"),
     }
 }
 
@@ -176,8 +176,7 @@ fn should_play_all_1s() {
             ..
         } => {
             println!(
-                "Bob played one of his unknown 1s (y1). Action: {:?}",
-                action
+                "Bob played one of his unknown 1s (y1). Action: {action:?}"
             );
         }
         GameAction::Play {
@@ -186,11 +185,10 @@ fn should_play_all_1s() {
             ..
         } => {
             println!(
-                "Bob played one of his unknown 1s (g1). Action: {:?}",
-                action
+                "Bob played one of his unknown 1s (g1). Action: {action:?}"
             );
         }
-        _ => panic!("Bob chose the following action: {:?}", action),
+        _ => panic!("Bob chose the following action: {action:?}"),
     }
 }
 
@@ -202,8 +200,8 @@ fn should_not_play_known_trash() {
             player_index: 1,
             card_deck_index: 8,
             ..
-        } => panic!("Bob known trash. Action: {:?}", action),
-        _ => println!("Bob chose the following action: {:?}", action),
+        } => panic!("Bob known trash. Action: {action:?}"),
+        _ => println!("Bob chose the following action: {action:?}"),
     }
 }
 
@@ -215,8 +213,8 @@ fn should_not_discard_off_chop() {
             player_index: 0,
             card_deck_index: 25,
             ..
-        } => panic!("Alice discarded off-chop. Action: {:?}", action),
-        _ => println!("Alice chose the following action: {:?}", action),
+        } => panic!("Alice discarded off-chop. Action: {action:?}"),
+        _ => println!("Alice chose the following action: {action:?}"),
     }
 }
 
@@ -232,12 +230,10 @@ fn should_not_discard_with_playables_in_hand() {
         GameAction::Discard {
             player_index: 0, ..
         } => panic!(
-            "Alice discarded with a known-playable card (b1) in her hand. Action: {:?}",
-            action
+            "Alice discarded with a known-playable card (b1) in her hand. Action: {action:?}"
         ),
         _ => panic!(
-            "Alice chose neither to play b1 nor discard. Action: {:?}",
-            action
+            "Alice chose neither to play b1 nor discard. Action: {action:?}"
         ),
     }
 }
@@ -251,10 +247,9 @@ fn should_prioritize_demonstrating_finesse() {
             card_deck_index: 3,
             ..
         } => println!(
-            "Alice blind-played y1 from her finesse position. Action: {:?}",
-            action
+            "Alice blind-played y1 from her finesse position. Action: {action:?}"
         ),
-        _ => panic!("Alice chose the following action. Action: {:?}", action),
+        _ => panic!("Alice chose the following action. Action: {action:?}"),
     }
 }
 
@@ -267,10 +262,9 @@ fn should_assign_the_correct_identity_to_the_focus() {
             card_deck_index: 32,
             ..
         } => println!(
-            "Alice correctly played the focus of the received green clue: {:?}",
-            action
+            "Alice correctly played the focus of the received green clue: {action:?}"
         ),
-        _ => panic!("Alice chose the following action. Action: {:?}", action),
+        _ => panic!("Alice chose the following action. Action: {action:?}"),
     }
 }
 
@@ -286,8 +280,8 @@ fn should_clue_instead_of_discarding() {
                     clue_value: 2,
                 },
             ..
-        } => println!("Bob has chosen to play clue b2: {:?}", action),
-        _ => panic!("Bob has chosen the following action: {:?}", action),
+        } => println!("Bob has chosen to play clue b2: {action:?}"),
+        _ => panic!("Bob has chosen the following action: {action:?}"),
     }
 }
 
@@ -300,10 +294,9 @@ fn should_play_instead_of_discarding() {
             card_deck_index: 15,
             ..
         } => println!(
-            "Cathy has chosen to play her known-playable p4: {:?}",
-            action
+            "Cathy has chosen to play her known-playable p4: {action:?}"
         ),
-        _ => panic!("Cathy has chosen the following action: {:?}", action),
+        _ => panic!("Cathy has chosen the following action: {action:?}"),
     }
 }
 
@@ -319,7 +312,7 @@ fn should_play_clue_alice() {
                     clue_value: 0,
                 },
             ..
-        } => println!("Cathy has chosen to play clue Alice's r2: {:?}", action),
+        } => println!("Cathy has chosen to play clue Alice's r2: {action:?}"),
         GameAction::Clue {
             player_index: 0,
             clue:
@@ -328,8 +321,8 @@ fn should_play_clue_alice() {
                     clue_value: 1,
                 },
             ..
-        } => println!("Cathy has chosen to play clue Alice's y1: {:?}", action),
-        _ => panic!("Cathy has chosen the following action: {:?}", action),
+        } => println!("Cathy has chosen to play clue Alice's y1: {action:?}"),
+        _ => panic!("Cathy has chosen the following action: {action:?}"),
     }
 }
 
@@ -341,7 +334,7 @@ fn should_not_discard() {
             player_index: 0,
             card_deck_index: 6,
             ..
-        } => println!("Bob has chosen to play his known playable 1: {:?}", action),
+        } => println!("Bob has chosen to play his known playable 1: {action:?}"),
         GameAction::Clue {
             player_index: 0,
             clue:
@@ -350,8 +343,8 @@ fn should_not_discard() {
                     clue_value: 0,
                 },
             ..
-        } => println!("Bob has chosen to clue red to Alice: {:?}", action),
-        _ => panic!("Bob has chosen the following action: {:?}", action),
+        } => println!("Bob has chosen to clue red to Alice: {action:?}"),
+        _ => panic!("Bob has chosen the following action: {action:?}"),
     }
 }
 
@@ -364,10 +357,9 @@ fn should_play_her_known_playable_and_let_bob_clue() {
             card_deck_index: 2,
             ..
         } => println!(
-            "Alice has decided to play her known-playable 3 Cathy: {:?}",
-            action
+            "Alice has decided to play her known-playable 3 Cathy: {action:?}"
         ),
-        _ => panic!("Alice has chosen the following action: {:?}", action),
+        _ => panic!("Alice has chosen the following action: {action:?}"),
     }
 }
 
@@ -387,10 +379,9 @@ fn should_pick_up_y1_without_bad_touch() {
                 },
             ..
         } => println!(
-            "Bob has chosen to pick up y1 without bad touch: {:?}",
-            action
+            "Bob has chosen to pick up y1 without bad touch: {action:?}"
         ),
-        _ => panic!("Bob has chosen the following action: {:?}", action),
+        _ => panic!("Bob has chosen the following action: {action:?}"),
     }
 }
 
@@ -400,8 +391,8 @@ fn should_not_clue_1s_to_cathy() {
     match action {
         GameAction::Discard {
             player_index: 1, ..
-        } => println!("Bob has chosen to discard his chop: {:?}", action),
-        _ => panic!("Bob has chosen the following action: {:?}", action),
+        } => println!("Bob has chosen to discard his chop: {action:?}"),
+        _ => panic!("Bob has chosen the following action: {action:?}"),
     }
 }
 
@@ -418,10 +409,9 @@ fn should_wait_for_g1_duplicate_to_discard() {
                 },
             ..
         } => println!(
-            "Alice has chosen to clue Cathy's red 2 and calling for Bob's chop to discard: {:?}",
-            action
+            "Alice has chosen to clue Cathy's red 2 and calling for Bob's chop to discard: {action:?}"
         ),
-        _ => panic!("Alice has chosen the following action: {:?}", action),
+        _ => panic!("Alice has chosen the following action: {action:?}"),
     }
 }
 
@@ -433,15 +423,14 @@ fn should_discard_known_trash_before_chop() {
             player_index: 0,
             card_deck_index: 4,
             ..
-        } => println!("Alice has chosen to discard her known trash: {:?}", action),
+        } => println!("Alice has chosen to discard her known trash: {action:?}"),
         GameAction::Discard {
             player_index: 0,
             card_deck_index: 23,
             ..
         } => panic!(
-            "Alice has chosen to discard her chop over safely discarding known trash: {:?}",
-            action
+            "Alice has chosen to discard her chop over safely discarding known trash: {action:?}"
         ),
-        _ => panic!("Alice has chosen the following action: {:?}", action),
+        _ => panic!("Alice has chosen the following action: {action:?}"),
     }
 }

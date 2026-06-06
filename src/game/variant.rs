@@ -16,8 +16,9 @@ pub struct Variant {
     pub card_copies_count_by_id: [u8; MAX_UNIQUE_CARDS_IN_DECK],
     /// Total number of cards (counting all the copies) that compose the deck used in the game
     pub deck_size: u8,
-    /// For each pair of indexes `i` and `j` of the array, the value is a [VariantCardsBitField]
-    /// bitfield of the cards which are touched by a clue type of type `i` with value `j`
+    /// For each pair of indexes `i` and `j` of the array, the value is a
+    /// [`VariantCardsBitField`] bitfield of the cards which are touched by a clue type of type
+    /// `i` with value `j`
     empathy_by_clue: [[VariantCardsBitField; MAX_CLUE_VALUES_PER_TYPE]; MAX_CLUE_TYPES_IN_VARIANT],
     /// The maximum size of each playing stack
     pub stacks_size: u8,
@@ -113,7 +114,7 @@ pub mod test_variants {
     const NO_VARIANT_EMPATHY_BY_CLUE: [[VariantCardsBitField; MAX_CLUE_VALUES_PER_TYPE];
         MAX_CLUE_TYPES_IN_VARIANT] = [
         [
-            0b11111 << 0,  // Red:    R1..R5  (bits  0-4)
+            0b11111,  // Red:    R1..R5  (bits  0-4)
             0b11111 << 5,  // Yellow: Y1..Y5  (bits  5-9)
             0b11111 << 10, // Green:  G1..G5  (bits 10-14)
             0b11111 << 15, // Blue:   B1..B5  (bits 15-19)

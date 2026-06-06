@@ -863,8 +863,8 @@ fn tempo_cost_respects_weight_zero() {
 // inferred-identity masks and verify the resulting BDR.
 
 /// Helper: POV fixture where the player cannot see their own hand
-/// (visible_cards = 0).  `knowledge` is taken by value so callers can set
-/// own_hand and inferred_identities before passing it in.
+/// (`visible_cards` = 0).  `knowledge` is taken by value so callers can set
+/// `own_hand` and `inferred_identities` before passing it in.
 struct OwnHandPOV {
     knowledge: PlayerKnowledge,
     team_knowledge: TeamKnowledge,

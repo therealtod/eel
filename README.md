@@ -85,7 +85,7 @@ A different convention system (e.g. Referential Sieve) would define its own prio
 | `DelayedPlayClue`                        | Give a clue for a card playable after intervening plays        |
 | `SimplePrompt`                           | A clue that prompts a player to play their oldest touched card |
 | `SimpleFinesse`                          | A clue that finesses a player's newest unclued card            |
-| `ColorCriticalSave` / `RankCriticalSave` | Save a critical (last-copy) card on chop                       |
+| `COLOR_CRITICAL_SAVE` / `RANK_CRITICAL_SAVE` | Save a critical (last-copy) card on chop                       |
 | `FiveSave`                               | Save a 5 on chop with a rank-5 clue                            |
 | `TwoSave`                                | Save a 2 on chop with a rank-2 clue                            |
 | `DiscardChop`                            | Discard the oldest unclued card when no better action exists   |

@@ -25,19 +25,19 @@ use crate::game::static_game_data::StaticGameData;
 ///
 /// Per-clue immediate adjustments (applied to every clue action along the search line):
 /// - `empathy_weight * resolved_touched_cards`          — precision bonus for clues that fully resolve touched cards
-/// - `-bad_touch_penalty * bad_touch_count`            — penalty for each touched card with no overlap with still-needed
-///                                                        cards (good-touch principle violation). Each penalty is softened by
-///                                                        `forced_save_bad_touch_relief` when the clue is a forced
-///                                                        Save-Principle save (see `forced_save_bad_touch_relief`).
-/// - `-potential_bad_touch_penalty`                     — flat penalty when a touched-on-receiver still-needed
-///                                                        identity overlaps with an identity the giver likely
-///                                                        already holds (potential duplicate)
+    /// - `-bad_touch_penalty * bad_touch_count` — penalty for each touched card with no overlap with still-needed
+    ///   cards (good-touch principle violation). Each penalty is softened by
+    ///   `forced_save_bad_touch_relief` when the clue is a forced
+    ///   Save-Principle save (see `forced_save_bad_touch_relief`).
+    /// - `-potential_bad_touch_penalty` — flat penalty when a touched-on-receiver still-needed
+    ///   identity overlaps with an identity the giver likely
+    ///   already holds (potential duplicate)
 ///
 /// Per-ply immediate adjustments (applied to every action along the search line):
-/// - `-tempo_cost_weight`                               — flat penalty for any non-play turn (clues, discards,
-///                                                        misplays); closes the horizon-arbitrage hole where the
-///                                                        engine pads lines with redundant clues to push discards
-///                                                        past the leaf
+/// - `-tempo_cost_weight` — flat penalty for any non-play turn (clues, discards,
+///   misplays); closes the horizon-arbitrage hole where the
+///   engine pads lines with redundant clues to push discards
+///   past the leaf
 pub struct DefaultEvaluator {
     /// Multiplier for the Hanabi game score term; dominates the total and keeps score progress as the primary objective.
     pub score_weight: f64,
@@ -466,7 +466,7 @@ impl DefaultEvaluator {
                     continue;
                 }
                 let truth_id = truth.card_identity(deck_idx);
-                let is_critical = truth_id.map_or(false, |id| (1u64 << id) & critical_mask != 0);
+                let is_critical = truth_id.is_some_and(|id| (1u64 << id) & critical_mask != 0);
                 run.push((pov.is_touched(deck_idx), is_critical, truth_id.is_some()));
             }
 
@@ -495,7 +495,7 @@ impl DefaultEvaluator {
                     continue;
                 }
                 if is_critical {
-                    let threat = 1.0 / (1.0 + rank as f64 + 4.0 * (buffer + touched_shield) as f64);
+                    let threat = 1.0 / (1.0 + f64::from(rank) + 4.0 * f64::from(buffer + touched_shield));
                     total += threat;
                 }
                 // Unknown-identity cards contribute no threat here (probabilistic risk is
@@ -539,6 +539,7 @@ impl DefaultEvaluator {
     /// For each clued card, a player who knows exactly one identity (popcount=1) contributes
     /// `max_identities - 1` to the sum; a card with all identities open contributes 0.
     /// Higher is better — it means clues have conveyed more precise information.
+    #[allow(clippy::cast_possible_truncation)]
     pub(crate) fn empathy_precision(
         table_state: &TableState,
         static_data: &StaticGameData,
@@ -546,7 +547,7 @@ impl DefaultEvaluator {
     ) -> f64 {
         let num_players = static_data.number_of_players as usize;
         let max_identities =
-            (static_data.variant.number_of_suits as u32) * (static_data.variant.stacks_size as u32);
+            u32::from(static_data.variant.number_of_suits) * u32::from(static_data.variant.stacks_size);
         let mut total = 0f64;
         for p in 0..num_players {
             let pk = team_knowledge.player(p);
@@ -562,7 +563,7 @@ impl DefaultEvaluator {
                     &static_data.variant,
                 );
                 let popcount = combined.count_possibilities();
-                total += (max_identities - popcount.min(max_identities)) as f64;
+                total += f64::from(max_identities - popcount.min(max_identities));
             }
         }
         total
@@ -580,6 +581,7 @@ impl DefaultEvaluator {
     /// even when the receiver's public knowledge appears playable. This guards against
     /// rewarding clues that mislead a player into believing a trash card is a playable —
     /// the receiver's optimistic reading is a misinformation cost, not an asset.
+    #[allow(clippy::cast_possible_truncation)]
     pub(crate) fn known_playable_in_hands(
         table_state: &TableState,
         static_data: &StaticGameData,
@@ -605,11 +607,10 @@ impl DefaultEvaluator {
                 // Detect the misinformation case: searcher knows the truth and it's
                 // unplayable. Skip even if the holder's local knowledge thinks otherwise.
                 let truth_id = truth.card_identity(idx as CardDeckIndex);
-                if let Some(truth_id) = truth_id {
-                    if (1u64 << truth_id) & playable_mask == 0 {
+                if let Some(truth_id) = truth_id
+                    && (1u64 << truth_id) & playable_mask == 0 {
                         continue;
                     }
-                }
                 // Does the holder know (by any priority) that this card is playable?
                 let counts = {
                     // Priority 1: convention signal
@@ -665,6 +666,7 @@ impl DefaultEvaluator {
     /// paying for the parked cards instead of recouping the one-time charge with optimistic
     /// plays elsewhere. Only the searcher-resolvable (truth-visible) cards are counted; an
     /// own-hand card the searcher cannot see contributes nothing.
+    #[allow(clippy::cast_possible_truncation)]
     pub(crate) fn parked_dead_weight(
         table_state: &TableState,
         static_data: &StaticGameData,
@@ -714,6 +716,7 @@ impl DefaultEvaluator {
     /// A fully-unknown card contributes 0; a fully-resolved card contributes near 1.
     /// Uses game-rule empathy from Deck — convention signals and inferred identities are captured
     /// separately by `known_playable_in_hands` and `resolved_card_count`.
+    #[allow(clippy::cast_possible_truncation)]
     pub(crate) fn team_empathy_score(
         static_data: &StaticGameData,
         team_knowledge: &TeamKnowledge,
@@ -721,8 +724,8 @@ impl DefaultEvaluator {
     ) -> f64 {
         let num_players = static_data.number_of_players as usize;
         let max_identities =
-            (static_data.variant.number_of_suits as u32) * (static_data.variant.stacks_size as u32);
-        let inv_max = 1.0 / max_identities as f64;
+            u32::from(static_data.variant.number_of_suits) * u32::from(static_data.variant.stacks_size);
+        let inv_max = 1.0 / f64::from(max_identities);
         let mut total = 0.0f64;
         for p in 0..num_players {
             let pk = team_knowledge.player(p);
@@ -738,7 +741,7 @@ impl DefaultEvaluator {
                 );
                 let popcount = combined.count_possibilities();
                 total +=
-                    max_identities.saturating_sub(popcount.min(max_identities)) as f64 * inv_max;
+                    f64::from(max_identities.saturating_sub(popcount.min(max_identities))) * inv_max;
             }
         }
         total
@@ -769,7 +772,7 @@ impl DefaultEvaluator {
         let critical_mask = Self::critical_mask(table_state, static_data);
 
         let mut demand = 0.0f64;
-        for hand in table_state.hands[..num_players].iter() {
+        for hand in &table_state.hands[..num_players] {
             for &deck_idx in hand.cards() {
                 if (table_state.clue_touched_cards >> deck_idx) & 1 != 0 {
                     continue;
@@ -780,7 +783,7 @@ impl DefaultEvaluator {
                 let playable_overlap = (bits & playable_mask).count_ones();
                 let critical_overlap = (bits & critical_mask).count_ones();
                 demand +=
-                    playable_overlap.max(critical_overlap) as f64 * RECIPROCAL_LUT[possibilities];
+                    f64::from(playable_overlap.max(critical_overlap)) * RECIPROCAL_LUT[possibilities];
             }
         }
         demand
@@ -801,6 +804,7 @@ impl DefaultEvaluator {
     /// Truth comes from the searcher's POV — which sees other players' hands and any
     /// publicly revealed cards. Cards the searcher cannot resolve (freshly-drawn search
     /// cards) contribute 0.
+    #[allow(clippy::cast_possible_truncation)]
     pub(crate) fn misinformation_score(
         static_data: &StaticGameData,
         team_knowledge: &TeamKnowledge,
@@ -856,6 +860,7 @@ impl DefaultEvaluator {
     /// An identity is skipped when: it has only one total copy (terminal); its rank is
     /// the top of the stack; its suit is already past this rank; discarding doesn't drive
     /// remaining copies to exactly 1; or any other hand visibly holds the surviving copy.
+    #[allow(clippy::cast_precision_loss)]
     pub(crate) fn bottom_deck_risk_score(
         discarded_deck_idx: CardDeckIndex,
         table_state: &TableState,
@@ -877,11 +882,11 @@ impl DefaultEvaluator {
             if e == 0 {
                 return 0.0;
             }
-            (e, e.count_ones() as f64)
+            (e, f64::from(e.count_ones()))
         };
         let num_players = static_data.number_of_players as usize;
         let mut visible_ids: VariantCardsBitField = 0;
-        for hand in table_state.hands[..num_players].iter() {
+        for hand in &table_state.hands[..num_players] {
             for &di in hand.cards() {
                 if di == discarded_deck_idx {
                     continue;
@@ -935,6 +940,7 @@ impl DefaultEvaluator {
     /// generators would offer them — i.e. a card matched by either
     /// `BlindPlay` (via `Signal::Play`) or `PlayKnownPlayable` (via combined
     /// inferred ⊆ playable). Delegates to [`Self::card_known_playable`].
+    #[allow(clippy::cast_possible_truncation)]
     pub(crate) fn actor_has_known_playable(
         actor: PlayerIndex,
         table_state: &TableState,
@@ -959,6 +965,7 @@ impl DefaultEvaluator {
     ///
     /// Delegates to [`Self::card_known_playable`] for each card in the player's hand so the
     /// definition of "known playable" is consistent across all evaluator terms.
+    #[allow(clippy::cast_possible_truncation)]
     pub(crate) fn count_known_playable(
         pov: &dyn PlayerPOV,
         playable_mask: VariantCardsBitField,

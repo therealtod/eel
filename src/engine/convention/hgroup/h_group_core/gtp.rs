@@ -44,11 +44,10 @@ fn already_clued_ids_mask(
             continue;
         }
         for &idx in table_state.hands[p].cards() {
-            if table_state.clue_touched_cards & (1u64 << idx) != 0 {
-                if let Some(id) = table_state.deck.get_global_empathy(idx).known_card_id() {
+            if table_state.clue_touched_cards & (1u64 << idx) != 0
+                && let Some(id) = table_state.deck.get_global_empathy(idx).known_card_id() {
                     mask |= 1u64 << id;
                 }
-            }
         }
     }
     mask
@@ -96,11 +95,10 @@ pub fn good_touch_receiver_masks(
         if touched_mask & (1u64 << idx) != 0 {
             continue;
         }
-        if table_state.clue_touched_cards & (1u64 << idx) != 0 {
-            if let Some(id) = table_state.deck.get_global_empathy(idx).known_card_id() {
+        if table_state.clue_touched_cards & (1u64 << idx) != 0
+            && let Some(id) = table_state.deck.get_global_empathy(idx).known_card_id() {
                 already_clued |= 1u64 << id;
             }
-        }
     }
     let good = clue_mask & still_needed & !already_clued;
     if good == 0 {
@@ -143,7 +141,7 @@ pub fn good_touch_receiver_masks(
         let available = good & !consumed;
         if available != 0 {
             result.push((idx, available));
-            if available.count_ones() == 1 {
+            if available.is_power_of_two() {
                 consumed |= available;
             }
         } else if trash_mask != 0 {
@@ -270,7 +268,7 @@ pub(crate) fn count_bad_touches(
             Some(id) => 1u64 << id,
             None => table_state.deck.get_global_empathy(idx).as_bits(),
         };
-        let is_singleton = bits.count_ones() == 1;
+        let is_singleton = bits.is_power_of_two();
         let dup_within_touched = is_singleton && (bits & seen_in_touched) != 0;
         let is_duplicate = bits & already_clued != 0 || dup_within_touched;
         // Dead-trash touches only harm when the receiver can't recognise them as trash.
@@ -334,14 +332,14 @@ pub(crate) fn is_potential_bad_touch(
 
 pub fn is_good_touch_principle_compliant(
     clue: &Clue,
-    clue_receiver_player_index: &PlayerIndex,
+    clue_receiver_player_index: PlayerIndex,
     touched_cards: &[CardDeckIndex],
     player_pov: &dyn PlayerPOV,
 ) -> bool {
     count_bad_touches(
         clue,
         touched_cards,
-        *clue_receiver_player_index,
+        clue_receiver_player_index,
         player_pov,
         player_pov.table_state(),
         player_pov.static_data(),
@@ -363,7 +361,7 @@ mod tests {
 
     // ── count_bad_touches ──────────────────────────────────────────────────
 
-    /// Build a minimal-knowledge truth POV for tests: an empty PlayerKnowledge so
+    /// Build a minimal-knowledge truth POV for tests: an empty `PlayerKnowledge` so
     /// `card_identity` falls back to the deck's public empathy. This matches the
     /// behaviour the old `count_bad_touches` had when it consulted the deck directly.
     fn make_truth_pov<'a>(
@@ -1093,7 +1091,7 @@ mod tests {
             &team_knowledge,
             &table_state,
             &static_data,
-            !0u64 & !(1u64 << 10),
+            !(1u64 << 10),
         );
         assert!(
             !super::is_potential_bad_touch(
@@ -1163,7 +1161,7 @@ mod tests {
             &team_knowledge,
             &table_state,
             &static_data,
-            !0u64 & !(1u64 << 10) & !(1u64 << 11),
+            !(1u64 << 10) & !(1u64 << 11),
         );
         assert_eq!(
             super::count_bad_touches(

@@ -23,7 +23,8 @@ use crate::impl_convention_tech_for_hgroup_clue_tech;
 /// - Every touched card from the leftmost up to and including the actual connecting card is
 ///   currently playable on the stacks (a "prompt chain": the player plays each one in turn,
 ///   eventually reaching the connecting card).
-/// See: https://hanabi.github.io/level-1#the-prompt and https://hanabi.github.io/beginner/prompt
+///
+/// See: <https://hanabi.github.io/level-1#the-prompt> and <https://hanabi.github.io/beginner/prompt>
 pub struct SimplePrompt;
 
 impl SimplePrompt {
@@ -210,7 +211,7 @@ impl ClueTech for SimplePrompt {
             .variant
             .empathy_for_clue(clue)
             .as_bits();
-        if let Some(focus) = get_clue_focus(clue_receiver_index, &touched, &giver_pov) {
+        if let Some(focus) = get_clue_focus(clue_receiver_index, touched, &giver_pov) {
             let num_players = giver_pov.static_data().number_of_players as usize;
             let giver_idx = giver_pov.active_player_index();
             let mask: u64 = (0..total_ids)
@@ -281,7 +282,7 @@ mod tests {
 
         for &(player, deck_idx, _) in cards {
             table_state.active_player_index = player;
-            table_state.update_with_draw_action(deck_idx as u8);
+            table_state.update_with_draw_action(deck_idx);
         }
         table_state.active_player_index = 0;
 
@@ -483,7 +484,7 @@ mod tests {
     // ── knowledge_updates ──────────────────────────────────────────────────────
 
     /// Clue receiver (player 0) has R3 as focus (1-away). Player 1 has R2 touched and unknown.
-    /// knowledge_updates should narrow the focus card to all 1-away IDs with a valid prompted player.
+    /// `knowledge_updates` should narrow the focus card to all 1-away IDs with a valid prompted player.
     #[test]
     fn knowledge_updates_receiver_narrows_focus_to_1_away_ids_with_prompted_player() {
         // Stack: R1 played. Player 0 (receiver) has R3 (card 10, focus — touched by this clue).
@@ -532,7 +533,7 @@ mod tests {
         }
     }
 
-    /// Clue receiver gets a NarrowPossibilities update when given a play clue on a 1-away card.
+    /// Clue receiver gets a `NarrowPossibilities` update when given a play clue on a 1-away card.
     #[test]
     fn knowledge_updates_prompted_player_narrows_leftmost_touched_to_connecting_card() {
         let (mut table_state, knowledge, mut team_knowledge, static_data) =
@@ -575,7 +576,7 @@ mod tests {
         }
     }
 
-    /// When the receiver has no touched cards, knowledge_updates returns empty.
+    /// When the receiver has no touched cards, `knowledge_updates` returns empty.
     #[test]
     fn knowledge_updates_returns_empty_when_no_touched_cards() {
         let (table_state, knowledge, team_knowledge, static_data) = setup(

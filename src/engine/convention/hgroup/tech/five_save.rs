@@ -93,9 +93,8 @@ impl ClueTech for FiveSave {
         };
         let giver = snap.table_state.active_player_index;
         let giver_pov = snap.player_pov(giver, observer_pov.static_data());
-        let focus = match get_clue_focus(player_index, touched, &giver_pov) {
-            Some(f) => f,
-            None => return Hypothesis::empty(),
+        let Some(focus) = get_clue_focus(player_index, touched, &giver_pov) else {
+            return Hypothesis::empty();
         };
         let static_data = giver_pov.static_data();
         let total_ids =

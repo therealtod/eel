@@ -22,14 +22,30 @@ pub struct Game {
 }
 
 impl Game {
+    /// Deserialize a [`Game`] from a JSON string.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`serde_json::Error`] if the input is not valid JSON or does not match the
+    /// expected schema.
     pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(json)
     }
 
+    /// Serialize this [`Game`] to a compact JSON string.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`serde_json::Error`] if serialization fails.
     pub fn to_json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string(self)
     }
 
+    /// Serialize this [`Game`] to a pretty-printed JSON string.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`serde_json::Error`] if serialization fails.
     pub fn to_json_pretty(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string_pretty(self)
     }

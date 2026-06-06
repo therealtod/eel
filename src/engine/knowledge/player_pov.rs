@@ -85,6 +85,7 @@ pub trait PlayerPOV {
     /// card is "stuck" awaiting further information.
     ///
     /// An empty hand is not considered locked.
+    #[allow(clippy::cast_possible_truncation)]
     fn is_hand_locked(&self) -> bool {
         let mut hand = self.team_knowledge().player(self.player_index()).own_hand;
         if hand == 0 {

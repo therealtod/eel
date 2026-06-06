@@ -29,6 +29,7 @@ impl Deck {
     }
 
     #[cfg(any(test, feature = "test-support"))]
+    #[must_use]
     pub fn of(
         current_size: u8,
         total_copies_per_id: [u8; MAX_UNIQUE_CARDS_IN_DECK],
@@ -55,6 +56,9 @@ impl Deck {
         self.empathy_by_index[deck_card_index as usize]
     }
 
+    /// # Panics
+    /// Panics if the card's identity is unknown when it should be known after narrowing.
+    #[allow(clippy::cast_possible_truncation)]
     pub fn reveal_card(
         &mut self,
         card_position_in_starting_deck: CardDeckIndex,
@@ -94,6 +98,8 @@ impl Deck {
         }
     }
 
+    /// # Panics
+    /// Panics if the narrowed empathy reveals an exactly-known card but its ID cannot be unwrapped.
     pub fn update_positive_empathy(
         &mut self,
         card_position_in_starting_deck: CardDeckIndex,
@@ -111,6 +117,8 @@ impl Deck {
         }
     }
 
+    /// # Panics
+    /// Panics if the excluded empathy reveals an exactly-known card but its ID cannot be unwrapped.
     pub fn update_negative_empathy(
         &mut self,
         card_position_in_starting_deck: CardDeckIndex,
@@ -177,6 +185,7 @@ pub mod unit_test_constants {
         }
 
         impl NoVarCards {
+            #[must_use]
             pub fn as_variant_card_id(&self) -> VariantCardId {
                 *self as VariantCardId
             }
@@ -232,7 +241,7 @@ mod tests {
 
         deck.decrement_size(3);
 
-        assert_eq!(47, deck.current_size)
+        assert_eq!(47, deck.current_size);
     }
 
     #[test]

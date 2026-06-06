@@ -66,6 +66,11 @@ impl<'a> ReplayRunner<'a> {
     /// Asserts that `options.variant == "No Variant"` and refuses anything else.
     /// Deals the initial hands; the runner is positioned before the first action
     /// (`current_turn() == 1`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ReplayError::UnsupportedVariant`] if the game variant is not "No Variant".
+    #[allow(clippy::cast_possible_truncation)]
     pub fn from_hanablive(
         game: &Game,
         convention_set: &'a dyn ConventionSet,
@@ -73,7 +78,7 @@ impl<'a> ReplayRunner<'a> {
         let variant_name = game.options.as_ref().and_then(|o| o.variant.as_deref());
         if variant_name != Some("No Variant") {
             return Err(ReplayError::UnsupportedVariant(
-                variant_name.map(|s| s.to_string()),
+                variant_name.map(std::string::ToString::to_string),
             ));
         }
 
@@ -139,6 +144,13 @@ impl<'a> ReplayRunner<'a> {
 
     /// Apply the next recorded action. Errors if the cursor is past the end or the
     /// action is malformed.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ReplayError::PastEnd`] if the cursor is beyond the last action.
+    /// Returns [`ReplayError::InvalidTarget`] if the action targets a non-existent card.
+    /// Returns [`ReplayError::MalformedClue`] if a clue action is missing a value.
+    #[allow(clippy::cast_possible_truncation)]
     pub fn step(&mut self) -> Result<AppliedAction, ReplayError> {
         if self.cursor >= self.actions.len() {
             return Err(ReplayError::PastEnd);
@@ -228,6 +240,11 @@ impl<'a> ReplayRunner<'a> {
     ///
     /// Errors if `target_turn` exceeds the replay length or is less than
     /// `current_turn()` (backwards seek is not supported; runners are forward-only).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ReplayError::PastEnd`] if `target_turn` is beyond the last turn.
+    /// Returns [`ReplayError::BackwardsStep`] if `target_turn` is before the current turn.
     pub fn step_to_turn(&mut self, target_turn: usize) -> Result<(), ReplayError> {
         if target_turn > self.total_turns() + 1 {
             return Err(ReplayError::PastEnd);
@@ -245,16 +262,19 @@ impl<'a> ReplayRunner<'a> {
     }
 
     /// Total turns recorded (number of filtered, non-EndGame actions).
+    #[must_use]
     pub fn total_turns(&self) -> usize {
         self.actions.len()
     }
 
     /// Current turn number (1-based; equals the number of actions applied so far plus one).
+    #[must_use]
     pub fn current_turn(&self) -> usize {
         self.cursor + 1
     }
 
     /// Ask the engine what it would play at the current position.
+    #[must_use]
     pub fn engine_recommendation(&self, strategy: &TreeActionSelectionStrategy) -> GameAction {
         let active = self.game.table_state.active_player_index;
         let pov = self.game.player_pov(active);
@@ -263,6 +283,7 @@ impl<'a> ReplayRunner<'a> {
 
     /// The action the replay says was taken next (before it has been applied).
     /// Returns `None` if the cursor is past the end.
+    #[must_use]
     pub fn next_recorded_action(&self) -> Option<&Action> {
         self.actions.get(self.cursor)
     }
@@ -270,6 +291,8 @@ impl<'a> ReplayRunner<'a> {
     /// Convert the next recorded action to a `GameAction` using the current
     /// hand state to resolve touched cards for clues.
     /// Returns `None` if the cursor is past the end or the action is malformed.
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub fn next_recorded_as_game_action(&self) -> Option<GameAction> {
         let action = self.actions.get(self.cursor)?;
         let turn = self.game.table_state.current_turn;
@@ -324,6 +347,7 @@ impl<'a> ReplayRunner<'a> {
 
     // ── private helpers ───────────────────────────────────────────────────────
 
+    #[allow(clippy::cast_possible_truncation)]
     fn deal_initial_hands(&mut self, num_players: usize, hand_size: usize) {
         for player in 0..num_players {
             self.game.table_state.active_player_index = player;
@@ -364,11 +388,13 @@ impl<'a> ReplayRunner<'a> {
 }
 
 /// Return the hand size for a given player count (5 for ≤3 players, 4 otherwise).
+#[must_use]
 pub fn hand_size_for(num_players: u8) -> usize {
     if num_players <= 3 { 5 } else { 4 }
 }
 
 /// Convert an internal `VariantCardId` to the hanab.live `Card` representation.
+#[must_use]
 pub fn variant_card_id_to_hanablive(id: VariantCardId, static_data: &StaticGameData) -> Card {
     let suit_index = id / static_data.variant.stacks_size as usize;
     let rank = static_data.variant.rank_of(id);
@@ -398,10 +424,9 @@ mod tests {
             ],
             cards,
         )
-        .with_options({
-            let mut opts = GameOptions::default();
-            opts.variant = Some("No Variant".to_string());
-            opts
+        .with_options(GameOptions {
+            variant: Some("No Variant".to_string()),
+            ..Default::default()
         });
         for (action_type, target, value) in actions {
             match action_type {
@@ -415,14 +440,14 @@ mod tests {
         builder.finish()
     }
 
-    /// Minimal ordered NO_VARIANT deck (all cards in canonical order): R1 R1 R1 … P5.
+    /// Minimal ordered `NO_VARIANT` deck (all cards in canonical order): R1 R1 R1 … P5.
     fn ordered_deck() -> Vec<(usize, u8)> {
         let mut deck = Vec::new();
         for suit in 0..5usize {
             for rank in 1u8..=5 {
                 let copies: u8 = match rank {
                     1 => 3,
-                    2 | 3 | 4 => 2,
+                    2..=4 => 2,
                     5 => 1,
                     _ => unreachable!(),
                 };
@@ -474,10 +499,9 @@ mod tests {
             deck,
         )
         .finish();
-        game.options = Some({
-            let mut o = GameOptions::default();
-            o.variant = Some("6 Suits".to_string());
-            o
+        game.options = Some(GameOptions {
+            variant: Some("6 Suits".to_string()),
+            ..Default::default()
         });
         let conv = HGroupConventionSet::for_level(HGroupLevel::One, &NO_VARIANT);
         assert!(matches!(

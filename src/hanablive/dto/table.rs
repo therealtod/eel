@@ -11,6 +11,7 @@ pub struct Spectator {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(clippy::struct_excessive_bools)]
 pub struct Table {
     pub id: usize,
     pub name: String,

@@ -57,8 +57,7 @@ pub(crate) fn matches_clue(
     let focus_own_gotten = observer_pov
         .card_identity(focus_idx)
         .filter(|_| observer_pov.is_touched(focus_idx))
-        .map(|id| 1u64 << id)
-        .unwrap_or(0);
+        .map_or(0, |id| 1u64 << id);
     let external_gotten = gotten & !focus_own_gotten;
     let mut mask = observer_pov.inferred_identities(focus_idx).as_bits() & clue_mask & playable;
     if require_gotten {
@@ -82,9 +81,8 @@ pub(crate) fn clue_knowledge_updates(
     };
     let giver = snap.table_state.active_player_index;
     let giver_pov = snap.player_pov(giver, observer_pov.static_data());
-    let focus = match get_clue_focus(player_index, touched, &giver_pov) {
-        Some(f) => f,
-        None => return Hypothesis::empty(),
+    let Some(focus) = get_clue_focus(player_index, touched, &giver_pov) else {
+        return Hypothesis::empty();
     };
     let static_data = giver_pov.static_data();
     let total_ids =

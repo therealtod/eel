@@ -6,7 +6,7 @@ use crate::game::state::PlayerIndex;
 
 /// Hypotheses emitted by a tech for a single observed action.
 ///
-/// Most techs emit 0 or 1 hypothesis (the common path). Techs like DelayedPlayClue
+/// Most techs emit 0 or 1 hypothesis (the common path). Techs like `DelayedPlayClue`
 /// that fan out into per-connecting-card sub-alternatives emit several. Inline
 /// capacity 1 keeps the common case allocation-free.
 pub type HypothesisSet = SmallVec<[Hypothesis; 1]>;
@@ -77,12 +77,12 @@ pub struct Hypothesis {
     ///
     /// - `None` (default): cohort-wide drop on confirm — every sibling in the
     ///   cohort is removed. This preserves the original framework behavior used
-    ///   by SimpleFinesse (a blind-play refutes Direct/Save siblings wholesale).
+    ///   by `SimpleFinesse` (a blind-play refutes Direct/Save siblings wholesale).
     /// - `Some(group)`: only siblings sharing the same `alt_group` are removed.
     ///   Used when a tech emits multiple mutually-exclusive sub-alternatives that
     ///   should refute each other on confirmation but should **not** disturb
-    ///   sibling techs' interpretations (e.g. DelayedPlayClue's per-connecting-id
-    ///   sub-hypotheses must not eliminate DirectPlayClue's interpretation).
+    ///   sibling techs' interpretations (e.g. `DelayedPlayClue`'s per-connecting-id
+    ///   sub-hypotheses must not eliminate `DirectPlayClue`'s interpretation).
     pub alt_group: Option<AltGroupKey>,
 }
 
@@ -168,13 +168,14 @@ pub enum PendingTrigger {
         /// Optional identity gate. When `Some(id)`, confirmation additionally
         /// requires the revealed identity of the played card to equal `id`; a
         /// mismatch rejects the hypothesis. When `None`, only the deck-index
-        /// match is checked (legacy behavior used by SimpleFinesse).
+        /// match is checked (legacy behavior used by `SimpleFinesse`).
         expected_identity: Option<VariantCardId>,
     },
 }
 
 impl PendingTrigger {
     /// Convenience constructor: blind-play trigger with no identity gate.
+    #[must_use]
     pub fn blind_play(player: PlayerIndex, expected_card: CardDeckIndex) -> Self {
         Self::BlindPlay {
             player,

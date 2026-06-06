@@ -2,6 +2,7 @@ use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(clippy::struct_excessive_bools)]
 pub struct VariantMetadata {
     pub id: usize,
     #[serde(rename = "newID")]

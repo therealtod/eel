@@ -10,7 +10,19 @@ pub struct HttpClient {
     cookie: Arc<Mutex<Option<String>>>,
 }
 
+impl Default for HttpClient {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HttpClient {
+    /// Create a new HTTP client.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reqwest client builder fails to build.
+    #[must_use]
     pub fn new() -> Self {
         let client = Client::builder()
             .user_agent("eel-bot")
@@ -23,6 +35,12 @@ impl HttpClient {
         }
     }
 
+    /// Log in to hanab.live and store the session cookie.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Http`] if the request fails, or [`Error::LoginFailed`] if the server
+    /// returns a non-success status.
     pub async fn login(&self, username: &str, password: &str) -> Result<(), Error> {
         let url = format!("https://{HOSTNAME}{LOGIN_PATH}");
         let body = format!(

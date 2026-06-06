@@ -13,10 +13,10 @@ use crate::game::static_game_data::StaticGameData;
 /// position — i.e. the team could clue it to be played, now or via a connecting chain. This
 /// unifies the four play clue techs by the precondition they all share:
 ///
-/// - **DirectPlayClue** — the identity is immediately playable on the stacks (`away_value == 0`).
-/// - **DelayedPlayClue / SimplePrompt** — the focus is `n`-away and the connecting cards down to
+/// - **`DirectPlayClue`** — the identity is immediately playable on the stacks (`away_value == 0`).
+/// - **`DelayedPlayClue` / `SimplePrompt`** — the focus is `n`-away and the connecting cards down to
 ///   the stack are present (clued / known) in some hand.
-/// - **SimpleFinesse** — the focus is 1-away and the connecting card sits unclued on a teammate's
+/// - **`SimpleFinesse`** — the focus is 1-away and the connecting card sits unclued on a teammate's
 ///   finesse position.
 ///
 /// Every one of them requires each connecting card between the stack top and `card_id` to be
@@ -46,7 +46,7 @@ pub fn is_play_clue_focusable(card_id: VariantCardId, pov: &dyn PlayerPOV) -> bo
     })
 }
 
-/// https://hanabi.github.io/docs/beginner/#the-save-principle  (Save Principle)
+/// <https://hanabi.github.io/docs/beginner/#the-save-principle>  (Save Principle)
 ///
 /// The Save Principle says the team must protect from being discarded every card it cannot
 /// afford to lose. Its protected set has three parts:
@@ -196,7 +196,7 @@ mod tests {
 
     /// Build a one-card chop for player 1 (receiver) visible to player 0 (observer), optionally
     /// discarding `discard_id` copies first to manipulate criticality. Returns a ready POV plus
-    /// the owning table_state/knowledge so the caller can keep them alive.
+    /// the owning `table_state/knowledge` so the caller can keep them alive.
     fn receiver_chop_pov(
         chop_mask: u64,
         extra: &[(u8, u64)],

@@ -30,6 +30,7 @@ impl GameBuilder {
     ///
     /// * `players` – player names (in seat order).
     /// * `deck` – the full ordered deck as `(suit_index, rank)` pairs, oldest card first.
+    #[must_use]
     pub fn new(players: Vec<String>, deck: Vec<Card>) -> Self {
         Self {
             players,
@@ -41,12 +42,14 @@ impl GameBuilder {
     }
 
     /// Attach a `GameOptions` (e.g. the variant name).
+    #[must_use]
     pub fn with_options(mut self, options: GameOptions) -> Self {
         self.options = Some(options);
         self
     }
 
     /// Attach an RNG seed string for hanab.live.
+    #[must_use]
     pub fn with_seed(mut self, seed: impl Into<String>) -> Self {
         self.seed = Some(seed.into());
         self
@@ -73,7 +76,7 @@ impl GameBuilder {
     }
 
     /// Record a colour clue. `target_player` is the seat index of the clue recipient;
-    /// `suit_index` is 0-based (0=Red, 1=Yellow, 2=Green, 3=Blue, 4=Purple for NO_VARIANT).
+    /// `suit_index` is 0-based (0=Red, 1=Yellow, 2=Green, 3=Blue, 4=Purple for `NO_VARIANT`).
     pub fn push_color_clue(&mut self, target_player: usize, suit_index: usize) {
         self.actions.push(Action {
             action_type: ActionType::ColorClue,
@@ -93,6 +96,7 @@ impl GameBuilder {
     }
 
     /// Consume the builder and produce the final [`Game`].
+    #[must_use]
     pub fn finish(self) -> Game {
         Game {
             players: self.players,

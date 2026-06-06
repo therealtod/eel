@@ -124,9 +124,8 @@ impl ClueTech for TwoSave {
         let giver = snap.table_state.active_player_index;
         let giver_pov = snap.player_pov(giver, player_pov.static_data());
         let receiver = player_index;
-        let focus = match get_clue_focus(receiver, touched, &giver_pov) {
-            Some(f) => f,
-            None => return Hypothesis::empty(),
+        let Some(focus) = get_clue_focus(receiver, touched, &giver_pov) else {
+            return Hypothesis::empty();
         };
         let static_data = giver_pov.static_data();
         let total_ids =

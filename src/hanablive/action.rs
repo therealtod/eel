@@ -34,8 +34,7 @@ impl<'de> serde::Deserialize<'de> for ActionType {
             3 => Ok(ActionType::RankClue),
             4 => Ok(ActionType::EndGame),
             _ => Err(serde::de::Error::custom(format!(
-                "Invalid action type: {}",
-                value
+                "Invalid action type: {value}"
             ))),
         }
     }

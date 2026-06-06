@@ -11,10 +11,11 @@ use crate::impl_convention_tech_for_play_tech;
 /// Trivial technique: play a card that is known to be playable from the active player's POV.
 ///
 /// Only fires for empathy-playable cards (all remaining possibilities are playable). Untouched
-/// cards that carry a `Signal::Play` are BlindPlay territory and are excluded here.
+/// cards that carry a `Signal::Play` are `BlindPlay` territory and are excluded here.
 pub struct PlayKnownPlayable;
 
 impl PlayTech for PlayKnownPlayable {
+    #[allow(clippy::cast_possible_truncation)]
     fn play_game_actions(&self, active_player_pov: &dyn PlayerPOV) -> Vec<GameAction> {
         let player_index = active_player_pov.active_player_index();
         let knowledge = active_player_pov.team_knowledge().player(player_index);

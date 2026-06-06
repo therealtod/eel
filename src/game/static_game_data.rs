@@ -10,6 +10,7 @@ pub struct StaticGameData {
     pub variant: Variant,
 }
 
+#[allow(clippy::similar_names)]
 impl StaticGameData {
     /// Returns true if `player_a_index` takes their turn before `player_b_index` in the circular
     /// order starting after the active player.

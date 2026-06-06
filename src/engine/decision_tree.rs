@@ -63,12 +63,12 @@ fn fmt_action(action: &GameAction, f: &mut std::fmt::Formatter<'_>) -> std::fmt:
             player_index,
             card_deck_index,
             ..
-        } => write!(f, "P{} Play deck#{}", player_index, card_deck_index),
+        } => write!(f, "P{player_index} Play deck#{card_deck_index}"),
         GameAction::Discard {
             player_index,
             card_deck_index,
             ..
-        } => write!(f, "P{} Discard deck#{}", player_index, card_deck_index),
+        } => write!(f, "P{player_index} Discard deck#{card_deck_index}"),
         GameAction::Clue {
             player_index,
             clue: Clue {
@@ -94,7 +94,7 @@ fn fmt_action(action: &GameAction, f: &mut std::fmt::Formatter<'_>) -> std::fmt:
         GameAction::Draw {
             player_index,
             card_deck_index,
-        } => write!(f, "P{} Draw deck#{}", player_index, card_deck_index),
+        } => write!(f, "P{player_index} Draw deck#{card_deck_index}"),
     }
 }
 

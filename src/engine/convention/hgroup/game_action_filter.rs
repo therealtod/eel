@@ -42,7 +42,7 @@ impl GameActionFilter {
                 if pov.as_player_pov(*player_index).is_hand_locked() {
                     return true;
                 }
-                is_minimal_clue_value_compliant(clue, player_index, touched_card_deck_indexes, pov)
+                is_minimal_clue_value_compliant(clue, *player_index, touched_card_deck_indexes, pov)
             }),
         }
     }

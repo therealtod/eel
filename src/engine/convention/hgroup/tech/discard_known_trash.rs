@@ -96,7 +96,7 @@ mod tests {
             k
         }
 
-        /// Play R1 to the stacks so that any card with empathy R1_MASK becomes known trash.
+        /// Play R1 to the stacks so that any card with empathy `R1_MASK` becomes known trash.
         fn play_r1(
             table_state: &mut crate::game::state::table_state::TableState,
             static_data: &crate::game::static_game_data::StaticGameData,

@@ -6,7 +6,7 @@ use crate::engine::convention::hgroup::h_group_core::{
 };
 use crate::engine::convention::hgroup::tech::blind_play::BlindPlay;
 use crate::engine::convention::hgroup::tech::clue_burn::ClueBurn;
-use crate::engine::convention::hgroup::tech::critical_save::{ColorCriticalSave, RankCriticalSave};
+use crate::engine::convention::hgroup::tech::critical_save::{COLOR_CRITICAL_SAVE, RANK_CRITICAL_SAVE};
 use crate::engine::convention::hgroup::tech::delayed_play_clue::DelayedPlayClue;
 use crate::engine::convention::hgroup::tech::direct_play_clue::DirectPlayClue;
 use crate::engine::convention::hgroup::tech::discard_chop::DiscardChop;
@@ -56,8 +56,8 @@ impl HGroupLevel {
                 Box::new(TempoClue),
                 Box::new(SimplePrompt),
                 Box::new(SimpleFinesse),
-                Box::new(ColorCriticalSave),
-                Box::new(RankCriticalSave),
+                Box::new(COLOR_CRITICAL_SAVE),
+                Box::new(RANK_CRITICAL_SAVE),
                 Box::new(FiveSave),
                 Box::new(TwoSave),
                 Box::new(DiscardKnownTrash),
@@ -144,7 +144,7 @@ impl ConventionSet for HGroupConventionSet {
                         ..
                     } => is_good_touch_principle_compliant(
                         clue,
-                        player_index,
+                        *player_index,
                         touched_card_deck_indexes,
                         pov,
                     ),

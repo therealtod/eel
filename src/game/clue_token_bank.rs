@@ -41,6 +41,8 @@ impl ClueTokenBank {
         }
     }
 
+    /// # Errors
+    /// Returns `GameError::NoClueTokens` if no clue tokens are available.
     pub fn use_token(&mut self) -> Result<(), GameError> {
         if self.whole_clue_tokens_count() < 1 {
             return Err(GameError::NoClueTokens);

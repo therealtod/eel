@@ -17,6 +17,7 @@ use crate::impl_convention_tech_for_play_tech;
 pub struct BlindPlay;
 
 impl PlayTech for BlindPlay {
+    #[allow(clippy::cast_possible_truncation)]
     fn play_game_actions(&self, pov: &dyn PlayerPOV) -> Vec<GameAction> {
         let player_index = pov.active_player_index();
         let knowledge = pov.team_knowledge().player(player_index);
@@ -48,10 +49,10 @@ impl PlayTech for BlindPlay {
         observer_pov: &dyn PlayerPOV,
     ) -> bool {
         let knowledge = observer_pov.team_knowledge().player(player_index);
-        let has_play_signal = knowledge.signals[card as usize]
+        
+        knowledge.signals[card as usize]
             .iter()
-            .any(|s| matches!(s, Signal::Play { .. }));
-        has_play_signal
+            .any(|s| matches!(s, Signal::Play { .. }))
     }
 
     fn play_knowledge_updates(

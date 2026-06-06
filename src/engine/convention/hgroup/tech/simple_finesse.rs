@@ -15,13 +15,13 @@ use crate::impl_convention_tech_for_hgroup_clue_tech;
 
 /// Give a clue whose focus card is exactly 1 step away from playable, where the connecting card
 /// sits on the finesse position (first unclued slot) of a teammate who plays before the target.
-/// See https://hanabi.github.io/level-1#the-finesse and https://hanabi.github.io/beginner/finesse
+/// See <https://hanabi.github.io/level-1#the-finesse> and <https://hanabi.github.io/beginner/finesse>
 ///
 /// **From the receiver's POV** the finesse is one of several possible interpretations of the
 /// clue (it can also be a direct play, a critical save, etc). This tech contributes a single
 /// provisional hypothesis pinning the focus to the 1-away identity, with a [`PendingTrigger`]
 /// that confirms when the would-be finessed teammate blind-plays. The dispatcher composes
-/// this with hypotheses from sibling techs (DelayedPlayClue, CriticalSave, …); the receiver's
+/// this with hypotheses from sibling techs (`DelayedPlayClue`, `CriticalSave`, …); the receiver's
 /// effective focus mask is their union, and confirmation prunes the siblings.
 pub struct SimpleFinesse;
 
@@ -29,7 +29,7 @@ impl SimpleFinesse {
     /// Core finesse detection: checks if giving a clue about `focus_card` to `target` constitutes
     /// a valid finesse. Returns true if:
     ///   1. `focus_card` is exactly 1-away from playable, AND
-    ///   2. The prerequisite card (focus_card - 1) sits on the finesse position of a teammate
+    ///   2. The prerequisite card (`focus_card` - 1) sits on the finesse position of a teammate
     ///      who plays before `target`.
     fn is_finesse_setup(focus_card: VariantCardId, target: usize, pov: &dyn PlayerPOV) -> bool {
         let active = pov.active_player_index();
@@ -134,9 +134,8 @@ impl ClueTech for SimpleFinesse {
         let giver_pov = snap.player_pov(giver, observer_pov.static_data());
         let observer = observer_pov.player_index();
 
-        let focus = match get_clue_focus(clue_receiver_index, touched, &giver_pov) {
-            Some(f) => f,
-            None => return Hypothesis::empty(),
+        let Some(focus) = get_clue_focus(clue_receiver_index, touched, &giver_pov) else {
+            return Hypothesis::empty();
         };
 
         // ── Receiver branch ────────────────────────────────────────────────────
@@ -257,7 +256,7 @@ mod tests {
 
     /// Alice (player 0) gives a clue to Cathy (player 2) whose focus is R3 (1-away).
     /// Bob (player 1) has R2 on his finesse position. Observer is Bob: he should receive
-    /// an AddSignal::Play on his finesse position card (deck index 10).
+    /// an `AddSignal::Play` on his finesse position card (deck index 10).
     #[test]
     fn knowledge_updates_finesse_position_player_gets_play_signal() {
         let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;

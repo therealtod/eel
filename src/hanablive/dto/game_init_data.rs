@@ -4,6 +4,7 @@ use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(clippy::struct_excessive_bools)]
 pub struct GameInitData {
     #[serde(rename = "tableID")]
     pub table_id: usize,

@@ -267,13 +267,13 @@ impl PlayerKnowledge {
     /// - **Confirm**: behavior depends on the hypothesis's `alt_group`:
     ///   - `None` (cohort-wide): bake the hypothesis's narrowings into baseline,
     ///     then drop **all** sibling hypotheses in the same cohort. Used by
-    ///     SimpleFinesse — a blind-play refutes Direct/Save siblings outright.
+    ///     `SimpleFinesse` — a blind-play refutes Direct/Save siblings outright.
     ///   - `Some(group)`: keep the confirmed hypothesis in the cohort with its
     ///     trigger cleared (so its mask continues to contribute to the cohort
     ///     union), and drop **only** sibling hypotheses sharing the same
     ///     `(cohort_id, alt_group)`. The hypothesis is NOT baked into baseline,
     ///     because doing so would collide with unconditional siblings outside
-    ///     the alt_group (e.g. DirectPlayClue's mask), producing an empty
+    ///     the `alt_group` (e.g. `DirectPlayClue`'s mask), producing an empty
     ///     effective intersection.
     /// - **Reject**: the hypothesis is dropped from the list. Sibling hypotheses
     ///   in the same cohort remain (the receiver's superposition narrows by one
@@ -360,7 +360,7 @@ impl PlayerKnowledge {
                         rejected_ids.push(id);
                     }
                 }
-                _ => {}
+                PendingTrigger::BlindPlay { .. } => {}
             }
         }
         // Identify cohorts where all tier-0 hypotheses were just rejected —
@@ -405,14 +405,13 @@ impl PlayerKnowledge {
                 if keep_with_trigger_cleared.contains(&h.id) {
                     return true;
                 }
-                if let Some(hg) = h.alt_group {
-                    if confirmed_groups
+                if let Some(hg) = h.alt_group
+                    && confirmed_groups
                         .iter()
                         .any(|(c, g)| *c == h.cohort_id && *g == hg)
                     {
                         return false;
                     }
-                }
                 true
             });
         }
@@ -502,12 +501,10 @@ impl PlayerKnowledge {
                         card_deck_index: idx,
                         mask: m,
                     } = u
-                    {
-                        if *idx == card_deck_index {
+                        && *idx == card_deck_index {
                             cohort_union |= *m;
                             cohort_touches_card = true;
                         }
-                    }
                 }
             }
             if cohort_touches_card {
@@ -693,7 +690,7 @@ impl PlayerKnowledge {
             return constrained;
         }
         let baseline_bits =
-            self.inferred_identities[card_deck_index as usize].map_or(u64::MAX, |m| m.as_bits());
+            self.inferred_identities[card_deck_index as usize].map_or(u64::MAX, crate::game::card::card_identity_mask::CardIdentityMask::as_bits);
         let safe = baseline_bits & observable;
         if safe != 0 {
             return CardIdentityMask::from_bits(safe);
@@ -757,6 +754,7 @@ impl PlayerKnowledge {
     /// about how many copies remain (e.g. own-hand card-count elimination across multiple
     /// own cards) use the counts rather than the collapsed mask.
     #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub fn observable_remaining_copies(
         &self,
         visible_cards: DeckCardsBitField,
@@ -794,7 +792,7 @@ impl PlayerKnowledge {
             for rank_idx in 0..stacks_size {
                 let card_id = suit * stacks_size + rank_idx;
                 let total = variant.card_copies_count_by_id[card_id];
-                let played = if rank_idx < stack_top { 1u8 } else { 0u8 };
+                let played = u8::from(rank_idx < stack_top);
                 let discarded = table_state.discard_pile.copies_of(card_id as VariantCardId);
                 let accounted = played + discarded + seen_in_others[card_id];
                 remaining[card_id] = total.saturating_sub(accounted);
@@ -805,6 +803,7 @@ impl PlayerKnowledge {
 }
 
 #[cfg(test)]
+#[must_use]
 pub fn knowledge_with_visible(player_index: usize, visible: &[(u8, u64)]) -> PlayerKnowledge {
     let mut k = PlayerKnowledge::new(player_index);
     for &(idx, mask) in visible {
@@ -815,6 +814,7 @@ pub fn knowledge_with_visible(player_index: usize, visible: &[(u8, u64)]) -> Pla
 }
 
 #[cfg(any(test, feature = "test-support"))]
+#[must_use]
 pub fn knowledge_for_hand(cards: &[u8]) -> PlayerKnowledge {
     let mut k = PlayerKnowledge::new(0);
     for &idx in cards {
@@ -824,6 +824,7 @@ pub fn knowledge_for_hand(cards: &[u8]) -> PlayerKnowledge {
 }
 
 #[cfg(test)]
+#[must_use]
 pub fn knowledge_with_empathy(
     card_deck_index: CardDeckIndex,
     possible_identities: VariantCardsBitField,
@@ -843,12 +844,12 @@ mod tests {
     /// §6.2 — rejecting the sole tier-0 hypothesis promotes the tier-1 fallback.
     ///
     /// Setup: card 5 has two hypotheses in cohort 0:
-    ///   tier-0: narrows to mask_a, triggered by player 1 blind-playing card 3
-    ///   tier-1: narrows to mask_b, unconditional (fallback)
+    ///   tier-0: narrows to `mask_a`, triggered by player 1 blind-playing card 3
+    ///   tier-1: narrows to `mask_b`, unconditional (fallback)
     ///
     /// After player 1 plays card 7 (not card 3) the trigger is rejected.  The tier-0
     /// hypothesis must be removed and the tier-1 fallback promoted to tier-0, so that
-    /// effective_inferred_mask reflects mask_b rather than the unnarrowed baseline.
+    /// `effective_inferred_mask` reflects `mask_b` rather than the unnarrowed baseline.
     #[test]
     fn rejection_promotes_tier1_fallback() {
         let variant = &NO_VARIANT;
@@ -912,7 +913,7 @@ mod tests {
     }
 
     /// A higher-priority tech can demote a still-valid *unconditional* alternative to
-    /// tier-1: e.g. a 2-Save (priority 0) reading `{R2,Y2,G2}` outranks a DirectPlayClue
+    /// tier-1: e.g. a 2-Save (priority 0) reading `{R2,Y2,G2}` outranks a `DirectPlayClue`
     /// (priority 1) reading `{B2,P2}` on the same rank-2 focus. Because the tier-1
     /// hypothesis is unconditional — no trigger could ever promote it — its identities must
     /// still be *accumulated* into the receiver's empathy, not excluded; otherwise the true
@@ -952,14 +953,14 @@ mod tests {
         );
     }
 
-    /// New alt_group semantics: confirmation of a grouped hypothesis prunes only
-    /// same-group siblings, leaves cohort-mate hypotheses outside the alt_group
+    /// New `alt_group` semantics: confirmation of a grouped hypothesis prunes only
+    /// same-group siblings, leaves cohort-mate hypotheses outside the `alt_group`
     /// untouched, and the confirmed hypothesis itself is kept (trigger cleared)
     /// so its mask continues to contribute to the cohort union.
     ///
-    /// Mirrors the DelayedPlayClue scenario: focus is rank-2 of unknown color;
-    /// receiver has three delayed-via-{R,Y,G}-1 sub-hypotheses (alt_group keyed
-    /// on the connecting card) plus an unconditional DirectPlayClue sibling
+    /// Mirrors the `DelayedPlayClue` scenario: focus is rank-2 of unknown color;
+    /// receiver has three delayed-via-{R,Y,G}-1 sub-hypotheses (`alt_group` keyed
+    /// on the connecting card) plus an unconditional `DirectPlayClue` sibling
     /// covering {B2, P2}. When the connecting card plays as R1, only the R-path
     /// confirms; Y and G paths reject; direct survives.
     #[test]
@@ -1098,7 +1099,7 @@ mod tests {
         );
     }
 
-    /// PhantomKeep: when the connecting card is played but its identity is ambiguous
+    /// `PhantomKeep`: when the connecting card is played but its identity is ambiguous
     /// (`played_identity = None`), identity-keyed alt-group siblings must all survive
     /// with triggers cleared — none should be rejected. This is the search-time bug
     /// where phantom plays silently collapsed multi cohorts to {B2, P2} only.

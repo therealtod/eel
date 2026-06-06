@@ -11,12 +11,18 @@ pub struct WebSocketClient {
 }
 
 impl WebSocketClient {
+    /// Connect to the hanab.live WebSocket endpoint.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Request`] if the request builder fails, or [`Error::WebSocket`] if the
+    /// WebSocket handshake fails.
     pub async fn connect(cookie: &str) -> Result<Self, Error> {
         let url = format!("wss://{HOSTNAME}{WEBSOCKET_PATH}");
         debug!("Connecting to WebSocket at {}", url);
 
         let root_store = rustls::RootCertStore {
-            roots: webpki_roots::TLS_SERVER_ROOTS.iter().cloned().collect(),
+            roots: webpki_roots::TLS_SERVER_ROOTS.to_vec(),
         };
 
         let config = rustls::ClientConfig::builder()
@@ -45,12 +51,22 @@ impl WebSocketClient {
         Ok(Self { stream })
     }
 
+    /// Send a text message over the WebSocket.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::WebSocket`] if the send fails.
     pub async fn send(&mut self, message: &str) -> Result<(), Error> {
         debug!("Sending WS message: {}", message);
         self.stream.send(Message::Text(message.into())).await?;
         Ok(())
     }
 
+    /// Send a WebSocket ping frame.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::WebSocket`] if the send fails.
     pub async fn send_ping(&mut self) -> Result<(), Error> {
         self.stream.send(Message::Ping(Vec::new().into())).await?;
         Ok(())
@@ -70,12 +86,11 @@ impl WebSocketClient {
                         return Some(Err(Error::WebSocket(e)));
                     }
                 }
-                Some(Ok(Message::Pong(_))) => {}
                 Some(Ok(Message::Close(_))) => {
                     debug!("WebSocket closed");
                     return None;
                 }
-                Some(Ok(_)) => {}
+                Some(Ok(Message::Pong(_) | _)) => {}
                 Some(Err(e)) => {
                     error!("WebSocket error: {}", e);
                     return Some(Err(Error::WebSocket(e)));

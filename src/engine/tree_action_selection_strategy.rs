@@ -43,7 +43,7 @@ struct PvTable {
 
 impl PvTable {
     fn new(max_depth: usize) -> Self {
-        let rows = (0..=max_depth).map(|d| Vec::with_capacity(d)).collect();
+        let rows = (0..=max_depth).map(Vec::with_capacity).collect();
         PvTable { rows }
     }
 
@@ -177,6 +177,7 @@ impl TreeActionSelectionStrategy {
     /// accumulated `LowLevelStall` bombs paying full tempo with no offset.
     /// `team_empathy_delta_bonus` and `critical_exposure_delta_bonus` remain
     /// un-capped so they continue to rank between competing good clues.
+    #[allow(clippy::cast_possible_truncation)]
     fn immediate_action_bonus(
         action: &GameAction,
         evaluator: &dyn Evaluator,
@@ -347,7 +348,6 @@ impl TreeActionSelectionStrategy {
     /// actor's own hidden cards (e.g. `LowLevelStall` picking "play slot 1") falsely
     /// resolve as known successes, paying out stack advances the actor couldn't
     /// actually predict from her own POV.
-    #[allow(clippy::too_many_arguments)]
     fn simulate_forward(
         state: &KnowledgeAwareGameState,
         static_data: &StaticGameData,
@@ -593,7 +593,6 @@ impl TreeActionSelectionStrategy {
     /// falls through to the static leaf — byte-for-byte the baseline behavior.
     #[cfg(not(feature = "quiescence-search"))]
     #[inline]
-    #[allow(clippy::too_many_arguments)]
     fn quiescence_extend(
         _state: &KnowledgeAwareGameState,
         _static_data: &StaticGameData,
@@ -615,7 +614,6 @@ impl TreeActionSelectionStrategy {
     /// quiet. See [`Self::quiescence_rollout`] for the tail and [`Self::has_uncashed_signalled_play`]
     /// for why the predicate is signal-based rather than the god's-eye `known_playable` term.
     #[cfg(feature = "quiescence-search")]
-    #[allow(clippy::too_many_arguments)]
     fn quiescence_extend(
         state: &KnowledgeAwareGameState,
         static_data: &StaticGameData,
@@ -677,6 +675,7 @@ impl TreeActionSelectionStrategy {
     /// taking a non-`Play` action while this returns true is deferring a guaranteed play, which
     /// the tail must not later re-credit for free (see [`Self::quiescence_rollout`]).
     #[cfg(feature = "quiescence-search")]
+    #[allow(clippy::cast_possible_truncation)]
     fn player_has_uncashed_signalled_play(
         state: &KnowledgeAwareGameState,
         static_data: &StaticGameData,
@@ -690,11 +689,10 @@ impl TreeActionSelectionStrategy {
             let idx = hand.trailing_zeros() as usize;
             hand &= hand - 1;
             // Skip cards the searcher knows are not actually playable (misinformation).
-            if let Some(truth_id) = truth.card_identity(idx as u8) {
-                if (1u64 << truth_id) & playable_mask == 0 {
+            if let Some(truth_id) = truth.card_identity(idx as u8)
+                && (1u64 << truth_id) & playable_mask == 0 {
                     continue;
                 }
-            }
             // Priority 1: convention play signal.
             if pk.signals[idx]
                 .iter()
@@ -764,7 +762,6 @@ impl TreeActionSelectionStrategy {
     /// sub-searches keep the plain static leaf, which bounds cost and prevents nesting a
     /// quiescence rollout inside every inner pick.
     #[cfg(feature = "quiescence-search")]
-    #[allow(clippy::too_many_arguments)]
     fn quiescence_rollout(
         state: &KnowledgeAwareGameState,
         static_data: &StaticGameData,
@@ -915,6 +912,7 @@ impl TreeActionSelectionStrategy {
     /// Sight is gated on `sight.visible_cards()`, so this only ever reorders teammate cards the
     /// observer can physically see; the root player's own hidden hand (no sight) is untouched
     /// and stays optimistic, consistent with [`TruthPovResolver`]'s resolution philosophy.
+    #[allow(clippy::cast_possible_truncation)]
     fn worst_case_symmetric_play(
         state: &KnowledgeAwareGameState,
         static_data: &StaticGameData,
@@ -934,11 +932,10 @@ impl TreeActionSelectionStrategy {
             .as_bits();
         let playable = state.table_state.playable_cards(static_data);
         // If the chosen card itself already strikes, no reordering is needed.
-        if let Some(truth) = sight.card_identity(card_deck_index) {
-            if (1u64 << truth) & playable == 0 {
+        if let Some(truth) = sight.card_identity(card_deck_index)
+            && (1u64 << truth) & playable == 0 {
                 return card_deck_index;
             }
-        }
         // Look for a subjectively-indistinguishable sibling whose true identity is *not*
         // playable — that is the copy the actor could just as easily have grabbed first.
         let mut hand = knowledge.own_hand & visible;
@@ -954,11 +951,10 @@ impl TreeActionSelectionStrategy {
             if sib_empathy != empathy {
                 continue; // distinguishable — the actor would not confuse the two
             }
-            if let Some(truth) = sight.card_identity(idx) {
-                if (1u64 << truth) & playable == 0 {
+            if let Some(truth) = sight.card_identity(idx)
+                && (1u64 << truth) & playable == 0 {
                     return idx;
                 }
-            }
         }
         card_deck_index
     }
@@ -1147,15 +1143,13 @@ impl ActionSelectionStrategy for TreeActionSelectionStrategy {
     ) -> GameAction {
         self.scored_actions(player_pov, convention_set)
             .into_iter()
-            .next()
-            .map(|n| n.action)
-            .unwrap_or_else(|| {
+            .next().map_or_else(|| {
                 player_pov
                     .valid_actions()
                     .into_iter()
                     .next()
                     .expect("no valid actions available for the active player")
-            })
+            }, |n| n.action)
     }
 }
 
@@ -1177,6 +1171,7 @@ impl TreeActionSelectionStrategy {
     /// `&mut state` while the truth POV borrows the same fields.
     ///
     /// [`apply`]: KnowledgeAwareGameState::apply
+    #[allow(clippy::cast_possible_truncation)]
     pub fn replay_leaf_breakdown(
         &self,
         pov: &dyn PlayerPOV,
@@ -1222,6 +1217,7 @@ impl TreeActionSelectionStrategy {
 
     /// Score every root candidate and return the list, sorted best-first.
     /// Useful for debugging: lets callers inspect why the engine chose a particular action.
+    #[allow(clippy::cast_possible_truncation)]
     pub fn scored_actions(
         &self,
         player_pov: &dyn PlayerPOV,

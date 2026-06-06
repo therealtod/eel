@@ -1,4 +1,4 @@
-/// Self-play runner for evaluating DefaultEvaluator parameter configurations.
+/// Self-play runner for evaluating `DefaultEvaluator` parameter configurations.
 ///
 /// Runs N complete Hanabi games using the H-Group convention set, reports score statistics.
 /// Each game uses a fresh shuffled deck; the bot operates in hidden-information mode (each
@@ -65,13 +65,13 @@ struct Args {
     log_failures_below: Option<u8>,
 }
 
-/// Produce a shuffled list of all card IDs for NO_VARIANT (50 cards).
+/// Produce a shuffled list of all card IDs for `NO_VARIANT` (50 cards).
 fn shuffled_deck(rng: &mut SmallRng) -> Vec<VariantCardId> {
     let mut deck: Vec<VariantCardId> = NO_VARIANT
         .card_copies_count_by_id
         .iter()
         .enumerate()
-        .flat_map(|(id, &copies)| std::iter::repeat(id as VariantCardId).take(copies as usize))
+        .flat_map(|(id, &copies)| std::iter::repeat_n(id as VariantCardId, copies as usize))
         .collect();
     deck.shuffle(rng);
     deck
@@ -81,6 +81,9 @@ fn shuffled_deck(rng: &mut SmallRng) -> Vec<VariantCardId> {
 ///
 /// When `log_failures_below` is `Some(t)` and the final score < `t`, the game is serialised
 /// to `logs/<score>/game_<game_num>.json` in hanab.live replay format.
+#[allow(
+    clippy::cast_precision_loss,
+)]
 fn run_game(
     static_data: &StaticGameData,
     convention_set: &dyn ConventionSet,
@@ -103,11 +106,9 @@ fn run_game(
     let logging_enabled = log_failures_below.is_some();
     let mut builder = if logging_enabled {
         Some(
-            GameBuilder::new(player_names, hanablive_deck).with_options({
-                let mut opts = GameOptions::default();
-                opts.variant = Some("No Variant".to_string());
-                opts
-            }),
+            GameBuilder::new(player_names, hanablive_deck).with_options(
+                GameOptions { variant: Some("No Variant".to_string()), ..Default::default() }
+            ),
         )
     } else {
         None
@@ -173,31 +174,33 @@ fn run_game(
 
     let score = runner.game.table_state.score(&static_data.variant);
 
-    if let Some(threshold) = log_failures_below {
-        if score < threshold {
-            if let Some(b) = builder {
+    if let Some(threshold) = log_failures_below
+        && score < threshold
+            && let Some(b) = builder {
                 let replay = b.finish();
                 let dir = PathBuf::from("logs").join(score.to_string());
                 if let Err(e) = fs::create_dir_all(&dir) {
-                    eprintln!("warn: could not create log directory {dir:?}: {e}");
+                    eprintln!("warn: could not create log directory {}: {e}", dir.display());
                 } else {
                     let path = dir.join(format!("game_{game_num}.json"));
                     match replay.to_json_pretty() {
                         Ok(json) => {
                             if let Err(e) = fs::write(&path, &json) {
-                                eprintln!("warn: could not write replay to {path:?}: {e}");
+                                eprintln!("warn: could not write replay to {}: {e}", path.display());
                             }
                         }
                         Err(e) => eprintln!("warn: could not serialise replay: {e}"),
                     }
                 }
             }
-        }
-    }
 
     score
 }
 
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+)]
 fn main() {
     let args = Args::parse();
 
@@ -248,11 +251,11 @@ fn main() {
 
     // Summary statistics
     let n = scores.len() as f64;
-    let mean = scores.iter().map(|&s| s as f64).sum::<f64>() / n;
+    let mean = scores.iter().map(|&s| f64::from(s)).sum::<f64>() / n;
     let variance = scores
         .iter()
         .map(|&s| {
-            let d = s as f64 - mean;
+            let d = f64::from(s) - mean;
             d * d
         })
         .sum::<f64>()
@@ -261,6 +264,7 @@ fn main() {
     let min = *scores.iter().min().unwrap();
     let max = *scores.iter().max().unwrap();
 
+    #[allow(clippy::naive_bytecount)]
     let perfect = scores.iter().filter(|&&s| s == 25).count();
 
     println!("\n=== {} games, {}p ===", args.games, args.players);
@@ -277,7 +281,7 @@ fn main() {
         dist[s as usize] += 1;
     }
     for (score, &count) in dist.iter().enumerate().filter(|&(_, &c)| c > 0) {
-        let pct = count as f64 / n * 100.0;
+        let pct = f64::from(count) / n * 100.0;
         let bar = "#".repeat((pct / 2.0).round() as usize);
         println!("{score:>2}: {bar:<50} {count:>4} ({pct:4.1}%)");
     }

@@ -52,7 +52,7 @@ fn direct_play_clue_is_top_choice() {
 }
 
 #[test]
-#[ignore]
+#[ignore = "requires manual verification"]
 fn prefers_blue_clue_to_cathy_over_rank1_clue_to_bob() {
     let action = search_best_action("long_term_setup");
     match action {
@@ -129,7 +129,7 @@ fn defers_playing_a_known_playable_to_save_a_critical_card() {
 }
 
 #[test]
-#[ignore]
+#[ignore = "requires manual verification"]
 fn does_not_defer_play_to_save_cathy_when_bob_could_save() {
     let action = search_best_action("avoid_deferring_play_to_save");
     match action {
@@ -192,7 +192,7 @@ fn should_avoid_bad_touch() {
     {
         panic!("Alice decided to clue both b1s, generating a bad touch: {action:?}")
     } else {
-        println!("Alice choose the following action: {:?}", action);
+        println!("Alice choose the following action: {action:?}");
     }
 }
 
@@ -212,7 +212,7 @@ fn should_not_give_a_play_clue_that_looks_like_a_save() {
             "Alice decided to clue red to play clue r3. This will look like a r4 critical save from Bob's POV: {action:?}"
         )
     } else {
-        println!("Alice choose the following action: {:?}", action);
+        println!("Alice choose the following action: {action:?}");
     }
 }
 
@@ -229,7 +229,7 @@ fn should_not_steal_a_play_clue_from_bob_and_rather_save_his_chop() {
                 },
             ..
         } => {
-            println!("Alice choose to save Bob's chop. Action: {:?}", action);
+            println!("Alice choose to save Bob's chop. Action: {action:?}");
         }
         GameAction::Clue {
             player_index: 2,
@@ -253,7 +253,7 @@ fn should_not_steal_a_play_clue_from_bob_and_rather_save_his_chop() {
                 "Alice chose to aggressively discard even though it's not as safe as saving Bob's chop {action:?}"
             )
         }
-        _ => println!("Alice chose the following action: {:?}", action),
+        _ => println!("Alice chose the following action: {action:?}"),
     }
 }
 #[test]
@@ -298,7 +298,7 @@ fn should_prefer_tempo_clue_over_hard_burn() {
                     clue_value: 4,
                 },
             ..
-        } => println!("Alice has chosen correctly: {:?}", action),
+        } => println!("Alice has chosen correctly: {action:?}"),
         GameAction::Clue {
             player_index: 1,
             clue:
@@ -308,7 +308,7 @@ fn should_prefer_tempo_clue_over_hard_burn() {
                 },
             ..
         } => panic!("Alice has decided to just burn a clue {action:?}"),
-        _ => panic!("Alice has chosen the following action: {:?}", action),
+        _ => panic!("Alice has chosen the following action: {action:?}"),
     }
 }
 
@@ -324,9 +324,9 @@ fn should_prefer_finesse_if_no_drawback() {
         ..
     } = action
     {
-        println!("Alice choose to give a blue finesse: {:?}", action);
+        println!("Alice choose to give a blue finesse: {action:?}");
     } else {
-        panic!("Alice choose the following action: {:?}", action);
+        panic!("Alice choose the following action: {action:?}");
     }
 }
 
@@ -353,13 +353,13 @@ fn should_avoid_potential_1s_bad_touch() {
             player_index: 0,
             card_deck_index: 0,
             ..
-        } => println!("Alice choose to play slot 5 (r1): {:?}", action),
+        } => println!("Alice choose to play slot 5 (r1): {action:?}"),
         GameAction::Play {
             player_index: 0,
             card_deck_index: 3,
             ..
-        } => println!("Alice choose to play slot 2 (b1): {:?}", action),
-        _ => panic!("Alice chose the following action: {:?}", action),
+        } => println!("Alice choose to play slot 2 (b1): {action:?}"),
+        _ => panic!("Alice chose the following action: {action:?}"),
     }
 }
 
@@ -375,13 +375,13 @@ fn should_prompt_over_hard_burn() {
                     clue_value: 4,
                 },
             ..
-        } => println!("Alice choose to prompt g3 by cluing g4: {:?}", action),
-        _ => panic!("Alice chose the following action: {:?}", action),
+        } => println!("Alice choose to prompt g3 by cluing g4: {action:?}"),
+        _ => panic!("Alice chose the following action: {action:?}"),
     }
 }
 
 #[test]
-#[ignore]
+#[ignore = "requires manual verification"]
 fn should_avoid_duplicate_ones() {
     let action = search_best_action("should_avoid_duplicate_ones");
     match action {
@@ -393,8 +393,8 @@ fn should_avoid_duplicate_ones() {
                     clue_value: 1,
                 },
             ..
-        } => panic!("Alice has chosen to clue duplicate b1s: {:?}", action),
-        _ => println!("Alice has chosen the following action: {:?}", action),
+        } => panic!("Alice has chosen to clue duplicate b1s: {action:?}"),
+        _ => println!("Alice has chosen the following action: {action:?}"),
     }
 }
 
@@ -404,8 +404,8 @@ fn should_play_instead_of_discarding() {
     match action {
         GameAction::Play {
             player_index: 0, ..
-        } => println!("Alice has chosen play her known playable p4: {:?}", action),
-        _ => panic!("Alice has chosen the following action: {:?}", action),
+        } => println!("Alice has chosen play her known playable p4: {action:?}"),
+        _ => panic!("Alice has chosen the following action: {action:?}"),
     }
 }
 
@@ -421,8 +421,8 @@ fn should_clue_bob_instead_of_skipping_to_cathy() {
                     clue_value: 0,
                 },
             ..
-        } => println!("Alice has chosen to play clue Bob's 2: {:?}", action),
-        _ => panic!("Alice has chosen the following action: {:?}", action),
+        } => println!("Alice has chosen to play clue Bob's 2: {action:?}"),
+        _ => panic!("Alice has chosen the following action: {action:?}"),
     }
 }
 
@@ -439,8 +439,7 @@ fn should_not_clue_duplicate_y1() {
                 },
             ..
         } => println!(
-            "Alice has chosen to start with a 2-save on Cathy: {:?}",
-            action
+            "Alice has chosen to start with a 2-save on Cathy: {action:?}"
         ),
         GameAction::Clue {
             player_index: 2,
@@ -451,10 +450,9 @@ fn should_not_clue_duplicate_y1() {
                 },
             ..
         } => println!(
-            "Alice has chosen to start with direct play clue on Cathy's r1: {:?}",
-            action
+            "Alice has chosen to start with direct play clue on Cathy's r1: {action:?}"
         ),
-        _ => panic!("Alice has chosen the following action: {:?}", action),
+        _ => panic!("Alice has chosen the following action: {action:?}"),
     }
 }
 
@@ -471,9 +469,8 @@ fn should_pick_up_y1_without_bad_touch() {
                 },
             ..
         } => println!(
-            "Alice has chosen to pick up y1 without bad touch: {:?}",
-            action
+            "Alice has chosen to pick up y1 without bad touch: {action:?}"
         ),
-        _ => panic!("Alice has chosen the following action: {:?}", action),
+        _ => panic!("Alice has chosen the following action: {action:?}"),
     }
 }

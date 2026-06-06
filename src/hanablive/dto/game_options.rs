@@ -2,6 +2,7 @@ use serde::Deserialize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(clippy::struct_excessive_bools)]
 pub struct GameOptions {
     pub max_players: Option<usize>,
     pub num_players: usize,

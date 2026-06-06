@@ -32,12 +32,12 @@ fn reconstruct_clues(deck_empathy: u64, variant: &Variant) -> (Vec<String>, Vec<
     let mut positive = Vec::new();
     let mut negative = Vec::new();
 
-    for suit_idx in 0..variant.number_of_suits as usize {
+    for (suit_idx, suit_name) in SUIT_NAMES.iter().enumerate().take(variant.number_of_suits as usize) {
         let clue_mask = variant.empathy_by_clue(ClueType::Color, suit_idx).as_bits();
         if (deck_empathy & !clue_mask) == 0 {
-            positive.push(SUIT_NAMES[suit_idx].to_string());
+            positive.push(suit_name.to_string());
         } else if (deck_empathy & clue_mask) == 0 {
-            negative.push(SUIT_NAMES[suit_idx].to_string());
+            negative.push(suit_name.to_string());
         }
     }
 
@@ -69,6 +69,8 @@ fn reconstruct_clues(deck_empathy: u64, variant: &Variant) -> (Vec<String>, Vec<
 ///   the chronological order cards were discarded.  `TableState` stores only a count-per-card
 ///   multiset, so the original sequence is not recoverable.  Multi-set membership is preserved,
 ///   but discard timing is lost.
+#[must_use]
+#[allow(clippy::too_many_lines)]
 pub fn to_scenario_json(game: &KnowledgeAwareGameState) -> Value {
     let ts = &game.table_state;
     let tk = &game.team_knowledge;
@@ -117,39 +119,7 @@ pub fn to_scenario_json(game: &KnowledgeAwareGameState) -> Value {
                 .map(|&deck_idx| {
                     let clue_touched = (ts.clue_touched_cards >> deck_idx) & 1 != 0;
 
-                    if p != active {
-                        // Emit the actual card identity (visible to the active player).
-                        let id_str = tk
-                            .player(active)
-                            .known_identity(deck_idx)
-                            .map(card_id_to_string)
-                            .unwrap_or_else(|| "x".to_string());
-
-                        // Include the teammate's own convention knowledge when it carries
-                        // more information than the plain card identity.
-                        let inferred_str =
-                            tk.player(p).inferred_identities[deck_idx as usize].and_then(|m| {
-                                let trivial = m
-                                    .known_card_id()
-                                    .map(|c| card_id_to_string(c) == id_str)
-                                    .unwrap_or(false);
-                                if trivial { None } else { Some(mask_to_inferred_string(m.as_bits())) }
-                            });
-
-                        if let Some(inferred) = inferred_str {
-                            let (pos, neg) = if clue_touched {
-                                reconstruct_clues(
-                                    ts.deck.get_global_empathy(deck_idx).as_bits(),
-                                    variant,
-                                )
-                            } else {
-                                (vec![], vec![])
-                            };
-                            json!({ "id": id_str, "positive": pos, "negative": neg, "inferred": inferred })
-                        } else {
-                            json!(id_str)
-                        }
-                    } else {
+                    if p == active {
                         // Active player's own card: identity hidden, emit clue/convention info.
                         let deck_empathy =
                             ts.deck.get_global_empathy(deck_idx).as_bits();
@@ -177,6 +147,35 @@ pub fn to_scenario_json(game: &KnowledgeAwareGameState) -> Value {
                                 obj.insert("inferred".to_string(), json!(inf));
                             }
                             Value::Object(obj)
+                        }
+                    } else {
+                        // Emit the actual card identity (visible to the active player).
+                        let id_str = tk
+                            .player(active)
+                            .known_identity(deck_idx).map_or_else(|| "x".to_string(), card_id_to_string);
+
+                        // Include the teammate's own convention knowledge when it carries
+                        // more information than the plain card identity.
+                        let inferred_str =
+                            tk.player(p).inferred_identities[deck_idx as usize].and_then(|m| {
+                                let trivial = m
+                                    .known_card_id()
+                                    .is_some_and(|c| card_id_to_string(c) == id_str);
+                                if trivial { None } else { Some(mask_to_inferred_string(m.as_bits())) }
+                            });
+
+                        if let Some(inferred) = inferred_str {
+                            let (pos, neg) = if clue_touched {
+                                reconstruct_clues(
+                                    ts.deck.get_global_empathy(deck_idx).as_bits(),
+                                    variant,
+                                )
+                            } else {
+                                (vec![], vec![])
+                            };
+                            json!({ "id": id_str, "positive": pos, "negative": neg, "inferred": inferred })
+                        } else {
+                            json!(id_str)
                         }
                     }
                 })
@@ -219,7 +218,7 @@ mod tests {
             for rank in 1u8..=5 {
                 let copies: u8 = match rank {
                     1 => 3,
-                    2 | 3 | 4 => 2,
+                    2..=4 => 2,
                     5 => 1,
                     _ => unreachable!(),
                 };
@@ -231,7 +230,7 @@ mod tests {
         deck
     }
 
-    /// Build a ReplayRunner positioned after `num_actions` actions using the ordered deck.
+    /// Build a `ReplayRunner` positioned after `num_actions` actions using the ordered deck.
     fn runner_after_actions<'a>(
         deck: &[(usize, u8)],
         action_tuples: Vec<(ActionType, usize, Option<usize>)>,
@@ -250,10 +249,9 @@ mod tests {
             ],
             cards,
         )
-        .with_options({
-            let mut opts = GameOptions::default();
-            opts.variant = Some("No Variant".to_string());
-            opts
+        .with_options(GameOptions {
+            variant: Some("No Variant".to_string()),
+            ..Default::default()
         });
 
         for (action_type, target, value) in action_tuples {

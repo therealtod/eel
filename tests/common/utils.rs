@@ -9,7 +9,7 @@ use eel::game::action::game_action::GameAction;
 pub fn search_best_action(name: &str) -> GameAction {
     let (table_state, static_data, team_knowledge, _, _) =
         common::load_scenario_by_name_with_knowledge(name);
-    let active = table_state.active_player_index as usize;
+    let active = table_state.active_player_index;
     let knowledge = team_knowledge.player(active).clone();
     let pov = LightweightPlayerPOV::new(
         active,

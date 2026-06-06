@@ -7,9 +7,9 @@
 ///
 /// Usage:
 ///   cargo run --release --bin snapshot -- \
-///       --replay logs/14/game_0042.json \
+///       --replay `logs/14/game_0042.json` \
 ///       --turn 22 \
-///       --out tests/fixtures/regression/slowplay_at_22/table_state.json \
+///       --out `tests/fixtures/regression/slowplay_at_22/table_state.json` \
 ///       --description "Bot slowplayed g3 instead of saving b5 on chop"
 use std::fs;
 use std::path::PathBuf;
@@ -39,7 +39,7 @@ struct Args {
     #[arg(long)]
     turn: usize,
 
-    /// Output path for the scenario JSON (e.g. tests/fixtures/regression/my_bug/table_state.json).
+    /// Output path for the scenario JSON (e.g. `tests/fixtures/regression/my_bug/table_state.json`).
     #[arg(long)]
     out: PathBuf,
 

@@ -8,9 +8,10 @@ use smallvec::SmallVec;
 
 /// Returns all valid clues for `target_player_index` paired with their focus card index.
 ///
-/// For every (clue_type, clue_value) combination that touches at least one fully-known card in
+/// For every (`clue_type`, `clue_value`) combination that touches at least one fully-known card in
 /// the target's hand and produces a defined focus, one `(GameAction::Clue, focus_index)` entry
 /// is emitted. Callers filter the list on whatever focus-card condition they need.
+#[allow(clippy::cast_possible_truncation)]
 pub fn clues_for_player_with_focus(
     target_player_index: usize,
     player_pov: &dyn PlayerPOV,

@@ -77,6 +77,9 @@ impl PlayingStacks {
     }
 
     /// Get a bitfield of cards that can be successfully played in the current state.
+    ///
+    /// # Panics
+    /// Panics if `variant.stacks_size` exceeds the number of bits available in `VariantCardsBitField`.
     #[must_use]
     pub fn next_cards(&self, variant: &Variant) -> VariantCardsBitField {
         let mut next_cards = 0;

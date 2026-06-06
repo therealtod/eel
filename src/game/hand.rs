@@ -31,6 +31,7 @@ impl Hand {
     }
 
     /// Create a hand from a slice ordered oldest-first (chop first, slot 1 last).
+    #[allow(clippy::cast_possible_truncation)]
     pub fn new(card_indexes: &[CardDeckIndex]) -> Hand {
         debug_assert!(card_indexes.len() <= MAX_HAND_SIZE);
         let mut hand = Hand::empty();
@@ -95,25 +96,25 @@ mod tests {
 
     #[test]
     fn adds_the_given_card_to_the_correct_slot() {
-        let mut hand = Hand::new(&vec![3, 15, 2, 12]);
+        let mut hand = Hand::new(&[3, 15, 2, 12]);
 
         hand.add_card_to_slot_1(55);
 
-        assert_eq!(Hand::new(&vec![3, 15, 2, 12, 55]), hand);
+        assert_eq!(Hand::new(&[3, 15, 2, 12, 55]), hand);
     }
 
     #[test]
     fn removes_the_card_from_the_correct_slot() {
-        let mut hand = Hand::new(&vec![3, 15, 2, 12, 8]);
+        let mut hand = Hand::new(&[3, 15, 2, 12, 8]);
 
         hand.remove_card_from_slot_from_newest(2);
 
-        assert_eq!(Hand::new(&vec![3, 15, 2, 8]), hand);
+        assert_eq!(Hand::new(&[3, 15, 2, 8]), hand);
     }
 
     #[test]
     fn gets_the_correct_card_from_the_given_slot() {
-        let hand = Hand::new(&vec![3, 15, 2, 12, 8]);
+        let hand = Hand::new(&[3, 15, 2, 12, 8]);
 
         assert_eq!(2, hand.card_in_slot(3));
     }

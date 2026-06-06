@@ -26,7 +26,7 @@ pub enum DrawnCard {
 /// Abstracts the two points of variation between search and replay:
 /// card-identity resolution and draw mode.
 ///
-/// All orchestration (collect_hypotheses, apply_cohort, resolve_pending) lives in
+/// All orchestration (`collect_hypotheses`, `apply_cohort`, `resolve_pending`) lives in
 /// `KnowledgeAwareGameState::apply`; implementors supply only identity and draw.
 pub trait PlayResolver {
     /// Determine the identity (or playable-but-ambiguous status) of a played card.
@@ -123,7 +123,7 @@ impl PlayResolver for TruthPovResolver<'_> {
         let empathy_id = combined.known_card_id().or_else(|| {
             if has_play_signal {
                 let playable = state.table_state.playable_cards(state.static_data());
-                combined.narrow(playable).and_then(|e| e.known_card_id())
+                combined.narrow(playable).and_then(super::super::game::card::card_identity_mask::CardIdentityMask::known_card_id)
             } else {
                 None
             }
@@ -234,6 +234,7 @@ pub struct GroundTruthResolver<'a> {
 }
 
 impl<'a> GroundTruthResolver<'a> {
+    #[must_use]
     pub fn new(actual_deck: &'a [VariantCardId]) -> Self {
         Self { actual_deck }
     }

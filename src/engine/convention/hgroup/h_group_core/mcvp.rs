@@ -11,7 +11,7 @@ use crate::game::state::table_state::TableState;
 use crate::game::variant::Variant;
 use smallvec::SmallVec;
 
-/// https://hanabi.github.io/beginner/minimum-clue-value-principle/
+/// <https://hanabi.github.io/beginner/minimum-clue-value-principle>/
 ///
 /// A clue is MCVP-compliant if either:
 /// 1. It touches at least one card whose identity is not yet gotten (touched with known identity
@@ -25,7 +25,7 @@ use smallvec::SmallVec;
 ///    that resolves through other committed cards.
 pub fn is_minimal_clue_value_compliant(
     clue: &Clue,
-    clue_receiver_player_index: &PlayerIndex,
+    clue_receiver_player_index: PlayerIndex,
     touched_cards: &[CardDeckIndex],
     player_pov: &dyn PlayerPOV,
 ) -> bool {
@@ -35,13 +35,13 @@ pub fn is_minimal_clue_value_compliant(
     if touched_cards.iter().any(|&idx| {
         player_pov
             .card_identity(idx)
-            .map_or(true, |id| !player_pov.is_gotten(id))
+            .is_none_or(|id| !player_pov.is_gotten(id))
     }) {
         return true;
     }
 
     // Condition 2: more than one card transitions from "not going to play" to "going to play".
-    count_newly_going_to_play(clue, *clue_receiver_player_index, touched_cards, player_pov) > 1
+    count_newly_going_to_play(clue, clue_receiver_player_index, touched_cards, player_pov) > 1
 }
 
 /// Overlay describing how a candidate clue would change holder-level empathy and signals.
@@ -117,14 +117,12 @@ fn compute_finesse_signal_overlay(
             continue;
         }
         // Finesse: connector on a teammate's finesse position (teammate plays before receiver).
-        if p != receiver && pov.static_data().plays_before(p, receiver, active) {
-            if let Some(finesse_idx) = get_finesse_position(p, pov) {
-                if pov.card_identity(finesse_idx) == Some(connecting_id) {
+        if p != receiver && pov.static_data().plays_before(p, receiver, active)
+            && let Some(finesse_idx) = get_finesse_position(p, pov)
+                && pov.card_identity(finesse_idx) == Some(connecting_id) {
                     result.push((finesse_idx, connecting_id));
                     continue;
                 }
-            }
-        }
         // Prompt: connector is an already-clued, ambiguous card in p's hand (excluding the focus).
         if let Some(connector_idx) = prompt_connector_index(connecting_id, p, focus, pov) {
             result.push((connector_idx, connecting_id));
@@ -200,11 +198,9 @@ fn compute_going_to_play(pov: &dyn PlayerPOV, overlay: Option<&ClueOverlay>) -> 
                                     committed_identity, ..
                                 },
                         } = u
-                        {
-                            if *card_deck_index == c {
+                            && *card_deck_index == c {
                                 signaled = Some(*committed_identity);
                             }
-                        }
                     }
                     if signaled.is_some() {
                         break;
@@ -252,7 +248,7 @@ fn compute_going_to_play(pov: &dyn PlayerPOV, overlay: Option<&ClueOverlay>) -> 
                         || is_chain_reachable_via_playing(x, playable, committed_ids, variant)
                 })
             {
-                if empathy.count_ones() == 1 {
+                if empathy.is_power_of_two() {
                     committed_ids |= empathy;
                 }
                 true
@@ -292,8 +288,8 @@ fn prune_own_hand_exhausted(
     let mut own_located = [0u8; MAX_UNIQUE_CARDS_IN_DECK];
     for &(_, empathy, signaled) in entries.iter() {
         if let Some(id) = signaled {
-            own_located[id as usize] += 1;
-        } else if empathy.count_ones() == 1 {
+            own_located[id] += 1;
+        } else if empathy.is_power_of_two() {
             own_located[empathy.trailing_zeros() as usize] += 1;
         }
     }
@@ -385,7 +381,7 @@ mod tests {
         };
         let touched: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = smallvec::smallvec![10, 20];
 
-        assert!(is_minimal_clue_value_compliant(&clue, &0, &touched, &pov));
+        assert!(is_minimal_clue_value_compliant(&clue, 0, &touched, &pov));
     }
 
     #[test]
@@ -417,7 +413,7 @@ mod tests {
         };
         let touched: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = smallvec::smallvec![10, 20];
 
-        assert!(!is_minimal_clue_value_compliant(&clue, &0, &touched, &pov));
+        assert!(!is_minimal_clue_value_compliant(&clue, 0, &touched, &pov));
     }
 
     #[test]
@@ -455,7 +451,7 @@ mod tests {
         };
         let touched: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = smallvec::smallvec![10];
 
-        assert!(!is_minimal_clue_value_compliant(&clue, &0, &touched, &pov));
+        assert!(!is_minimal_clue_value_compliant(&clue, 0, &touched, &pov));
     }
 
     #[test]
@@ -479,7 +475,7 @@ mod tests {
         };
         let touched: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = smallvec::smallvec![10];
 
-        assert!(is_minimal_clue_value_compliant(&clue, &0, &touched, &pov));
+        assert!(is_minimal_clue_value_compliant(&clue, 0, &touched, &pov));
     }
 
     #[test]
@@ -516,7 +512,7 @@ mod tests {
         };
         let touched: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = smallvec::smallvec![30];
 
-        assert!(is_minimal_clue_value_compliant(&clue, &3, &touched, &pov));
+        assert!(is_minimal_clue_value_compliant(&clue, 3, &touched, &pov));
     }
 
     #[test]
@@ -565,7 +561,7 @@ mod tests {
         let touched: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = smallvec::smallvec![20];
 
         assert!(
-            is_minimal_clue_value_compliant(&clue, &2, &touched, &pov),
+            is_minimal_clue_value_compliant(&clue, 2, &touched, &pov),
             "finesse re-clue should pass MCVP via condition 2 (Bob's R1 + Cathy's R2 both \
              newly become going-to-play)"
         );
@@ -625,7 +621,7 @@ mod tests {
         let touched: SmallVec<[CardDeckIndex; MAX_HAND_SIZE]> = smallvec::smallvec![21];
 
         assert!(
-            is_minimal_clue_value_compliant(&clue, &2, &touched, &pov),
+            is_minimal_clue_value_compliant(&clue, 2, &touched, &pov),
             "rank-4 prompt re-clue should pass MCVP via condition 2 (Cathy's R3 prompt + R4 focus \
              both newly become going-to-play)"
         );

@@ -51,7 +51,7 @@ pub trait ConventionTech: Sync {
     /// Multi-hypothesis variant used by the dispatcher. Defaults to wrapping
     /// [`knowledge_updates`] in a single-element set. Override only when the tech
     /// emits several mutually-exclusive sub-alternatives that should share the
-    /// same cohort (e.g. DelayedPlayClue's per-connecting-card sub-hypotheses).
+    /// same cohort (e.g. `DelayedPlayClue`'s per-connecting-card sub-hypotheses).
     fn knowledge_updates_multi(
         &self,
         action: &GameAction,
