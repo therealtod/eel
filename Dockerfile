@@ -36,4 +36,5 @@ WORKDIR /app
 COPY --from=builder /app/target/release/eel_bot /usr/local/bin/
 
 # Set entrypoint
-ENTRYPOINT ["eel_bot"]
+entrypoint: ["sh", "-c"]
+command: ["eel_bot --name eel-bot 2>&1 | tee -a /app/logs/bot.log"]

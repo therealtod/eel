@@ -1,13 +1,35 @@
+use std::fs;
+use std::path::Path;
+
 use eel::bot::configuration::Configuration;
 use eel::hanablive::bot::hanab_live_bot::HanabLiveBot;
 use eel::hanablive::client::http_client::HttpClient;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::Layer;
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
+
+    let log_dir = "/app/logs";
+    if !Path::new(log_dir).exists() {
+        let _ = fs::create_dir_all(log_dir);
+    }
+    let file_appender = tracing_appender::rolling::never(log_dir, "bot.log");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_writer(std::io::stdout)
+                .with_filter(filter.clone()),
+        )
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_writer(non_blocking)
+                .with_filter(filter),
         )
         .init();
 
