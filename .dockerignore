@@ -1,0 +1,30 @@
+# Docker ignore file for Eel project
+
+# Git
+.git
+.gitignore
+
+# Rust build artifacts
+target/
+**/*.rs.bk
+**/Cargo.lock.bak
+
+# IDE files
+.idea/
+.vscode/
+
+# Logs
+logs/
+*.log
+
+# Documentation
+docs/_build/
+
+# Docker artifacts
+.docker/
+docker-compose.override.yml
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store

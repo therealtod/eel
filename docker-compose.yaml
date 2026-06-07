@@ -1,0 +1,14 @@
+services:
+  eel-bot1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eel-bot1
+    environment:
+      - RUST_LOG=info
+      - EEL_BOT_USERNAME=${EEL_BOT_1_USERNAME}
+      - EEL_BOT_PASSWORD=${EEL_BOT_1_PASSWORD}
+    command: --name eel-bot
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
