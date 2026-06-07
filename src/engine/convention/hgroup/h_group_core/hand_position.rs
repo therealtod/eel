@@ -51,9 +51,10 @@ pub fn get_clue_focus(
     player_pov: &dyn PlayerPOV,
 ) -> Option<CardDeckIndex> {
     if let Some(chop) = get_chop_index(player_index, player_pov)
-        && touched.contains(&chop) {
-            return Some(chop);
-        }
+        && touched.contains(&chop)
+    {
+        return Some(chop);
+    }
 
     // Leftmost = newest = first in cards() (which is ordered newest-first).
     let hand = &player_pov.table_state().hands[player_index];

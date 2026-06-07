@@ -49,7 +49,7 @@ impl PlayTech for BlindPlay {
         observer_pov: &dyn PlayerPOV,
     ) -> bool {
         let knowledge = observer_pov.team_knowledge().player(player_index);
-        
+
         knowledge.signals[card as usize]
             .iter()
             .any(|s| matches!(s, Signal::Play { .. }))

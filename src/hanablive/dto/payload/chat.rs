@@ -1,9 +1,9 @@
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct ChatMessage {
+pub struct Chat {
     pub msg: String,
     pub who: String,
     pub discord: bool,

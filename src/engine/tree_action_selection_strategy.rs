@@ -690,9 +690,10 @@ impl TreeActionSelectionStrategy {
             hand &= hand - 1;
             // Skip cards the searcher knows are not actually playable (misinformation).
             if let Some(truth_id) = truth.card_identity(idx as u8)
-                && (1u64 << truth_id) & playable_mask == 0 {
-                    continue;
-                }
+                && (1u64 << truth_id) & playable_mask == 0
+            {
+                continue;
+            }
             // Priority 1: convention play signal.
             if pk.signals[idx]
                 .iter()
@@ -933,9 +934,10 @@ impl TreeActionSelectionStrategy {
         let playable = state.table_state.playable_cards(static_data);
         // If the chosen card itself already strikes, no reordering is needed.
         if let Some(truth) = sight.card_identity(card_deck_index)
-            && (1u64 << truth) & playable == 0 {
-                return card_deck_index;
-            }
+            && (1u64 << truth) & playable == 0
+        {
+            return card_deck_index;
+        }
         // Look for a subjectively-indistinguishable sibling whose true identity is *not*
         // playable — that is the copy the actor could just as easily have grabbed first.
         let mut hand = knowledge.own_hand & visible;
@@ -952,9 +954,10 @@ impl TreeActionSelectionStrategy {
                 continue; // distinguishable — the actor would not confuse the two
             }
             if let Some(truth) = sight.card_identity(idx)
-                && (1u64 << truth) & playable == 0 {
-                    return idx;
-                }
+                && (1u64 << truth) & playable == 0
+            {
+                return idx;
+            }
         }
         card_deck_index
     }
@@ -1143,13 +1146,17 @@ impl ActionSelectionStrategy for TreeActionSelectionStrategy {
     ) -> GameAction {
         self.scored_actions(player_pov, convention_set)
             .into_iter()
-            .next().map_or_else(|| {
-                player_pov
-                    .valid_actions()
-                    .into_iter()
-                    .next()
-                    .expect("no valid actions available for the active player")
-            }, |n| n.action)
+            .next()
+            .map_or_else(
+                || {
+                    player_pov
+                        .valid_actions()
+                        .into_iter()
+                        .next()
+                        .expect("no valid actions available for the active player")
+                },
+                |n| n.action,
+            )
     }
 }
 

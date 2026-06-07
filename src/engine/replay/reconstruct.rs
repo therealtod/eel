@@ -15,7 +15,7 @@ use crate::game::static_game_data::StaticGameData;
 use crate::game::variant::test_variants::NO_VARIANT;
 use crate::hanablive::action::{Action, ActionType};
 use crate::hanablive::dto::card::Card;
-use crate::hanablive::dto::game::Game;
+use crate::hanablive::dto::payload::game::Game;
 
 #[derive(Debug)]
 pub enum ReplayError {
@@ -58,6 +58,11 @@ pub struct ReplayRunner<'a> {
     convention_set: &'a dyn ConventionSet,
     actions: Vec<Action>,
     cursor: usize,
+    /// The seat whose own hand is hidden, reproducing the live bot's perspective (it never
+    /// learns its own card identities). `None` for the omniscient full-deck reconstruction.
+    /// When set, this seat's initial hand and post-deal replacement draws are kept hidden from
+    /// teammates' empathy. See [`GroundTruthResolver::new_hiding_draws`].
+    hidden_seat: Option<usize>,
 }
 
 impl<'a> ReplayRunner<'a> {
@@ -70,10 +75,39 @@ impl<'a> ReplayRunner<'a> {
     /// # Errors
     ///
     /// Returns [`ReplayError::UnsupportedVariant`] if the game variant is not "No Variant".
-    #[allow(clippy::cast_possible_truncation)]
     pub fn from_hanablive(
         game: &Game,
         convention_set: &'a dyn ConventionSet,
+    ) -> Result<Self, ReplayError> {
+        Self::build_from_hanablive(game, convention_set, None)
+    }
+
+    /// Build a runner that hides `hidden_seat`'s own hand, reproducing the live bot's
+    /// perspective from that seat.
+    ///
+    /// The full-deck reconstruction ([`Self::from_hanablive`]) reveals every card — including the
+    /// acting seat's own hand — to all players' empathy, because the exported replay carries the
+    /// complete deck. Live play never learns its own card identities, so its teammates' model of
+    /// that hand stays hidden. A test built with this constructor therefore exercises the same
+    /// (hidden-own-hand) state the live bot actually decides from, catching divergences the
+    /// omniscient reconstruction masks.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ReplayError::UnsupportedVariant`] if the game variant is not "No Variant".
+    pub fn from_hanablive_hidden_seat(
+        game: &Game,
+        convention_set: &'a dyn ConventionSet,
+        hidden_seat: usize,
+    ) -> Result<Self, ReplayError> {
+        Self::build_from_hanablive(game, convention_set, Some(hidden_seat))
+    }
+
+    #[allow(clippy::cast_possible_truncation)]
+    fn build_from_hanablive(
+        game: &Game,
+        convention_set: &'a dyn ConventionSet,
+        hidden_seat: Option<usize>,
     ) -> Result<Self, ReplayError> {
         let variant_name = game.options.as_ref().and_then(|o| o.variant.as_deref());
         if variant_name != Some("No Variant") {
@@ -110,6 +144,7 @@ impl<'a> ReplayRunner<'a> {
             convention_set,
             actions,
             cursor: 0,
+            hidden_seat,
         };
 
         let hs = hand_size_for(num_players);
@@ -137,6 +172,7 @@ impl<'a> ReplayRunner<'a> {
             convention_set,
             actions: Vec::new(),
             cursor: 0,
+            hidden_seat: None,
         };
         runner.deal_initial_hands(num_players as usize, hs);
         runner
@@ -174,7 +210,11 @@ impl<'a> ReplayRunner<'a> {
                     card_deck_index: deck_idx,
                     turn,
                 };
-                let mut resolver = GroundTruthResolver::new(&self.actual_deck);
+                let mut resolver = if self.hidden_seat == Some(p) {
+                    GroundTruthResolver::new_hiding_draws(&self.actual_deck)
+                } else {
+                    GroundTruthResolver::new(&self.actual_deck)
+                };
                 self.game
                     .apply(&game_action, self.convention_set, &mut resolver);
                 AppliedAction::Play
@@ -194,7 +234,11 @@ impl<'a> ReplayRunner<'a> {
                     card_deck_index: deck_idx,
                     turn,
                 };
-                let mut resolver = GroundTruthResolver::new(&self.actual_deck);
+                let mut resolver = if self.hidden_seat == Some(p) {
+                    GroundTruthResolver::new_hiding_draws(&self.actual_deck)
+                } else {
+                    GroundTruthResolver::new(&self.actual_deck)
+                };
                 self.game
                     .apply(&game_action, self.convention_set, &mut resolver);
                 AppliedAction::Discard
@@ -215,6 +259,7 @@ impl<'a> ReplayRunner<'a> {
                 };
                 let touched = self.compute_touched_cards(receiver, &clue)?;
                 let turn = self.game.table_state.current_turn;
+                let p = self.game.table_state.active_player_index;
                 let game_action = GameAction::Clue {
                     player_index: receiver,
                     touched_card_deck_indexes: touched,
@@ -349,13 +394,20 @@ impl<'a> ReplayRunner<'a> {
 
     #[allow(clippy::cast_possible_truncation)]
     fn deal_initial_hands(&mut self, num_players: usize, hand_size: usize) {
+        let hidden_seat = self.hidden_seat;
         for player in 0..num_players {
             self.game.table_state.active_player_index = player;
             for slot in 0..hand_size {
                 let deck_idx = (player * hand_size + slot) as CardDeckIndex;
-                let card_id = self.actual_deck[deck_idx as usize];
-                self.game
-                    .update_with_draw_action_of_specific_card(player, deck_idx, card_id);
+                if hidden_seat == Some(player) {
+                    // Hidden seat: model the card as in-hand but identity-unknown to teammates,
+                    // exactly as the live bot sees its own freshly-dealt hand.
+                    self.game.update_with_draw_action(player, deck_idx);
+                } else {
+                    let card_id = self.actual_deck[deck_idx as usize];
+                    self.game
+                        .update_with_draw_action_of_specific_card(player, deck_idx, card_id);
+                }
             }
         }
         self.game.table_state.active_player_index = 0;
@@ -387,10 +439,15 @@ impl<'a> ReplayRunner<'a> {
     }
 }
 
-/// Return the hand size for a given player count (5 for ≤3 players, 4 otherwise).
+/// Return the hand size for a given player count: 5 for 2–3 players, 4 for 4–5
+/// players, and 3 for 6 players (standard Hanabi rules).
 #[must_use]
 pub fn hand_size_for(num_players: u8) -> usize {
-    if num_players <= 3 { 5 } else { 4 }
+    match num_players {
+        ..=3 => 5,
+        4 | 5 => 4,
+        _ => 3,
+    }
 }
 
 /// Convert an internal `VariantCardId` to the hanab.live `Card` representation.
@@ -470,6 +527,16 @@ mod tests {
     }
 
     #[test]
+    fn hand_size_for_returns_four_for_five_players() {
+        assert_eq!(hand_size_for(5), 4);
+    }
+
+    #[test]
+    fn hand_size_for_returns_three_for_six_players() {
+        assert_eq!(hand_size_for(6), 3);
+    }
+
+    #[test]
     fn variant_card_id_to_hanablive_roundtrip() {
         let static_data = StaticGameData {
             number_of_players: 3,
@@ -508,6 +575,39 @@ mod tests {
             ReplayRunner::from_hanablive(&game, &conv),
             Err(ReplayError::UnsupportedVariant(_))
         ));
+    }
+
+    #[test]
+    fn hidden_seat_hides_own_hand_from_teammates() {
+        // 3 players, ordered deck: player 0's initial hand is deck[0..5].
+        let deck = ordered_deck();
+        let game = make_game(deck, vec![]);
+        let conv = HGroupConventionSet::for_level(HGroupLevel::One, &NO_VARIANT);
+
+        // Bits for player 0's dealt hand slots (deck indices 0..5).
+        let p0_hand_bits: u64 = (0..5).map(|i| 1u64 << i).sum();
+
+        // Full-deck reconstruction: teammates can see player 0's whole hand.
+        let full = ReplayRunner::from_hanablive(&game, &conv).unwrap();
+        assert_eq!(
+            full.game.team_knowledge.player(1).visible_cards & p0_hand_bits,
+            p0_hand_bits,
+            "full-deck reconstruction should reveal player 0's hand to teammates"
+        );
+
+        // Hidden-seat reconstruction (seat 0 hidden): teammates see none of player 0's hand,
+        // matching the live bot's perspective. Player 0 still has the cards in its own hand.
+        let hidden = ReplayRunner::from_hanablive_hidden_seat(&game, &conv, 0).unwrap();
+        assert_eq!(
+            hidden.game.team_knowledge.player(1).visible_cards & p0_hand_bits,
+            0,
+            "hidden seat's own hand must be invisible to teammates"
+        );
+        assert_eq!(
+            hidden.game.team_knowledge.player(0).own_hand & p0_hand_bits,
+            p0_hand_bits,
+            "hidden seat must still hold its own cards"
+        );
     }
 
     #[test]

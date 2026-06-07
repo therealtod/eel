@@ -225,7 +225,9 @@ impl TableState {
     /// Positive pace means the team has "breathing room"; negative means they're behind.
     #[must_use]
     pub fn pace(&self, static_game_data: &StaticGameData) -> i32 {
-        let max_score = i32::from(static_game_data.variant.number_of_suits * static_game_data.variant.stacks_size);
+        let max_score = i32::from(
+            static_game_data.variant.number_of_suits * static_game_data.variant.stacks_size,
+        );
         i32::from(self.score(&static_game_data.variant))
             + i32::from(self.deck.current_size)
             + i32::from(static_game_data.number_of_players)
@@ -239,10 +241,16 @@ impl TableState {
     ///
     /// Returns 0.0 when the game is already won; `f32::INFINITY` when no spare turns remain, but
     /// cards are still needed.
-    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_precision_loss)]
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_precision_loss
+    )]
     #[must_use]
     pub fn required_efficiency(&self, static_game_data: &StaticGameData) -> f32 {
-        let max_score = i32::from(static_game_data.variant.number_of_suits * static_game_data.variant.stacks_size);
+        let max_score = i32::from(
+            static_game_data.variant.number_of_suits * static_game_data.variant.stacks_size,
+        );
         let num_players = static_game_data.number_of_players as usize;
         let hands = &self.hands[..num_players];
         let hand_cards: i32 = hands.iter().map(|h| h.cards().len() as i32).sum();
@@ -282,8 +290,8 @@ impl TableState {
             }
             total += suit_max as u32;
         }
-        let max_possible =
-            u32::from(static_data.variant.stacks_size) * u32::from(static_data.variant.number_of_suits);
+        let max_possible = u32::from(static_data.variant.stacks_size)
+            * u32::from(static_data.variant.number_of_suits);
         let remaining_plays = u32::from(self.score(&static_data.variant))
             + u32::from(self.deck.current_size)
             + u32::from(static_data.number_of_players);

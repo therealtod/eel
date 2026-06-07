@@ -45,9 +45,10 @@ fn already_clued_ids_mask(
         }
         for &idx in table_state.hands[p].cards() {
             if table_state.clue_touched_cards & (1u64 << idx) != 0
-                && let Some(id) = table_state.deck.get_global_empathy(idx).known_card_id() {
-                    mask |= 1u64 << id;
-                }
+                && let Some(id) = table_state.deck.get_global_empathy(idx).known_card_id()
+            {
+                mask |= 1u64 << id;
+            }
         }
     }
     mask
@@ -96,9 +97,10 @@ pub fn good_touch_receiver_masks(
             continue;
         }
         if table_state.clue_touched_cards & (1u64 << idx) != 0
-            && let Some(id) = table_state.deck.get_global_empathy(idx).known_card_id() {
-                already_clued |= 1u64 << id;
-            }
+            && let Some(id) = table_state.deck.get_global_empathy(idx).known_card_id()
+        {
+            already_clued |= 1u64 << id;
+        }
     }
     let good = clue_mask & still_needed & !already_clued;
     if good == 0 {

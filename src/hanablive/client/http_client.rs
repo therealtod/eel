@@ -1,13 +1,9 @@
-use reqwest::Client;
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use tracing::debug;
-
 use crate::hanablive::constants::{HOSTNAME, LOGIN_PATH};
+use reqwest::Client;
+use tracing::debug;
 
 pub struct HttpClient {
     client: Client,
-    cookie: Arc<Mutex<Option<String>>>,
 }
 
 impl Default for HttpClient {
@@ -29,10 +25,7 @@ impl HttpClient {
             .build()
             .expect("failed to build HTTP client");
 
-        Self {
-            client,
-            cookie: Arc::new(Mutex::new(None)),
-        }
+        Self { client }
     }
 
     /// Log in to hanab.live and store the session cookie.
@@ -41,7 +34,7 @@ impl HttpClient {
     ///
     /// Returns [`Error::Http`] if the request fails, or [`Error::LoginFailed`] if the server
     /// returns a non-success status.
-    pub async fn login(&self, username: &str, password: &str) -> Result<(), Error> {
+    pub async fn sign_in(&self, username: &str, password: &str) -> Result<String, Error> {
         let url = format!("https://{HOSTNAME}{LOGIN_PATH}");
         let body = format!(
             "username={}&password={}&version=bot",
@@ -68,6 +61,7 @@ impl HttpClient {
 
         // Extract the session cookie from response headers
         if let Some(cookie_header) = response.headers().get(reqwest::header::SET_COOKIE) {
+            debug!("Received session cookie");
             let cookie_str = cookie_header.to_str().unwrap_or("");
             let session_cookie = cookie_str
                 .split(';')
@@ -75,17 +69,10 @@ impl HttpClient {
                 .unwrap_or("")
                 .trim()
                 .to_string();
-            let mut cookie = self.cookie.lock().await;
-            *cookie = Some(session_cookie);
-            debug!("Received session cookie");
+            return Ok(session_cookie);
         }
 
-        debug!("Login successful");
-        Ok(())
-    }
-
-    pub async fn get_cookie(&self) -> Option<String> {
-        self.cookie.lock().await.clone()
+        Err(Error::MissingSessionCookie)
     }
 }
 
@@ -95,4 +82,6 @@ pub enum Error {
     Http(#[from] reqwest::Error),
     #[error("Login failed with status: {0}")]
     LoginFailed(reqwest::StatusCode),
+    #[error("Missing session cookie in response headers")]
+    MissingSessionCookie,
 }

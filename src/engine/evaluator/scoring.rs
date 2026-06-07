@@ -63,9 +63,11 @@ impl super::Evaluator for DefaultEvaluator {
             };
         }
         let pace = self.pace_weight
-            * f64::from(state
-                .pace(phantom_plays)
-                .clamp(-10, i32::from(static_data.number_of_players)));
+            * f64::from(
+                state
+                    .pace(phantom_plays)
+                    .clamp(-10, i32::from(static_data.number_of_players)),
+            );
         let efficiency_penalty =
             self.efficiency_weight * f64::from(state.required_efficiency(phantom_plays));
         let critical_exposure_penalty = if self.critical_exposure_weight == 0.0 {

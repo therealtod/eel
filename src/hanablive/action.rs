@@ -10,7 +10,7 @@ pub enum ActionType {
 }
 
 impl ActionType {
-    fn as_u8(self) -> u8 {
+    pub fn as_u8(self) -> u8 {
         match self {
             ActionType::Play => 0,
             ActionType::Discard => 1,

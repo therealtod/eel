@@ -70,15 +70,16 @@ pub fn team_knowledge_from_scenario(scenario: &ScenarioJson, variant: &Variant) 
                 break;
             }
             if let Some(inferred_str) = slot.inferred()
-                && inferred_str != "x" {
-                    let deck_idx = indices[hand_size - 1 - slot_pos];
-                    let mask = parse_empathy_mask(inferred_str);
-                    let emp = CardIdentityMask::from_bits(mask);
-                    team_knowledge.player_mut(p).inferred_identities[deck_idx as usize] = Some(emp);
-                    if emp.is_exactly_known() {
-                        team_knowledge.player_mut(p).visible_cards |= 1u64 << deck_idx;
-                    }
+                && inferred_str != "x"
+            {
+                let deck_idx = indices[hand_size - 1 - slot_pos];
+                let mask = parse_empathy_mask(inferred_str);
+                let emp = CardIdentityMask::from_bits(mask);
+                team_knowledge.player_mut(p).inferred_identities[deck_idx as usize] = Some(emp);
+                if emp.is_exactly_known() {
+                    team_knowledge.player_mut(p).visible_cards |= 1u64 << deck_idx;
                 }
+            }
         }
     }
 

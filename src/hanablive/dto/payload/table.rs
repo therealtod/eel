@@ -1,4 +1,5 @@
-use crate::hanablive::dto::game_options::GameOptions;
+use crate::hanablive::TableId;
+use crate::hanablive::dto::payload::game_options::GameOptions;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -13,7 +14,7 @@ pub struct Spectator {
 #[serde(rename_all = "camelCase")]
 #[allow(clippy::struct_excessive_bools)]
 pub struct Table {
-    pub id: usize,
+    pub id: TableId,
     pub name: String,
     pub password_protected: bool,
     pub joined: bool,

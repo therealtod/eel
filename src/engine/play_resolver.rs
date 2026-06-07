@@ -123,7 +123,9 @@ impl PlayResolver for TruthPovResolver<'_> {
         let empathy_id = combined.known_card_id().or_else(|| {
             if has_play_signal {
                 let playable = state.table_state.playable_cards(state.static_data());
-                combined.narrow(playable).and_then(super::super::game::card::card_identity_mask::CardIdentityMask::known_card_id)
+                combined.narrow(playable).and_then(
+                    super::super::game::card::card_identity_mask::CardIdentityMask::known_card_id,
+                )
             } else {
                 None
             }
@@ -224,19 +226,119 @@ impl PlayResolver for TruthPovResolver<'_> {
     }
 }
 
-// ── Replay-mode resolver ──────────────────────────────────────────────────────
+// ── Player-index truth resolver ───────────────────────────────────────────────
+
+/// Like [`TruthPovResolver`] but stores a player index instead of a borrow, allowing it to
+/// be constructed without holding an immutable borrow on [`KnowledgeAwareGameState`].
+/// The POV is retrieved lazily from `state` inside each resolver method.
+pub struct PlayerIndexTruthResolver {
+    player_index: usize,
+}
+
+impl PlayerIndexTruthResolver {
+    pub fn new(player_index: usize) -> Self {
+        Self { player_index }
+    }
+}
+
+impl PlayResolver for PlayerIndexTruthResolver {
+    fn resolve_play(
+        &self,
+        player_index: usize,
+        card_deck_index: CardDeckIndex,
+        state: &KnowledgeAwareGameState,
+    ) -> ResolvedPlay {
+        let knowledge = state.team_knowledge.player(player_index);
+        let has_play_signal = knowledge.has_play_signal(card_deck_index);
+        let combined = knowledge.combined_possible_identities(
+            card_deck_index,
+            &state.table_state,
+            &state.static_data().variant,
+        );
+        let empathy_id = combined.known_card_id().or_else(|| {
+            if has_play_signal {
+                let playable = state.table_state.playable_cards(state.static_data());
+                combined.narrow(playable).and_then(
+                    super::super::game::card::card_identity_mask::CardIdentityMask::known_card_id,
+                )
+            } else {
+                None
+            }
+        });
+        let pov = state.player_pov(self.player_index);
+        let id = pov.card_identity(card_deck_index).or(empathy_id);
+        if let Some(card_id) = id {
+            ResolvedPlay::Known(card_id)
+        } else if let Some(card_id) = knowledge.committed_play_identity(card_deck_index) {
+            ResolvedPlay::Known(card_id)
+        } else if state.is_known_playable_play(player_index, card_deck_index, has_play_signal) {
+            ResolvedPlay::KnownPlayableAmbiguous
+        } else {
+            ResolvedPlay::Unknown
+        }
+    }
+
+    fn resolve_discard(
+        &self,
+        player_index: usize,
+        card_deck_index: CardDeckIndex,
+        state: &KnowledgeAwareGameState,
+    ) -> Option<VariantCardId> {
+        let combined = state
+            .team_knowledge
+            .player(player_index)
+            .combined_possible_identities(
+                card_deck_index,
+                &state.table_state,
+                &state.static_data().variant,
+            );
+        let pov = state.player_pov(self.player_index);
+        pov.card_identity(card_deck_index)
+            .or_else(|| combined.known_card_id())
+    }
+
+    fn draw_next(&mut self, _deck_size: u8, _next_deck_index: u8) -> DrawnCard {
+        DrawnCard::Unknown
+    }
+
+    fn advances_real_game(&self) -> bool {
+        true
+    }
+}
 
 /// Replay-mode resolver: uses the ground-truth deck for identity resolution.
 ///
 /// Wraps a reference to the actual card sequence. Zero-alloc on construction.
 pub struct GroundTruthResolver<'a> {
     actual_deck: &'a [VariantCardId],
+    /// When `true`, replacement draws after a play/discard resolve as [`DrawnCard::Unknown`]
+    /// instead of [`DrawnCard::Known`], so the drawing player's new card is **not** revealed to
+    /// teammates' empathy.
+    ///
+    /// Used to reconstruct a single *hidden seat* — the live bot's own hand. Live play never
+    /// learns its own card identities, so the engine's model of that seat (and its teammates'
+    /// view of it) must stay hidden, unlike the omniscient full-deck reconstruction. Played and
+    /// discarded cards are still resolved from the deck, since those identities become public.
+    hide_draws: bool,
 }
 
 impl<'a> GroundTruthResolver<'a> {
     #[must_use]
     pub fn new(actual_deck: &'a [VariantCardId]) -> Self {
-        Self { actual_deck }
+        Self {
+            actual_deck,
+            hide_draws: false,
+        }
+    }
+
+    /// Like [`Self::new`], but replacement draws stay hidden from teammates (see `hide_draws`).
+    /// Use for the seat whose own hand the live bot cannot see.
+    #[must_use]
+    pub fn new_hiding_draws(actual_deck: &'a [VariantCardId]) -> Self {
+        Self {
+            actual_deck,
+            hide_draws: true,
+        }
     }
 }
 
@@ -247,7 +349,11 @@ impl PlayResolver for GroundTruthResolver<'_> {
         card_deck_index: CardDeckIndex,
         _state: &KnowledgeAwareGameState,
     ) -> ResolvedPlay {
-        ResolvedPlay::Known(self.actual_deck[card_deck_index as usize])
+        match self.actual_deck.get(card_deck_index as usize) {
+            Some(&card_id) => ResolvedPlay::Known(card_id),
+            // Identity not yet known (live play: the card's Draw message hasn't arrived yet).
+            None => ResolvedPlay::Unknown,
+        }
     }
 
     fn resolve_discard(
@@ -256,15 +362,25 @@ impl PlayResolver for GroundTruthResolver<'_> {
         card_deck_index: CardDeckIndex,
         _state: &KnowledgeAwareGameState,
     ) -> Option<VariantCardId> {
-        Some(self.actual_deck[card_deck_index as usize])
+        // None if the identity isn't yet known (live play: Draw message not yet received).
+        self.actual_deck.get(card_deck_index as usize).copied()
     }
 
     fn draw_next(&mut self, deck_size: u8, next_deck_index: u8) -> DrawnCard {
         if deck_size == 0 {
             return DrawnCard::Empty;
         }
+        if self.hide_draws {
+            // Hidden seat: the drawer's new card identity is never revealed to teammates.
+            return DrawnCard::Unknown;
+        }
+        let idx = next_deck_index as usize;
+        if idx >= self.actual_deck.len() {
+            // Identity not yet known (live play: Draw message arrives after this action).
+            return DrawnCard::Unknown;
+        }
         DrawnCard::Known {
-            card_id: self.actual_deck[next_deck_index as usize],
+            card_id: self.actual_deck[idx],
         }
     }
 

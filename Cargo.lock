@@ -415,6 +415,7 @@ dependencies = [
  "chrono",
  "clap",
  "futures-util",
+ "log",
  "mockall",
  "rand 0.10.1",
  "rayon",

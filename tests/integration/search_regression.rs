@@ -52,7 +52,7 @@ fn direct_play_clue_is_top_choice() {
 }
 
 #[test]
-#[ignore = "requires manual verification"]
+#[ignore = "requires better understanding of the scenario"]
 fn prefers_blue_clue_to_cathy_over_rank1_clue_to_bob() {
     let action = search_best_action("long_term_setup");
     match action {
@@ -129,7 +129,7 @@ fn defers_playing_a_known_playable_to_save_a_critical_card() {
 }
 
 #[test]
-#[ignore = "requires manual verification"]
+#[ignore = "requires better understanding of the scenario"]
 fn does_not_defer_play_to_save_cathy_when_bob_could_save() {
     let action = search_best_action("avoid_deferring_play_to_save");
     match action {
@@ -381,7 +381,7 @@ fn should_prompt_over_hard_burn() {
 }
 
 #[test]
-#[ignore = "requires manual verification"]
+#[ignore = "requires better understanding of the scenario"]
 fn should_avoid_duplicate_ones() {
     let action = search_best_action("should_avoid_duplicate_ones");
     match action {
@@ -438,9 +438,7 @@ fn should_not_clue_duplicate_y1() {
                     clue_value: 2,
                 },
             ..
-        } => println!(
-            "Alice has chosen to start with a 2-save on Cathy: {action:?}"
-        ),
+        } => println!("Alice has chosen to start with a 2-save on Cathy: {action:?}"),
         GameAction::Clue {
             player_index: 2,
             clue:
@@ -449,9 +447,7 @@ fn should_not_clue_duplicate_y1() {
                     clue_value: 0,
                 },
             ..
-        } => println!(
-            "Alice has chosen to start with direct play clue on Cathy's r1: {action:?}"
-        ),
+        } => println!("Alice has chosen to start with direct play clue on Cathy's r1: {action:?}"),
         _ => panic!("Alice has chosen the following action: {action:?}"),
     }
 }
@@ -468,9 +464,7 @@ fn should_pick_up_y1_without_bad_touch() {
                     clue_value: 1,
                 },
             ..
-        } => println!(
-            "Alice has chosen to pick up y1 without bad touch: {action:?}"
-        ),
+        } => println!("Alice has chosen to pick up y1 without bad touch: {action:?}"),
         _ => panic!("Alice has chosen the following action: {action:?}"),
     }
 }

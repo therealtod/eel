@@ -81,9 +81,7 @@ fn shuffled_deck(rng: &mut SmallRng) -> Vec<VariantCardId> {
 ///
 /// When `log_failures_below` is `Some(t)` and the final score < `t`, the game is serialised
 /// to `logs/<score>/game_<game_num>.json` in hanab.live replay format.
-#[allow(
-    clippy::cast_precision_loss,
-)]
+#[allow(clippy::cast_precision_loss)]
 fn run_game(
     static_data: &StaticGameData,
     convention_set: &dyn ConventionSet,
@@ -106,9 +104,10 @@ fn run_game(
     let logging_enabled = log_failures_below.is_some();
     let mut builder = if logging_enabled {
         Some(
-            GameBuilder::new(player_names, hanablive_deck).with_options(
-                GameOptions { variant: Some("No Variant".to_string()), ..Default::default() }
-            ),
+            GameBuilder::new(player_names, hanablive_deck).with_options(GameOptions {
+                variant: Some("No Variant".to_string()),
+                ..Default::default()
+            }),
         )
     } else {
         None
@@ -176,31 +175,32 @@ fn run_game(
 
     if let Some(threshold) = log_failures_below
         && score < threshold
-            && let Some(b) = builder {
-                let replay = b.finish();
-                let dir = PathBuf::from("logs").join(score.to_string());
-                if let Err(e) = fs::create_dir_all(&dir) {
-                    eprintln!("warn: could not create log directory {}: {e}", dir.display());
-                } else {
-                    let path = dir.join(format!("game_{game_num}.json"));
-                    match replay.to_json_pretty() {
-                        Ok(json) => {
-                            if let Err(e) = fs::write(&path, &json) {
-                                eprintln!("warn: could not write replay to {}: {e}", path.display());
-                            }
-                        }
-                        Err(e) => eprintln!("warn: could not serialise replay: {e}"),
+        && let Some(b) = builder
+    {
+        let replay = b.finish();
+        let dir = PathBuf::from("logs").join(score.to_string());
+        if let Err(e) = fs::create_dir_all(&dir) {
+            eprintln!(
+                "warn: could not create log directory {}: {e}",
+                dir.display()
+            );
+        } else {
+            let path = dir.join(format!("game_{game_num}.json"));
+            match replay.to_json_pretty() {
+                Ok(json) => {
+                    if let Err(e) = fs::write(&path, &json) {
+                        eprintln!("warn: could not write replay to {}: {e}", path.display());
                     }
                 }
+                Err(e) => eprintln!("warn: could not serialise replay: {e}"),
             }
+        }
+    }
 
     score
 }
 
-#[allow(
-    clippy::cast_possible_truncation,
-    clippy::cast_precision_loss,
-)]
+#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 fn main() {
     let args = Args::parse();
 

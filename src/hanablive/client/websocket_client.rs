@@ -1,13 +1,33 @@
+use std::time::Duration;
+
+use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
+use tokio::sync::mpsc;
+use tokio::time::timeout;
 use tokio_tungstenite::{Connector, connect_async_tls_with_config, tungstenite::Message};
-use tracing::{debug, error};
+use tracing::{debug, error, info, warn};
 
 use crate::hanablive::constants::{HOSTNAME, WEBSOCKET_PATH};
+use crate::hanablive::inbound_websocket_message::InboundWebsocketMessage;
+use crate::hanablive::liveplay_recorder::LiveplayRecorder;
+use crate::hanablive::outbound_websocket_message::OutboundWebsocketMessage;
+
+type WsStream =
+    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
+
+/// If no frame at all — including the server's keepalive pings — arrives within this window, the
+/// connection is presumed dead and the read loop exits so the bot can reconnect. hanab.live sends
+/// pings well inside this interval even when no game data is flowing, so prolonged silence is a
+/// reliable signal of a half-open socket that a plain blocking `read.next()` would never surface.
+const READ_TIMEOUT: Duration = Duration::from_secs(90);
 
 pub struct WebSocketClient {
-    stream: tokio_tungstenite::WebSocketStream<
-        tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
-    >,
+    write: SplitSink<WsStream, Message>,
+    /// Cleared the first time a [`Self::send`] fails. Send errors are otherwise logged and
+    /// swallowed by the `bot_state` handlers, which would leave the engine diverged from the
+    /// server with no recovery path. The run loop polls [`Self::is_connected`] and treats a
+    /// flipped flag as a disconnect, driving a reconnect (and the state reset that resyncs us).
+    connected: bool,
 }
 
 impl WebSocketClient {
@@ -17,7 +37,9 @@ impl WebSocketClient {
     ///
     /// Returns [`Error::Request`] if the request builder fails, or [`Error::WebSocket`] if the
     /// WebSocket handshake fails.
-    pub async fn connect(cookie: &str) -> Result<Self, Error> {
+    pub async fn connect(
+        cookie: &str,
+    ) -> Result<(Self, mpsc::Receiver<InboundWebsocketMessage>), Error> {
         let url = format!("wss://{HOSTNAME}{WEBSOCKET_PATH}");
         debug!("Connecting to WebSocket at {}", url);
 
@@ -48,55 +70,114 @@ impl WebSocketClient {
             connect_async_tls_with_config(request, None, true, Some(connector)).await?;
         debug!("WebSocket connected, status: {}", response.status());
 
-        Ok(Self { stream })
+        let (write, read) = stream.split();
+        let (message_tx, message_rx) = mpsc::channel(1000);
+
+        // Debug builds capture the raw inbound stream for offline replay; `new` returns `None`
+        // (and the recorder compiles to nothing) in optimized builds. See [`LiveplayRecorder`].
+        let recorder = LiveplayRecorder::new();
+        tokio::spawn(Self::read_loop(read, message_tx, recorder));
+
+        Ok((
+            Self {
+                write,
+                connected: true,
+            },
+            message_rx,
+        ))
     }
 
-    /// Send a text message over the WebSocket.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Error::WebSocket`] if the send fails.
-    pub async fn send(&mut self, message: &str) -> Result<(), Error> {
-        debug!("Sending WS message: {}", message);
-        self.stream.send(Message::Text(message.into())).await?;
-        Ok(())
-    }
-
-    /// Send a WebSocket ping frame.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Error::WebSocket`] if the send fails.
-    pub async fn send_ping(&mut self) -> Result<(), Error> {
-        self.stream.send(Message::Ping(Vec::new().into())).await?;
-        Ok(())
-    }
-
-    pub async fn receive(&mut self) -> Option<Result<String, Error>> {
+    async fn read_loop(
+        mut read: SplitStream<WsStream>,
+        message_tx: mpsc::Sender<InboundWebsocketMessage>,
+        recorder: Option<LiveplayRecorder>,
+    ) {
         loop {
-            match self.stream.next().await {
-                Some(Ok(Message::Text(text))) => return Some(Ok(text.to_string())),
-                Some(Ok(Message::Binary(data))) => match String::from_utf8(data.to_vec()) {
-                    Ok(text) => return Some(Ok(text)),
-                    Err(e) => return Some(Err(Error::Utf8(e))),
-                },
-                Some(Ok(Message::Ping(payload))) => {
-                    if let Err(e) = self.stream.send(Message::Pong(payload)).await {
-                        error!("Failed to send pong: {}", e);
-                        return Some(Err(Error::WebSocket(e)));
+            let next = match timeout(READ_TIMEOUT, read.next()).await {
+                Ok(next) => next,
+                Err(_elapsed) => {
+                    warn!("No WebSocket frame within {READ_TIMEOUT:?}; presuming connection dead");
+                    break;
+                }
+            };
+            match next {
+                Some(Ok(Message::Text(text))) => {
+                    if let Some(recorder) = &recorder {
+                        recorder.record(&text);
+                    }
+                    if let Err(e) = message_tx.send(InboundWebsocketMessage::parse(&text)).await {
+                        error!("Failed to broadcast message: {}", e);
                     }
                 }
+                Some(Ok(Message::Binary(_))) => warn!("Received binary message, ignoring."),
                 Some(Ok(Message::Close(_))) => {
-                    debug!("WebSocket closed");
-                    return None;
+                    info!("WebSocket closed");
+                    break;
                 }
                 Some(Ok(Message::Pong(_) | _)) => {}
                 Some(Err(e)) => {
                     error!("WebSocket error: {}", e);
-                    return Some(Err(Error::WebSocket(e)));
+                    break;
                 }
-                None => return None,
+                None => {
+                    info!("WebSocket stream ended");
+                    break;
+                }
             }
+        }
+        // Falling out of the loop drops `message_tx`; once the last sender is gone the bot's
+        // `message_rx.recv()` returns `None`, which the run loop treats as a disconnect and uses
+        // to drive reconnection.
+    }
+
+    /// Send an outbound message over the WebSocket.
+    ///
+    /// On failure the connection is marked dead (see [`Self::is_connected`]) so a swallowed send
+    /// error still surfaces as a disconnect to the run loop.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::WebSocket`] if the write fails.
+    pub async fn send(&mut self, msg: &OutboundWebsocketMessage) -> Result<(), Error> {
+        let text = msg.serialize();
+        if let Err(e) = self.write.send(Message::from(text)).await {
+            self.connected = false;
+            return Err(e.into());
+        }
+        Ok(())
+    }
+
+    /// Whether the connection is still believed healthy. Returns `false` once any [`Self::send`]
+    /// has failed, signalling the run loop to drop the connection and reconnect/resync.
+    #[must_use]
+    pub fn is_connected(&self) -> bool {
+        self.connected
+    }
+
+    /// Create an in-memory WebSocket client for unit tests. All messages sent through this client
+    /// are silently discarded by a local server task; sends always succeed.
+    #[cfg(test)]
+    pub(crate) async fn for_test() -> Self {
+        use tokio::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            if let Ok((stream, _)) = listener.accept().await {
+                if let Ok(ws) = tokio_tungstenite::accept_async(stream).await {
+                    let (_, mut read) = futures_util::StreamExt::split(ws);
+                    while futures_util::StreamExt::next(&mut read).await.is_some() {}
+                }
+            }
+        });
+
+        let url = format!("ws://127.0.0.1:{}/", addr.port());
+        let (ws, _) = tokio_tungstenite::connect_async(url).await.unwrap();
+        let (write, _) = futures_util::StreamExt::split(ws);
+        Self {
+            write,
+            connected: true,
         }
     }
 }

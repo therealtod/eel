@@ -46,7 +46,7 @@ impl DelayedPlayClue {
         (1..=away_value as usize).all(|offset| {
             let connecting_id = card_id - offset;
             let connecting_bit = 1u64 << connecting_id;
-            
+
             (0..num_players).any(|p| {
                 let pk = pov.team_knowledge().player(p);
                 table_state.hands[p].cards().iter().any(|&idx| {
@@ -76,9 +76,10 @@ impl DelayedPlayClue {
                     // the card is provably not the connector — even if the holder's empathy
                     // includes connecting_id as a possibility.
                     if let Some(giver_id) = pov.card_identity(idx)
-                        && giver_id != connecting_id {
-                            return false;
-                        }
+                        && giver_id != connecting_id
+                    {
+                        return false;
+                    }
                     let possibilities = pk
                         .combined_possible_identities(idx, table_state, variant)
                         .as_bits();

@@ -24,7 +24,7 @@ use eel::engine::replay::snapshot::to_scenario_json;
 use eel::engine::tree_action_selection_strategy::TreeActionSelectionStrategy;
 use eel::game::state::table_state_json::parse_scenario;
 use eel::game::variant::test_variants::NO_VARIANT;
-use eel::hanablive::dto::game::Game;
+use eel::hanablive::dto::payload::game::Game;
 
 #[derive(Parser, Debug)]
 #[command(about = "Extract a scenario JSON from a hanab.live replay at a given turn")]

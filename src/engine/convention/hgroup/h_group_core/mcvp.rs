@@ -117,12 +117,14 @@ fn compute_finesse_signal_overlay(
             continue;
         }
         // Finesse: connector on a teammate's finesse position (teammate plays before receiver).
-        if p != receiver && pov.static_data().plays_before(p, receiver, active)
+        if p != receiver
+            && pov.static_data().plays_before(p, receiver, active)
             && let Some(finesse_idx) = get_finesse_position(p, pov)
-                && pov.card_identity(finesse_idx) == Some(connecting_id) {
-                    result.push((finesse_idx, connecting_id));
-                    continue;
-                }
+            && pov.card_identity(finesse_idx) == Some(connecting_id)
+        {
+            result.push((finesse_idx, connecting_id));
+            continue;
+        }
         // Prompt: connector is an already-clued, ambiguous card in p's hand (excluding the focus).
         if let Some(connector_idx) = prompt_connector_index(connecting_id, p, focus, pov) {
             result.push((connector_idx, connecting_id));
@@ -198,9 +200,10 @@ fn compute_going_to_play(pov: &dyn PlayerPOV, overlay: Option<&ClueOverlay>) -> 
                                     committed_identity, ..
                                 },
                         } = u
-                            && *card_deck_index == c {
-                                signaled = Some(*committed_identity);
-                            }
+                            && *card_deck_index == c
+                        {
+                            signaled = Some(*committed_identity);
+                        }
                     }
                     if signaled.is_some() {
                         break;

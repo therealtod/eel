@@ -114,7 +114,7 @@ pub mod test_variants {
     const NO_VARIANT_EMPATHY_BY_CLUE: [[VariantCardsBitField; MAX_CLUE_VALUES_PER_TYPE];
         MAX_CLUE_TYPES_IN_VARIANT] = [
         [
-            0b11111,  // Red:    R1..R5  (bits  0-4)
+            0b11111,       // Red:    R1..R5  (bits  0-4)
             0b11111 << 5,  // Yellow: Y1..Y5  (bits  5-9)
             0b11111 << 10, // Green:  G1..G5  (bits 10-14)
             0b11111 << 15, // Blue:   B1..B5  (bits 15-19)

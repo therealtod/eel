@@ -310,9 +310,10 @@ impl PlayerPOV for LightweightPlayerPOV<'_> {
             let player_hand = &self.table_state.hands[player_index];
             for &card_deck_index in player_hand.cards() {
                 if let Some(card_identity) = self.card_identity(card_deck_index)
-                    && self.is_touched(card_deck_index) {
-                        bits |= 1 << card_identity;
-                    }
+                    && self.is_touched(card_deck_index)
+                {
+                    bits |= 1 << card_identity;
+                }
             }
         }
         CardIdentityMask::from_bits(bits)

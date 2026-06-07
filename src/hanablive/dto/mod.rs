@@ -1,9 +1,5 @@
 pub mod card;
 pub mod character;
-pub mod chat_message;
-pub mod game;
-pub mod game_init_data;
-pub mod game_options;
+pub mod payload;
 pub mod suit_metadata;
-pub mod table;
 pub mod variant_metadata;

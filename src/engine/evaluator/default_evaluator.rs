@@ -25,13 +25,13 @@ use crate::game::static_game_data::StaticGameData;
 ///
 /// Per-clue immediate adjustments (applied to every clue action along the search line):
 /// - `empathy_weight * resolved_touched_cards`          — precision bonus for clues that fully resolve touched cards
-    /// - `-bad_touch_penalty * bad_touch_count` — penalty for each touched card with no overlap with still-needed
-    ///   cards (good-touch principle violation). Each penalty is softened by
-    ///   `forced_save_bad_touch_relief` when the clue is a forced
-    ///   Save-Principle save (see `forced_save_bad_touch_relief`).
-    /// - `-potential_bad_touch_penalty` — flat penalty when a touched-on-receiver still-needed
-    ///   identity overlaps with an identity the giver likely
-    ///   already holds (potential duplicate)
+/// - `-bad_touch_penalty * bad_touch_count` — penalty for each touched card with no overlap with still-needed
+///   cards (good-touch principle violation). Each penalty is softened by
+///   `forced_save_bad_touch_relief` when the clue is a forced
+///   Save-Principle save (see `forced_save_bad_touch_relief`).
+/// - `-potential_bad_touch_penalty` — flat penalty when a touched-on-receiver still-needed
+///   identity overlaps with an identity the giver likely
+///   already holds (potential duplicate)
 ///
 /// Per-ply immediate adjustments (applied to every action along the search line):
 /// - `-tempo_cost_weight` — flat penalty for any non-play turn (clues, discards,
@@ -495,7 +495,8 @@ impl DefaultEvaluator {
                     continue;
                 }
                 if is_critical {
-                    let threat = 1.0 / (1.0 + f64::from(rank) + 4.0 * f64::from(buffer + touched_shield));
+                    let threat =
+                        1.0 / (1.0 + f64::from(rank) + 4.0 * f64::from(buffer + touched_shield));
                     total += threat;
                 }
                 // Unknown-identity cards contribute no threat here (probabilistic risk is
@@ -546,8 +547,8 @@ impl DefaultEvaluator {
         team_knowledge: &TeamKnowledge,
     ) -> f64 {
         let num_players = static_data.number_of_players as usize;
-        let max_identities =
-            u32::from(static_data.variant.number_of_suits) * u32::from(static_data.variant.stacks_size);
+        let max_identities = u32::from(static_data.variant.number_of_suits)
+            * u32::from(static_data.variant.stacks_size);
         let mut total = 0f64;
         for p in 0..num_players {
             let pk = team_knowledge.player(p);
@@ -608,9 +609,10 @@ impl DefaultEvaluator {
                 // unplayable. Skip even if the holder's local knowledge thinks otherwise.
                 let truth_id = truth.card_identity(idx as CardDeckIndex);
                 if let Some(truth_id) = truth_id
-                    && (1u64 << truth_id) & playable_mask == 0 {
-                        continue;
-                    }
+                    && (1u64 << truth_id) & playable_mask == 0
+                {
+                    continue;
+                }
                 // Does the holder know (by any priority) that this card is playable?
                 let counts = {
                     // Priority 1: convention signal
@@ -723,8 +725,8 @@ impl DefaultEvaluator {
         table_state: &TableState,
     ) -> f64 {
         let num_players = static_data.number_of_players as usize;
-        let max_identities =
-            u32::from(static_data.variant.number_of_suits) * u32::from(static_data.variant.stacks_size);
+        let max_identities = u32::from(static_data.variant.number_of_suits)
+            * u32::from(static_data.variant.stacks_size);
         let inv_max = 1.0 / f64::from(max_identities);
         let mut total = 0.0f64;
         for p in 0..num_players {
@@ -740,8 +742,8 @@ impl DefaultEvaluator {
                     &static_data.variant,
                 );
                 let popcount = combined.count_possibilities();
-                total +=
-                    f64::from(max_identities.saturating_sub(popcount.min(max_identities))) * inv_max;
+                total += f64::from(max_identities.saturating_sub(popcount.min(max_identities)))
+                    * inv_max;
             }
         }
         total
@@ -782,8 +784,8 @@ impl DefaultEvaluator {
                 let possibilities = empathy.count_possibilities() as usize;
                 let playable_overlap = (bits & playable_mask).count_ones();
                 let critical_overlap = (bits & critical_mask).count_ones();
-                demand +=
-                    f64::from(playable_overlap.max(critical_overlap)) * RECIPROCAL_LUT[possibilities];
+                demand += f64::from(playable_overlap.max(critical_overlap))
+                    * RECIPROCAL_LUT[possibilities];
             }
         }
         demand

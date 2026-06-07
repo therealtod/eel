@@ -1,4 +1,5 @@
-use crate::hanablive::dto::game_options::GameOptions;
+use crate::hanablive::TableId;
+use crate::hanablive::dto::payload::game_options::GameOptions;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
@@ -7,7 +8,7 @@ use serde::Deserialize;
 #[allow(clippy::struct_excessive_bools)]
 pub struct GameInitData {
     #[serde(rename = "tableID")]
-    pub table_id: usize,
+    pub table_id: TableId,
     pub player_names: Vec<String>,
     pub our_player_index: usize,
     pub spectating: bool,

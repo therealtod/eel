@@ -32,7 +32,11 @@ fn reconstruct_clues(deck_empathy: u64, variant: &Variant) -> (Vec<String>, Vec<
     let mut positive = Vec::new();
     let mut negative = Vec::new();
 
-    for (suit_idx, suit_name) in SUIT_NAMES.iter().enumerate().take(variant.number_of_suits as usize) {
+    for (suit_idx, suit_name) in SUIT_NAMES
+        .iter()
+        .enumerate()
+        .take(variant.number_of_suits as usize)
+    {
         let clue_mask = variant.empathy_by_clue(ClueType::Color, suit_idx).as_bits();
         if (deck_empathy & !clue_mask) == 0 {
             positive.push(suit_name.to_string());

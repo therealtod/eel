@@ -409,9 +409,9 @@ impl PlayerKnowledge {
                     && confirmed_groups
                         .iter()
                         .any(|(c, g)| *c == h.cohort_id && *g == hg)
-                    {
-                        return false;
-                    }
+                {
+                    return false;
+                }
                 true
             });
         }
@@ -501,10 +501,11 @@ impl PlayerKnowledge {
                         card_deck_index: idx,
                         mask: m,
                     } = u
-                        && *idx == card_deck_index {
-                            cohort_union |= *m;
-                            cohort_touches_card = true;
-                        }
+                        && *idx == card_deck_index
+                    {
+                        cohort_union |= *m;
+                        cohort_touches_card = true;
+                    }
                 }
             }
             if cohort_touches_card {
@@ -689,8 +690,10 @@ impl PlayerKnowledge {
         if let Some(constrained) = effective.narrow(observable) {
             return constrained;
         }
-        let baseline_bits =
-            self.inferred_identities[card_deck_index as usize].map_or(u64::MAX, crate::game::card::card_identity_mask::CardIdentityMask::as_bits);
+        let baseline_bits = self.inferred_identities[card_deck_index as usize].map_or(
+            u64::MAX,
+            crate::game::card::card_identity_mask::CardIdentityMask::as_bits,
+        );
         let safe = baseline_bits & observable;
         if safe != 0 {
             return CardIdentityMask::from_bits(safe);

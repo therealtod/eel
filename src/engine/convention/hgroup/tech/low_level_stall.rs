@@ -66,13 +66,14 @@ impl ConventionTech for LowLevelStall {
 
         // Priority 2: discard slot 1 when the clue token bank is not full.
         if table_state.clue_token_bank.whole_clue_tokens_count() < MAX_CLUE_TOKEN_COUNT
-            && let Some(&slot1) = table_state.hands[active].cards().first() {
-                return vec![GameAction::Discard {
-                    player_index: active,
-                    card_deck_index: slot1,
-                    turn: table_state.current_turn,
-                }];
-            }
+            && let Some(&slot1) = table_state.hands[active].cards().first()
+        {
+            return vec![GameAction::Discard {
+                player_index: active,
+                card_deck_index: slot1,
+                turn: table_state.current_turn,
+            }];
+        }
 
         // Priority 3: play slot 1 (newest card in own hand).
         if let Some(&slot1) = table_state.hands[active].cards().first() {
