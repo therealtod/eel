@@ -259,7 +259,6 @@ impl<'a> ReplayRunner<'a> {
                 };
                 let touched = self.compute_touched_cards(receiver, &clue)?;
                 let turn = self.game.table_state.current_turn;
-                let p = self.game.table_state.active_player_index;
                 let game_action = GameAction::Clue {
                     player_index: receiver,
                     touched_card_deck_indexes: touched,
