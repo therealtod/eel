@@ -101,22 +101,51 @@ cargo build --release               # optimised
 
 ## Docker
 
-### Build the image
+Two Dockerfiles are provided. Architecture is resolved automatically by Docker
+(buildx / `--platform`), so either can be built on x86_64 or ARM (Raspberry Pi,
+Apple Silicon, etc.).
+
+| File | Runtime | Best for |
+|------|---------|----------|
+| `Dockerfile` | `debian:bookworm-slim` | Default — glibc, full compatibility |
+| `Dockerfile.lowresource` | `alpine:3.21` | Low-RAM systems, old Raspberry Pi (see below) |
+
+### Build
 
 ```bash
+# Default
 docker build -t eel .
+
+# Low-resource variant (single-job compile, stripped binary)
+docker build -f Dockerfile.lowresource -t eel:lowresource .
 ```
 
 ### Run
 
 ```bash
-docker run eel --name <name> [--count <count>]
+# Default image
+docker run eel --name <name>
+
+# Low-resource image (specify the tag you built with)
+docker run eel:lowresource --name <name>
 ```
 
 ### Run with logging
 
 ```bash
 docker run -e RUST_LOG=eel::search=debug eel --name <name>
+```
+
+### docker-compose
+
+Edit `docker-compose.yaml` and change the `dockerfile` field per service:
+
+```yaml
+services:
+  eel-bot1:
+    build:
+      context: .
+      dockerfile: Dockerfile.lowresource   # <-- swap variant here
 ```
 
 ### Run tests in a container

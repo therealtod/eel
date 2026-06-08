@@ -1,0 +1,46 @@
+# Low-resource variant — Alpine-based, single-job compile, stripped binary.
+# Designed to build and run on old Raspberry Pi models (512 MB – 1 GB RAM).
+# Architecture is resolved automatically by Docker via buildx / --platform.
+#
+#   docker build -f Dockerfile.lowresource -t eel:lowresource .
+
+# ---------------------------------------------------------------------------
+# Builder stage
+# ---------------------------------------------------------------------------
+FROM rust:1.88.0-alpine AS builder
+
+WORKDIR /app
+
+# Build deps for vendored openssl-sys (perl, gcc, make, etc.)
+RUN apk add --no-cache build-base perl pkgconfig musl-dev
+
+# Limit compiler parallelism — one job at a time to avoid OOM on low-RAM hosts
+ENV CARGO_BUILD_JOBS=1
+
+# Cache dependency build
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir -p src/bin && \
+    echo "fn main() {}" > src/bin/eel_bot.rs && \
+    cargo build --release --bin eel_bot && \
+    rm -rf src
+
+# Build the real binary
+COPY src ./src
+COPY tests ./tests
+COPY scripts ./scripts
+RUN cargo build --release --bin eel_bot && \
+    strip target/release/eel_bot
+
+# ---------------------------------------------------------------------------
+# Runtime stage
+# ---------------------------------------------------------------------------
+FROM alpine:3.21
+
+RUN apk add --no-cache ca-certificates
+
+WORKDIR /app
+COPY --from=builder /app/target/release/eel_bot /usr/local/bin/
+RUN mkdir -p /app/logs
+
+ENTRYPOINT ["sh", "-c"]
+CMD ["eel_bot --name eel-bot 2>&1 | tee -a /app/logs/bot.log"]
