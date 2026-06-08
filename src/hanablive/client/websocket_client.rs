@@ -180,6 +180,45 @@ impl WebSocketClient {
             connected: true,
         }
     }
+
+    /// Reconnect to the hanab.live WebSocket endpoint with exponential backoff.
+    ///
+    /// Tries up to `max_attempts` times, doubling the backoff each time (up to `max_backoff`).
+    /// On success, returns the new client and message receiver.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if all reconnection attempts fail.
+    pub async fn reconnect(
+        cookie: &str,
+        max_attempts: usize,
+        initial_backoff: Duration,
+        max_backoff: Duration,
+    ) -> Result<(Self, mpsc::Receiver<InboundWebsocketMessage>), Error> {
+        let mut backoff = initial_backoff;
+        for attempt in 1..=max_attempts {
+            debug!(
+                "Reconnect attempt {attempt}/{max_attempts} in {backoff:?}",
+            );
+            tokio::time::sleep(backoff).await;
+            match Self::connect(cookie).await {
+                Ok((client, rx)) => {
+                    info!("Reconnected to hanab.live");
+                    return Ok((client, rx));
+                }
+                Err(e) => {
+                    warn!("Reconnect attempt {attempt} failed: {e}");
+                    backoff = next_backoff(backoff, max_backoff);
+                }
+            }
+        }
+        Err(Error::ReconnectFailed(max_attempts))
+    }
+}
+
+/// Double the backoff, saturating at `max`.
+fn next_backoff(current: Duration, max: Duration) -> Duration {
+    current.saturating_mul(2).min(max)
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -192,4 +231,6 @@ pub enum Error {
     Request(#[from] tokio_tungstenite::tungstenite::http::Error),
     #[error("UTF-8 error: {0}")]
     Utf8(#[from] std::string::FromUtf8Error),
+    #[error("Reconnection failed after {0} attempts")]
+    ReconnectFailed(usize),
 }

@@ -48,44 +48,29 @@ impl HanabLiveBot {
         loop {
             self.process_messages().await;
             tracing::warn!("Inbound message stream ended; connection lost");
-            if !self.reconnect().await {
-                tracing::error!(
-                    "Failed to reconnect after {} attempts; shutting down",
-                    self.configuration.max_reconnect_attempts
-                );
-                break;
-            }
-        }
-    }
-
-    /// Re-establish the WebSocket session after a disconnect, backing off exponentially between
-    /// attempts. On success the bot state is reset to [`BotState::initial_state`]; hanab.live
-    /// re-sends the welcome and table list on reconnect, which rebuilds the local view.
-    ///
-    /// Returns `true` once reconnected, or `false` if every attempt was exhausted.
-    async fn reconnect(&mut self) -> bool {
-        let mut backoff = self.configuration.reconnect_initial_backoff;
-        for attempt in 1..=self.configuration.max_reconnect_attempts {
-            tracing::warn!(
-                "Reconnect attempt {attempt}/{} in {backoff:?}",
-                self.configuration.max_reconnect_attempts
-            );
-            tokio::time::sleep(backoff).await;
-            match WebSocketClient::connect(&self.session_cookie).await {
+            match WebSocketClient::reconnect(
+                &self.session_cookie,
+                self.configuration.max_reconnect_attempts as usize,
+                self.configuration.reconnect_initial_backoff,
+                self.configuration.reconnect_max_backoff,
+            )
+            .await
+            {
                 Ok((websocket_client, message_rx)) => {
                     tracing::info!("Reconnected to hanab.live");
                     self.websocket_client = websocket_client;
                     self.message_rx = message_rx;
                     self.state = BotState::initial_state();
-                    return true;
                 }
                 Err(e) => {
-                    tracing::warn!("Reconnect attempt {attempt} failed: {e}");
-                    backoff = next_backoff(backoff, self.configuration.reconnect_max_backoff);
+                    tracing::error!(
+                        "Failed to reconnect after {} attempts; shutting down: {e}",
+                        self.configuration.max_reconnect_attempts
+                    );
+                    break;
                 }
             }
         }
-        false
     }
 
     /// Process inbound messages until the stream ends (disconnect), then return.
@@ -220,37 +205,5 @@ impl HanabLiveBot {
         self.state
             .on_table_leave_request(&mut self.websocket_client)
             .await;
-    }
-}
-
-/// Double the reconnect backoff, saturating at `max`.
-fn next_backoff(current: std::time::Duration, max: std::time::Duration) -> std::time::Duration {
-    current.saturating_mul(2).min(max)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::time::Duration;
-
-    #[test]
-    fn backoff_doubles_until_capped() {
-        let max = Duration::from_secs(30);
-        let mut backoff = Duration::from_secs(1);
-        let observed: Vec<u64> = std::iter::repeat_with(|| {
-            let now = backoff.as_secs();
-            backoff = next_backoff(backoff, max);
-            now
-        })
-        .take(8)
-        .collect();
-        assert_eq!(observed, vec![1, 2, 4, 8, 16, 30, 30, 30]);
-    }
-
-    #[test]
-    fn backoff_never_exceeds_max() {
-        let max = Duration::from_secs(30);
-        assert_eq!(next_backoff(Duration::from_secs(20), max), max);
-        assert_eq!(next_backoff(max, max), max);
     }
 }
