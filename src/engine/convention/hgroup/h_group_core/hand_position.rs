@@ -137,6 +137,48 @@ pub fn prompt_connector_index(
     None
 }
 
+/// Like [`prompt_connector_index`] but resolves the connector in `target_player`'s **own
+/// hidden hand** using clue empathy rather than ground-truth card identity.
+///
+/// A player interpreting a prompt that lands on their own hand cannot see their card
+/// identities, so they resolve the promised connector to the leftmost (newest) of their
+/// touched cards whose empathy still admits `connecting_id`. Cards whose empathy *excludes*
+/// `connecting_id` (e.g. one already locked to a different identity) are skipped over — this is
+/// the H-Group "skip" rule expressed in terms of the holder's own knowledge.
+///
+/// `focus_idx` is excluded from the search for the same reason as in [`prompt_connector_index`]:
+/// a self-prompt's focus is the freshly clued card that disambiguates it from the connector.
+///
+/// Only cards whose identity is **hidden to `pov`** are eligible: when `pov` can see a card's
+/// true identity (omniscient reconstruction, or the giver's view of a visible teammate) the
+/// authoritative [`prompt_connector_index`] already handles it, and resolving by empathy there
+/// would invent phantom connectors during search projections.
+///
+/// Note: this is the *static* resolution. If the chosen card later plays and reveals a different
+/// (still consistent) identity, the promise must slide to the next eligible card — that sliding
+/// behaviour is not modelled here.
+pub fn prompt_connector_index_by_empathy(
+    connecting_id: VariantCardId,
+    target_player: PlayerIndex,
+    focus_idx: CardDeckIndex,
+    pov: &dyn PlayerPOV,
+) -> Option<CardDeckIndex> {
+    let holder_knowledge = pov.team_knowledge().player(target_player);
+    pov.table_state().hands[target_player]
+        .cards()
+        .iter()
+        .copied()
+        .filter(|&idx| idx != focus_idx && pov.is_touched(idx) && pov.card_identity(idx).is_none())
+        .find(|&idx| {
+            let empathy = holder_knowledge.combined_possible_identities(
+                idx,
+                pov.table_state(),
+                &pov.static_data().variant,
+            );
+            empathy.as_bits() & (1u64 << connecting_id) != 0
+        })
+}
+
 /// Returns true if `player`'s finesse position (first unclued card, newest) holds `card_id`.
 pub fn has_on_finesse_position(
     card_id: VariantCardId,

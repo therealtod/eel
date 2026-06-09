@@ -159,9 +159,7 @@ fn receiver_had_primary_candidate(
     // Strict gate failed: was that because the giver's POV (as we can reconstruct it) can't see
     // the receiver's hand? If so, a primary candidate there cannot be excluded.
     let giver_pov = snapshot.player_pov(giver, static_data);
-    snapshot
-        .table_state
-        .hands[receiver]
+    snapshot.table_state.hands[receiver]
         .cards()
         .iter()
         .any(|&slot| giver_pov.card_identity(slot).is_none())
@@ -395,7 +393,14 @@ impl KnowledgeAwareGameState {
                 let touched = touched_card_deck_indexes.clone();
                 let clue_val = clue.clone();
                 let receiver = *player_index;
-                self.apply_clue(&touched, &clue_val, receiver, action, convention_set);
+                self.apply_clue(
+                    &touched,
+                    &clue_val,
+                    receiver,
+                    action,
+                    convention_set,
+                    resolver.advances_real_game(),
+                );
                 None
             }
             GameAction::Draw {
@@ -650,6 +655,7 @@ impl KnowledgeAwareGameState {
         receiver: usize,
         action: &GameAction,
         convention_set: &dyn ConventionSet,
+        grounded: bool,
     ) {
         let giver = self.table_state.active_player_index();
         // Save pre-clue table state so that focus calculation can correctly distinguish
@@ -722,6 +728,7 @@ impl KnowledgeAwareGameState {
             cohort_id,
             receiver_gate,
             convention_set,
+            grounded,
         );
         self.interpret_clue_for_observers(
             receiver,
@@ -731,6 +738,7 @@ impl KnowledgeAwareGameState {
             cohort_id,
             observer_gate,
             convention_set,
+            grounded,
         );
     }
 
@@ -836,6 +844,7 @@ impl KnowledgeAwareGameState {
         cohort_id: HypothesisId,
         had_primary_candidate: bool,
         convention_set: &dyn ConventionSet,
+        grounded: bool,
     ) {
         let receiver_hypotheses = {
             let receiver_pov = LightweightPlayerPOV::new(
@@ -844,7 +853,8 @@ impl KnowledgeAwareGameState {
                 &self.team_knowledge,
                 &self.table_state,
                 &self.static_data,
-            );
+            )
+            .with_grounded(grounded);
             collect_pov_hypotheses(
                 convention_set,
                 had_primary_candidate,
@@ -882,6 +892,7 @@ impl KnowledgeAwareGameState {
         cohort_id: HypothesisId,
         had_primary_candidate: bool,
         convention_set: &dyn ConventionSet,
+        grounded: bool,
     ) {
         let num_players = self.static_data.number_of_players as usize;
         let original_active = self.table_state.active_player_index;
@@ -894,7 +905,8 @@ impl KnowledgeAwareGameState {
                     &self.team_knowledge,
                     &self.table_state,
                     &self.static_data,
-                );
+                )
+                .with_grounded(grounded);
                 collect_pov_hypotheses(
                     convention_set,
                     had_primary_candidate,
@@ -1513,9 +1525,9 @@ mod tests {
 
     #[test]
     fn receiver_had_primary_candidate_delegates_to_strict_when_strict_passes() {
+        use crate::engine::convention::convention_tech::ConventionTech;
         use crate::engine::convention::hgroup::h_group_convention_set::HGroupConventionSet;
         use crate::engine::convention::hgroup::tech::play_known_playable::PlayKnownPlayable;
-        use crate::engine::convention::convention_tech::ConventionTech;
 
         let mut state = make_state();
         // Give player 0 (giver) a known playable card (R1, id 0)
@@ -1623,4 +1635,3 @@ mod tests {
         );
     }
 }
-

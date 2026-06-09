@@ -22,6 +22,16 @@ pub trait PlayerPOV {
     /// Get the player's own player index
     fn player_index(&self) -> PlayerIndex;
 
+    /// Whether this POV is interpreting a *real* (grounded) clue that advances the observed
+    /// game, as opposed to a hypothetical clue projected during search. Convention trust that
+    /// relies on a teammate having seen something the bot itself cannot (e.g. prompting a card
+    /// into the bot's own hidden hand) is only warranted for grounded interpretation: during
+    /// search the inner giver could not have seen the root's hand, so it could not have intended
+    /// such a prompt. Defaults to `false`; only the live/replay interpretation path sets it.
+    fn is_grounded(&self) -> bool {
+        false
+    }
+
     /// Get the "away value" of a card (how many plays away from being playable).
     fn away_value(&self, card_id: VariantCardId) -> Option<u8>;
 

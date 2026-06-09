@@ -11,7 +11,7 @@ pub use gtp::{
 };
 pub use hand_position::{
     get_chop_index, get_clue_focus, get_finesse_position, has_on_finesse_position,
-    prompt_connector_index, touched_cards_for_clue,
+    prompt_connector_index, prompt_connector_index_by_empathy, touched_cards_for_clue,
 };
 pub use mcvp::is_minimal_clue_value_compliant;
 pub use save_principle::{is_early_game, is_forced_save, is_save_principle_protected};

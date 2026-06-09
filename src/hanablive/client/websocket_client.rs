@@ -197,9 +197,7 @@ impl WebSocketClient {
     ) -> Result<(Self, mpsc::Receiver<InboundWebsocketMessage>), Error> {
         let mut backoff = initial_backoff;
         for attempt in 1..=max_attempts {
-            debug!(
-                "Reconnect attempt {attempt}/{max_attempts} in {backoff:?}",
-            );
+            debug!("Reconnect attempt {attempt}/{max_attempts} in {backoff:?}",);
             tokio::time::sleep(backoff).await;
             match Self::connect(cookie).await {
                 Ok((client, rx)) => {

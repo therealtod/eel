@@ -587,3 +587,29 @@ fn should_trust_play_clue() {
         _ => panic!("Bob has chosen the following action: {action:?}"),
     }
 }
+
+#[test]
+fn should_not_dupe_own_y2() {
+    let action = engine_action_at_turn("should_not_dupe_own_y2.json", 11);
+    match action {
+        GameAction::Play {
+            player_index: 1,
+            card_deck_index: 7,
+            ..
+        } => println!("Bob has chosen to play his playable y2: {action:?}"),
+        _ => panic!("Bob has chosen the following action: {action:?}"),
+    }
+}
+
+#[test]
+fn should_not_dupe_own_y2_in_liveplay() {
+    let action = engine_action_at_turn_hidden_seat("should_not_dupe_own_y2.json", 11);
+    match action {
+        GameAction::Play {
+            player_index: 1,
+            card_deck_index: 7,
+            ..
+        } => println!("Bob has chosen to play his playable y2: {action:?}"),
+        _ => panic!("Bob has chosen the following action: {action:?}"),
+    }
+}

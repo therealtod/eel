@@ -1,6 +1,7 @@
 use crate::engine::convention::convention_tech::ClueTech;
 use crate::engine::convention::hgroup::h_group_core::{
     clues_for_player_with_focus, get_clue_focus, prompt_connector_index,
+    prompt_connector_index_by_empathy,
 };
 use crate::engine::convention::hgroup::h_group_tech::{HGroupClueTech, PlayClueTech, priority};
 use crate::engine::game_state_snapshot::GameStateSnapshot;
@@ -127,6 +128,7 @@ impl ClueTech for SimplePrompt {
         let clue_mask = static_data.variant.empathy_for_clue(clue).as_bits();
         let candidates = observer_pov.inferred_identities(focus).as_bits() & clue_mask;
         let num_players = static_data.number_of_players as usize;
+        let observer = observer_pov.player_index();
         (0..total_ids).any(|focus_id| {
             if (candidates & (1u64 << focus_id)) == 0 {
                 return false;
@@ -137,9 +139,18 @@ impl ClueTech for SimplePrompt {
                 return false;
             }
             let connecting_id = focus_id - 1;
-            (0..num_players)
-                .filter(|&p| p != giver)
-                .any(|p| Self::is_valid_prompt_situation(connecting_id, p, focus, &giver_pov))
+            (0..num_players).filter(|&p| p != giver).any(|p| {
+                Self::is_valid_prompt_situation(connecting_id, p, focus, &giver_pov)
+                    // The connector may sit in the observer's own hidden hand, where the giver's
+                    // identity-based gate cannot see it; fall back to the holder's own empathy.
+                    // Only for grounded (real) clues: trusting that the giver saw a connector we
+                    // cannot is warranted for a real partner, but not for a hypothetical clue
+                    // projected in search, where the inner giver could not have seen our hand.
+                    || (p == observer
+                        && observer_pov.is_grounded()
+                        && prompt_connector_index_by_empathy(connecting_id, p, focus, &giver_pov)
+                            .is_some())
+            })
         })
     }
 
@@ -176,30 +187,45 @@ impl ClueTech for SimplePrompt {
                     _ => return Hypothesis::empty(),
                 };
                 let connecting_id = focus_id - 1;
-                if Self::is_valid_prompt_situation(connecting_id, current, focus, &giver_pov) {
-                    let hand = giver_pov.table_state().hands[current].cards();
-                    let touched_in_hand: Vec<CardDeckIndex> = hand
-                        .iter()
-                        .copied()
-                        .filter(|&idx| giver_pov.is_touched(idx))
-                        .collect();
-                    let holder_knowledge = giver_pov.team_knowledge().player(current);
-                    let card = touched_in_hand.iter().copied().find(|&idx| {
-                        let emp = holder_knowledge.combined_possible_identities(
-                            idx,
-                            giver_pov.table_state(),
-                            &giver_pov.static_data().variant,
-                        );
-                        emp.as_bits() & (1u64 << connecting_id) != 0
+                // Primary: the giver can see the connector in `current`'s hand — either an
+                // omniscient reconstruction, or a teammate whose hand the giver sees directly.
+                let connector = prompt_connector_index(connecting_id, current, focus, &giver_pov)
+                    // Fallback: the connector sits in `current`'s own hand, which is hidden to
+                    // them in live play, so the identity-based gate above cannot resolve it.
+                    // Resolve by the holder's own empathy instead, with two correctness guards:
+                    //   1. Defer to any *other* non-giver player who visibly holds the connector
+                    //      as a valid prompt target — that prompt is theirs, not ours.
+                    //   2. The skip rule (leftmost touched card whose empathy admits
+                    //      `connecting_id`) is encoded in `prompt_connector_index_by_empathy`.
+                    .or_else(|| {
+                        // Empathy trust is only sound for a grounded (real) clue — see the
+                        // matching guard in `matches_clue`. In search the inner giver could not
+                        // have seen the observer's own hand, so it could not have prompted it.
+                        if !observer_pov.is_grounded() {
+                            return None;
+                        }
+                        let num_players = giver_pov.static_data().number_of_players as usize;
+                        let teammate_holds_connector = (0..num_players)
+                            .filter(|&p| p != giver && p != current)
+                            .any(|p| {
+                                Self::is_valid_prompt_situation(connecting_id, p, focus, &giver_pov)
+                            });
+                        (!teammate_holds_connector)
+                            .then(|| {
+                                prompt_connector_index_by_empathy(
+                                    connecting_id,
+                                    current,
+                                    focus,
+                                    &giver_pov,
+                                )
+                            })
+                            .flatten()
                     });
-                    if let Some(card) = card {
-                        return Hypothesis::unconditional(vec![
-                            KnowledgeUpdate::NarrowPossibilities {
-                                card_deck_index: card,
-                                mask: 1 << connecting_id,
-                            },
-                        ]);
-                    }
+                if let Some(card) = connector {
+                    return Hypothesis::unconditional(vec![KnowledgeUpdate::NarrowPossibilities {
+                        card_deck_index: card,
+                        mask: 1 << connecting_id,
+                    }]);
                 }
             }
             return Hypothesis::empty();
@@ -574,6 +600,122 @@ mod tests {
         } else {
             panic!("expected NarrowPossibilities");
         }
+    }
+
+    /// Build a Case-1 scenario (observer is the *prompted* player, not the receiver) where the
+    /// connecting card sits in the observer's **own hidden hand**: the giver cannot see its
+    /// identity (empathy is ambiguous `{R2, Y2}`), so only the empathy fallback can resolve it.
+    ///
+    /// Layout (stacks: R1 played):
+    /// - Player 0 (observer / prompted): deck 5 = connector, touched pre-clue, identity hidden.
+    /// - Player 1 (giver): on turn.
+    /// - Player 2 (receiver): deck 20 = R3 focus, touched by this clue, seen by the giver.
+    ///
+    /// Returns the post-clue table state, team knowledge, static data, the pre-clue history, and
+    /// the clue action — everything needed to drive `knowledge_updates` from player 0's POV.
+    fn hidden_own_connector_case1_setup() -> (
+        crate::game::state::table_state::TableState,
+        TeamKnowledge,
+        crate::game::static_game_data::StaticGameData,
+        Vec<GameStateSnapshot>,
+        GameAction,
+    ) {
+        let static_data = NOVAR_5_PLAYERS_STATIC_GAME_DATA;
+        let mut table_state = initial_five_players_table_state();
+        table_state.update_with_play_action_of_specific_card(
+            0,
+            R1.as_variant_card_id(),
+            &static_data,
+        );
+
+        table_state.active_player_index = 0;
+        table_state.update_with_draw_action(5); // connector, in observer's own hand
+        table_state.active_player_index = 2;
+        table_state.update_with_draw_action(20); // focus R3, in receiver's hand
+        table_state.active_player_index = 1; // giver on turn
+
+        // Pre-clue: connector already touched; focus not yet touched.
+        table_state.clue_touched_cards |= 1u64 << 5;
+        let pre_clue = table_state.clone();
+        // Post-clue: focus now touched by this clue.
+        table_state.clue_touched_cards |= 1u64 << 20;
+
+        let mut team_knowledge = TeamKnowledge::new(static_data.number_of_players as usize);
+        // Observer owns the connector; its empathy admits R2 but is ambiguous ({R2, Y2}), so its
+        // identity is unknown to everyone — only empathy can resolve it as the connector.
+        team_knowledge.player_mut(0).own_hand |= 1u64 << 5;
+        team_knowledge.player_mut(0).inferred_identities[5] =
+            Some(CardIdentityMask::from_bits(R2_MASK | Y2_MASK));
+        // The giver knows the focus is R3 (sees the receiver's hand).
+        team_knowledge.player_mut(1).inferred_identities[20] =
+            Some(CardIdentityMask::from_bits(R3_MASK));
+        team_knowledge.player_mut(2).own_hand |= 1u64 << 20;
+
+        let action = GameAction::Clue {
+            player_index: 2,
+            touched_card_deck_indexes: smallvec::smallvec![20],
+            clue: Clue {
+                clue_type: ClueType::Rank,
+                clue_value: 3,
+            },
+            turn: 1,
+        };
+        let history = vec![GameStateSnapshot::new(pre_clue, team_knowledge.clone())];
+        (table_state, team_knowledge, static_data, history, action)
+    }
+
+    /// Grounded (real) clue: the observer trusts the giver saw a connector it cannot see itself,
+    /// and narrows its own hidden card to the connecting identity via the empathy fallback.
+    #[test]
+    fn case1_narrows_own_hidden_connector_for_grounded_clue() {
+        let (table_state, team_knowledge, static_data, history, action) =
+            hidden_own_connector_case1_setup();
+        let pov = LightweightPlayerPOV::new(
+            0,
+            team_knowledge.player(0),
+            &team_knowledge,
+            &table_state,
+            &static_data,
+        )
+        .with_grounded(true);
+
+        let updates = SimplePrompt.knowledge_updates(&action, &history, &pov);
+        assert_eq!(updates.immediate.len(), 1);
+        if let KnowledgeUpdate::NarrowPossibilities {
+            card_deck_index,
+            mask,
+        } = &updates.immediate[0]
+        {
+            assert_eq!(
+                *card_deck_index, 5,
+                "the observer's own connector is narrowed"
+            );
+            assert_eq!(*mask, R2_MASK, "narrowed to the R2 connecting identity");
+        } else {
+            panic!("expected NarrowPossibilities");
+        }
+    }
+
+    /// Hypothetical clue projected in search (default, non-grounded POV): the inner giver could
+    /// not have seen the observer's own hand, so the empathy self-prompt must NOT fire — this is
+    /// the guard that prevents the phantom self-prompt chain during lookahead.
+    #[test]
+    fn case1_does_not_narrow_own_hidden_connector_in_search() {
+        let (table_state, team_knowledge, static_data, history, action) =
+            hidden_own_connector_case1_setup();
+        let pov = LightweightPlayerPOV::new(
+            0,
+            team_knowledge.player(0),
+            &team_knowledge,
+            &table_state,
+            &static_data,
+        ); // default: not grounded
+
+        let updates = SimplePrompt.knowledge_updates(&action, &history, &pov);
+        assert!(
+            updates.is_empty(),
+            "search must not self-prompt a connector into the observer's own hidden hand"
+        );
     }
 
     /// When the receiver has no touched cards, `knowledge_updates` returns empty.

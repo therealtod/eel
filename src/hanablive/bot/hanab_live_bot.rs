@@ -80,7 +80,7 @@ impl HanabLiveBot {
                 return;
             };
             tracing::info!("Received message of type: {:?}", message.label());
-            tracing::info!("Raw message: {:?}", message);
+            tracing::debug!("Raw message: {:?}", message);
             match message {
                 InboundWebsocketMessage::Welcome(welcome) => {
                     tracing::info!("Logged in as {}", welcome.username);

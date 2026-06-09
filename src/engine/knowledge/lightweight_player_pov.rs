@@ -26,6 +26,10 @@ pub struct LightweightPlayerPOV<'a> {
     /// produces a POV with an intersected `visible_cards` so a teammate cannot peek
     /// at hands the root observer cannot see.
     visible_cards: DeckCardsBitField,
+    /// True only when this POV is interpreting a real (grounded) clue that advances the
+    /// observed game. See [`PlayerPOV::is_grounded`]. Defaults to `false`; search-time and
+    /// teammate-projection POVs leave it unset.
+    grounded: bool,
 }
 
 impl<'a> LightweightPlayerPOV<'a> {
@@ -44,7 +48,15 @@ impl<'a> LightweightPlayerPOV<'a> {
             table_state,
             static_data,
             visible_cards: knowledge.visible_cards,
+            grounded: false,
         }
+    }
+
+    /// Mark this POV as interpreting a real (grounded) clue. See [`PlayerPOV::is_grounded`].
+    #[must_use]
+    pub fn with_grounded(mut self, grounded: bool) -> Self {
+        self.grounded = grounded;
+        self
     }
 
     /// Construct a POV with an explicit effective sight set, overriding
@@ -65,6 +77,7 @@ impl<'a> LightweightPlayerPOV<'a> {
             table_state,
             static_data,
             visible_cards,
+            grounded: false,
         }
     }
 
@@ -99,6 +112,10 @@ impl<'a> LightweightPlayerPOV<'a> {
 impl PlayerPOV for LightweightPlayerPOV<'_> {
     fn player_index(&self) -> PlayerIndex {
         self.player_index
+    }
+
+    fn is_grounded(&self) -> bool {
+        self.grounded
     }
 
     fn away_value(&self, card_id: VariantCardId) -> Option<u8> {
